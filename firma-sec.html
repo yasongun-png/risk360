@@ -22,6 +22,10 @@
   <script src="core/auth.js"></script>
   <script src="core/tenant.js"></script>
   <script>
+    function _fsKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
     const kullanici = girisGerekli();
 
     if (kullanici) {
@@ -51,8 +55,8 @@
           const kart = document.createElement('div');
           kart.className = 'firma-kart';
           kart.innerHTML = `
-            <div class="rozet" style="background:${firma.renk}">${kisaAd}</div>
-            <span class="ad">${firma.ad}</span>
+            <div class="rozet" style="background:${firma.renk}">${_fsKacir(kisaAd)}</div>
+            <span class="ad">${_fsKacir(firma.ad)}</span>
           `;
           kart.addEventListener('click', () => {
             aktifFirmaAyarla(firma.id);

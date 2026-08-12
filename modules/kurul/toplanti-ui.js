@@ -1,5 +1,9 @@
 // Toplantı detay ekranının DOM işlemleri (gündem + kararlar + tutanak).
 
+function _ktKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 let _toplantiId = null;
 let _duzenlenenKararId = null;
 let _duzenlenenOlayId = null;
@@ -281,12 +285,12 @@ function bilgiKartiniCiz(toplanti) {
     <div class="istatistik-grid" style="grid-template-columns: repeat(5, minmax(150px,1fr));">
       <div class="istatistik-kutu"><span>Tarih / Saat</span><b style="font-size:15px;">${gunAyYil(toplanti.tarih)} ${toplanti.saat}</b></div>
       <div class="istatistik-kutu"><span>Dönem</span><b style="font-size:15px;">${_ciktiDonemMetni(toplanti)}</b></div>
-      <div class="istatistik-kutu"><span>Yer</span><b style="font-size:15px;">${toplanti.yer || '-'}</b></div>
-      <div class="istatistik-kutu"><span>Başkan / Kurul Sekreteri</span><b style="font-size:15px;">${bs.baskan || '-'} / ${bs.yazman || '-'}</b></div>
-      <div class="istatistik-kutu"><span>Durum</span><b style="font-size:15px;">${toplanti.durum}</b></div>
+      <div class="istatistik-kutu"><span>Yer</span><b style="font-size:15px;">${_ktKacir(toplanti.yer) || '-'}</b></div>
+      <div class="istatistik-kutu"><span>Başkan / Kurul Sekreteri</span><b style="font-size:15px;">${_ktKacir(bs.baskan) || '-'} / ${_ktKacir(bs.yazman) || '-'}</b></div>
+      <div class="istatistik-kutu"><span>Durum</span><b style="font-size:15px;">${_ktKacir(toplanti.durum)}</b></div>
     </div>
-    <p style="font-size:13px;"><strong>Katılımcılar:</strong> ${toplanti.katilimcilar.join(', ') || '-'}</p>
-    ${toplanti.notlar ? `<p style="font-size:13px;"><strong>Notlar:</strong> ${toplanti.notlar}</p>` : ''}
+    <p style="font-size:13px;"><strong>Katılımcılar:</strong> ${_ktKacir(toplanti.katilimcilar.join(', ')) || '-'}</p>
+    ${toplanti.notlar ? `<p style="font-size:13px;"><strong>Notlar:</strong> ${_ktKacir(toplanti.notlar)}</p>` : ''}
   `;
 }
 
@@ -329,9 +333,9 @@ function gundemListesiniCiz(toplanti) {
   kutu.innerHTML = toplanti.gundem.length
     ? `<ol style="padding-left:20px; font-size:13px;">${toplanti.gundem.map(g => {
         const otoNot = /^olaylar/i.test(g.baslik.trim()) && olaylarMetni
-          ? `<div style="margin-top:2px; color:var(--metin-soluk); font-size:12px;">${olaylarMetni}</div>`
+          ? `<div style="margin-top:2px; color:var(--metin-soluk); font-size:12px;">${_ktKacir(olaylarMetni)}</div>`
           : '';
-        return `<li style="margin-bottom:6px;">${g.baslik}${g.not ? ' — ' + g.not : ''}${otoNot}</li>`;
+        return `<li style="margin-bottom:6px;">${_ktKacir(g.baslik)}${g.not ? ' — ' + _ktKacir(g.not) : ''}${otoNot}</li>`;
       }).join('')}</ol>`
     : '<div class="bos-durum gorunur">Gündem maddesi eklenmemiş.</div>';
 }
@@ -363,12 +367,12 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
     const tamamlandiRozeti = k.durum === 'Kapalı' ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Tamamlandı)</span>' : '';
     satir.innerHTML = `
       <td>${k.kararNo}</td>
-      <td>${k.kaynakGundem || '-'}</td>
-      <td>${k.kararMetni}</td>
-      <td>${k.sorumlu}</td>
+      <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
+      <td>${_ktKacir(k.kararMetni)}</td>
+      <td>${_ktKacir(k.sorumlu)}</td>
       <td>${gunAyYil(k.termin) || '-'}</td>
-      <td>${k.oncelik}</td>
-      <td>${k.durumGoruntu}${tamamlandiRozeti}</td>
+      <td>${_ktKacir(k.oncelik)}</td>
+      <td>${_ktKacir(k.durumGoruntu)}${tamamlandiRozeti}</td>
       <td>${_kararFotoHucresiUret(k)}</td>
       <td class="sutun-sabit">
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
@@ -445,13 +449,13 @@ function olaylariCiz() {
     if (!o.otomatik) manuelSira++;
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${o.tur}${o.otomatik ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Olay/Kaza modülünden)</span>' : ''}</td><td>${gunAyYil(o.tarih)}</td><td>${o.yer || '-'}</td><td>${o.birim || '-'}</td>
-      <td>${o.olusSekli || '-'}</td><td>${o.kokNeden || '-'}</td><td>${o.isGunuKaybi || '-'}</td>
-      <td>${o.otomatik ? '-' : (o.kararMetni || '-')}</td>
-      <td>${o.otomatik ? '-' : (o.sorumlu || '-')}</td>
+      <td>${_ktKacir(o.tur)}${o.otomatik ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Olay/Kaza modülünden)</span>' : ''}</td><td>${gunAyYil(o.tarih)}</td><td>${_ktKacir(o.yer) || '-'}</td><td>${_ktKacir(o.birim) || '-'}</td>
+      <td>${_ktKacir(o.olusSekli) || '-'}</td><td>${_ktKacir(o.kokNeden) || '-'}</td><td>${_ktKacir(o.isGunuKaybi) || '-'}</td>
+      <td>${o.otomatik ? '-' : (_ktKacir(o.kararMetni) || '-')}</td>
+      <td>${o.otomatik ? '-' : (_ktKacir(o.sorumlu) || '-')}</td>
       <td>${o.otomatik ? '-' : (gunAyYil(o.termin) || '-')}</td>
-      <td>${o.otomatik ? '-' : (o.oncelik || '-')}</td>
-      <td>${o.otomatik ? '-' : (o.durum || '-')}</td>
+      <td>${o.otomatik ? '-' : (_ktKacir(o.oncelik) || '-')}</td>
+      <td>${o.otomatik ? '-' : (_ktKacir(o.durum) || '-')}</td>
       <td>${_olayFotoHucresiUret(o)}</td>
       <td class="sutun-sabit">
         ${!o.otomatik && manuelSira > 0 ? `<button class="tablo-buton" data-yukari="${o.id}" title="Yukarı taşı">▲</button>` : ''}
@@ -607,7 +611,7 @@ function imzalariCiz() {
   imzalar.forEach(i => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${i.siraNo}</td><td>${i.adSoyad}</td><td>${i.unvan || '-'}</td><td>${i.birim || '-'}</td><td>${i.kuruldakiGorev || '-'}</td>
+      <td>${i.siraNo}</td><td>${_ktKacir(i.adSoyad)}</td><td>${_ktKacir(i.unvan) || '-'}</td><td>${_ktKacir(i.birim) || '-'}</td><td>${_ktKacir(i.kuruldakiGorev) || '-'}</td>
       <td><button type="button" class="tablo-buton" data-katildi-toggle="${i.id}" title="Tıklayarak katılım durumunu değiştir" style="font-size:16px; font-weight:700; color:${i.katildiMi ? '#16a34a' : '#dc2626'};">${i.katildiMi ? '✓' : '✗'}</button></td>
       <td>
         <button class="tablo-buton" data-duzenle="${i.id}">Düzenle</button>
@@ -672,7 +676,7 @@ function imzaModalAc(imza) {
   document.getElementById('imzaUnvan').value = imza ? imza.unvan : '';
   document.getElementById('imzaBirim').value = imza ? imza.birim : '';
   document.getElementById('imzaKuruldakiGorev').innerHTML = '<option value="">— Seçiniz —</option>' +
-    _kuruldakiGorevSecenekleriUret().map(g => `<option ${imza && imza.kuruldakiGorev === g ? 'selected' : ''}>${g}</option>`).join('');
+    _kuruldakiGorevSecenekleriUret().map(g => `<option ${imza && imza.kuruldakiGorev === g ? 'selected' : ''}>${_ktKacir(g)}</option>`).join('');
   document.getElementById('imzaKatildiMi').checked = imza ? !!imza.katildiMi : true;
   document.getElementById('imzaModalKatman').classList.add('acik');
 }
@@ -821,8 +825,8 @@ function tespitEdilenUygunsuzluklariCiz(toplanti) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${k.konuBasligi}</td><td>${gunAyYil(k.tespitTarihi) || '-'}</td>
-      <td>${k.bolum || '-'}</td><td>${k.uygunsuzluk || '-'}</td><td>${k.sorumlu || '-'}</td><td>${k.durum || '-'}</td>
+      <td>${_ktKacir(k.konuBasligi)}</td><td>${gunAyYil(k.tespitTarihi) || '-'}</td>
+      <td>${_ktKacir(k.bolum) || '-'}</td><td>${_ktKacir(k.uygunsuzluk) || '-'}</td><td>${_ktKacir(k.sorumlu) || '-'}</td><td>${_ktKacir(k.durum) || '-'}</td>
       <td>${_uygunsuzlukFotoHucresiUret(k)}</td>
     `;
     govde.appendChild(satir);
@@ -848,8 +852,8 @@ function kapananUygunsuzluklariCiz(toplanti) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${k.konuBasligi}</td><td>${gunAyYil(k.tespitTarihi) || '-'}</td><td>${gunAyYil(k.kapanisTarihi) || '-'}</td>
-      <td>${k.bolum || '-'}</td><td>${k.uygunsuzluk || '-'}</td><td>${k.alinanOnlem || '-'}</td><td>${k.sorumlu || '-'}</td>
+      <td>${_ktKacir(k.konuBasligi)}</td><td>${gunAyYil(k.tespitTarihi) || '-'}</td><td>${gunAyYil(k.kapanisTarihi) || '-'}</td>
+      <td>${_ktKacir(k.bolum) || '-'}</td><td>${_ktKacir(k.uygunsuzluk) || '-'}</td><td>${_ktKacir(k.alinanOnlem) || '-'}</td><td>${_ktKacir(k.sorumlu) || '-'}</td>
       <td>${_uygunsuzlukFotoHucresiUret(k)}</td>
     `;
     govde.appendChild(satir);
@@ -875,7 +879,7 @@ function aylikEgitimleriCiz(toplanti) {
   kayitlar.forEach(k => {
     const tarihGoruntu = k.egitimTarihi2 ? `${gunAyYil(k.egitimTarihi)} - ${gunAyYil(k.egitimTarihi2)}` : gunAyYil(k.egitimTarihi);
     const satir = document.createElement('tr');
-    satir.innerHTML = `<td>${k.siraNo}</td><td>${k.egitimAdi}</td><td>${tarihGoruntu || '-'}</td><td>${k.katilimciSayisi}</td><td>${k.birim || '-'}</td>`;
+    satir.innerHTML = `<td>${k.siraNo}</td><td>${_ktKacir(k.egitimAdi)}</td><td>${tarihGoruntu || '-'}</td><td>${k.katilimciSayisi}</td><td>${_ktKacir(k.birim) || '-'}</td>`;
     govde.appendChild(satir);
   });
 }
@@ -898,7 +902,7 @@ function ayIciFaaliyetleriCiz() {
   faaliyetler.forEach(f => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${f.faaliyet}</td><td>${f.adet || '-'}</td><td>${f.aciklama || '-'}</td>
+      <td>${_ktKacir(f.faaliyet)}</td><td>${f.adet || '-'}</td><td>${_ktKacir(f.aciklama) || '-'}</td>
       <td><button class="tablo-buton sil" data-sil="${f.id}">Sil</button></td>
     `;
     govde.appendChild(satir);

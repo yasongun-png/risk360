@@ -9,6 +9,10 @@ function mtRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+function _mtKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function malzemeTalepSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.addEventListener('click', () => mtGorunumDegistir(btn.getAttribute('data-sekme')));
@@ -136,7 +140,7 @@ function malzemePickerCiz(aramaMetni) {
   const kutu = document.getElementById('malzemePicker');
   const liste = malzemeleriGetir(aramaMetni, { aktifMi: 'Aktif' });
   kutu.innerHTML = liste.map(m =>
-    `<button type="button" class="tablo-buton" style="display:block; width:100%; text-align:left; margin-bottom:4px;" data-pick="${m.id}"><b>${m.ad}</b> <span style="color:var(--metin-soluk); font-size:11px;">${m.kod ? m.kod + ' · ' : ''}${m.kategori || ''} · ${m.birim}</span></button>`
+    `<button type="button" class="tablo-buton" style="display:block; width:100%; text-align:left; margin-bottom:4px;" data-pick="${m.id}"><b>${_mtKacir(m.ad)}</b> <span style="color:var(--metin-soluk); font-size:11px;">${m.kod ? _mtKacir(m.kod) + ' · ' : ''}${_mtKacir(m.kategori) || ''} · ${_mtKacir(m.birim)}</span></button>`
   ).join('') || '<div class="bos-durum gorunur">Kayıt yok.</div>';
   kutu.querySelectorAll('[data-pick]').forEach(btn => btn.addEventListener('click', () => malzemeSec(btn.getAttribute('data-pick'))));
 }
@@ -164,23 +168,23 @@ function secilenMalzemeleriCiz() {
   kutu.innerHTML = _mtSecilenMalzemeler.map((m, i) => `
     <div class="kart" style="margin-bottom:8px; padding:10px;" data-si="${i}">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <b>${i + 1}. ${m.ad}</b>
+        <b>${i + 1}. ${_mtKacir(m.ad)}</b>
         <button type="button" class="tablo-buton sil" data-rm="${i}">Sil</button>
       </div>
       <div class="form-satir-ikili" style="margin-top:6px;">
         <div><label style="font-size:11px;">Miktar</label><input type="number" min="0.01" step="0.01" data-f="miktar" value="${m.miktar}"></div>
-        <div><label style="font-size:11px;">Birim</label><input type="text" data-f="birim" value="${m.birim}"></div>
+        <div><label style="font-size:11px;">Birim</label><input type="text" data-f="birim" value="${_mtKacir(m.birim)}"></div>
       </div>
       <div class="form-satir-ikili">
-        <div><label style="font-size:11px;">Renk</label><input type="text" data-f="renk" value="${m.renk}"></div>
-        <div><label style="font-size:11px;">Beden</label><input type="text" data-f="beden" value="${m.beden}"></div>
+        <div><label style="font-size:11px;">Renk</label><input type="text" data-f="renk" value="${_mtKacir(m.renk)}"></div>
+        <div><label style="font-size:11px;">Beden</label><input type="text" data-f="beden" value="${_mtKacir(m.beden)}"></div>
       </div>
       <div class="form-satir-ikili">
-        <div><label style="font-size:11px;">Numara</label><input type="text" data-f="numara" value="${m.numara}"></div>
-        <div><label style="font-size:11px;">Marka / Model</label><input type="text" data-f="marka" value="${m.marka}"></div>
+        <div><label style="font-size:11px;">Numara</label><input type="text" data-f="numara" value="${_mtKacir(m.numara)}"></div>
+        <div><label style="font-size:11px;">Marka / Model</label><input type="text" data-f="marka" value="${_mtKacir(m.marka)}"></div>
       </div>
-      <label style="font-size:11px;">Açıklama</label><input type="text" data-f="aciklama" value="${m.aciklama}">
-      ${m.altKalemler.length ? `<div style="margin-top:6px;">${m.altKalemler.map((s, j) => `<label style="margin-right:10px; font-weight:400; font-size:12px;"><input type="checkbox" data-sub="${j}" style="width:auto;" ${m.seciliAltKalemler.includes(s) ? 'checked' : ''}> ${s}</label>`).join('')}</div>` : ''}
+      <label style="font-size:11px;">Açıklama</label><input type="text" data-f="aciklama" value="${_mtKacir(m.aciklama)}">
+      ${m.altKalemler.length ? `<div style="margin-top:6px;">${m.altKalemler.map((s, j) => `<label style="margin-right:10px; font-weight:400; font-size:12px;"><input type="checkbox" data-sub="${j}" style="width:auto;" ${m.seciliAltKalemler.includes(s) ? 'checked' : ''}> ${_mtKacir(s)}</label>`).join('')}</div>` : ''}
     </div>
   `).join('');
 
@@ -346,9 +350,9 @@ function takipListesiniCiz(aramaMetni) {
     satir.innerHTML = `
       <td>${t.belgeNo}</td>
       <td>${gunAyYil(t.talepTarihi)}</td>
-      <td>${t.konu}</td>
-      <td>${t.talepEdenBirim || '-'}</td>
-      <td>${t.aciliyet}</td>
+      <td>${_mtKacir(t.konu)}</td>
+      <td>${_mtKacir(t.talepEdenBirim) || '-'}</td>
+      <td>${_mtKacir(t.aciliyet)}</td>
       <td>
         <select data-durum="${t.id}" style="width:auto; margin:0; font-size:12px;">
           ${MALZEME_TALEP_DURUMLARI.map(d => `<option ${t.durum === d ? 'selected' : ''}>${d}</option>`).join('')}
@@ -458,10 +462,10 @@ function katalogListesiniCiz(aramaMetni) {
   liste.forEach(m => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${m.kod || '-'}</td>
-      <td>${m.ad}</td>
-      <td>${m.kategori || '-'}</td>
-      <td>${m.birim}</td>
+      <td>${_mtKacir(m.kod) || '-'}</td>
+      <td>${_mtKacir(m.ad)}</td>
+      <td>${_mtKacir(m.kategori) || '-'}</td>
+      <td>${_mtKacir(m.birim)}</td>
       <td><span class="genel-rozet rozet-${mtRozetSinifAdi(m.aktifMi ? 'Aktif' : 'Pasif')}">${m.aktifMi ? 'Aktif' : 'Pasif'}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${m.id}">Düzenle</button>

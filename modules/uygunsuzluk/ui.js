@@ -475,16 +475,16 @@ function kayitlariCiz(aramaMetni) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${k.aksiyonNo}</td>
-      <td>${k.bolum}</td>
+      <td>${_usKacir(k.aksiyonNo)}</td>
+      <td>${_usKacir(k.bolum)}</td>
       <td>${gunAyYil(k.bildirimTarihi) || '-'}</td>
       <td>${_usTanimHucresiUret(k)}</td>
-      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.riskSeviyesi)}">${k.riskSeviyesi}</span></td>
+      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.riskSeviyesi)}">${_usKacir(k.riskSeviyesi)}</span></td>
       <td>${gunAyYil(k.termin) || '-'}</td>
-      <td>${k.sorumlu}</td>
+      <td>${_usKacir(k.sorumlu)}</td>
       <td>${_usFotoHucresiUret(k.fotoOncesi, 'Öncesi')}</td>
       <td>${_usFotoHucresiUret(k.fotoSonrasi, 'Sonrası')}</td>
-      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.durumGoruntu)}">${k.durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.durumGoruntu)}">${_usKacir(k.durumGoruntu)}</span></td>
       <td>${gunAyYil(k.kapanisTarihi) || '-'}</td>
       <td><div class="us-kapanis-hucre" title="${_usKacir(k.kanitAciklamasi || '')}">${_usKacir(k.kanitAciklamasi) || '-'}</div></td>
       <td>${_islemButonlariUret(k)}</td>

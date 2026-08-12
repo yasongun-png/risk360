@@ -40,13 +40,13 @@
       window.location.href = 'firma-sec.html';
     }
 
-    document.getElementById('girisForm').addEventListener('submit', function (e) {
+    document.getElementById('girisForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       const kullaniciAdi = document.getElementById('kullaniciAdi').value;
       const sifre = document.getElementById('sifre').value;
       const hataMesaji = document.getElementById('hataMesaji');
 
-      const sonuc = girisYap(kullaniciAdi, sifre);
+      const sonuc = await girisYap(kullaniciAdi, sifre);
       if (!sonuc.basarili) {
         hataMesaji.textContent = sonuc.hata;
         hataMesaji.classList.add('gorunur');

@@ -8,9 +8,16 @@ function getFirmalar() {
   return tumFirmalar.filter(f => f.sahipId === kullanici.id);
 }
 
+// Firmayı SADECE oturumdaki kullanıcı sahibiyse döndürür — aksi halde localStorage
+// (ör. isg_aktif_firma) üzerinden başka bir kullanıcının firmaId'sini vermek,
+// o firmanın verisine erişim için yeterli olurdu (bkz. aktifFirmaAyarla,
+// tenantAnahtarFirma). Aynı kullanıcının yönettiği farklı bir firmaya
+// (ör. olay-kaza modülünde çapraz firma kopyalama) erişim hâlâ mümkündür.
 function getFirmaById(firmaId) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return null;
   const tumFirmalar = oku('isg_firmalar', []);
-  return tumFirmalar.find(f => f.id === firmaId) || null;
+  return tumFirmalar.find(f => f.id === firmaId && f.sahipId === kullanici.id) || null;
 }
 
 function firmaEkle(ad, kullaniciId, tehlikeSinifi, sektor) {
@@ -215,6 +222,9 @@ function firmaSil(firmaId) {
 }
 
 function aktifFirmaAyarla(firmaId) {
+  // Sahiplik kontrolü: kullanıcı yalnızca kendi firmalarından birini aktif
+  // firma yapabilir (bkz. getFirmaById).
+  if (!getFirmaById(firmaId)) return;
   localStorage.setItem('isg_aktif_firma', firmaId);
 }
 

@@ -34,6 +34,10 @@
   <script src="core/auth.js"></script>
   <script src="core/tenant.js"></script>
   <script>
+    function _dbKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
     const kullanici = girisGerekli();
 
     const MODULLER = [
@@ -74,7 +78,7 @@
         window.location.href = 'firma-sec.html';
       } else {
         const rozet = document.getElementById('aktifFirmaRozeti');
-        rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${aktifFirma.ad}`;
+        rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${_dbKacir(aktifFirma.ad)}`;
 
         const grid = document.getElementById('modulGrid');
         MODULLER.forEach(modul => {

@@ -97,14 +97,17 @@ async function _kaydiDigerFirmayaKopyala(personelFirmaId, yeniKayit) {
 // KAYNAK_TURLERI) ama hiçbir modül bunu otomatik tetiklemiyordu — bu ilk
 // gerçek entegrasyon. Aynı firma içinde (cross-firma değil) olduğu için
 // düz uygunsuzlukEkle() yeterlidir, buyukVeriFirmadanOku gerekmez.
+// Döner: başarısız olan (sessizce kaybolmaması gereken) aksiyon aktarımlarını
+// açıklayan uyarı metinleri dizisi — çağıran, bunu kullanıcıya göstermelidir.
 function _aksiyonlariUygunsuzluguYaz(aksiyonlar, olayKaydi) {
-  if (typeof uygunsuzlukEkle !== 'function' || !Array.isArray(aksiyonlar) || !aksiyonlar.length) return;
+  if (typeof uygunsuzlukEkle !== 'function' || !Array.isArray(aksiyonlar) || !aksiyonlar.length) return [];
   const fkRP = fineKinneyPuaniHesapla(olayKaydi);
   const riskSeviyesi = fkRP == null ? 'Orta' : fkRP < 20 ? 'Düşük' : fkRP < 70 ? 'Orta' : fkRP < 200 ? 'Yüksek' : 'Çok Yüksek';
 
+  const uyarilar = [];
   aksiyonlar.forEach(a => {
     if (!a.baslik && !a.duzelticiFaaliyet) return;
-    uygunsuzlukEkle({
+    const sonuc = uygunsuzlukEkle({
       baslik: a.baslik || a.duzelticiFaaliyet,
       aciklama: [a.duzelticiFaaliyet, olayKaydi.kayitNo ? ('Kaynak: Olay/Kaza ' + olayKaydi.kayitNo) : ''].filter(Boolean).join(' — '),
       bolum: olayKaydi.bolum,
@@ -117,7 +120,11 @@ function _aksiyonlariUygunsuzluguYaz(aksiyonlar, olayKaydi) {
       termin: a.termin,
       yasalDayanak: olayKaydi.ilgiliMevzuat || ''
     });
+    if (!sonuc || !sonuc.basarili) {
+      uyarilar.push('"' + (a.baslik || a.duzelticiFaaliyet) + '" aksiyonu Uygunsuzluk kaydına işlenemedi.');
+    }
   });
+  return uyarilar;
 }
 
 // Olayın kendisi, Risk Değerlendirmesi modülüne "İş Kazaları" sabit bölümü
@@ -137,13 +144,14 @@ function _olayTipineGoreVarsayilanSiddet(olayTipi) {
   return harita[olayTipi] || 7;
 }
 
+// Döner: başarısızsa kullanıcıya gösterilecek bir uyarı metni, başarılıysa null.
 function _kaydiRiskeYaz(olayKaydi) {
-  if (typeof riskEkle !== 'function') return;
+  if (typeof riskEkle !== 'function') return null;
   const o = olayKaydi.fkO || 3;
   const f = olayKaydi.fkF || 1;
   const s = olayKaydi.fkS || _olayTipineGoreVarsayilanSiddet(olayKaydi.olayTipi);
 
-  riskEkle({
+  const sonuc = riskEkle({
     yontem: 'Fine-Kinney',
     bolum: 'İş Kazaları',
     yer: olayKaydi.kazaYeri,
@@ -160,6 +168,7 @@ function _kaydiRiskeYaz(olayKaydi) {
     tespit: olayKaydi.hazirlayanAdi,
     durum: 'Açık'
   });
+  return (sonuc && sonuc.basarili) ? null : 'Kayıt Risk Değerlendirmesi modülüne işlenemedi.';
 }
 
 function olayKaydiEkle(veriler) {
@@ -175,10 +184,14 @@ function olayKaydiEkle(veriler) {
     _kaydiDigerFirmayaKopyala(veriler.personelFirmaId, yeniKayit);
   }
 
-  _aksiyonlariUygunsuzluguYaz(yeniKayit.aksiyonlar, yeniKayit);
-  _kaydiRiskeYaz(yeniKayit);
+  // Bu iki aktarım (Uygunsuzluk/DÖF ve Risk Değerlendirmesi) başarısız olursa
+  // artık sessizce kaybolmaz — uyarı olarak sonuçta döner, çağıran (ui.js)
+  // kullanıcıyı bilgilendirir; asıl olay/kaza kaydı yine de kaydedilmiş sayılır.
+  const uyarilar = _aksiyonlariUygunsuzluguYaz(yeniKayit.aksiyonlar, yeniKayit);
+  const riskUyarisi = _kaydiRiskeYaz(yeniKayit);
+  if (riskUyarisi) uyarilar.push(riskUyarisi);
 
-  return { basarili: true, kayit: yeniKayit };
+  return { basarili: true, kayit: yeniKayit, uyarilar: uyarilar.length ? uyarilar : undefined };
 }
 
 function olayKaydiGuncelle(id, veriler) {

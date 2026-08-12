@@ -5,6 +5,10 @@ let _duzenlenenKayitId = null;
 let _sjFirma = null;
 let _sertifikaKayitId = null;
 
+function _sjKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function sertifikaAyarModalAc(id) {
   const stajyer = stajyerIdIleGetirRepo(id);
   if (!stajyer || !stajyer.isgEgitimTarihi) {
@@ -156,14 +160,14 @@ function kayitlariCiz(aramaMetni) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${k.stajNo}</td>
-      <td>${k.adSoyad}</td>
-      <td>${k.bolum}</td>
-      <td>${k.okul}</td>
-      <td>${k.stajTuru}</td>
+      <td>${_sjKacir(k.stajNo)}</td>
+      <td>${_sjKacir(k.adSoyad)}</td>
+      <td>${_sjKacir(k.bolum)}</td>
+      <td>${_sjKacir(k.okul)}</td>
+      <td>${_sjKacir(k.stajTuru)}</td>
       <td>${k.baslangicTarihi} → ${k.bitisTarihi}</td>
-      <td><span class="genel-rozet rozet-${sjRozetSinifAdi(k.durumGoruntu)}">${k.durumGoruntu}</span></td>
-      <td><span class="genel-rozet rozet-${sjRozetSinifAdi(k.isgEgitimDurumu)}">${k.isgEgitimDurumu}</span></td>
+      <td><span class="genel-rozet rozet-${sjRozetSinifAdi(k.durumGoruntu)}">${_sjKacir(k.durumGoruntu)}</span></td>
+      <td><span class="genel-rozet rozet-${sjRozetSinifAdi(k.isgEgitimDurumu)}">${_sjKacir(k.isgEgitimDurumu)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         ${k.isgEgitimTarihi ? `<button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>` : ''}
@@ -199,7 +203,7 @@ function kayitModalAc(kayit) {
 
   const personeller = personelleriGetir('', false);
   document.getElementById('sorumluPersonelId').innerHTML = '<option value="">— Seçilmedi —</option>' +
-    personeller.map(p => `<option value="${p.id}" ${kayit && kayit.sorumluPersonelId === p.id ? 'selected' : ''}>${p.adSoyad}</option>`).join('');
+    personeller.map(p => `<option value="${p.id}" ${kayit && kayit.sorumluPersonelId === p.id ? 'selected' : ''}>${_sjKacir(p.adSoyad)}</option>`).join('');
   document.getElementById('sorumluAdi').value = kayit ? kayit.sorumluAdi : '';
 
   document.getElementById('baslangicTarihi').value = kayit ? kayit.baslangicTarihi : '';
@@ -286,7 +290,7 @@ function ozetiCiz() {
     <div class="kart" style="margin-bottom:14px;">
       <div class="card-title" style="margin-bottom:8px;"><h3 style="margin:0; font-size:14px;">${baslik}</h3></div>
       ${satirlar.length
-        ? satirlar.map(([k, v]) => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--kenarlik);"><span>${k}</span><strong>${v}</strong></div>`).join('')
+        ? satirlar.map(([k, v]) => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--kenarlik);"><span>${_sjKacir(k)}</span><strong>${v}</strong></div>`).join('')
         : '<div class="bos-durum gorunur">Veri yok.</div>'}
     </div>
   `;
@@ -312,7 +316,7 @@ function ozetiCiz() {
       <table class="veri-tablosu">
         <thead><tr><th>Staj No</th><th>Ad Soyad</th><th>Bölüm</th><th>Bitiş Tarihi</th></tr></thead>
         <tbody>
-          ${ozet.yakindaBitecekler.map(k => `<tr><td>${k.stajNo}</td><td>${k.adSoyad}</td><td>${k.bolum}</td><td>${k.bitisTarihi}</td></tr>`).join('') || '<tr><td colspan="4">Yaklaşan bitiş yok.</td></tr>'}
+          ${ozet.yakindaBitecekler.map(k => `<tr><td>${_sjKacir(k.stajNo)}</td><td>${_sjKacir(k.adSoyad)}</td><td>${_sjKacir(k.bolum)}</td><td>${k.bitisTarihi}</td></tr>`).join('') || '<tr><td colspan="4">Yaklaşan bitiş yok.</td></tr>'}
         </tbody>
       </table>
     </div>

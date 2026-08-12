@@ -408,6 +408,10 @@ function _bolumFiltreDoldur() {
     bolumler.map(b => `<option value="${b.ad}" ${b.ad === seciliDeger ? 'selected' : ''}>${b.ad}</option>`).join('');
 }
 
+function _riskKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
@@ -428,23 +432,23 @@ function kayitlariCiz(aramaMetni) {
   riskler.forEach(r => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${r.riskNo}</td>
-      <td>${r.yontem}</td>
-      <td>${r.bolum}</td>
-      <td>${r.yer}</td>
-      <td>${r.tehlike}</td>
-      <td>${r.risk}</td>
-      <td>${r.onlem || '-'}</td>
+      <td>${_riskKacir(r.riskNo)}</td>
+      <td>${_riskKacir(r.yontem)}</td>
+      <td>${_riskKacir(r.bolum)}</td>
+      <td>${_riskKacir(r.yer)}</td>
+      <td>${_riskKacir(r.tehlike)}</td>
+      <td>${_riskKacir(r.risk)}</td>
+      <td>${_riskKacir(r.onlem) || '-'}</td>
       <td>${r.RP1}</td>
-      <td><span class="duzey-rozet duzey-${duzeySinifAdi(r.duzey1)}">${r.duzey1}</span></td>
+      <td><span class="duzey-rozet duzey-${duzeySinifAdi(r.duzey1)}">${_riskKacir(r.duzey1)}</span></td>
       <td>${_riskFotoHucresiUret(r.fotoOncesi, 'Öncesi')}</td>
-      <td>${r.planlanan || '-'}</td>
+      <td>${_riskKacir(r.planlanan) || '-'}</td>
       <td>${r.RP2 !== null ? r.RP2 : '-'}</td>
-      <td>${r.azalma || '-'}</td>
+      <td>${_riskKacir(r.azalma) || '-'}</td>
       <td>${_riskFotoHucresiUret(r.fotoSonrasi, 'Sonrası')}</td>
-      <td>${r.sorumlu || '-'}</td>
-      <td>${r.termin || '-'}</td>
-      <td>${r.durumGoruntu}</td>
+      <td>${_riskKacir(r.sorumlu) || '-'}</td>
+      <td>${_riskKacir(r.termin) || '-'}</td>
+      <td>${_riskKacir(r.durumGoruntu)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${r.id}">Düzenle</button>
         <button class="tablo-buton" data-sablon-yap="${r.id}" title="Bu kaydı hazır şablon olarak kaydet">⭐ Şablon Yap</button>

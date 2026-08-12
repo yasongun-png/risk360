@@ -8,6 +8,10 @@ function izRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+function _izKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function izinSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.addEventListener('click', () => izGorunumDegistir(btn.getAttribute('data-sekme')));
@@ -120,15 +124,15 @@ function izinleriCiz(aramaMetni) {
     islemler.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
 
     satir.innerHTML = `
-      <td>${k.izinNo}</td>
-      <td>${k.izinTuru}</td>
-      <td>${k.isTanimi}</td>
-      <td>${[k.bolum, k.lokasyon].filter(Boolean).join(' / ') || '-'}</td>
+      <td>${_izKacir(k.izinNo)}</td>
+      <td>${_izKacir(k.izinTuru)}</td>
+      <td>${_izKacir(k.isTanimi)}</td>
+      <td>${_izKacir([k.bolum, k.lokasyon].filter(Boolean).join(' / ') || '-')}</td>
       <td>${_izTarihSaatGoruntu(k.baslangic)}</td>
       <td>${_izTarihSaatGoruntu(k.bitis)}</td>
-      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.riskSeviyesi)}">${k.riskSeviyesi}</span></td>
-      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.durumGoruntu)}">${k.durumGoruntu}</span> <span style="font-size:11px; color:var(--metin-soluk);">%${k.tamamlanmaOrani}</span></td>
-      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.onayDurumu)}">${k.onayDurumu}</span></td>
+      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.riskSeviyesi)}">${_izKacir(k.riskSeviyesi)}</span></td>
+      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.durumGoruntu)}">${_izKacir(k.durumGoruntu)}</span> <span style="font-size:11px; color:var(--metin-soluk);">%${k.tamamlanmaOrani}</span></td>
+      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.onayDurumu)}">${_izKacir(k.onayDurumu)}</span></td>
       <td>${islemler.join(' ')}</td>
     `;
     govde.appendChild(satir);
@@ -139,18 +143,16 @@ function izinleriCiz(aramaMetni) {
     try { await izinFormunuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-onay]').forEach(btn => btn.addEventListener('click', () => {
-    const ad = prompt('Onaylayan ad soyad:', '');
-    if (ad === null || !ad.trim()) return;
     const rol = prompt('Onaylayanın rolü:', '') || '';
-    izinOnayVer(btn.getAttribute('data-onay'), ad, rol);
+    const sonuc = izinOnayVer(btn.getAttribute('data-onay'), rol);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
     izinleriCiz(document.getElementById('izinAramaKutusu').value);
     izOzetiCiz();
   }));
   govde.querySelectorAll('[data-red]').forEach(btn => btn.addEventListener('click', () => {
-    const ad = prompt('Reddeden ad soyad:', '');
-    if (ad === null || !ad.trim()) return;
     const sebep = prompt('Red sebebi:', '') || '';
-    izinReddet(btn.getAttribute('data-red'), ad, '', sebep);
+    const sonuc = izinReddet(btn.getAttribute('data-red'), '', sebep);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
     izinleriCiz(document.getElementById('izinAramaKutusu').value);
     izOzetiCiz();
   }));
@@ -205,8 +207,13 @@ function izinModalAc(kayit) {
   document.getElementById('izEnerjiIzolasyonu').value = izo.enerjiIzolasyonu;
   document.getElementById('izKorlemeListesi').value = izo.korlemeListesi;
 
+  // Salt-okunur bilgi amaçlı: onayDurumu/durum bu formdan gönderilmez, sadece
+  // Onay Ver/Reddet/Aktifleştir/Durdur/Kapat aksiyonlarıyla değişir (bkz.
+  // izinGuncelle) — bu yüzden alanlar devre dışı bırakılır.
   document.getElementById('izOnayDurumu').innerHTML = IS_IZNI_ONAY_DURUMLARI.map(o => `<option ${kayit && kayit.onayDurumu === o ? 'selected' : ''}>${o}</option>`).join('');
-  document.getElementById('izDurum').innerHTML = IS_IZNI_DURUMLARI.map(d => `<option ${kayit && kayit.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('izOnayDurumu').disabled = true;
+  document.getElementById('izDurum').innerHTML = IS_IZNI_DURUMLARI.map(d => `<option ${(kayit ? kayit.durum : 'Taslak') === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('izDurum').disabled = true;
   document.getElementById('izNotlar').value = kayit ? kayit.notlar : '';
 
   document.querySelectorAll('#izinForm .alan-hatasi').forEach(el => el.textContent = '');
@@ -262,8 +269,6 @@ function izinFormGonderildi(e) {
       enerjiIzolasyonu: document.getElementById('izEnerjiIzolasyonu').value,
       korlemeListesi: document.getElementById('izKorlemeListesi').value
     },
-    onayDurumu: document.getElementById('izOnayDurumu').value,
-    durum: document.getElementById('izDurum').value,
     notlar: document.getElementById('izNotlar').value
   };
 

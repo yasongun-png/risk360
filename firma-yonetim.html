@@ -96,6 +96,10 @@
   <script src="core/auth.js"></script>
   <script src="core/tenant.js"></script>
   <script>
+    function _fyKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
     const session = girisGerekli();
     let kullanici;
 
@@ -160,9 +164,9 @@
         satir.innerHTML = `
           <div class="sol">
             ${firmaLogoGetir(firma.id)
-              ? `<img src="${firmaLogoGetir(firma.id)}" style="width:34px; height:34px; border-radius:8px; object-fit:contain; background:#fff; border:1px solid var(--kenarlik);">`
-              : `<div class="rozet" style="background:${firma.renk}">${kisaAd}</div>`}
-            <span>${firma.ad}</span>
+              ? `<img src="${_fyKacir(firmaLogoGetir(firma.id))}" style="width:34px; height:34px; border-radius:8px; object-fit:contain; background:#fff; border:1px solid var(--kenarlik);">`
+              : `<div class="rozet" style="background:${firma.renk}">${_fyKacir(kisaAd)}</div>`}
+            <span>${_fyKacir(firma.ad)}</span>
             <select class="tehlike-sinifi-sec" data-tehlike="${firma.id}" style="width:auto; margin:0; font-size:12px; padding:6px 8px;">
               ${TEHLIKE_SINIFLARI.map(s => `<option value="${s}" ${s === firma.tehlikeSinifi ? 'selected' : ''}>${s}</option>`).join('')}
             </select>

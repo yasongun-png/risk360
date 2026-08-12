@@ -7,6 +7,10 @@ let _seciliKayitIdleri = new Set();
 let _sertifikaKayitId = null;
 let _topluSeciliPersonelIdleri = new Set();
 
+function _egKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function sertifikaAyarModalAc(id) {
   const kayit = egitimKaydiIdIleGetirRepo(id);
   if (!kayit || !_aktifFirma) return;
@@ -422,7 +426,7 @@ function _topluPersonelListesiCiz(aramaMetni) {
     kutu.innerHTML = personeller.map(p => `
       <label style="display:flex; align-items:center; gap:8px; padding:4px 2px; cursor:pointer;">
         <input type="checkbox" data-toplu-personel="${p.id}" style="width:auto;" ${_topluSeciliPersonelIdleri.has(p.id) ? 'checked' : ''}>
-        <span>${p.adSoyad} (${p.sicilNo})${p.isveren ? ' — ' + p.isveren : ''}</span>
+        <span>${_egKacir(p.adSoyad)} (${_egKacir(p.sicilNo)})${p.isveren ? ' — ' + _egKacir(p.isveren) : ''}</span>
       </label>
     `).join('');
     kutu.querySelectorAll('[data-toplu-personel]').forEach(kutucuk => {
@@ -448,7 +452,7 @@ function _topluSeciliSayisiGuncelle(gorunenler) {
 function topluModalAc() {
   _topluSeciliPersonelIdleri.clear();
   document.getElementById('topluForm').reset();
-  document.getElementById('topluTuruId').innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${t.ad}</option>`).join('');
+  document.getElementById('topluTuruId').innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${_egKacir(t.ad)}</option>`).join('');
   topluTurAlanlariniGuncelle();
   document.getElementById('topluPersonelArama').value = '';
   _topluPersonelListesiCiz('');
@@ -515,7 +519,7 @@ function _ozelTurListesiCiz() {
   }
   kutu.innerHTML = liste.map(t => `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
-      <span>${t.ad} <span style="color:var(--metin-soluk); font-size:12px;">(${t.yil} yıl geçerli)</span></span>
+      <span>${_egKacir(t.ad)} <span style="color:var(--metin-soluk); font-size:12px;">(${t.yil} yıl geçerli)</span></span>
       <button type="button" class="tablo-buton sil" data-ozel-tur-sil="${t.id}">Sil</button>
     </div>
   `).join('');
@@ -706,13 +710,13 @@ function personelSecimleriniDoldur(aramaMetni, seciliId) {
   const personeller = _personelSirali().filter(p =>
     !kucuk || p.adSoyad.toLocaleLowerCase('tr-TR').includes(kucuk) || p.sicilNo.toLowerCase().includes(kucuk)
   );
-  secim.innerHTML = personeller.map(p => `<option value="${p.id}">${p.adSoyad} (${p.sicilNo})${p.isveren ? ' — ' + p.isveren : ''}</option>`).join('');
+  secim.innerHTML = personeller.map(p => `<option value="${p.id}">${_egKacir(p.adSoyad)} (${_egKacir(p.sicilNo)})${p.isveren ? ' — ' + _egKacir(p.isveren) : ''}</option>`).join('');
   if (seciliId && personeller.some(p => p.id === seciliId)) secim.value = seciliId;
 }
 
 function turSecimleriniDoldur() {
   const secim = document.getElementById('egitimTuruId');
-  secim.innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${t.ad}</option>`).join('');
+  secim.innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${_egKacir(t.ad)}</option>`).join('');
   turAlanlariniGuncelle();
 }
 
@@ -761,10 +765,10 @@ function kayitTablosunuCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" class="satir-secim" data-secim="${k.id}" ${_seciliKayitIdleri.has(k.id) ? 'checked' : ''}></td>
-      <td>${k.personelAdi}${k.personelIsveren ? ` <span style="font-size:11px; color:var(--metin-soluk);">(${k.personelIsveren})</span>` : ''}</td>
-      <td>${k.turAdi}${k.aciklama ? ' — ' + k.aciklama : ''}</td>
+      <td>${_egKacir(k.personelAdi)}${k.personelIsveren ? ` <span style="font-size:11px; color:var(--metin-soluk);">(${_egKacir(k.personelIsveren)})</span>` : ''}</td>
+      <td>${_egKacir(k.turAdi)}${k.aciklama ? ' — ' + _egKacir(k.aciklama) : ''}</td>
       <td>${k.tarih2 ? _egitimTarihGoruntu(k.tarih) + ' - ' + _egitimTarihGoruntu(k.tarih2) : _egitimTarihGoruntu(k.tarih)}</td>
-      <td>${k.saat || '-'}</td>
+      <td>${_egKacir(k.saat) || '-'}</td>
       <td>${k.bitisTarihi ? _egitimTarihGoruntu(k.bitisTarihi) : '-'}</td>
       <td><span class="durum-rozet durum-${k.durum}">${DURUM_METIN[k.durum]}</span></td>
       <td>
@@ -842,10 +846,10 @@ function durumTablosunuCiz() {
     return;
   }
 
-  const basliklar = egitimTurleriTumu().map(t => `<th>${t.ad}</th>`).join('');
+  const basliklar = egitimTurleriTumu().map(t => `<th>${_egKacir(t.ad)}</th>`).join('');
   const govde = satirlar.map(satir => `
     <tr>
-      <td>${satir.personelAdi}${satir.personelIsveren ? ` <span style="font-size:11px; color:var(--metin-soluk);">(${satir.personelIsveren})</span>` : ''}</td>
+      <td>${_egKacir(satir.personelAdi)}${satir.personelIsveren ? ` <span style="font-size:11px; color:var(--metin-soluk);">(${_egKacir(satir.personelIsveren)})</span>` : ''}</td>
       ${satir.hucreler.map(h => `
         <td>
           <span class="durum-rozet durum-${h.durum}" title="${h.sonTarih ? 'Son: ' + _egitimTarihGoruntu(h.sonTarih) : ''}">${DURUM_METIN[h.durum]}</span>

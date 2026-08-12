@@ -4,6 +4,10 @@ function maRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+function _maKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function merkeziAksiyonSayfasiniBaslat() {
   document.getElementById('maKaynakFiltre').innerHTML += MERKEZI_AKSIYON_KAYNAKLARI.map(k => `<option>${k}</option>`).join('');
 
@@ -67,12 +71,12 @@ function maListesiniCiz(aramaMetni) {
     const satir = document.createElement('tr');
     const durumGoruntu = s.gecikmisMi ? 'Gecikmiş' : (s.yaklasiyorMu ? 'Yaklaşıyor' : s.durum);
     satir.innerHTML = `
-      <td>${s.kaynakModul}</td>
-      <td>${s.kaynakNo}</td>
-      <td>${s.baslik}</td>
-      <td>${s.sorumlu}</td>
+      <td>${_maKacir(s.kaynakModul)}</td>
+      <td>${_maKacir(s.kaynakNo)}</td>
+      <td>${_maKacir(s.baslik)}</td>
+      <td>${_maKacir(s.sorumlu)}</td>
       <td>${gunAyYil(s.termin) || '-'}</td>
-      <td><span class="genel-rozet rozet-${maRozetSinifAdi(durumGoruntu)}">${durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${maRozetSinifAdi(durumGoruntu)}">${_maKacir(durumGoruntu)}</span></td>
       <td><a class="tablo-buton" href="${s.baglanti}" style="text-decoration:none; display:inline-block;">İncele</a></td>
     `;
     govde.appendChild(satir);

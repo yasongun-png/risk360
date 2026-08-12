@@ -9,6 +9,10 @@ function pkRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+function _pkKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function periyodikSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.addEventListener('click', () => pkGorunumDegistir(btn.getAttribute('data-sekme')));
@@ -125,13 +129,13 @@ function ekipmanlariCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${e.ekipmanNo}</td>
-      <td>${e.ad}</td>
-      <td>${e.kategori}</td>
-      <td>${[e.bolum, e.lokasyon].filter(Boolean).join(' / ') || '-'}</td>
+      <td>${_pkKacir(e.ad)}</td>
+      <td>${_pkKacir(e.kategori)}</td>
+      <td>${_pkKacir([e.bolum, e.lokasyon].filter(Boolean).join(' / ')) || '-'}</td>
       <td>${e.periyotAy} ay</td>
       <td>${gunAyYil(e.sonKontrolTarihi) || '-'}</td>
       <td>${gunAyYil(e.sonrakiKontrolTarihi) || '-'}</td>
-      <td><span class="genel-rozet rozet-${pkRozetSinifAdi(e.durumGoruntu)}">${e.durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${pkRozetSinifAdi(e.durumGoruntu)}">${_pkKacir(e.durumGoruntu)}</span></td>
       <td>
         <button class="tablo-buton" data-kontrol-ekle="${e.id}">Kontrol Ekle</button>
         <button class="tablo-buton" data-gecmis="${e.id}">Geçmiş</button>
@@ -294,13 +298,13 @@ function kontrolleriCiz(aramaMetni) {
   liste.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${k.ekipmanAdi} <span style="color:var(--metin-soluk); font-size:11px;">(${k.ekipmanNo})</span></td>
+      <td>${_pkKacir(k.ekipmanAdi)} <span style="color:var(--metin-soluk); font-size:11px;">(${k.ekipmanNo})</span></td>
       <td>${gunAyYil(k.kontrolTarihi)}</td>
-      <td>${k.kontrolTuru}</td>
-      <td>${k.raporNo || '-'}</td>
-      <td>${k.firma}</td>
-      <td>${k.uzman || '-'}</td>
-      <td><span class="genel-rozet rozet-${pkRozetSinifAdi(k.sonuc)}">${k.sonuc}</span></td>
+      <td>${_pkKacir(k.kontrolTuru)}</td>
+      <td>${_pkKacir(k.raporNo) || '-'}</td>
+      <td>${_pkKacir(k.firma)}</td>
+      <td>${_pkKacir(k.uzman) || '-'}</td>
+      <td><span class="genel-rozet rozet-${pkRozetSinifAdi(k.sonuc)}">${_pkKacir(k.sonuc)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
@@ -322,7 +326,7 @@ function kontrolModalAc(kayit, onSecilenEkipmanId) {
   const ekipmanlar = periyodikEkipmanTumunuGetir();
   const seciliId = kayit ? kayit.ekipmanId : (onSecilenEkipmanId || '');
   document.getElementById('koEkipmanId').innerHTML = '<option value="">Seçiniz</option>' +
-    ekipmanlar.map(e => `<option value="${e.id}" ${seciliId === e.id ? 'selected' : ''}>${e.ekipmanNo} - ${e.ad}</option>`).join('');
+    ekipmanlar.map(e => `<option value="${e.id}" ${seciliId === e.id ? 'selected' : ''}>${e.ekipmanNo} - ${_pkKacir(e.ad)}</option>`).join('');
 
   document.getElementById('koKontrolTarihi').value = kayit ? kayit.kontrolTarihi : bugunIso();
   document.getElementById('koKontrolTuru').innerHTML = PERIYODIK_KONTROL_TURLERI.map(t => `<option ${kayit && kayit.kontrolTuru === t ? 'selected' : ''}>${t}</option>`).join('');
@@ -383,7 +387,7 @@ function pkOzetiCiz() {
     <div class="kart" style="margin-bottom:14px;">
       <div class="card-title" style="margin-bottom:8px;"><h3 style="margin:0; font-size:14px;">${baslik}</h3></div>
       ${satirlar.length
-        ? satirlar.map(([k, v]) => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--kenarlik);"><span>${k}</span><strong>${v}</strong></div>`).join('')
+        ? satirlar.map(([k, v]) => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--kenarlik);"><span>${_pkKacir(k)}</span><strong>${v}</strong></div>`).join('')
         : `<div class="bos-durum gorunur">${bosMetin}</div>`}
     </div>
   `;

@@ -659,6 +659,10 @@ async function formGonderildi(e) {
 
   kayitModalKapat();
   kayitlariCiz(document.getElementById('aramaKutusu').value);
+
+  if (sonuc.uyarilar && sonuc.uyarilar.length) {
+    alert('Kayıt kaydedildi, ancak şu aktarımlar tamamlanamadı:\n\n' + sonuc.uyarilar.join('\n'));
+  }
 }
 
 // ==================== RCA İSTATİSTİK ====================

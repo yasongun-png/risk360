@@ -106,13 +106,18 @@
       try {
         return JSON.parse(metin);
       } catch (e) {
-        try {
-          const fn = new Function('return (' + metin + ')');
-          const sonuc = fn();
-          return (sonuc && typeof sonuc === 'object') ? sonuc : null;
-        } catch (e2) {
-          return null;
-        }
+        // Firebase konsolundan kopyalanan snippet'ler genelde geçerli JSON
+        // değildir (ör. "const firebaseConfig = { apiKey: '...', ... };").
+        // Yapıştırılan metni ASLA çalıştırmadan (eval/new Function GÜVENLİ
+        // DEĞİL — kötü niyetli bir "yapılandırma" yapıştırıldığında keyfi kod
+        // çalıştırır), sadece bilinen alan adlarını regex ile çıkarırız.
+        const alanlar = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId', 'measurementId'];
+        const config = {};
+        alanlar.forEach(alan => {
+          const eslesme = metin.match(new RegExp(alan + '\\s*:\\s*["\']([^"\']*)["\']'));
+          if (eslesme) config[alan] = eslesme[1];
+        });
+        return Object.keys(config).length ? config : null;
       }
     }
 
