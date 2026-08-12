@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Firma Yönetimi</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .firma-satir {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--kart-bg);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: var(--golge);
+  }
+  .firma-satir .sol { display: flex; align-items: center; gap: 12px; }
+  .firma-satir .rozet {
+    width: 34px; height: 34px; border-radius: 8px;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .firma-satir .islemler { display: flex; gap: 10px; }
+  .mini-buton {
+    border: none; background: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--celik-mavi);
+    padding: 6px 10px; border-radius: 6px;
+  }
+  .mini-buton.sil { color: var(--hata); }
+  .mini-buton:hover { background: #f0f3f7; }
+  .ekle-form { display: flex; gap: 10px; margin: 20px 0; }
+  .ekle-form input { flex: 1; margin: 0; }
+  .ekle-form button { width: auto; margin: 0; padding: 11px 20px; white-space: nowrap; }
+  .geri-link { font-size: 13px; color: var(--celik-mavi); text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik" style="max-width: 640px;">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Firma Yönetimi</h2>
+    <p style="color:#6b7280; font-size:13px;">
+      İstediğiniz kadar firma tanımlayabilirsiniz. Her firmanın modül verileri
+      birbirinden bağımsız olarak izole tutulur.
+    </p>
+
+    <form class="ekle-form" id="ekleForm">
+      <input type="text" id="yeniFirmaAdi" placeholder="Yeni firma adı (örn. Akme Sanayi A.Ş.)" required>
+      <select id="yeniFirmaTehlikeSinifi" style="max-width:180px;"></select>
+      <select id="yeniFirmaSektor" style="max-width:180px;"></select>
+      <button type="submit" class="birincil">+ Firma Ekle</button>
+    </form>
+
+    <div class="hata-mesaji" id="hataMesaji"></div>
+
+    <div id="firmaListesi"></div>
+  </div>
+
+  <div class="modal-katman" id="bolumlerModalKatman">
+    <div class="modal-kutu">
+      <h3 id="bolumlerModalBaslik">Bölümler</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Her satıra bir bölüm/pozisyon adı yazın (kişi adı değil — ör. "Teknik Hizmetler Müdürlüğü"). Bu liste, Sorumlu alanlarının altında hızlı seçim butonu olarak gösterilir.</p>
+      <textarea id="bolumlerTextarea" rows="14" placeholder="Bakım Onarım Müdürlüğü&#10;Teknik Hizmetler Müdürlüğü&#10;İş Güvenliği Uzmanı"></textarea>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="bolumlerModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="bolumlerModalKaydetBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="isverenlerModalKatman">
+    <div class="modal-kutu">
+      <h3 id="isverenlerModalBaslik">İşverenler</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Aynı sahada birden fazla sicil/tüzel işveren varsa (ör. aynı yerde çalışan ama farklı sicilli birden fazla şirket) her satıra bir işveren adı yazın. Bu liste, Personel kaydındaki "İşveren" alanında seçenek olarak gösterilir.</p>
+      <textarea id="isverenlerTextarea" rows="8" placeholder="Bağfaş Bandırma Gübre Fabrikaları&#10;Bağfaş Servis Pazarlama&#10;Bağfaş Teknik Müteahhitlik"></textarea>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="isverenlerModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="isverenlerModalKaydetBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    const session = girisGerekli();
+    let kullanici;
+
+    if (session) {
+      kullanici = oturumdakiKullanici();
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+
+      const tehlikeSecimi = document.getElementById('yeniFirmaTehlikeSinifi');
+      TEHLIKE_SINIFLARI.forEach(sinif => {
+        const secenek = document.createElement('option');
+        secenek.value = sinif;
+        secenek.textContent = sinif;
+        tehlikeSecimi.appendChild(secenek);
+      });
+
+      const sektorSecimi = document.getElementById('yeniFirmaSektor');
+      SEKTORLER.forEach(sektor => {
+        const secenek = document.createElement('option');
+        secenek.value = sektor;
+        secenek.textContent = sektor;
+        sektorSecimi.appendChild(secenek);
+      });
+
+      renderListe();
+
+      document.getElementById('bolumlerModalIptalBtn').addEventListener('click', () => {
+        document.getElementById('bolumlerModalKatman').classList.remove('acik');
+      });
+      document.getElementById('bolumlerModalKaydetBtn').addEventListener('click', () => {
+        const satirlar = document.getElementById('bolumlerTextarea').value.split('\n');
+        firmaBolumleriAyarla(_duzenlenenBolumlerFirmaId, satirlar);
+        document.getElementById('bolumlerModalKatman').classList.remove('acik');
+      });
+
+      document.getElementById('isverenlerModalIptalBtn').addEventListener('click', () => {
+        document.getElementById('isverenlerModalKatman').classList.remove('acik');
+      });
+      document.getElementById('isverenlerModalKaydetBtn').addEventListener('click', () => {
+        const satirlar = document.getElementById('isverenlerTextarea').value.split('\n');
+        firmaIsverenleriAyarla(_duzenlenenIsverenlerFirmaId, satirlar);
+        document.getElementById('isverenlerModalKatman').classList.remove('acik');
+      });
+    }
+
+    let _duzenlenenBolumlerFirmaId = null;
+    let _duzenlenenIsverenlerFirmaId = null;
+
+    function renderListe() {
+      const liste = document.getElementById('firmaListesi');
+      liste.innerHTML = '';
+      const firmalar = getFirmalar();
+
+      firmalar.forEach(firma => {
+        const kisaAd = firma.ad.split(' ').map(k => k[0]).join('').substring(0, 3).toUpperCase();
+        const satir = document.createElement('div');
+        satir.className = 'firma-satir';
+        satir.innerHTML = `
+          <div class="sol">
+            ${firmaLogoGetir(firma.id)
+              ? `<img src="${firmaLogoGetir(firma.id)}" style="width:34px; height:34px; border-radius:8px; object-fit:contain; background:#fff; border:1px solid var(--kenarlik);">`
+              : `<div class="rozet" style="background:${firma.renk}">${kisaAd}</div>`}
+            <span>${firma.ad}</span>
+            <select class="tehlike-sinifi-sec" data-tehlike="${firma.id}" style="width:auto; margin:0; font-size:12px; padding:6px 8px;">
+              ${TEHLIKE_SINIFLARI.map(s => `<option value="${s}" ${s === firma.tehlikeSinifi ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+            <select class="sektor-sec" data-sektor="${firma.id}" style="width:auto; margin:0; font-size:12px; padding:6px 8px;">
+              ${SEKTORLER.map(s => `<option value="${s}" ${s === firma.sektor ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="islemler">
+            <button class="mini-buton" data-logo="${firma.id}">Logo</button>
+            <input type="file" accept="image/*" data-logo-dosya="${firma.id}" style="display:none;">
+            <button class="mini-buton" data-bolumler="${firma.id}">Bölümler</button>
+            <button class="mini-buton" data-isverenler="${firma.id}">İşverenler</button>
+            <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
+            <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>
+          </div>
+        `;
+        liste.appendChild(satir);
+      });
+
+      liste.querySelectorAll('[data-tehlike]').forEach(sec => {
+        sec.addEventListener('change', () => {
+          firmaTehlikeSinifiAyarla(sec.getAttribute('data-tehlike'), sec.value);
+        });
+      });
+
+      liste.querySelectorAll('[data-sektor]').forEach(sec => {
+        sec.addEventListener('change', () => {
+          firmaSektoruAyarla(sec.getAttribute('data-sektor'), sec.value);
+        });
+      });
+
+      liste.querySelectorAll('[data-logo]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          liste.querySelector(`[data-logo-dosya="${btn.getAttribute('data-logo')}"]`).click();
+        });
+      });
+      liste.querySelectorAll('[data-logo-dosya]').forEach(input => {
+        input.addEventListener('change', async () => {
+          const dosya = input.files[0];
+          const firmaId = input.getAttribute('data-logo-dosya');
+          input.value = '';
+          if (!dosya) return;
+          try {
+            const sonuc = await fotoYukle(dosya, 'firma-logo/' + firmaId, 200, 0.7, false);
+            firmaLogoAyarla(firmaId, sonuc.url);
+            renderListe();
+          } catch (hata) {
+            alert(hata.message || 'Logo yüklenemedi.');
+          }
+        });
+      });
+
+      liste.querySelectorAll('[data-bolumler]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          _duzenlenenBolumlerFirmaId = btn.getAttribute('data-bolumler');
+          const firma = getFirmaById(_duzenlenenBolumlerFirmaId);
+          document.getElementById('bolumlerModalBaslik').textContent = `${firma.ad} — Bölümler`;
+          document.getElementById('bolumlerTextarea').value = (Array.isArray(firma.bolumler) ? firma.bolumler : []).join('\n');
+          document.getElementById('bolumlerModalKatman').classList.add('acik');
+        });
+      });
+
+      liste.querySelectorAll('[data-isverenler]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          _duzenlenenIsverenlerFirmaId = btn.getAttribute('data-isverenler');
+          const firma = getFirmaById(_duzenlenenIsverenlerFirmaId);
+          document.getElementById('isverenlerModalBaslik').textContent = `${firma.ad} — İşverenler`;
+          document.getElementById('isverenlerTextarea').value = (Array.isArray(firma.isverenler) ? firma.isverenler : []).join('\n');
+          document.getElementById('isverenlerModalKatman').classList.add('acik');
+        });
+      });
+
+      liste.querySelectorAll('[data-duzenle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const firmaId = btn.getAttribute('data-duzenle');
+          const firma = getFirmaById(firmaId);
+          const yeniAd = prompt('Yeni firma adı:', firma.ad);
+          if (yeniAd && yeniAd.trim()) {
+            firmaGuncelle(firmaId, yeniAd);
+            renderListe();
+          }
+        });
+      });
+
+      liste.querySelectorAll('[data-sil]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const firmaId = btn.getAttribute('data-sil');
+          const firma = getFirmaById(firmaId);
+          const onay = confirm(`"${firma.ad}" firmasını silmek istediğinize emin misiniz?`);
+          if (onay) {
+            firmaSil(firmaId);
+            renderListe();
+          }
+        });
+      });
+    }
+
+    document.getElementById('ekleForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const input = document.getElementById('yeniFirmaAdi');
+      const tehlikeSecimi = document.getElementById('yeniFirmaTehlikeSinifi');
+      const sektorSecimi = document.getElementById('yeniFirmaSektor');
+      const hataMesaji = document.getElementById('hataMesaji');
+      const sonuc = firmaEkle(input.value, kullanici.id, tehlikeSecimi.value, sektorSecimi.value);
+
+      if (!sonuc.basarili) {
+        hataMesaji.textContent = sonuc.hata;
+        hataMesaji.classList.add('gorunur');
+        return;
+      }
+
+      hataMesaji.classList.remove('gorunur');
+      input.value = '';
+      renderListe();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Giriş</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="giris-sahne">
+    <div class="giris-kutu">
+      <h1>🛡️ İSG Yönetim Platformu</h1>
+      <div class="alt-baslik">Devam etmek için giriş yapın</div>
+
+      <div class="hata-mesaji" id="hataMesaji"></div>
+
+      <form id="girisForm">
+        <label for="kullaniciAdi">Kullanıcı Adı</label>
+        <input type="text" id="kullaniciAdi" autocomplete="username" required>
+
+        <label for="sifre">Şifre</label>
+        <input type="password" id="sifre" autocomplete="current-password" required>
+
+        <button type="submit" class="birincil">Giriş Yap</button>
+      </form>
+
+      <p style="font-size:12px; color:var(--metin-soluk); text-align:center; margin-top:18px;">
+        Demo giriş: <strong>admin</strong> / <strong>123456</strong>
+      </p>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script>
+    // Zaten oturumu açık kullanıcıyı doğrudan akışın devamına gönder.
+    if (oturumdakiKullanici()) {
+      window.location.href = 'firma-sec.html';
+    }
+
+    document.getElementById('girisForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const kullaniciAdi = document.getElementById('kullaniciAdi').value;
+      const sifre = document.getElementById('sifre').value;
+      const hataMesaji = document.getElementById('hataMesaji');
+
+      const sonuc = girisYap(kullaniciAdi, sifre);
+      if (!sonuc.basarili) {
+        hataMesaji.textContent = sonuc.hata;
+        hataMesaji.classList.add('gorunur');
+        return;
+      }
+
+      window.location.href = 'firma-sec.html';
+    });
+  </script>
+</body>
+</html>

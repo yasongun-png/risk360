@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Acil Durum Planı</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="index.html" class="geri-link">← Acil Durum Yönetimine Dön</a>
+    <div class="dashboard-ust" style="margin-top:14px;">
+      <h2 style="margin:0;">Acil Durum Planı</h2>
+      <a href="#" id="planYazdirBtn" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🖨️ Görüntüle / Yazdır</a>
+    </div>
+
+    <div id="planOzetKutusu"></div>
+
+    <div class="rapor-meta-grid">
+      <label>Hazırlanma Tarihi<input type="date" id="planHazirlanmaTarihi"></label>
+      <label>Geçerlilik Tarihi<input type="date" id="planGecerlilikTarihi"></label>
+      <label>Hazırlayan<input type="text" id="planHazirlayan"></label>
+      <label>Hazırlayan Unvanı<input type="text" id="planHazirlayanUnvan"></label>
+      <label>Onaylayan<input type="text" id="planOnaylayan"></label>
+      <label>Onaylayan Unvanı<input type="text" id="planOnaylayanUnvan"></label>
+      <label class="span2">Uyarı Sistemleri<input type="text" id="planUyariSistemleri"></label>
+    </div>
+
+    <div class="form-satir-ikili">
+      <div>
+        <label for="planOlasiAcilDurumlar">Olası Acil Durumlar <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir madde)</span></label>
+        <textarea id="planOlasiAcilDurumlar"></textarea>
+      </div>
+      <div>
+        <label for="planOzelRiskBolgeleri">Özel Risk Bölgeleri</label>
+        <textarea id="planOzelRiskBolgeleri"></textarea>
+      </div>
+    </div>
+
+    <label for="planOnleyiciTedbirler">Önleyici Tedbirler</label>
+    <textarea id="planOnleyiciTedbirler"></textarea>
+
+    <label for="planTahliyePlani">Tahliye Planı</label>
+    <textarea id="planTahliyePlani"></textarea>
+
+    <label for="planToplanmaYerleri">Toplanma Yerleri <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir yer)</span></label>
+    <textarea id="planToplanmaYerleri"></textarea>
+
+    <label for="planDisKurumIletisim">Dış Kurum İletişim Bilgileri</label>
+    <textarea id="planDisKurumIletisim"></textarea>
+
+    <label for="planNotlar">Notlar</label>
+    <textarea id="planNotlar"></textarea>
+
+    <div class="form-bolum-baslik">Ekip Bilgileri</div>
+    <div id="planEkipKutusu"></div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../personel/model.js"></script>
+  <script src="../personel/validation.js"></script>
+  <script src="../personel/repository.js"></script>
+  <script src="../personel/org-repository.js"></script>
+  <script src="../personel/service.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="plan-ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          planSayfasiniBaslat(aktifFirma);
+        });
+      }
+    }
+  </script>
+</body>
+</html>

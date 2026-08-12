@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Tespit ve Öneri Defteri</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Tespit ve Öneri Defteri</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" id="sekmeKayitlar">Kayıtlar</button>
+      <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
+    </div>
+
+    <div id="bolum-kayitlar">
+      <div class="arac-cubugu">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="No, bölüm, tespit, öneri veya tespit edene göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="durumFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm Durumlar</option>
+          </select>
+          <select id="oncelikFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm Öncelikler</option>
+          </select>
+          <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
+          <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
+          <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>No / Tarih</th><th>Bölüm / Tespit Eden</th><th>Tespit</th><th>Öneri</th><th>Öncelik</th><th>Tebliğ</th><th>Fotoğraf</th><th>Durum</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody id="tabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bosDurum"></div>
+    </div>
+
+    <div id="bolum-ozet" style="display:none;">
+      <div id="ozetKutusu"></div>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <div class="modal-katman" id="modalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="modalBaslik">Yeni Tespit Kaydı</h3>
+      <form id="kayitForm">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="tespitTarihi">Tespit Tarihi</label>
+            <input type="date" id="tespitTarihi">
+            <div class="alan-hatasi" id="tespitTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="oncelik">Öncelik</label>
+            <select id="oncelik"></select>
+          </div>
+        </div>
+
+        <label for="tespitEden">Tespiti Yapan</label>
+        <input type="text" id="tespitEden" placeholder="Ad Soyad">
+        <div class="alan-hatasi" id="tespitEdenHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="bolum">Bölüm / Yer</label>
+        <input type="text" id="bolum" placeholder="Üretim Sahası">
+        <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="tespit">Tespit (Bulgu)</label>
+        <textarea id="tespit" placeholder="Gözlemlenen tehlike / uygunsuzluk"></textarea>
+        <div class="alan-hatasi" id="tespitHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="oneri">Öneri</label>
+        <textarea id="oneri" placeholder="Önerilen düzeltici / önleyici tedbir"></textarea>
+        <div class="alan-hatasi" id="oneriHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="defterFotografiDosya">Defter Sayfası Fotoğrafı</label>
+        <input type="file" id="defterFotografiDosya" accept="image/*" capture="environment">
+        <div id="defterFotografiOnizleme" style="margin-top:6px; margin-bottom:14px;"></div>
+
+        <div class="form-bolum-baslik">Tebliğ ve Uygulama</div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="tebligEdilen">Tebliğ Edilen Birim/Kişi</label>
+            <input type="text" id="tebligEdilen">
+          </div>
+          <div>
+            <label for="tebligTarihi">Tebliğ Tarihi</label>
+            <input type="date" id="tebligTarihi">
+            <div class="alan-hatasi" id="tebligTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+        <label for="yapilanIslem">Yapılan İşlem</label>
+        <textarea id="yapilanIslem"></textarea>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="kapanisTarihi">Kapanış Tarihi</label>
+            <input type="date" id="kapanisTarihi">
+          </div>
+          <div>
+            <label for="durum">Durum (elle geçersiz kılmak isterseniz)</label>
+            <select id="durum"></select>
+          </div>
+        </div>
+        <label for="notlar">Not</label>
+        <textarea id="notlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="modalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="modalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="../../core/rapor.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' tespit ve öneri defteri kayıtları';
+          document.getElementById('durumFiltre').innerHTML += TESPIT_DURUMLARI.map(d => `<option>${d}</option>`).join('');
+          document.getElementById('oncelikFiltre').innerHTML += TESPIT_ONCELIKLERI.map(o => `<option>${o}</option>`).join('');
+          tespitOneriSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>

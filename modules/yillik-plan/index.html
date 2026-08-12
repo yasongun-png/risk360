@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Yıllık Değerlendirme ve Planlama</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <div class="dashboard-ust" style="margin-top:14px;">
+      <div>
+        <h2 style="margin:0;">Yıllık Değerlendirme ve Planlama</h2>
+        <p style="color:#6b7280; font-size:13px; margin:4px 0 0;" id="firmaEtiketi"></p>
+      </div>
+      <label style="font-size:13px; font-weight:600;">Yıl
+        <select id="yilSecimi" style="width:auto; margin:0 0 0 8px; display:inline-block;"></select>
+      </label>
+    </div>
+
+    <div class="sekme-cubugu">
+      <button type="button" id="sekmeEgitim">Eğitim Planı</button>
+      <button type="button" id="sekmeCalisma" class="sekme-seciliDegil">Yıllık Çalışma Planı</button>
+      <button type="button" id="sekmeRapor" class="sekme-seciliDegil">Yıllık Değerlendirme Raporu</button>
+    </div>
+
+    <div class="istatistik-grid">
+      <div class="istatistik-kutu"><span>Planlanan Satır</span><b id="stToplam">0</b></div>
+      <div class="istatistik-kutu"><span>İşaretli Ay Toplamı</span><b id="stAyToplami">0</b></div>
+      <div class="istatistik-kutu"><span>Tamamlandı</span><b id="stTamamlanan">0</b></div>
+      <div class="istatistik-kutu"><span>Yıl</span><b id="stYilEtiketi">-</b></div>
+    </div>
+
+    <div id="panelEgitim">
+      <div class="arac-cubugu">
+        <div></div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="ikincil" id="egitimSatiriEkleBtn">+ Eğitim Satırı</button>
+          <button type="button" class="ikincil" data-export="egitim">Excel</button>
+          <button type="button" class="ikincil" data-print="egitim">PDF / Yazdır</button>
+          <button type="button" class="ikincil" data-import="egitim">İçe Aktar</button>
+          <input type="file" data-import-dosya="egitim" accept=".xlsx,.xls" style="display:none;">
+        </div>
+      </div>
+      <div class="tablo-scroll" id="egitimTablosu"></div>
+    </div>
+
+    <div id="panelCalisma" style="display:none;">
+      <div class="arac-cubugu">
+        <div></div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="ikincil" id="calismaSatiriEkleBtn">+ Faaliyet Satırı</button>
+          <button type="button" class="ikincil" data-export="calisma">Excel</button>
+          <button type="button" class="ikincil" data-print="calisma">PDF / Yazdır</button>
+          <button type="button" class="ikincil" data-import="calisma">İçe Aktar</button>
+          <input type="file" data-import-dosya="calisma" accept=".xlsx,.xls" style="display:none;">
+        </div>
+      </div>
+      <div class="tablo-scroll" id="calismaTablosu"></div>
+    </div>
+
+    <div id="panelRapor" style="display:none;">
+      <div class="arac-cubugu">
+        <div></div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="ikincil" id="raporSatiriEkleBtn">+ Faaliyet Satırı</button>
+          <button type="button" class="ikincil" data-export="rapor">Excel</button>
+          <button type="button" class="ikincil" data-print="rapor">PDF / Yazdır</button>
+          <button type="button" class="ikincil" data-import="rapor">İçe Aktar</button>
+          <input type="file" data-import-dosya="rapor" accept=".xlsx,.xls" style="display:none;">
+        </div>
+      </div>
+
+      <div class="rapor-meta-grid">
+        <label class="span2">Firma / İşyeri Unvanı<input id="metaFirma"></label>
+        <label>SGK Sicil No<input id="metaSgk"></label>
+        <label>İşkolu<input id="metaIsKolu"></label>
+        <label class="span2">Adres<textarea id="metaAdres"></textarea></label>
+        <label>Telefon / Faks<input id="metaTelefon"></label>
+        <label>E-posta<input id="metaEposta"></label>
+        <label>Erkek Çalışan<input id="metaErkek" type="number" min="0"></label>
+        <label>Kadın Çalışan<input id="metaKadin" type="number" min="0"></label>
+        <label>Genç Çalışan<input id="metaGenc" type="number" min="0"></label>
+        <label>Çocuk Çalışan<input id="metaCocuk" type="number" min="0"></label>
+        <label>İSG Uzmanı<input id="metaUzman"></label>
+        <label>İşyeri Hekimi<input id="metaHekim"></label>
+        <label class="span2">İşveren / İşveren Vekili<input id="metaIsveren"></label>
+      </div>
+
+      <div class="tablo-scroll">
+        <table class="veri-tablosu rapor-tablosu">
+          <thead>
+            <tr>
+              <th style="width:50px">Sıra No</th>
+              <th>Yapılan Çalışmalar</th>
+              <th>Tarih / Geçerlilik</th>
+              <th>Yapan Kişi ve Unvanı</th>
+              <th style="width:90px">Tekrar Sayısı</th>
+              <th>Kullanılan Yöntem</th>
+              <th>Sonuç ve Yorum</th>
+              <th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="raporSatirGovdesi"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="model.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' için yıllık plan ve rapor';
+          yillikPlanSayfasiniBaslat(aktifFirma);
+        });
+      }
+    }
+  </script>
+</body>
+</html>

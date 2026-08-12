@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - KKD Takibi</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">KKD Takibi</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" data-sekme="envanter">Envanter</button>
+      <button type="button" data-sekme="zimmet" class="sekme-seciliDegil">Zimmet</button>
+      <button type="button" data-sekme="ihlal" class="sekme-seciliDegil">İhlal Takibi</button>
+      <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
+    </div>
+
+    <datalist id="kkdKatalogListesi"></datalist>
+    <datalist id="kkdPersonelListesi"></datalist>
+
+    <!-- ENVANTER -->
+    <div id="bolum-envanter">
+      <div class="arac-cubugu">
+        <input type="text" id="envanterAramaKutusu" class="arama-kutusu" placeholder="KKD adı, no, marka veya bölüme göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="envanterTurFiltre" style="width:auto; margin:0;"><option value="">Tüm Türler</option></select>
+          <select id="envanterDurumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
+          <button type="button" class="ikincil" id="envanterSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="envanterIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="envanterIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="envanterDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="birincil" id="yeniEnvanterBtn" style="width:auto;">+ Yeni Envanter</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>KKD No</th><th>Ad</th><th>Tür</th><th>Marka / Model</th><th>Beden</th><th>EN Standartları</th><th>Stok</th><th>Min. Stok</th><th>Değişim Periyodu</th><th>Bölüm</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="envanterTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="envanterBosDurum"></div>
+    </div>
+
+    <!-- ZİMMET -->
+    <div id="bolum-zimmet" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="zimmetAramaKutusu" class="arama-kutusu" placeholder="Personel, zimmet no veya KKD adına göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="zimmetDurumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
+          <button type="button" class="ikincil" id="zimmetSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="zimmetIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="zimmetIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="zimmetDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="birincil" id="yeniZimmetBtn" style="width:auto;">+ Yeni Zimmet</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Zimmet No</th><th>Personel</th><th>Bölüm</th><th>KKD Adı</th><th>Tür</th><th>Veriliş Tarihi</th><th>Değişim Tarihi</th><th>Durum</th><th>Kondisyon</th><th>İşlemler</th></tr></thead>
+          <tbody id="zimmetTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="zimmetBosDurum"></div>
+    </div>
+
+    <!-- İHLAL -->
+    <div id="bolum-ihlal" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="ihlalAramaKutusu" class="arama-kutusu" placeholder="Ad soyad, sicil, bölüm veya KKD'ye göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="ihlalTuruFiltre" style="width:auto; margin:0;"><option value="">Tüm İhlal Türleri</option></select>
+          <select id="ihlalTekrarFiltre" style="width:auto; margin:0;">
+            <option value="">Tekrar Durumu (Tümü)</option>
+            <option value="Evet">Sadece Tekrar Edenler</option>
+            <option value="Hayır">Sadece İlk Kez</option>
+          </select>
+          <button type="button" class="ikincil" id="ihlalSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="ihlalIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="ihlalIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="ihlalDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="birincil" id="yeniIhlalBtn" style="width:auto;">+ Yeni İhlal</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>İhlal No</th><th>Tarih</th><th>Ad Soyad</th><th>Sicil</th><th>Bölüm</th><th>KKD</th><th>İhlal Türü</th><th>İşlem</th><th>Tekrar</th><th>İşlemler</th></tr></thead>
+          <tbody id="ihlalTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="ihlalBosDurum"></div>
+    </div>
+
+    <!-- ÖZET -->
+    <div id="bolum-ozet" style="display:none;">
+      <div id="ozetKutusu"></div>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <!-- ENVANTER MODAL -->
+  <div class="modal-katman" id="envanterModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="envanterModalBaslik">Yeni Envanter Kaydı</h3>
+      <form id="envanterForm">
+        <label for="envanterAd">KKD Adı</label>
+        <input type="text" id="envanterAd" list="kkdKatalogListesi">
+        <div class="alan-hatasi" id="envanterAdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="envanterTur">KKD Türü</label>
+            <select id="envanterTur"></select>
+            <div class="alan-hatasi" id="envanterTurHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="envanterEnStandartlari">EN Standartları <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın)</span></label>
+            <input type="text" id="envanterEnStandartlari">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="envanterMarka">Marka</label>
+            <input type="text" id="envanterMarka">
+          </div>
+          <div>
+            <label for="envanterModel">Model</label>
+            <input type="text" id="envanterModel">
+          </div>
+        </div>
+        <label for="envanterBeden">Beden / Ölçü</label>
+        <input type="text" id="envanterBeden">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="envanterStok">Stok</label>
+            <input type="number" id="envanterStok" min="0">
+          </div>
+          <div>
+            <label for="envanterMinimumStok">Minimum Stok</label>
+            <input type="number" id="envanterMinimumStok" min="0">
+          </div>
+        </div>
+        <label for="envanterDegisimPeriyoduGun">Değişim Periyodu (Gün)</label>
+        <input type="number" id="envanterDegisimPeriyoduGun" min="0">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="envanterBolum">Bölüm</label>
+            <input type="text" id="envanterBolum">
+          </div>
+          <div>
+            <label for="envanterLokasyon">Lokasyon</label>
+            <input type="text" id="envanterLokasyon">
+          </div>
+        </div>
+        <label for="envanterTedarikci">Tedarikçi</label>
+        <input type="text" id="envanterTedarikci">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="envanterSatinAlmaTarihi">Satın Alma Tarihi</label>
+            <input type="date" id="envanterSatinAlmaTarihi">
+          </div>
+          <div>
+            <label for="envanterSonKullanmaTarihi">Son Kullanma Tarihi</label>
+            <input type="date" id="envanterSonKullanmaTarihi">
+          </div>
+        </div>
+
+        <label for="envanterDurum">Durum</label>
+        <select id="envanterDurum"></select>
+        <label for="envanterNotlar">Notlar</label>
+        <textarea id="envanterNotlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="envanterModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="envanterModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- ZİMMET MODAL -->
+  <div class="modal-katman" id="zimmetModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="zimmetModalBaslik">Yeni Zimmet Kaydı</h3>
+      <form id="zimmetForm">
+        <label for="zimmetPersonelAdi">Personel</label>
+        <input type="text" id="zimmetPersonelAdi" list="kkdPersonelListesi">
+        <div class="alan-hatasi" id="zimmetPersonelAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="zimmetBolum">Bölüm</label>
+            <input type="text" id="zimmetBolum">
+          </div>
+          <div>
+            <label for="zimmetGorev">Görev</label>
+            <input type="text" id="zimmetGorev">
+          </div>
+        </div>
+
+        <label for="zimmetKkdAdi">KKD Adı</label>
+        <input type="text" id="zimmetKkdAdi" list="kkdKatalogListesi">
+        <div class="alan-hatasi" id="zimmetKkdAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="zimmetKkdTuru">KKD Türü</label>
+            <select id="zimmetKkdTuru"></select>
+          </div>
+          <div>
+            <label for="zimmetEnStandartlari">EN Standartları</label>
+            <input type="text" id="zimmetEnStandartlari">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="zimmetMarka">Marka</label>
+            <input type="text" id="zimmetMarka">
+          </div>
+          <div>
+            <label for="zimmetModel">Model</label>
+            <input type="text" id="zimmetModel">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="zimmetBeden">Beden / Ölçü</label>
+            <input type="text" id="zimmetBeden">
+          </div>
+          <div>
+            <label for="zimmetAdet">Adet</label>
+            <input type="number" id="zimmetAdet" min="1" value="1">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="zimmetVerilisTarihi">Veriliş Tarihi</label>
+            <input type="date" id="zimmetVerilisTarihi">
+            <div class="alan-hatasi" id="zimmetVerilisTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="zimmetDegisimPeriyoduGun">Değişim Periyodu (Gün)</label>
+            <input type="number" id="zimmetDegisimPeriyoduGun" min="0">
+          </div>
+        </div>
+        <label for="zimmetDegisimTarihi">Değişim Tarihi <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa otomatik hesaplanır)</span></label>
+        <input type="date" id="zimmetDegisimTarihi">
+
+        <label for="zimmetKondisyon">Kondisyon</label>
+        <select id="zimmetKondisyon"></select>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="zimmetTeslimEden">Teslim Eden</label>
+            <input type="text" id="zimmetTeslimEden">
+          </div>
+          <div>
+            <label for="zimmetTeslimAlanImza">Teslim Alan Onayı / İmza</label>
+            <input type="text" id="zimmetTeslimAlanImza">
+          </div>
+        </div>
+        <label for="zimmetNotlar">Notlar</label>
+        <textarea id="zimmetNotlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="zimmetModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="zimmetModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- İHLAL MODAL -->
+  <div class="modal-katman" id="ihlalModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="ihlalModalBaslik">Yeni İhlal Kaydı</h3>
+      <form id="ihlalForm">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ihlalTarih">Tarih</label>
+            <input type="date" id="ihlalTarih">
+            <div class="alan-hatasi" id="ihlalTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="ihlalSaat">Tespit Saati</label>
+            <input type="time" id="ihlalSaat">
+          </div>
+        </div>
+
+        <label for="ihlalAdSoyad">Çalışan Ad Soyad</label>
+        <input type="text" id="ihlalAdSoyad" list="kkdPersonelListesi">
+        <div class="alan-hatasi" id="ihlalAdSoyadHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ihlalSicil">Sicil No</label>
+            <input type="text" id="ihlalSicil">
+          </div>
+          <div>
+            <label for="ihlalFirma">Firma <span style="color:var(--metin-soluk); font-weight:400;">(kendi personeli / yüklenici)</span></label>
+            <input type="text" id="ihlalFirma">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ihlalBolum">Bölüm / Lokasyon <span style="color:var(--metin-soluk); font-weight:400;">(tespit yeri)</span></label>
+            <input type="text" id="ihlalBolum">
+          </div>
+          <div>
+            <label for="ihlalCalismaBolumu">Çalıştığı Bölüm / Görev</label>
+            <input type="text" id="ihlalCalismaBolumu">
+          </div>
+        </div>
+
+        <label for="ihlalKkd">Kullanılmayan / Uygunsuz Kullanılan KKD</label>
+        <input type="text" id="ihlalKkd" list="kkdKatalogListesi">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ihlalIhlalTuru">İhlal Türü</label>
+            <select id="ihlalIhlalTuru"></select>
+            <div class="alan-hatasi" id="ihlalIhlalTuruHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="ihlalIslem">Uygulanan İşlem</label>
+            <select id="ihlalIslem"></select>
+            <div class="alan-hatasi" id="ihlalIslemHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <label for="ihlalTespitEden">Tespiti Yapan</label>
+        <input type="text" id="ihlalTespitEden">
+        <div class="alan-hatasi" id="ihlalTespitEdenHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="ihlalAciklama">Açıklama</label>
+        <textarea id="ihlalAciklama"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="ihlalModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="ihlalModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="../../core/rapor.js"></script>
+  <script src="../../core/form-ayarlari.js"></script>
+  <script src="../personel/model.js"></script>
+  <script src="../personel/repository.js"></script>
+  <script src="../personel/service.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script src="cikti.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' KKD envanter, zimmet ve ihlal kayıtları';
+          kkdSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>

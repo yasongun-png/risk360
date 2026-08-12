@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Organizasyon Şeması</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="index.html" class="geri-link">← Personel Yönetimine Dön</a>
+    <h2 style="margin-top:14px;">Organizasyon Şeması</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;">
+      Önce bölümleri, sonra bu bölümlerin altına yönetici/unvan kademelerini
+      (müdür, müdür yardımcısı, formen, vardiya amiri vb.) kendi isimlendirmenizle
+      ekleyin. Personel Yönetimi ekranındaki "Pozisyon" alanından personeli
+      bu kademelere atayınca şema otomatik oluşur.
+    </p>
+
+    <div class="hata-mesaji" id="hataMesaji"></div>
+
+    <form class="ekle-form" id="pozisyonForm">
+      <input type="text" id="pozisyonAdi" placeholder="Bölüm veya unvan adı (örn. Bakım Müdürü)" required>
+      <select id="ustPozisyon" style="max-width:260px;"></select>
+      <button type="submit" class="birincil">+ Ekle</button>
+    </form>
+
+    <div id="agacKutusu" style="margin-top:20px;"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="org-repository.js"></script>
+  <script src="service.js"></script>
+  <script src="org-ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          orgSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>

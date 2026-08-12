@@ -1,0 +1,656 @@
+// Acil Durum Yönetimi ana sayfa DOM işlemleri (Ekipler / Uygunluk / Ekipman / Tatbikat / Senaryo).
+
+let _adGorunum = 'ekipler';
+let _adFirma = null;
+let _duzenlenenEkipId = null;
+let _duzenlenenEkipmanId = null;
+// Saha Dijital Haritası'ndan "Nokta Ekle" ile buraya yönlendirildiğinde
+// (bkz. modules/harita/ui.js) taşınan konum — form kaydedilirken yeni kayda
+// eklenir. Düzenlemede kullanılmaz.
+let _bekleyenHaritaKonum = null;
+let _duzenlenenTatbikatId = null;
+let _duzenlenenSenaryoId = null;
+
+function rozetSinifAdi(durum) {
+  return slugOlustur(durum || '');
+}
+
+function acilDurumSayfasiniBaslat(firma) {
+  _adFirma = firma;
+
+  document.querySelectorAll('[data-sekme]').forEach(btn => {
+    btn.addEventListener('click', () => gorunumDegistir(btn.getAttribute('data-sekme')));
+  });
+
+  // Ekipler
+  document.getElementById('yeniEkipBtn').addEventListener('click', () => ekipModalAc());
+  document.getElementById('ekipModalKapatBtn').addEventListener('click', ekipModalKapat);
+  document.getElementById('ekipModalIptalBtn').addEventListener('click', ekipModalKapat);
+  document.getElementById('ekipForm').addEventListener('submit', ekipFormGonderildi);
+  document.getElementById('ekipAramaKutusu').addEventListener('input', e => ekipleriCiz(e.target.value));
+  document.getElementById('ekipPersonelId').addEventListener('change', ekipPersonelSecildi);
+
+  // Ekipman
+  document.getElementById('yeniEkipmanBtn').addEventListener('click', () => ekipmanModalAc());
+  document.getElementById('ekipmanModalKapatBtn').addEventListener('click', ekipmanModalKapat);
+  document.getElementById('ekipmanModalIptalBtn').addEventListener('click', ekipmanModalKapat);
+  document.getElementById('ekipmanForm').addEventListener('submit', ekipmanFormGonderildi);
+  document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
+
+  // Tatbikat
+  document.getElementById('yeniTatbikatBtn').addEventListener('click', () => tatbikatModalAc());
+  document.getElementById('tatbikatModalKapatBtn').addEventListener('click', tatbikatModalKapat);
+  document.getElementById('tatbikatModalIptalBtn').addEventListener('click', tatbikatModalKapat);
+  document.getElementById('tatbikatForm').addEventListener('submit', tatbikatFormGonderildi);
+  document.getElementById('tatbikatAramaKutusu').addEventListener('input', e => tatbikatlariCiz(e.target.value));
+
+  // Senaryo
+  document.getElementById('yeniSenaryoBtn').addEventListener('click', () => senaryoModalAc());
+  document.getElementById('senaryoModalKapatBtn').addEventListener('click', senaryoModalKapat);
+  document.getElementById('senaryoModalIptalBtn').addEventListener('click', senaryoModalKapat);
+  document.getElementById('senaryoForm').addEventListener('submit', senaryoFormGonderildi);
+  document.getElementById('senaryoAramaKutusu').addEventListener('input', e => senaryolariCiz(e.target.value));
+
+  _acilDurumExcelRaporBaglantilariniKur();
+
+  gorunumDegistir('ekipler');
+}
+
+// ---- Excel / Rapor ----
+
+const EKIP_IMPORT_KOLONLARI = [
+  { anahtar: 'personelAdi', baslik: 'Personel Adı' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'ekipTuru', baslik: 'Ekip Türü' },
+  { anahtar: 'rol', baslik: 'Rol' },
+  { anahtar: 'vardiya', baslik: 'Vardiya' },
+  { anahtar: 'telefon', baslik: 'Telefon' },
+  { anahtar: 'egitimTarihi', baslik: 'Eğitim Tarihi' }
+];
+
+const EKIP_EXPORT_KOLONLARI = [
+  { anahtar: 'atamaNo', baslik: 'Atama No' },
+  { anahtar: 'personelAdi', baslik: 'Personel' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'ekipTuru', baslik: 'Ekip Türü' },
+  { anahtar: 'rol', baslik: 'Rol' },
+  { anahtar: 'vardiya', baslik: 'Vardiya' },
+  { anahtar: 'gecerlilikTarihi', baslik: 'Eğitim Geçerlilik' },
+  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+];
+
+const EKIPMAN_IMPORT_KOLONLARI = [
+  { anahtar: 'tur', baslik: 'Tür' },
+  { anahtar: 'ad', baslik: 'Ad' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'lokasyon', baslik: 'Lokasyon' },
+  { anahtar: 'periyotGun', baslik: 'Kontrol Periyodu (Gün)' },
+  { anahtar: 'sonKontrol', baslik: 'Son Kontrol Tarihi' },
+  { anahtar: 'sorumlu', baslik: 'Sorumlu' }
+];
+
+const EKIPMAN_EXPORT_KOLONLARI = [
+  { anahtar: 'ekipmanNo', baslik: 'Ekipman No' },
+  { anahtar: 'tur', baslik: 'Tür' },
+  { anahtar: 'ad', baslik: 'Ad' },
+  { anahtar: 'lokasyon', baslik: 'Lokasyon' },
+  { anahtar: 'sonKontrol', baslik: 'Son Kontrol' },
+  { anahtar: 'sonrakiKontrol', baslik: 'Sonraki Kontrol' },
+  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+];
+
+const TATBIKAT_EXPORT_KOLONLARI = [
+  { anahtar: 'tatbikatNo', baslik: 'Tatbikat No' },
+  { anahtar: 'baslik', baslik: 'Başlık' },
+  { anahtar: 'tur', baslik: 'Tür' },
+  { anahtar: 'planlananTarih', baslik: 'Planlanan' },
+  { anahtar: 'gerceklesmeTarihi', baslik: 'Gerçekleşme' },
+  { anahtar: 'katilimciSayisi', baslik: 'Katılımcı' },
+  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+];
+
+const SENARYO_EXPORT_KOLONLARI = [
+  { anahtar: 'senaryoNo', baslik: 'Senaryo No' },
+  { anahtar: 'baslik', baslik: 'Başlık' },
+  { anahtar: 'tur', baslik: 'Tür' },
+  { anahtar: 'sorumluEkip', baslik: 'Sorumlu Ekip' },
+  { anahtar: 'gozdenGecirmeTarihi', baslik: 'Gözden Geçirme' },
+  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+];
+
+function _acilDurumExcelRaporBaglantilariniKur() {
+  document.getElementById('ekipSablonIndirBtn').addEventListener('click', () => {
+    excelSablonIndir(EKIP_IMPORT_KOLONLARI, 'acil_durum_ekip_sablonu.xlsx');
+  });
+  document.getElementById('ekipDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(ekipUyeleriniGetir(''), EKIP_EXPORT_KOLONLARI, 'acil_durum_ekipleri.xlsx');
+  });
+  document.getElementById('ekipYazdirBtn').addEventListener('click', () => {
+    raporListesiYazdir('Acil Durum Ekipleri', _adFirma ? _adFirma.ad : '', EKIP_EXPORT_KOLONLARI, ekipUyeleriniGetir(document.getElementById('ekipAramaKutusu').value));
+  });
+  document.getElementById('ekipIceAktarBtn').addEventListener('click', () => document.getElementById('ekipIceAktarDosya').click());
+  document.getElementById('ekipIceAktarDosya').addEventListener('change', e => {
+    const dosya = e.target.files[0];
+    excelIceAktar(dosya, EKIP_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      satirlar.forEach(satir => { satir.egitimTarihi = excelTarihiNormallestir(satir.egitimTarihi); });
+      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, ekipUyesiEkle);
+      alert(excelIceAktarOzetMesaji(sonuc));
+      ekipleriCiz(document.getElementById('ekipAramaKutusu').value);
+    });
+  });
+
+  document.getElementById('ekipmanSablonIndirBtn').addEventListener('click', () => {
+    excelSablonIndir(EKIPMAN_IMPORT_KOLONLARI, 'acil_durum_ekipman_sablonu.xlsx');
+  });
+  document.getElementById('ekipmanDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(ekipmanlariGetir(''), EKIPMAN_EXPORT_KOLONLARI, 'acil_durum_ekipmanlari.xlsx');
+  });
+  document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
+    raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, ekipmanlariGetir(document.getElementById('ekipmanAramaKutusu').value));
+  });
+  document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
+  document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
+    const dosya = e.target.files[0];
+    excelIceAktar(dosya, EKIPMAN_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      satirlar.forEach(satir => { satir.sonKontrol = excelTarihiNormallestir(satir.sonKontrol); });
+      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, ekipmanEkle);
+      alert(excelIceAktarOzetMesaji(sonuc));
+      ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+    });
+  });
+
+  document.getElementById('tatbikatDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(tatbikatlariGetir(''), TATBIKAT_EXPORT_KOLONLARI, 'acil_durum_tatbikatlari.xlsx');
+  });
+  document.getElementById('tatbikatYazdirBtn').addEventListener('click', () => {
+    raporListesiYazdir('Acil Durum Tatbikatları', _adFirma ? _adFirma.ad : '', TATBIKAT_EXPORT_KOLONLARI, tatbikatlariGetir(document.getElementById('tatbikatAramaKutusu').value));
+  });
+
+  document.getElementById('senaryoDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(senaryolariGetir(''), SENARYO_EXPORT_KOLONLARI, 'acil_durum_senaryolari.xlsx');
+  });
+  document.getElementById('senaryoYazdirBtn').addEventListener('click', () => {
+    raporListesiYazdir('Acil Durum Senaryoları', _adFirma ? _adFirma.ad : '', SENARYO_EXPORT_KOLONLARI, senaryolariGetir(document.getElementById('senaryoAramaKutusu').value));
+  });
+}
+
+function gorunumDegistir(gorunum) {
+  _adGorunum = gorunum;
+  document.querySelectorAll('[data-sekme]').forEach(btn => {
+    btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
+  });
+  ['ekipler', 'uygunluk', 'ekipman', 'tatbikat', 'senaryo'].forEach(g => {
+    document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
+  });
+
+  if (gorunum === 'ekipler') ekipleriCiz('');
+  else if (gorunum === 'uygunluk') uygunlugCiz();
+  else if (gorunum === 'ekipman') ekipmanlariCiz('');
+  else if (gorunum === 'tatbikat') tatbikatlariCiz('');
+  else if (gorunum === 'senaryo') senaryolariCiz('');
+}
+
+// ==================== EKİPLER ====================
+
+function ekipleriCiz(aramaMetni) {
+  const govde = document.getElementById('ekipTabloGovde');
+  const bosDurum = document.getElementById('ekipBosDurum');
+  const uyeler = ekipUyeleriniGetir(aramaMetni);
+
+  govde.innerHTML = '';
+  if (uyeler.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen ekip üyesi bulunamadı.' : 'Henüz ekip üyesi eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  uyeler.forEach(u => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${u.atamaNo}</td>
+      <td>${u.personelAdi}</td>
+      <td>${u.bolum || '-'}</td>
+      <td>${u.ekipTuru}</td>
+      <td>${u.rol}</td>
+      <td>${u.vardiya}</td>
+      <td>${u.gecerlilikTarihi || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(u.durumGoruntu)}">${u.durumGoruntu}</span></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${u.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${u.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipModalAc(ekipUyesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
+    if (confirm('Bu ekip üyesini silmek istediğinize emin misiniz?')) { ekipUyesiSil(btn.getAttribute('data-sil')); ekipleriCiz(document.getElementById('ekipAramaKutusu').value); }
+  }));
+}
+
+function ekipPersonelSecildi() {
+  const secim = document.getElementById('ekipPersonelId');
+  const personel = personelIdIleGetirRepo(secim.value);
+  document.getElementById('ekipBolum').value = personel ? personel.bolum : '';
+}
+
+function ekipModalAc(uye) {
+  _duzenlenenEkipId = uye ? uye.id : null;
+  document.getElementById('ekipModalBaslik').textContent = uye ? 'Ekip Üyesini Düzenle' : 'Yeni Ekip Üyesi';
+
+  const personeller = personelleriGetir('', false);
+  document.getElementById('ekipPersonelId').innerHTML = '<option value="">— Personel seçiniz —</option>' +
+    personeller.map(p => `<option value="${p.id}" ${uye && uye.personelId === p.id ? 'selected' : ''}>${p.adSoyad} (${p.sicilNo})</option>`).join('');
+
+  document.getElementById('ekipBolum').value = uye ? uye.bolum : '';
+  document.getElementById('ekipTuru').innerHTML = EKIP_TURLERI.map(t => `<option ${uye && uye.ekipTuru === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('ekipRol').innerHTML = EKIP_ROLLERI.map(r => `<option ${uye && uye.rol === r ? 'selected' : ''}>${r}</option>`).join('');
+  document.getElementById('ekipVardiya').innerHTML = VARDIYALAR.map(v => `<option ${uye && uye.vardiya === v ? 'selected' : ''}>${v}</option>`).join('');
+  document.getElementById('ekipTelefon').value = uye ? uye.telefon : '';
+  document.getElementById('ekipEgitimTarihi').value = uye ? uye.egitimTarihi : '';
+  document.getElementById('ekipGecerlilikTarihi').value = uye ? uye.gecerlilikTarihi : '';
+  document.getElementById('ekipDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${uye && uye.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('ekipNotlar').value = uye ? uye.notlar : '';
+
+  temizleFormHatalari('ekipForm');
+  document.getElementById('ekipModalKatman').classList.add('acik');
+}
+
+function ekipModalKapat() {
+  document.getElementById('ekipModalKatman').classList.remove('acik');
+  _duzenlenenEkipId = null;
+}
+
+function ekipFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('ekipForm');
+
+  const secilenPersonel = personelIdIleGetirRepo(document.getElementById('ekipPersonelId').value);
+  const veriler = {
+    personelId: document.getElementById('ekipPersonelId').value,
+    personelAdi: secilenPersonel ? secilenPersonel.adSoyad : '',
+    bolum: document.getElementById('ekipBolum').value,
+    ekipTuru: document.getElementById('ekipTuru').value,
+    rol: document.getElementById('ekipRol').value,
+    vardiya: document.getElementById('ekipVardiya').value,
+    telefon: document.getElementById('ekipTelefon').value,
+    egitimTarihi: document.getElementById('ekipEgitimTarihi').value,
+    gecerlilikTarihi: document.getElementById('ekipGecerlilikTarihi').value,
+    durum: document.getElementById('ekipDurum').value,
+    notlar: document.getElementById('ekipNotlar').value
+  };
+
+  const sonuc = _duzenlenenEkipId ? ekipUyesiGuncelle(_duzenlenenEkipId, veriler) : ekipUyesiEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ekip'); return; }
+
+  ekipModalKapat();
+  ekipleriCiz(document.getElementById('ekipAramaKutusu').value);
+}
+
+// ==================== UYGUNLUK DEĞERLENDİRMESİ ====================
+
+function uygunlugCiz() {
+  const sonuc = uygunlukDegerlendirmesiHesapla(_adFirma);
+  const kutu = document.getElementById('uygunlukKutusu');
+  const g = sonuc.gereksinim;
+
+  const satirHtml = sonuc.genelDegerlendirme.satirlar.map(s => `
+    <tr>
+      <td>${s.tur}</td><td>${s.gerekli}</td><td>${s.atanan}</td><td>${s.eksik}</td>
+      <td><span class="genel-rozet rozet-${s.uygun ? 'uygun' : 'uygun-degil'}">${s.uygun ? 'Uygun' : 'Uygun Değil'}</span></td>
+    </tr>
+  `).join('');
+
+  let vardiyaHtml = '';
+  if (sonuc.vardiyaDegerlendirme.gecerliMi) {
+    vardiyaHtml = `
+      <div class="form-bolum-baslik">Vardiya Bazlı Kontrol</div>
+      <p style="font-size:12px; color:var(--metin-soluk);">Kullanılan vardiyalar: ${sonuc.vardiyaDegerlendirme.kullanilanVardiyalar.join(', ')}. Her vardiyada her ekip türünden en az 1 kişi bulunmalıdır.</p>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Ekip Türü</th>${sonuc.vardiyaDegerlendirme.kullanilanVardiyalar.map(v => `<th>${v}</th>`).join('')}<th>Durum</th></tr></thead>
+          <tbody>
+            ${sonuc.vardiyaDegerlendirme.satirlar.map(s => `
+              <tr>
+                <td>${s.tur}</td>
+                ${s.vardiyaDurumu.map(v => `<td><span class="genel-rozet rozet-${v.uygun ? 'uygun' : 'uygun-degil'}">${v.atanan}</span></td>`).join('')}
+                <td><span class="genel-rozet rozet-${s.uygun ? 'uygun' : 'uygun-degil'}">${s.uygun ? 'Uygun' : 'Uygun Değil'}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const gecmisUyelerHtml = sonuc.egitimiGecmisUyeler.length
+    ? `<ul style="font-size:13px; padding-left:20px;">${sonuc.egitimiGecmisUyeler.map(u => `<li>${u.personelAdi} — ${u.ekipTuru} (geçerlilik: ${u.gecerlilikTarihi})</li>`).join('')}</ul>`
+    : '<div class="bos-durum gorunur">Eğitimi geçmiş ekip üyesi yok.</div>';
+
+  kutu.innerHTML = `
+    <div class="istatistik-grid">
+      <div class="istatistik-kutu"><span>Tehlike Sınıfı</span><b style="font-size:16px;">${g.tehlikeSinifi}</b></div>
+      <div class="istatistik-kutu"><span>Çalışan Sayısı</span><b>${g.calisanSayisi}</b></div>
+      <div class="istatistik-kutu"><span>Genel Durum</span><b>${sonuc.genelDegerlendirme.uygun ? 'Uygun' : sonuc.genelDegerlendirme.toplamEksik + ' Kişi Eksik'}</b></div>
+      <div class="istatistik-kutu"><span>Plan Yenileme Süresi</span><b>${g.planYenilemeYili} Yıl</b></div>
+    </div>
+
+    <div class="form-bolum-baslik">Mevzuata Göre Gerekli Ekip Sayıları (Md.11, Md.19)</div>
+    <div class="tablo-scroll">
+      <table class="veri-tablosu">
+        <thead><tr><th>Ekip Türü</th><th>Gerekli</th><th>Atanan</th><th>Eksik</th><th>Durum</th></tr></thead>
+        <tbody>${satirHtml}</tbody>
+      </table>
+    </div>
+
+    ${vardiyaHtml}
+
+    <div class="form-bolum-baslik">Eğitim Geçerliliği Geçmiş Ekip Üyeleri</div>
+    ${gecmisUyelerHtml}
+  `;
+}
+
+// ==================== EKİPMAN ====================
+
+function ekipmanlariCiz(aramaMetni) {
+  const govde = document.getElementById('ekipmanTabloGovde');
+  const bosDurum = document.getElementById('ekipmanBosDurum');
+  const liste = ekipmanlariGetir(aramaMetni);
+
+  govde.innerHTML = '';
+  if (liste.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen ekipman bulunamadı.' : 'Henüz ekipman eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(e => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${e.ekipmanNo}</td><td>${e.tur}</td><td>${e.ad}</td><td>${e.lokasyon}</td>
+      <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${e.durumGoruntu}</span></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${e.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${e.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
+    if (confirm('Bu ekipmanı silmek istediğinize emin misiniz?')) { ekipmanSil(btn.getAttribute('data-sil')); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
+  }));
+}
+
+function ekipmanModalAc(ekipman) {
+  _duzenlenenEkipmanId = ekipman ? ekipman.id : null;
+  document.getElementById('ekipmanModalBaslik').textContent = ekipman ? 'Ekipmanı Düzenle' : 'Yeni Ekipman';
+  document.getElementById('ekipmanTur').innerHTML = EKIPMAN_TURLERI.map(t => `<option ${ekipman && ekipman.tur === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('ekipmanAd').value = ekipman ? ekipman.ad : '';
+  document.getElementById('ekipmanBolum').value = ekipman ? ekipman.bolum : '';
+  document.getElementById('ekipmanLokasyon').value = ekipman ? ekipman.lokasyon : '';
+  document.getElementById('ekipmanPeriyot').value = ekipman ? ekipman.periyotGun : 30;
+  document.getElementById('ekipmanSonKontrol').value = ekipman ? ekipman.sonKontrol : '';
+  document.getElementById('ekipmanSonrakiKontrol').value = ekipman ? ekipman.sonrakiKontrol : '';
+  document.getElementById('ekipmanSorumlu').value = ekipman ? ekipman.sorumlu : '';
+  document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
+  document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
+  _ekipmanKonumAlaniCiz(ekipman);
+  temizleFormHatalari('ekipmanForm');
+  document.getElementById('ekipmanModalKatman').classList.add('acik');
+}
+
+// Saha Dijital Haritası köprüsü — bkz. modules/uygunsuzluk/ui.js'teki
+// _konumAlaniCiz ile aynı desen.
+function _ekipmanKonumAlaniCiz(ekipman) {
+  const kutu = document.getElementById('ekipmanKonumAlani');
+  if (!kutu) return;
+  if (_bekleyenHaritaKonum && !ekipman) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">📍 Haritadan seçilen konum bu kayda kaydedilince eklenecek.</div>';
+    return;
+  }
+  if (!ekipman) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Konum eklemek için önce kaydı oluşturup tekrar açın.</div>';
+    return;
+  }
+  const donusUrl = encodeURIComponent(location.pathname + '?ac=' + ekipman.id);
+  if (ekipman.haritaTesisId) {
+    kutu.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px;">
+        <span>📍 Haritada işaretli</span>
+        <button type="button" class="tablo-buton" id="ekipmanKonumGorBtn">Haritada Gör</button>
+      </div>`;
+    document.getElementById('ekipmanKonumGorBtn').addEventListener('click', () => {
+      window.location.href = `../harita/index.html?odaklanKaynak=acilDurumEkipman&odaklanId=${ekipman.id}`;
+    });
+  } else {
+    kutu.innerHTML = `<button type="button" class="tablo-buton" id="ekipmanKonumEkleBtn">📍 Haritada Konum Ekle</button>`;
+    document.getElementById('ekipmanKonumEkleBtn').addEventListener('click', () => {
+      window.location.href = `../harita/index.html?konumKaynak=acilDurumEkipman&konumId=${ekipman.id}&donus=${donusUrl}`;
+    });
+  }
+}
+
+function ekipmanModalKapat() {
+  document.getElementById('ekipmanModalKatman').classList.remove('acik');
+  _duzenlenenEkipmanId = null;
+}
+
+function ekipmanFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('ekipmanForm');
+
+  const veriler = {
+    tur: document.getElementById('ekipmanTur').value,
+    ad: document.getElementById('ekipmanAd').value,
+    bolum: document.getElementById('ekipmanBolum').value,
+    lokasyon: document.getElementById('ekipmanLokasyon').value,
+    periyotGun: document.getElementById('ekipmanPeriyot').value,
+    sonKontrol: document.getElementById('ekipmanSonKontrol').value,
+    sonrakiKontrol: document.getElementById('ekipmanSonrakiKontrol').value,
+    sorumlu: document.getElementById('ekipmanSorumlu').value,
+    durum: document.getElementById('ekipmanDurum').value,
+    bulgular: document.getElementById('ekipmanBulgular').value,
+    notlar: document.getElementById('ekipmanNotlar').value
+  };
+
+  if (!_duzenlenenEkipmanId && _bekleyenHaritaKonum) {
+    veriler.haritaTesisId = _bekleyenHaritaKonum.tesisId;
+    veriler.haritaX = _bekleyenHaritaKonum.x;
+    veriler.haritaY = _bekleyenHaritaKonum.y;
+  }
+
+  const sonuc = _duzenlenenEkipmanId ? ekipmanGuncelle(_duzenlenenEkipmanId, veriler) : ekipmanEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ekipman'); return; }
+
+  _bekleyenHaritaKonum = null;
+  ekipmanModalKapat();
+  ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+}
+
+// ==================== TATBİKAT ====================
+
+function tatbikatlariCiz(aramaMetni) {
+  const govde = document.getElementById('tatbikatTabloGovde');
+  const bosDurum = document.getElementById('tatbikatBosDurum');
+  const liste = tatbikatlariGetir(aramaMetni);
+
+  govde.innerHTML = '';
+  if (liste.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen tatbikat bulunamadı.' : 'Henüz tatbikat eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(t => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${t.tatbikatNo}</td><td>${t.baslik}</td><td>${t.tur}</td>
+      <td>${t.planlananTarih || '-'}</td><td>${t.gerceklesmeTarihi || '-'}</td><td>${t.katilimciSayisi || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => tatbikatModalAc(tatbikatIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
+    if (confirm('Bu tatbikatı silmek istediğinize emin misiniz?')) { tatbikatSil(btn.getAttribute('data-sil')); tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value); }
+  }));
+}
+
+function tatbikatModalAc(tatbikat) {
+  _duzenlenenTatbikatId = tatbikat ? tatbikat.id : null;
+  document.getElementById('tatbikatModalBaslik').textContent = tatbikat ? 'Tatbikatı Düzenle' : 'Yeni Tatbikat';
+  document.getElementById('tatbikatBaslik').value = tatbikat ? tatbikat.baslik : '';
+  document.getElementById('tatbikatTur').innerHTML = TATBIKAT_TURLERI.map(t => `<option ${tatbikat && tatbikat.tur === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('tatbikatPlanlananTarih').value = tatbikat ? tatbikat.planlananTarih : '';
+  document.getElementById('tatbikatGerceklesmeTarihi').value = tatbikat ? tatbikat.gerceklesmeTarihi : '';
+  document.getElementById('tatbikatLokasyon').value = tatbikat ? tatbikat.lokasyon : '';
+  document.getElementById('tatbikatKatilimciSayisi').value = tatbikat ? tatbikat.katilimciSayisi : '';
+  document.getElementById('tatbikatDurum').innerHTML = ['Planlandı', 'Tamamlandı', 'Ertelendi', 'İptal'].map(d => `<option ${tatbikat && tatbikat.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('tatbikatBulgular').value = tatbikat ? tatbikat.bulgular : '';
+  document.getElementById('tatbikatAksiyonlar').value = tatbikat ? tatbikat.aksiyonlar : '';
+  temizleFormHatalari('tatbikatForm');
+  document.getElementById('tatbikatModalKatman').classList.add('acik');
+}
+
+function tatbikatModalKapat() {
+  document.getElementById('tatbikatModalKatman').classList.remove('acik');
+  _duzenlenenTatbikatId = null;
+}
+
+function tatbikatFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('tatbikatForm');
+
+  const veriler = {
+    baslik: document.getElementById('tatbikatBaslik').value,
+    tur: document.getElementById('tatbikatTur').value,
+    planlananTarih: document.getElementById('tatbikatPlanlananTarih').value,
+    gerceklesmeTarihi: document.getElementById('tatbikatGerceklesmeTarihi').value,
+    lokasyon: document.getElementById('tatbikatLokasyon').value,
+    katilimciSayisi: document.getElementById('tatbikatKatilimciSayisi').value,
+    durum: document.getElementById('tatbikatDurum').value,
+    bulgular: document.getElementById('tatbikatBulgular').value,
+    aksiyonlar: document.getElementById('tatbikatAksiyonlar').value
+  };
+
+  const sonuc = _duzenlenenTatbikatId ? tatbikatGuncelle(_duzenlenenTatbikatId, veriler) : tatbikatEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'tatbikat'); return; }
+
+  tatbikatModalKapat();
+  tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value);
+}
+
+// ==================== SENARYO ====================
+
+function senaryolariCiz(aramaMetni) {
+  const govde = document.getElementById('senaryoTabloGovde');
+  const bosDurum = document.getElementById('senaryoBosDurum');
+  const liste = senaryolariGetir(aramaMetni);
+
+  govde.innerHTML = '';
+  if (liste.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen senaryo bulunamadı.' : 'Henüz senaryo eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(s => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${s.senaryoNo}</td><td>${s.baslik}</td><td>${s.tur}</td><td>${s.sorumluEkip}</td>
+      <td>${s.gozdenGecirmeTarihi || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(s.durumGoruntu)}">${s.durumGoruntu}</span></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${s.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${s.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => senaryoModalAc(senaryoIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
+    if (confirm('Bu senaryoyu silmek istediğinize emin misiniz?')) { senaryoSil(btn.getAttribute('data-sil')); senaryolariCiz(document.getElementById('senaryoAramaKutusu').value); }
+  }));
+}
+
+function senaryoModalAc(senaryo) {
+  _duzenlenenSenaryoId = senaryo ? senaryo.id : null;
+  document.getElementById('senaryoModalBaslik').textContent = senaryo ? 'Senaryoyu Düzenle' : 'Yeni Senaryo';
+  document.getElementById('senaryoBaslik').value = senaryo ? senaryo.baslik : '';
+  document.getElementById('senaryoTur').innerHTML = SENARYO_TURLERI.map(t => `<option ${senaryo && senaryo.tur === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('senaryoBolum').value = senaryo ? senaryo.bolum : '';
+  document.getElementById('senaryoLokasyon').value = senaryo ? senaryo.lokasyon : '';
+  document.getElementById('senaryoTetikleyici').value = senaryo ? senaryo.tetikleyici : '';
+  document.getElementById('senaryoMudahaleAdimlari').value = senaryo ? senaryo.mudahaleAdimlari.join('\n') : '';
+  document.getElementById('senaryoSorumluEkip').innerHTML = EKIP_TURLERI.map(t => `<option ${senaryo && senaryo.sorumluEkip === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('senaryoGozdenGecirmeTarihi').value = senaryo ? senaryo.gozdenGecirmeTarihi : '';
+  document.getElementById('senaryoDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${senaryo && senaryo.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('senaryoNotlar').value = senaryo ? senaryo.notlar : '';
+  temizleFormHatalari('senaryoForm');
+  document.getElementById('senaryoModalKatman').classList.add('acik');
+}
+
+function senaryoModalKapat() {
+  document.getElementById('senaryoModalKatman').classList.remove('acik');
+  _duzenlenenSenaryoId = null;
+}
+
+function senaryoFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('senaryoForm');
+
+  const veriler = {
+    baslik: document.getElementById('senaryoBaslik').value,
+    tur: document.getElementById('senaryoTur').value,
+    bolum: document.getElementById('senaryoBolum').value,
+    lokasyon: document.getElementById('senaryoLokasyon').value,
+    tetikleyici: document.getElementById('senaryoTetikleyici').value,
+    mudahaleAdimlari: document.getElementById('senaryoMudahaleAdimlari').value,
+    sorumluEkip: document.getElementById('senaryoSorumluEkip').value,
+    gozdenGecirmeTarihi: document.getElementById('senaryoGozdenGecirmeTarihi').value,
+    durum: document.getElementById('senaryoDurum').value,
+    notlar: document.getElementById('senaryoNotlar').value
+  };
+
+  const sonuc = _duzenlenenSenaryoId ? senaryoGuncelle(_duzenlenenSenaryoId, veriler) : senaryoEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'senaryo'); return; }
+
+  senaryoModalKapat();
+  senaryolariCiz(document.getElementById('senaryoAramaKutusu').value);
+}
+
+// ==================== Ortak yardımcılar ====================
+
+function temizleFormHatalari(formId) {
+  document.querySelectorAll('#' + formId + ' .alan-hatasi').forEach(el => el.textContent = '');
+}
+
+// Her formun alan-hatası div id'si <onEk><Alan>Hata şeklindedir (örn. "tatbikatBaslikHata")
+// çünkü tüm formlar aynı sayfada birlikte durduğundan salt "baslikHata" gibi genel bir id
+// birden fazla formda çakışırdı.
+function formHatalariniGoster(hatalar, onEk) {
+  Object.keys(hatalar).forEach(alan => {
+    const buyukAlan = alan.charAt(0).toUpperCase() + alan.slice(1);
+    const hataEl = document.getElementById(onEk + buyukAlan + 'Hata');
+    if (hataEl) hataEl.textContent = hatalar[alan];
+  });
+}

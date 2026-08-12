@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Olay / Kaza Takibi</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Olay / Kaza Takibi</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" id="sekmeKayitlar">Kayıtlar</button>
+      <button type="button" id="sekmeRCA" class="sekme-seciliDegil">RCA İstatistik</button>
+    </div>
+
+    <div id="bolum-kayitlar">
+      <div class="arac-cubugu">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Kayıt no, kişi, bölüm veya açıklamaya göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="olayTipiFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm Olay Tipleri</option>
+          </select>
+          <select id="durumFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm Durumlar</option>
+            <option>Açık</option>
+            <option>Kapalı</option>
+          </select>
+          <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
+          <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="jsonDisaAktarBtn">JSON Dışa Aktar</button>
+          <button type="button" class="ikincil" id="jsonIceAktarBtn">JSON İçe Aktar</button>
+          <input type="file" id="jsonIceAktarDosya" accept=".json" style="display:none;">
+          <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
+          <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
+          <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>Kayıt No</th><th>Olay Tipi</th><th>Tarih</th><th>Bölüm</th><th>Kişi</th><th>Yaralanma Türü</th><th>Fine-Kinney RP</th><th>Durum</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody id="tabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bosDurum"></div>
+    </div>
+
+    <div id="bolum-rca" style="display:none;">
+      <div class="rapor-meta-grid" style="grid-template-columns: 260px;">
+        <label>Yıllık Çalışma Saati<input type="number" id="yillikCalismaSaati" min="0"></label>
+      </div>
+      <div id="rcaKutusu"></div>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="modalKatman">
+    <div class="modal-kutu" style="max-width:820px;">
+      <h3 id="modalBaslik">Yeni Olay/Kaza Kaydı</h3>
+      <form id="kayitForm">
+
+        <div class="form-bolum-baslik katlanir" data-bolum-toggle>Temel Bilgiler</div>
+        <div class="form-bolum-icerik">
+        <label for="temelKayitNo">Kayıt No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakırsanız otomatik verilir)</span></label>
+        <input type="text" id="temelKayitNo" placeholder="Otomatik">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="temelOlayTipi">Olay Tipi</label>
+            <select id="temelOlayTipi"></select>
+            <div class="alan-hatasi" id="olayTipiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="temelBolum">Bölüm</label>
+            <input type="text" id="temelBolum">
+            <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="temelKazaTarihi">Tarih</label>
+            <input type="date" id="temelKazaTarihi">
+            <div class="alan-hatasi" id="kazaTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="temelKazaSaati">Saat</label>
+            <input type="time" id="temelKazaSaati">
+          </div>
+        </div>
+        <label for="temelKazaYeri">Olay Yeri</label>
+        <input type="text" id="temelKazaYeri">
+        </div>
+
+        <div class="form-bolum-baslik katlanir" data-bolum-toggle>Olay Yeri Fotoğrafları</div>
+        <div class="form-bolum-icerik">
+        <label for="olayFotoDosya">Fotoğraf Ekle (en fazla 3)</label>
+        <input type="file" id="olayFotoDosya" accept="image/*">
+        <div id="olayFotoOnizleme" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir" data-bolum-toggle>Kişi Bilgileri (Mağdur)</div>
+        <div class="form-bolum-icerik">
+        <label for="kisiPersonelId">Personel</label>
+        <select id="kisiPersonelId"></select>
+        <div class="alan-hatasi" id="adSoyadHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="kisiSicilNo">Sicil No</label>
+            <input type="text" id="kisiSicilNo" readonly>
+          </div>
+          <div>
+            <label for="kisiGorev">Görev</label>
+            <input type="text" id="kisiGorev" readonly>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="kisiIseGirisTarihi">İşe Giriş Tarihi</label>
+            <input type="date" id="kisiIseGirisTarihi" readonly>
+          </div>
+          <div>
+            <label for="kisiYas">Yaşı</label>
+            <input type="number" id="kisiYas" min="0">
+          </div>
+        </div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir" data-bolum-toggle>Olay Anlatımı (Kaza Özeti)</div>
+        <div class="form-bolum-icerik">
+        <label for="anlatimIsTanimi">Yapılan İş</label>
+        <input type="text" id="anlatimIsTanimi">
+        <label for="anlatimAciklama">Kaza Özeti / Açıklama</label>
+        <textarea id="anlatimAciklama"></textarea>
+        <div class="alan-hatasi" id="aciklamaHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <label for="anlatimPotansiyelSonuc">Potansiyel Sonuç</label>
+        <textarea id="anlatimPotansiyelSonuc"></textarea>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="anlatimTehlikeliMadde">Tehlikeli Madde</label>
+            <input type="text" id="anlatimTehlikeliMadde" placeholder="örn. Sülfürik Asit (H₂SO₄, %98) – Aşındırıcı">
+          </div>
+          <div>
+            <label for="anlatimTanikSayisi">Tanık Sayısı</label>
+            <input type="number" id="anlatimTanikSayisi" min="0">
+          </div>
+        </div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Yaralanma Bilgileri</div>
+        <div class="form-bolum-icerik kapali">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="siniflandirmaYaralanmaTuru">Yaralanma Türü</label>
+            <select id="siniflandirmaYaralanmaTuru"></select>
+          </div>
+          <div>
+            <label for="siniflandirmaYaralananUzuv">Yaralanan Bölge</label>
+            <input type="text" id="siniflandirmaYaralananUzuv" placeholder="örn. Sağ El, Sol Diz">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="siniflandirmaKayipGun">Kayıp Gün</label>
+            <input type="number" id="siniflandirmaKayipGun" min="0">
+          </div>
+          <div>
+            <label for="siniflandirmaDartGun">DART Gün</label>
+            <input type="number" id="siniflandirmaDartGun" min="0">
+          </div>
+        </div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Olay Kronolojisi</div>
+        <div class="form-bolum-icerik kapali">
+        <div id="kronolojiListesi"></div>
+        <button type="button" class="ikincil" id="kronolojiEkleBtn" style="width:auto; margin-bottom:14px;">+ Kronoloji Satırı Ekle</button>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Tanık İfadeleri</div>
+        <div class="form-bolum-icerik kapali">
+        <div id="tanikListesi"></div>
+        <button type="button" class="ikincil" id="tanikEkleBtn" style="width:auto; margin-bottom:14px;">+ Tanık Ekle</button>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Fine-Kinney Risk Puanlaması</div>
+        <div class="form-bolum-icerik kapali">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="fkO">Olasılık (O)</label>
+            <select id="fkO"></select>
+          </div>
+          <div>
+            <label for="fkF">Frekans (F)</label>
+            <select id="fkF"></select>
+          </div>
+        </div>
+        <label for="fkS">Şiddet (Ş)</label>
+        <select id="fkS"></select>
+        <div class="hesap-kutusu" id="fkHesapKutusu"></div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>5N1K Analizi</div>
+        <div class="form-bolum-icerik kapali">
+        <label for="analiz5n1kNe">Ne</label>
+        <input type="text" id="analiz5n1kNe">
+        <label for="analiz5n1kNerede">Nerede</label>
+        <input type="text" id="analiz5n1kNerede">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="analiz5n1kNeZaman">Ne Zaman</label>
+            <input type="text" id="analiz5n1kNeZaman">
+          </div>
+          <div>
+            <label for="analiz5n1kKim">Kim</label>
+            <input type="text" id="analiz5n1kKim">
+          </div>
+        </div>
+        <label for="analiz5n1kNasil">Nasıl</label>
+        <textarea id="analiz5n1kNasil"></textarea>
+        <label for="analiz5n1kNeden">Neden</label>
+        <textarea id="analiz5n1kNeden"></textarea>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>İlgili Mevzuat</div>
+        <div class="form-bolum-icerik kapali">
+        <label style="display:block; font-weight:400; font-size:12px; color:var(--metin-soluk); margin-top:-4px;">İlgili gördüğünüz madde/yönetmelikleri işaretleyin.</label>
+        <div id="mevzuatListesi" style="display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; margin:8px 0 12px;"></div>
+        <label for="ilgiliMevzuatDiger">Diğer <span style="color:var(--metin-soluk); font-weight:400;">(listede olmayan, opsiyonel — her satıra bir madde)</span></label>
+        <textarea id="ilgiliMevzuatDiger" placeholder="örn. 6331 sayılı Kanun, Md. 4"></textarea>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Uygunsuzluk (Düzeltici ve Önleyici Faaliyet)</div>
+        <div class="form-bolum-icerik kapali">
+        <p style="font-size:12px; color:var(--metin-soluk); margin-top:-4px;">Eklediğin her satır otomatik olarak Uygunsuzluk modülüne de işlenir (Kaynak: İş Kazası).</p>
+        <div id="aksiyonListesi"></div>
+        <button type="button" class="ikincil" id="aksiyonEkleBtn" style="width:auto; margin-bottom:14px;">+ Uygunsuzluk Ekle</button>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Sonuç ve Değerlendirme</div>
+        <div class="form-bolum-icerik kapali">
+        <textarea id="sonucDegerlendirme"></textarea>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Rapor Bilgileri (Hazırlayan / Onaylayan)</div>
+        <div class="form-bolum-icerik kapali">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="raporHazirlayanAdi">Hazırlayan (Ad Soyad)</label>
+            <input type="text" id="raporHazirlayanAdi">
+          </div>
+          <div>
+            <label for="raporHazirlayanUnvan">Hazırlayan Unvanı</label>
+            <input type="text" id="raporHazirlayanUnvan" placeholder="örn. İSG Uzmanı (B Sınıfı)">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="raporEkipUyesiAdi">Soruşturma Ekibi Üyesi</label>
+            <input type="text" id="raporEkipUyesiAdi">
+          </div>
+          <div>
+            <label for="raporEkipUyesiUnvan">Ekip Üyesi Unvanı</label>
+            <input type="text" id="raporEkipUyesiUnvan" placeholder="örn. Vardiya Amiri">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="raporOnaylayanAdi">Onaylayan (Ad Soyad)</label>
+            <input type="text" id="raporOnaylayanAdi">
+          </div>
+          <div>
+            <label for="raporOnaylayanUnvan">Onaylayan Unvanı</label>
+            <input type="text" id="raporOnaylayanUnvan" placeholder="örn. Fabrika Müdürü">
+          </div>
+        </div>
+        <label for="raporKazaSinifi">Kaza Sınıfı</label>
+        <input type="text" id="raporKazaSinifi" placeholder="örn. Hafif yaralanma – iş günü kaybı yok">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="raporSorusturmaBaslangic">Soruşturma Başlangıcı</label>
+            <input type="date" id="raporSorusturmaBaslangic">
+          </div>
+          <div>
+            <label for="raporSorusturmaBitis">Soruşturma Bitişi</label>
+            <input type="date" id="raporSorusturmaBitis">
+          </div>
+        </div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Kapanış</div>
+        <div class="form-bolum-icerik kapali">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="kapanisTarihi">Kapanış Tarihi</label>
+            <input type="date" id="kapanisTarihi">
+          </div>
+          <div>
+            <label for="kapanisDurum">Genel Durum</label>
+            <select id="kapanisDurum"></select>
+          </div>
+        </div>
+        </div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="modalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="modalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="../../core/rapor.js"></script>
+  <script src="../../core/form-ayarlari.js"></script>
+  <script src="../personel/model.js"></script>
+  <script src="../personel/validation.js"></script>
+  <script src="../personel/repository.js"></script>
+  <script src="../personel/org-repository.js"></script>
+  <script src="../personel/service.js"></script>
+  <script src="../risk/model.js"></script>
+  <script src="../risk/validation.js"></script>
+  <script src="../risk/repository.js"></script>
+  <script src="../risk/sablon-repository.js"></script>
+  <script src="../risk/service.js"></script>
+  <script src="../uygunsuzluk/model.js"></script>
+  <script src="../uygunsuzluk/validation.js"></script>
+  <script src="../uygunsuzluk/repository.js"></script>
+  <script src="../uygunsuzluk/service.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="cikti.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' olay/kaza kayıtları ve kök neden analizi';
+          document.getElementById('olayTipiFiltre').innerHTML += OLAY_TIPLERI.map(t => `<option>${t}</option>`).join('');
+          olayKazaSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Hizmet Sözleşmeleri</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Hizmet Sözleşmeleri</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div id="ozetKutusu" style="margin-bottom:16px;"></div>
+
+    <div class="arac-cubugu">
+      <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Ad soyad, belge no veya sözleşme no'ya göre ara...">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <select id="gorevFiltre" style="width:auto; margin:0;"><option value="">Tüm Görevler</option></select>
+        <select id="durumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
+        <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
+        <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
+        <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+        <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
+        <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
+        <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
+      </div>
+    </div>
+    <div class="tablo-scroll">
+      <table class="veri-tablosu">
+        <thead>
+          <tr><th>Sözleşme No / Görev</th><th>Ad Soyad</th><th>Belge No / Sınıfı</th><th>Başlangıç</th><th>Bitiş</th><th>Ayrılan Süre</th><th>Belge</th><th>Durum</th><th>İşlemler</th></tr>
+        </thead>
+        <tbody id="tabloGovde"></tbody>
+      </table>
+    </div>
+    <div class="bos-durum" id="bosDurum"></div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <div class="modal-katman" id="modalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="modalBaslik">Yeni Hizmet Sözleşmesi</h3>
+      <form id="kayitForm">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gorevTuru">Görev Türü</label>
+            <select id="gorevTuru"></select>
+            <div class="alan-hatasi" id="gorevTuruHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="adSoyad">Ad Soyad</label>
+            <input type="text" id="adSoyad">
+            <div class="alan-hatasi" id="adSoyadHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="belgeNo">Belge / Sertifika No</label>
+            <input type="text" id="belgeNo">
+          </div>
+          <div>
+            <label for="belgeSinifi">Belge Sınıfı <span style="color:var(--metin-soluk); font-weight:400;">(İSG Uzmanı için A/B/C)</span></label>
+            <input type="text" id="belgeSinifi">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="sozlesmeBaslangicTarihi">Sözleşme Başlangıç Tarihi</label>
+            <input type="date" id="sozlesmeBaslangicTarihi">
+            <div class="alan-hatasi" id="sozlesmeBaslangicTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="sozlesmeBitisTarihi">Sözleşme Bitiş Tarihi</label>
+            <input type="date" id="sozlesmeBitisTarihi">
+            <div class="alan-hatasi" id="sozlesmeBitisTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <label for="ayrilanSure">Ayrılan Süre <span style="color:var(--metin-soluk); font-weight:400;">(ör. Ayda 8 saat)</span></label>
+        <input type="text" id="ayrilanSure">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="telefon">Telefon</label>
+            <input type="text" id="telefon">
+          </div>
+          <div>
+            <label for="eposta">E-posta</label>
+            <input type="email" id="eposta">
+          </div>
+        </div>
+
+        <label for="sozlesmeBelgesiDosya">Sözleşme Belgesi</label>
+        <input type="file" id="sozlesmeBelgesiDosya" accept="image/*">
+        <div id="sozlesmeBelgesiOnizleme" style="margin-top:6px; margin-bottom:14px;"></div>
+
+        <label for="notlar">Not</label>
+        <textarea id="notlar"></textarea>
+
+        <label for="durum">Durum (elle geçersiz kılmak isterseniz)</label>
+        <select id="durum"></select>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="modalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="modalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="../../core/rapor.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — İSG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmeleri';
+          document.getElementById('gorevFiltre').innerHTML += HIZMET_GOREV_TURLERI.map(g => `<option>${g}</option>`).join('');
+          document.getElementById('durumFiltre').innerHTML += HIZMET_SOZLESME_DURUMLARI.map(d => `<option>${d}</option>`).join('');
+          hizmetSozlesmesiSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Stajyer Yönetimi</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Stajyer Yönetimi</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" id="sekmeKayitlar">Stajyerler</button>
+      <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
+    </div>
+
+    <div id="bolum-kayitlar">
+      <div class="arac-cubugu">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Staj no, ad, bölüm veya okula göre ara...">
+        <div style="display:flex; gap:8px;">
+          <select id="durumFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm Durumlar</option>
+            <option>Planlandı</option>
+            <option>Aktif</option>
+            <option>Tamamlandı</option>
+            <option>İptal Edildi</option>
+          </select>
+          <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
+          <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
+          <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Stajyer</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>Staj No</th><th>Ad Soyad</th><th>Bölüm</th><th>Okul</th><th>Staj Türü</th><th>Tarih Aralığı</th><th>Durum</th><th>İSG Eğitimi</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody id="tabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bosDurum"></div>
+    </div>
+
+    <div id="bolum-ozet" style="display:none;">
+      <div id="ozetKutusu"></div>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="modalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="modalBaslik">Yeni Stajyer</h3>
+      <form id="kayitForm">
+        <label for="adSoyad">Ad Soyad</label>
+        <input type="text" id="adSoyad">
+        <div class="alan-hatasi" id="adSoyadHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="bolum">Staj Yapılacak Bölüm</label>
+            <input type="text" id="bolum">
+            <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="stajTuru">Staj Türü</label>
+            <select id="stajTuru"></select>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="okul">Okul</label>
+            <input type="text" id="okul">
+            <div class="alan-hatasi" id="okulHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="okulBolumu">Okul Bölümü / Programı</label>
+            <input type="text" id="okulBolumu">
+            <div class="alan-hatasi" id="okulBolumuHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="sinif">Sınıf / Dönem</label>
+            <input type="text" id="sinif">
+          </div>
+          <div>
+            <label for="telefon">Telefon</label>
+            <input type="text" id="telefon">
+          </div>
+        </div>
+
+        <label for="sorumluPersonelId">Sorumlu Personel / Danışman</label>
+        <select id="sorumluPersonelId"></select>
+        <input type="hidden" id="sorumluAdi">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="baslangicTarihi">Staj Başlangıç Tarihi</label>
+            <input type="date" id="baslangicTarihi">
+            <div class="alan-hatasi" id="baslangicTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="bitisTarihi">Staj Bitiş Tarihi</label>
+            <input type="date" id="bitisTarihi">
+            <div class="alan-hatasi" id="bitisTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="isgEgitimTarihi">Temel İSG Eğitim Tarihi (1. Gün)</label>
+            <input type="date" id="isgEgitimTarihi">
+          </div>
+          <div>
+            <label for="isgEgitimTarihi2">2. Gün Tarihi <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+            <input type="date" id="isgEgitimTarihi2">
+            <div class="alan-hatasi" id="isgEgitimTarihi2Hata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+        <div class="hesap-kutusu" id="isgEgitimUyarisi"></div>
+
+        <label for="durum">Durum</label>
+        <select id="durum"></select>
+
+        <label for="notlar">Notlar</label>
+        <textarea id="notlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="modalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="modalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="sertifikaAyarModal">
+    <div class="modal-kutu" style="max-width:440px;">
+      <h3>Sertifika Ayarları</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">İkinci sayfadaki konu/süre tablosu bu seçime göre hesaplanır.</p>
+
+      <label for="sertTehlikeSinifi">Tehlike Sınıfı</label>
+      <select id="sertTehlikeSinifi"></select>
+
+      <div class="hesap-kutusu" id="sertSureKutusu"></div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="sertAyarIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="sertAyarOlusturBtn">Sertifikayı Oluştur</button>
+      </div>
+      <button type="button" class="tablo-buton" id="sertAyarKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="../../core/rapor.js"></script>
+  <script src="../personel/model.js"></script>
+  <script src="../personel/validation.js"></script>
+  <script src="../personel/repository.js"></script>
+  <script src="../personel/org-repository.js"></script>
+  <script src="../personel/service.js"></script>
+  <script src="../hizmet-sozlesmesi/repository.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script src="cikti.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' stajyer kayıtları';
+          stajyerSayfasiniBaslat(aktifFirma);
+        });
+      }
+    }
+  </script>
+</body>
+</html>

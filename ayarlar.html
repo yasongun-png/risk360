@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Ayarlar</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .durum-kutusu {
+    background: var(--kart-bg);
+    border: 1px solid var(--kenarlik);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 16px 0;
+    box-shadow: var(--golge);
+  }
+  .durum-satiri { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 6px; }
+  .durum-satiri b { min-width: 140px; display: inline-block; }
+  .durum-nokta { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .durum-nokta.bagli { background: var(--basari); }
+  .durum-nokta.bagli-degil { background: var(--metin-soluk); }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik" style="max-width: 640px;">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Ayarlar</h2>
+    <p style="color:#6b7280; font-size:13px;">
+      Uygulama verisi Firebase/Firestore üzerinden senkronize edilir. Farklı bir
+      müşteri/kurulum için ayrı bir Firebase projesine geçmek isterseniz, o
+      projenin yapılandırmasını buraya yapıştırıp kaydetmeniz yeterli — kod
+      değişikliği gerekmez.
+    </p>
+
+    <div class="durum-kutusu">
+      <div class="durum-satiri">
+        <span class="durum-nokta" id="durumNoktasi"></span>
+        <b>Bağlantı Durumu</b><span id="durumMetni">-</span>
+      </div>
+      <div class="durum-satiri"><b>Proje ID</b><span id="durumProjeId">-</span></div>
+      <div class="durum-satiri"><b>Yapılandırma</b><span id="durumYapilandirma">-</span></div>
+    </div>
+
+    <div class="hata-mesaji" id="hataMesaji"></div>
+    <div class="basari-mesaji" id="basariMesaji"></div>
+
+    <label for="configMetni">Firebase Yapılandırması</label>
+    <p style="color:var(--metin-soluk); font-size:12px; margin-top:-8px;">
+      Firebase Console → Project Settings → Your apps bölümündeki kod bloğunu
+      olduğu gibi yapıştırabilirsiniz (JSON ya da <code>firebaseConfig = {'{'}...{'}'}</code> formatı fark etmez).
+    </p>
+    <textarea id="configMetni" rows="9" style="font-family: monospace; font-size:12px;" placeholder='{
+  "apiKey": "...",
+  "authDomain": "...",
+  "projectId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+
+    <div class="modal-eylemler" style="justify-content:flex-start;">
+      <button type="button" class="birincil" id="kaydetBtn" style="width:auto;">Kaydet ve Yeniden Başlat</button>
+      <button type="button" class="ikincil" id="sifirlaBtn">Varsayılana Sıfırla</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+
+      durumuGoster();
+      document.getElementById('configMetni').value = JSON.stringify(firebaseConfigGetir(), null, 2);
+
+      document.getElementById('kaydetBtn').addEventListener('click', kaydetTiklandi);
+      document.getElementById('sifirlaBtn').addEventListener('click', sifirlaTiklandi);
+    }
+
+    function durumuGoster() {
+      const durum = bulutDurumu();
+      document.getElementById('durumNoktasi').className = 'durum-nokta ' + (durum.aktif ? 'bagli' : 'bagli-degil');
+      document.getElementById('durumMetni').textContent = durum.aktif ? 'Bağlı' : 'Bağlı değil (yerel/localStorage modu)';
+      document.getElementById('durumProjeId').textContent = durum.projeId || '-';
+      document.getElementById('durumYapilandirma').textContent = durum.ozelYapilandirma ? 'Özel (bu cihaza kayıtlı)' : 'Varsayılan (uygulamayla birlikte gelen proje)';
+    }
+
+    function metniConfigeCevir(metin) {
+      try {
+        return JSON.parse(metin);
+      } catch (e) {
+        try {
+          const fn = new Function('return (' + metin + ')');
+          const sonuc = fn();
+          return (sonuc && typeof sonuc === 'object') ? sonuc : null;
+        } catch (e2) {
+          return null;
+        }
+      }
+    }
+
+    function mesajlariTemizle() {
+      document.getElementById('hataMesaji').classList.remove('gorunur');
+      document.getElementById('basariMesaji').classList.remove('gorunur');
+    }
+
+    function kaydetTiklandi() {
+      mesajlariTemizle();
+      const metin = document.getElementById('configMetni').value;
+      const config = metniConfigeCevir(metin);
+
+      if (!config || !config.apiKey || !config.projectId) {
+        const hataEl = document.getElementById('hataMesaji');
+        hataEl.textContent = 'Geçerli bir Firebase yapılandırması yapıştırın (en azından apiKey ve projectId alanları gerekli).';
+        hataEl.classList.add('gorunur');
+        return;
+      }
+
+      firebaseConfigKaydet(config);
+      const basariEl = document.getElementById('basariMesaji');
+      basariEl.textContent = 'Kaydedildi, yeniden başlatılıyor...';
+      basariEl.classList.add('gorunur');
+      setTimeout(() => window.location.reload(), 600);
+    }
+
+    function sifirlaTiklandi() {
+      if (!confirm('Bu cihazdaki özel Firebase yapılandırması silinip varsayılan projeye dönülecek. Emin misiniz?')) return;
+      firebaseConfigSifirla();
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>

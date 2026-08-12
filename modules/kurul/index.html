@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - İSG Kurulu</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">İSG Kurulu</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" id="sekmeToplantilar">Toplantılar</button>
+      <button type="button" id="sekmeKararlar" class="sekme-seciliDegil">Tüm Kararlar</button>
+      <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
+      <button type="button" id="sekmeDenetim" class="sekme-seciliDegil">Denetim Kaydı</button>
+    </div>
+
+    <div id="toplantilarBolumu">
+      <div class="arac-cubugu">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Toplantı no veya başlığa göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="eskiJsonIceAktarBtn">Eski Sistemden İçe Aktar (JSON, Fotoğraflı)</button>
+          <input type="file" id="eskiJsonIceAktarDosya" accept=".json" style="display:none;">
+          <button type="button" class="birincil" id="yeniToplantiBtn" style="width:auto;">+ Yeni Toplantı</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>No</th><th>Başlık</th><th>Tarih/Saat</th><th>Yer</th><th>Durum</th><th>Gündem</th><th>Karar</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody id="tabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bosDurum"></div>
+    </div>
+
+    <div id="kararlarBolumu" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="kararAramaKutusu" class="arama-kutusu" placeholder="Karar metni veya sorumluya göre ara...">
+        <select id="kararDurumFiltre" style="width:auto; margin:0;">
+          <option value="">Tüm Durumlar</option>
+          <option>Açık</option>
+          <option>Devam Ediyor</option>
+          <option>Onay Bekliyor</option>
+          <option>Kapalı</option>
+          <option>Gecikmiş</option>
+          <option>İptal</option>
+        </select>
+        <button type="button" class="ikincil" id="kararDisaAktarBtn">Dışa Aktar</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>Karar No</th><th>Toplantı</th><th>Konu / Başlık</th><th>Karar Metni</th><th>Sorumlu</th><th>Termin</th><th>Öncelik</th><th>Durum</th></tr>
+          </thead>
+          <tbody id="kararTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="kararBosDurum"></div>
+    </div>
+
+    <div id="ozetBolumu" style="display:none;">
+      <div id="ozetKutusu"></div>
+    </div>
+
+    <div id="denetimBolumu" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0;">Toplantı, karar, olay ve imza listesi üzerindeki ekleme/güncelleme/silme işlemlerinin izi (en fazla son 800 kayıt).</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="denetimDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil sil" id="denetimTemizleBtn">Kayıtları Temizle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>Tarih/Saat</th><th>Varlık</th><th>Eylem</th><th>Kullanıcı</th><th>Değişen Alanlar</th></tr>
+          </thead>
+          <tbody id="denetimTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="denetimBosDurum"></div>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="modalKatman">
+    <div class="modal-kutu" style="max-width:680px;">
+      <h3 id="modalBaslik">Yeni Toplantı</h3>
+      <form id="toplantiForm">
+        <label for="toplantiNo">Toplantı No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakırsanız otomatik verilir)</span></label>
+        <input type="text" id="toplantiNo" placeholder="Otomatik">
+
+        <label for="baslik">Başlık</label>
+        <input type="text" id="baslik">
+        <div class="alan-hatasi" id="baslikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="tarih">Tarih</label>
+            <input type="date" id="tarih">
+            <div class="alan-hatasi" id="tarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="saat">Saat</label>
+            <input type="time" id="saat">
+          </div>
+        </div>
+
+        <label for="donem">Dönem <span style="color:var(--metin-soluk); font-weight:400;">(toplantının değerlendirdiği ay, opsiyonel)</span></label>
+        <input type="month" id="donem">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yer">Yer</label>
+            <input type="text" id="yer">
+          </div>
+          <div>
+            <label for="katilimciSayisi">Katılımcı Sayısı <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+            <input type="number" id="katilimciSayisi" min="0">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="tesis">Tesis <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+            <input type="text" id="tesis">
+          </div>
+          <div>
+            <label for="bolum">Bölüm <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+            <input type="text" id="bolum">
+          </div>
+        </div>
+
+        <p class="hint" style="font-size:12px; color:var(--metin-soluk); margin:2px 0 12px;">
+          Başkan ve Kurul Sekreteri artık burada elle girilmez: toplantı detay sayfasındaki
+          İmza Listesi'nde bir katılımcının "Kuruldaki Görevi" alanını "Kurul Başkanı" / "Kurul Sekreteri"
+          olarak işaretlediğinizde otomatik olarak buradan gelir.
+        </p>
+
+        <label for="katilimcilar">Katılımcılar <span style="color:var(--metin-soluk); font-weight:400;">(virgülle ayırın)</span></label>
+        <input type="text" id="katilimcilar" placeholder="İşveren Vekili, İSG Uzmanı, İşyeri Hekimi, Çalışan Temsilcisi">
+
+        <div class="form-bolum-baslik">Gündem</div>
+        <div id="gundemListesi"></div>
+        <button type="button" class="ikincil" id="gundemEkleBtn" style="width:auto; margin-bottom:14px;">+ Gündem Maddesi Ekle</button>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="durum">Durum</label>
+            <select id="durum"></select>
+          </div>
+        </div>
+
+        <label for="genelDegerlendirme">Genel Değerlendirme <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — boş bırakılırsa raporlarda hazır bir metin kullanılır)</span></label>
+        <textarea id="genelDegerlendirme"></textarea>
+
+        <label for="planlananFaaliyetlerGerceklesme">İlgili Dönemde Planlanan Faaliyetlerin Gerçekleşme Durumu <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <textarea id="planlananFaaliyetlerGerceklesme"></textarea>
+
+        <label for="tespitEdilenHususlar">Tespit Edilen Hususlar <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <textarea id="tespitEdilenHususlar"></textarea>
+
+        <label for="calisanBildirimleri">Çalışanların Bildirimleri <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <textarea id="calisanBildirimleri"></textarea>
+
+        <label for="faaliyetMetni">Ay İçi İSG Çalışmaları (Serbest Metin) <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <textarea id="faaliyetMetni"></textarea>
+
+        <label for="metrikler">Metrikler <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — ör. "12 saha kontrolü, 3 ramak kala")</span></label>
+        <textarea id="metrikler"></textarea>
+
+        <label for="calisanTemsilcisiGorusleri">Çalışan Temsilcilerinin Görüş ve Önerileri <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <textarea id="calisanTemsilcisiGorusleri"></textarea>
+
+        <label for="notlar">Notlar</label>
+        <textarea id="notlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="modalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="modalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' İSG Kurulu toplantı ve kararları';
+          kurulSayfasiniBaslat();
+
+          const duzenlenecekId = new URLSearchParams(window.location.search).get('edit');
+          if (duzenlenecekId) {
+            const toplanti = toplantiIdIleGetirRepo(duzenlenecekId);
+            if (toplanti) modalAc(toplanti);
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>

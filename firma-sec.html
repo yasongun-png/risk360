@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Firma Seçimi</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="giris-sahne">
+    <div class="giris-kutu" style="max-width: 460px;">
+      <h1>Firma Seçin</h1>
+      <div class="alt-baslik" id="altBaslik">Devam etmek istediğiniz firmayı seçin</div>
+
+      <div id="icerikAlani"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      const firmalar = getFirmalar();
+      const icerikAlani = document.getElementById('icerikAlani');
+
+      if (firmalar.length === 0) {
+        document.getElementById('altBaslik').textContent = 'Henüz kayıtlı firmanız yok';
+        icerikAlani.innerHTML = `
+          <p style="font-size:13px; color:var(--metin-soluk); margin-bottom:18px;">
+            Devam etmeden önce en az bir firma tanımlamalısınız.
+          </p>
+          <a href="firma-yonetim.html" class="birincil"
+             style="display:block; text-align:center; text-decoration:none; padding:12px;">
+            + Firma Ekle
+          </a>
+        `;
+      } else if (firmalar.length === 1) {
+        aktifFirmaAyarla(firmalar[0].id);
+        window.location.href = 'dashboard.html';
+      } else {
+        icerikAlani.innerHTML = '<div class="firma-kart-listesi" id="firmaListesi"></div>';
+        const liste = document.getElementById('firmaListesi');
+
+        firmalar.forEach(firma => {
+          const kisaAd = firma.ad.split(' ').map(k => k[0]).join('').substring(0, 3).toUpperCase();
+          const kart = document.createElement('div');
+          kart.className = 'firma-kart';
+          kart.innerHTML = `
+            <div class="rozet" style="background:${firma.renk}">${kisaAd}</div>
+            <span class="ad">${firma.ad}</span>
+          `;
+          kart.addEventListener('click', () => {
+            aktifFirmaAyarla(firma.id);
+            window.location.href = 'dashboard.html';
+          });
+          liste.appendChild(kart);
+        });
+      }
+    }
+  </script>
+</body>
+</html>

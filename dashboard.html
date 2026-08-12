@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Kontrol Paneli</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <div class="dashboard-ust">
+      <div class="aktif-firma-rozeti" id="aktifFirmaRozeti"></div>
+      <div class="baglanti-grubu">
+        <a href="firma-sec.html">Firma Değiştir</a>
+        <a href="firma-yonetim.html">Firma Yönetimi</a>
+        <a href="ayarlar.html">⚙️ Ayarlar</a>
+      </div>
+    </div>
+
+    <div class="modul-grid" id="modulGrid"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    const MODULLER = [
+      { ikon: '👥', baslik: 'Personel Yönetimi', aciklama: 'Personel kayıtları ve TC Kimlik doğrulaması', baglanti: 'modules/personel/index.html', aktif: true },
+      { ikon: '🎓', baslik: 'Eğitim Yönetimi', aciklama: 'Zorunlu İSG eğitimleri ve sertifika takibi', baglanti: 'modules/egitim/index.html', aktif: true },
+      { ikon: '📅', baslik: 'Yıllık Değerlendirme ve Planlama', aciklama: 'Eğitim planı, yıllık çalışma planı ve yıllık değerlendirme raporu', baglanti: 'modules/yillik-plan/index.html', aktif: true },
+      { ikon: '⚠️', baslik: 'Risk Değerlendirmesi', aciklama: 'Tehlike tespiti ve risk skorlama', baglanti: 'modules/risk/index.html', aktif: true },
+      { ikon: '🏛️', baslik: 'İSG Kurulu', aciklama: 'Kurul toplantıları ve karar takibi', baglanti: 'modules/kurul/index.html', aktif: true },
+      { ikon: '🚨', baslik: 'Acil Durum Yönetimi', aciklama: 'Ekipler, ekipman, tatbikat ve acil durum planı', baglanti: 'modules/acil-durum/index.html', aktif: true },
+      { ikon: '🧪', baslik: 'Kimyasal Yönetimi', aciklama: 'Kimyasal envanteri, GBF/SDS takibi ve depolama uyumsuzluğu uyarıları', baglanti: 'modules/kimyasal/index.html', aktif: true },
+      { ikon: '🛠️', baslik: 'Periyodik Kontrol', aciklama: 'Basınçlı kap, kaldırma ekipmanı, elektrik tesisatı vb. yasal periyodik muayene takibi', baglanti: 'modules/periyodik-kontrol/index.html', aktif: true },
+      { ikon: '🦺', baslik: 'KKD Takibi', aciklama: 'KKD envanteri, zimmet takibi ve kullanım ihlali tutanakları', baglanti: 'modules/kkd/index.html', aktif: true },
+      { ikon: '📋', baslik: 'Olay / Kaza Takibi', aciklama: 'İş kazası, ramak kala ve kök neden analizi', baglanti: 'modules/olay-kaza/index.html', aktif: true },
+      { ikon: '✅', baslik: 'Uygunsuzluk', aciklama: 'Düzeltici, önleyici faaliyet ve onay akışı', baglanti: 'modules/uygunsuzluk/index.html', aktif: true },
+      { ikon: '🏗️', baslik: 'Yüklenici Yönetimi', aciklama: 'Yüklenici firma ve personel evrak uygunluğu', baglanti: 'modules/yuklenici/index.html', aktif: true },
+      { ikon: '🧑‍🎓', baslik: 'Stajyer Yönetimi', aciklama: 'Stajyer kayıtları ve Temel Eğitim Belgesi', baglanti: 'modules/stajyer/index.html', aktif: true },
+      { ikon: '📝', baslik: 'Sınav Oluşturucu', aciklama: 'Soru bankası, rastgele sınav oluşturma ve sonuç takibi', baglanti: 'modules/sinav/index.html', aktif: true },
+      { ikon: '🔍', baslik: 'Saha Denetim', aciklama: 'Konu bazlı kontrol listeleri, puanlama ve DÖF aktarımı', baglanti: 'modules/saha-denetim/index.html', aktif: true },
+      { ikon: '📦', baslik: 'İSG Malzeme Talep', aciklama: 'KKD/malzeme talep oluru, Word çıktısı ve olur takip listesi', baglanti: 'modules/malzeme-talep/index.html', aktif: true },
+      { ikon: '🧾', baslik: 'İş İzinleri', aciklama: 'Sıcak çalışma, kapalı alan, yüksekte çalışma vb. çalışma izin belgeleri', baglanti: 'modules/is-izni/index.html', aktif: true },
+      { ikon: '📌', baslik: 'Merkezi Aksiyon Takibi', aciklama: 'Tüm modüllerden doğan aksiyonların tekilleştirilmesi', baglanti: 'modules/merkezi-aksiyon/index.html', aktif: true },
+      { ikon: '📊', baslik: 'Raporlar', aciklama: 'Tüm modüllerden derlenen İSG performans özeti, KPI kartları ve grafikler', baglanti: 'modules/raporlar/index.html', aktif: true },
+      { ikon: '📖', baslik: 'Tespit ve Öneri Defteri', aciklama: 'İSG uzmanı/işyeri hekimi tespit-öneri kayıtları, tebliğ ve kapanış takibi', baglanti: 'modules/tespit-oneri/index.html', aktif: true },
+      { ikon: '🖋️', baslik: 'Hizmet Sözleşmeleri', aciklama: 'İSG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmesi takibi', baglanti: 'modules/hizmet-sozlesmesi/index.html', aktif: true },
+      { ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true }
+    ];
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = 'firma-sec.html';
+      } else {
+        const rozet = document.getElementById('aktifFirmaRozeti');
+        rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${aktifFirma.ad}`;
+
+        const grid = document.getElementById('modulGrid');
+        MODULLER.forEach(modul => {
+          const kart = document.createElement(modul.aktif ? 'a' : 'div');
+          kart.className = 'modul-kart ' + (modul.aktif ? 'aktif' : 'pasif');
+          if (modul.aktif) kart.href = modul.baglanti;
+          kart.innerHTML = `
+            <div class="ikon">${modul.ikon}</div>
+            <div class="baslik">${modul.baslik}</div>
+            <div class="aciklama">${modul.aciklama}</div>
+            ${modul.aktif ? '' : '<span class="yakinda-etiket">YAKINDA</span>'}
+          `;
+          grid.appendChild(kart);
+        });
+      }
+    }
+  </script>
+</body>
+</html>

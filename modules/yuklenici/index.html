@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Yüklenici Yönetimi</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Yüklenici Yönetimi</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" data-sekme="dashboard">Dashboard</button>
+      <button type="button" data-sekme="firmalar" class="sekme-seciliDegil">Yüklenici Firmalar</button>
+      <button type="button" data-sekme="kisiler" class="sekme-seciliDegil">Yüklenici Personeli</button>
+      <button type="button" data-sekme="araclar" class="sekme-seciliDegil">Araç / Ekipman</button>
+      <button type="button" data-sekme="ziyaretciler" class="sekme-seciliDegil">Ziyaretçiler</button>
+      <button type="button" data-sekme="kayitlar" class="sekme-seciliDegil">Kayıtlar</button>
+      <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
+    </div>
+
+    <div id="bolum-dashboard">
+      <div class="istatistik-grid">
+        <div class="istatistik-kutu"><span>Toplam Personel</span><b id="dashToplamPersonel">0</b></div>
+        <div class="istatistik-kutu"><span>Toplam Araç</span><b id="dashToplamArac">0</b></div>
+        <div class="istatistik-kutu"><span>Tam Uygun</span><b id="dashUygun">0</b></div>
+        <div class="istatistik-kutu"><span>Bugün Uygunsuz</span><b id="dashUygunsuz">0</b></div>
+      </div>
+
+      <div class="card-title" style="margin:20px 0 8px;"><h3 style="margin:0; font-size:14px;">Aksiyon Merkezi</h3></div>
+      <div class="arac-cubugu">
+        <input type="text" id="dashAramaKutusu" class="arama-kutusu" placeholder="Firma veya personele göre ara...">
+        <select id="dashKapsamFiltre" style="width:auto; margin:0;">
+          <option value="all">Tümü</option>
+          <option value="critical">Bugün Uygunsuz (Giriş Engeli)</option>
+          <option value="warn">30 Gün İçinde Düşecek</option>
+        </select>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Tür</th><th>Firma</th><th>Personel</th><th>Durum</th><th>Sebep</th><th>Son Tarih</th><th>Kalan Gün</th><th>İşlem</th></tr></thead>
+          <tbody id="dashAksiyonGovde"></tbody>
+        </table>
+      </div>
+
+      <div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); margin-top:20px;">
+        <div>
+          <div class="card-title" style="margin-bottom:8px;"><h3 style="margin:0; font-size:14px;">Firma Bazlı Sorun (İlk 10)</h3></div>
+          <div class="tablo-scroll">
+            <table class="veri-tablosu">
+              <thead><tr><th>Firma</th><th>Kritik</th><th>Uyarı</th><th>Toplam</th></tr></thead>
+              <tbody id="dashFirmaGovde"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="card-title" style="margin-bottom:8px;"><h3 style="margin:0; font-size:14px;">Belge Bazlı Sorun</h3></div>
+          <div class="tablo-scroll">
+            <table class="veri-tablosu">
+              <thead><tr><th>Belge</th><th>Adet</th></tr></thead>
+              <tbody id="dashBelgeGovde"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bolum-firmalar">
+      <div class="arac-cubugu">
+        <input type="text" id="firmaAramaKutusu" class="arama-kutusu" placeholder="Firma no veya adına göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="firmaSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="firmaIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="firmaIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="firmaDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="birincil" id="yeniFirmaBtn" style="width:auto;">+ Firma Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Firma No</th><th>Firma Adı</th><th>Yetkili</th><th>Risk</th><th>Durum</th><th>Uygunluk</th><th>İşlemler</th></tr></thead>
+          <tbody id="firmaTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="firmaBosDurum"></div>
+    </div>
+
+    <div id="bolum-kisiler" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="kisiAramaKutusu" class="arama-kutusu" placeholder="Personel no, ad veya firmaya göre ara...">
+        <div style="display:flex; gap:8px;">
+          <select id="kisiDurumFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm Durumlar</option>
+          </select>
+          <button type="button" class="ikincil" id="kisiSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="kisiIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="kisiIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="kisiDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="birincil" id="yeniKisiBtn" style="width:auto;">+ Personel Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Personel No</th><th>Ad Soyad</th><th>Firma</th><th>Durum</th><th>Girebileceği Son Tarih</th><th>İşlemler</th></tr></thead>
+          <tbody id="kisiTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="kisiBosDurum"></div>
+    </div>
+
+    <div id="bolum-araclar" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="aracAramaKutusu" class="arama-kutusu" placeholder="Plaka/seri no veya firmaya göre ara...">
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="birincil" id="yeniAracBtn" style="width:auto;">+ Araç / Ekipman Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Araç No</th><th>Firma</th><th>Tür</th><th>Plaka / Seri No</th><th>PTM</th><th>Ruhsat</th><th>ZMS</th><th>TÜVTÜRK</th><th>Genel Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="aracTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="aracBosDurum"></div>
+    </div>
+
+    <div id="bolum-ziyaretciler" style="display:none;">
+      <form id="ziyaretciForm" class="kart" style="margin-bottom:14px;">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ziyaretciAdSoyad">Ad Soyad</label>
+            <input type="text" id="ziyaretciAdSoyad">
+            <div class="alan-hatasi" id="adSoyadHata2" style="color:var(--hata); font-size:12px;"></div>
+          </div>
+          <div>
+            <label for="ziyaretciFirma">Firma</label>
+            <input type="text" id="ziyaretciFirma">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ziyaretciZiyaretEdilen">Ziyaret Edilen</label>
+            <input type="text" id="ziyaretciZiyaretEdilen">
+          </div>
+          <div>
+            <label for="ziyaretciTarih">Tarih</label>
+            <input type="date" id="ziyaretciTarih">
+            <div class="alan-hatasi" id="tarihHata" style="color:var(--hata); font-size:12px;"></div>
+          </div>
+        </div>
+        <button type="submit" class="birincil" style="width:auto;">Kaydet</button>
+      </form>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Tarih</th><th>Ad Soyad</th><th>Firma</th><th>Ziyaret Edilen</th><th>İşlem</th></tr></thead>
+          <tbody id="ziyaretciTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="ziyaretciBosDurum"></div>
+    </div>
+
+    <div id="bolum-kayitlar" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="kayitAramaKutusu" class="arama-kutusu" placeholder="Firma veya ad/kimliğe göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="kayitTumExcelBtn">Tüm Kayıtları Excel'e Aktar</button>
+          <button type="button" class="ikincil" id="kayitUygunExcelBtn">Tam Uygun Olanlar (Excel)</button>
+          <button type="button" class="ikincil" id="kayitUygunsuzExcelBtn">Uygun Olmayanlar (Excel)</button>
+          <button type="button" class="ikincil" id="kayitDetayliExcelBtn">Detaylı Excel (Kriterli)</button>
+          <button type="button" class="ikincil" id="kayitIceAktarBtn">İçe Aktar (Diğer Uygulamadan)</button>
+          <input type="file" id="kayitIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="kayitPdfBtn">PDF İndir</button>
+          <button type="button" class="ikincil sil" id="kayitSecilenSilBtn">Seçilenleri Sil</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="kayitTumunuSecCheckbox"></th>
+              <th>Tür</th><th>Firma</th><th>Ad / Kimlik</th><th>Uygun / Toplam</th><th>Kayıt Tarihi</th><th>Eğitmen</th><th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="kayitTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="kayitBosDurum"></div>
+    </div>
+
+    <div id="bolum-ozet" style="display:none;">
+      <div id="ozetKutusu"></div>
+    </div>
+  </div>
+
+  <!-- ARAÇ / EKİPMAN MODAL -->
+  <div class="modal-katman" id="aracModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="aracModalBaslik">Yeni Araç / Ekipman</h3>
+      <form id="aracForm">
+        <label for="aracFirmaId">Firma</label>
+        <input type="text" id="aracFirmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
+        <select id="aracFirmaId" size="6" style="height:auto;"></select>
+        <div class="alan-hatasi" id="firmaIdHata2" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="aracTur">Tür</label>
+            <select id="aracTur"></select>
+          </div>
+          <div>
+            <label for="aracKimlik">Plaka / Seri No</label>
+            <input type="text" id="aracKimlik" placeholder="34 ABC 123 / SN-0001">
+            <div class="alan-hatasi" id="kimlikHata" style="color:var(--hata); font-size:12px; margin-top:-8px;"></div>
+          </div>
+        </div>
+
+        <div class="form-bolum-baslik">Periyodik Teknik Muayene</div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="aracPtmVar">Var / Yok</label>
+            <select id="aracPtmVar"><option value="Var">Var</option><option value="Yok">Yok</option></select>
+          </div>
+          <div>
+            <label for="aracPtmTarih">Tarih (boş=+1 yıl otomatik)</label>
+            <input type="date" id="aracPtmTarih">
+            <input type="date" id="aracPtmGecerlilik" style="margin-top:6px;" title="Geçerlilik (opsiyonel)">
+          </div>
+        </div>
+
+        <div class="form-bolum-baslik">Ruhsat</div>
+        <select id="aracRuhsat"><option value="Var">Var</option><option value="Yok">Yok</option></select>
+
+        <div class="form-bolum-baslik">Zorunlu Trafik Sigortası</div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="aracZmsTarih">Başlangıç Tarihi</label>
+            <input type="date" id="aracZmsTarih">
+          </div>
+          <div>
+            <label for="aracZmsGecerlilik">Geçerlilik (boş=+1 yıl otomatik)</label>
+            <input type="date" id="aracZmsGecerlilik">
+          </div>
+        </div>
+
+        <div class="form-bolum-baslik">TÜVTÜRK Muayenesi</div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="aracTuvTarih">Muayene Tarihi</label>
+            <input type="date" id="aracTuvTarih">
+          </div>
+          <div>
+            <label for="aracTuvGecerlilik">Geçerlilik (boş=+1 yıl otomatik)</label>
+            <input type="date" id="aracTuvGecerlilik">
+          </div>
+        </div>
+
+        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; margin-top:14px;">
+          <input type="checkbox" id="aracPasif" style="width:auto;"> Pasif
+        </label>
+
+        <div id="aracCanliDurum" style="margin:14px 0;"></div>
+
+        <label for="aracNotlar">Notlar</label>
+        <textarea id="aracNotlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="aracModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="aracModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- FİRMA MODAL -->
+  <div class="modal-katman" id="firmaModalKatman">
+    <div class="modal-kutu" style="max-width:680px;">
+      <h3 id="firmaModalBaslik">Yeni Yüklenici Firma</h3>
+      <form id="firmaForm">
+        <label for="firmaAdi">Firma Adı</label>
+        <input type="text" id="firmaAdi">
+        <div class="alan-hatasi" id="firmaAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="vergiNo">Vergi No</label>
+            <input type="text" id="vergiNo">
+          </div>
+          <div>
+            <label for="faaliyetAlani">Faaliyet Alanı</label>
+            <input type="text" id="faaliyetAlani">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yetkiliAdi">Yetkili Adı</label>
+            <input type="text" id="yetkiliAdi">
+          </div>
+          <div>
+            <label for="firmaTelefon">Telefon</label>
+            <input type="text" id="firmaTelefon">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="eposta">E-posta</label>
+            <input type="email" id="eposta">
+          </div>
+          <div>
+            <label for="firmaRiskSeviyesi">Risk Seviyesi</label>
+            <select id="firmaRiskSeviyesi"></select>
+          </div>
+        </div>
+        <label for="firmaDurum">Durum</label>
+        <select id="firmaDurum"></select>
+
+        <div class="form-bolum-baslik">Gerekli Evraklar</div>
+        <div id="firmaGerekliEvraklarKutusu" style="margin-bottom:14px;"></div>
+
+        <div class="form-bolum-baslik">Evraklar</div>
+        <div id="firmaEvrakListesi"></div>
+        <button type="button" class="ikincil" id="firmaEvrakEkleBtn" style="width:auto; margin-bottom:14px;">+ Evrak Ekle</button>
+
+        <label for="firmaNotlar">Notlar</label>
+        <textarea id="firmaNotlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="firmaModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="firmaModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- KİŞİ MODAL -->
+  <div class="modal-katman" id="kisiModalKatman">
+    <div class="modal-kutu" style="max-width:680px;">
+      <h3 id="kisiModalBaslik">Yeni Yüklenici Personeli</h3>
+      <form id="kisiForm">
+        <label for="kisiFirmaId">Firma</label>
+        <input type="text" id="kisiFirmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
+        <select id="kisiFirmaId" size="6" style="height:auto;"></select>
+        <div class="alan-hatasi" id="firmaIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="adSoyad">Ad Soyad</label>
+        <input type="text" id="adSoyad">
+        <div class="alan-hatasi" id="adSoyadHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="kisiTelefon">Telefon</label>
+            <input type="text" id="kisiTelefon">
+          </div>
+          <div>
+            <label for="kisiDurum">Durum</label>
+            <select id="kisiDurum"></select>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="kisiTehlikeSinifi">Tehlike Sınıfı</label>
+            <select id="kisiTehlikeSinifi"></select>
+          </div>
+          <div>
+            <label for="kisiPersonelTuru">Personel Türü</label>
+            <select id="kisiPersonelTuru"></select>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+            <input type="checkbox" id="kisiPasif" style="width:auto;"> Pasif
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+            <input type="checkbox" id="kisiIlkGiris" style="width:auto;"> İlk Giriş (Eğitim Verilecek)
+          </label>
+        </div>
+
+        <div id="kisiCanliDurum" style="margin:14px 0;"></div>
+
+        <div class="form-bolum-baslik">Belgeler <span style="font-weight:normal; font-size:12px; color:var(--metin-soluk);">(* girişe engel olan belgeler)</span></div>
+        <div id="kisiBelgeListesi"></div>
+
+        <label for="kisiNotlar">Notlar</label>
+        <textarea id="kisiNotlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="kisiModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="kisiModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/excel.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script src="roboto-font.js"></script>
+  <script src="cikti.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' için yüklenici firma ve personel takibi';
+          document.getElementById('kisiDurumFiltre').innerHTML += KISI_DURUMLARI.map(d => `<option>${d}</option>`).join('');
+          yukleniciSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>

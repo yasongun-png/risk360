@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Saha Dijital Haritası</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* Saha Dijital Haritası — sayfa risk360'ın standart .icerik (1080px, dikey
+     akış) kalıbına sığmayan, geniş/sabit yükseklikli etkileşimli bir kanvas
+     gerektirir (pan/zoom). Bu yüzden başlık şeridi .icerik içinde kalır ama
+     harita uygulamasının kendisi ayrı, daha geniş bir sarmalayıcıda (.h-sayfa)
+     kendi kompakt form kontrolü stilini kullanır (global input/select/textarea
+     genişlik varsayılanı burada bilerek sıfırlanır). */
+  .hidden { display: none !important; }
+  .h-sayfa { max-width: 1400px; margin: 0 auto 40px; padding: 0 20px; }
+  .h-sayfa input, .h-sayfa select, .h-sayfa textarea { width: auto; margin: 0; padding: 7px 9px; font-size: 13px; }
+  .h-sayfa textarea { width: 100%; resize: vertical; min-height: 60px; }
+
+  .h-app {
+    display: flex; flex-direction: column;
+    height: 76vh; min-height: 560px;
+    background: var(--kart-bg); border: 1px solid var(--kenarlik); border-radius: 10px;
+    box-shadow: var(--golge); overflow: hidden;
+  }
+
+  .h-ust { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--kenarlik); flex-wrap: wrap; background: #fafbfc; }
+  .h-ust select#tesisSelect { min-width: 160px; }
+  .h-aramaSarmal { flex: 1 1 220px; min-width: 160px; }
+  .h-aramaSarmal input { width: 100%; }
+  .h-ustBosluk { flex: 1 1 auto; }
+  .h-ust .sekme-cubugu { margin-bottom: 0; }
+
+  .h-govde { flex: 1 1 auto; display: flex; min-height: 0; }
+  .h-yan { width: 250px; flex: 0 0 250px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--kenarlik); background: #fafbfc; }
+  .h-panel { border: 1px solid var(--kenarlik); border-radius: 8px; padding: 10px; background: #fff; }
+  .h-panelBaslik { font-weight: 700; font-size: 12px; text-transform: uppercase; color: var(--metin-soluk); margin-bottom: 8px; letter-spacing: .03em; }
+  .h-alan { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--metin-soluk); margin-bottom: 8px; }
+  .h-alan select { font-size: 13px; color: var(--metin); width: 100%; }
+
+  .h-katmanListe { display: flex; flex-direction: column; gap: 6px; }
+  .h-katmanSatir { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .h-katmanSatir input { width: auto; margin: 0; padding: 0; }
+  .h-katmanSatir .h-sayi { margin-left: auto; color: var(--metin-soluk); font-size: 12px; }
+
+  .h-cipSatir { display: flex; flex-wrap: wrap; gap: 6px; }
+  .h-cip { border: 1px solid var(--kenarlik); background: #f1f5f9; border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .h-cip:hover { background: #e2e8f0; }
+
+  .h-icerik { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+  .h-haritaGorunum { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+  .h-haritaArac { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--kenarlik); background: #fff; }
+  .h-zoomEtiket { font-size: 12px; color: var(--metin-soluk); width: 44px; text-align: center; }
+  .h-ipucu { margin-left: auto; font-size: 12px; color: var(--celik-mavi); font-weight: 600; }
+
+  .h-tuval { position: relative; flex: 1 1 auto; overflow: hidden; background: repeating-conic-gradient(#eef2f7 0% 25%, #f8fafc 0% 50%) 50% / 24px 24px; cursor: grab; }
+  .h-tuval.h-yerlestiriliyor { cursor: crosshair; }
+  .h-tuval.h-kaydiriliyor { cursor: grabbing; }
+  .h-sahne { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+  .h-sahne img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
+  .h-oklarSvg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .h-oklarSvg .h-ok-grup { pointer-events: all; cursor: pointer; }
+  .h-ok-tutamac { fill: #fff; stroke: #111827; stroke-width: 0.15; cursor: grab; opacity: 0; }
+  .h-ok-grup:hover .h-ok-tutamac { opacity: .85; }
+  .h-ok-tutamac:hover { opacity: 1 !important; }
+  .h-ok-orta-tutamac { fill: #ffffffb0; stroke: #111827; stroke-width: 0.1; cursor: grab; opacity: 0; }
+  .h-ok-grup:hover .h-ok-orta-tutamac { opacity: .7; }
+  .h-ok-orta-tutamac:hover { opacity: 1 !important; }
+  .h-bos { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; color: var(--metin-soluk); padding: 20px; }
+  .h-bos b { color: var(--metin); font-size: 16px; }
+
+  .h-nokta { position: absolute; transform: translate(-50%, -100%); cursor: pointer; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+  .h-nokta-simge { font-size: 30px; line-height: 1; }
+  .h-nokta-kod { font-size: 8px; background: #111827dd; color: #fff; padding: 1px 4px; border-radius: 3px; margin-top: 2px; white-space: nowrap; }
+  .h-nokta-yukseklik { font-size: 8px; background: #795548dd; color: #fff; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; order: -1; }
+
+  .h-etiket {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
+    padding: 1px 5px; border-radius: 3px;
+    text-shadow: 0 1px 1px rgba(0,0,0,.5); letter-spacing: .01em;
+    cursor: pointer; z-index: 5; line-height: 1.5;
+  }
+  .h-etiket:hover { filter: brightness(1.2); z-index: 6; }
+  .h-etiket-dikey { writing-mode: vertical-rl; text-orientation: mixed; }
+  .h-etiket-altalta { white-space: normal; text-align: center; line-height: 1.25; }
+
+  .h-formIzgara input[type="color"] { width: 48px; height: 30px; padding: 2px; cursor: pointer; }
+
+  .h-listeGorunum { flex: 1 1 auto; overflow: auto; padding: 12px; }
+  .h-listeGorunum table { width: 100%; border-collapse: collapse; background: #fff; }
+  .h-listeGorunum th, .h-listeGorunum td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--kenarlik); font-size: 13px; }
+  .h-listeGorunum th { color: var(--metin-soluk); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  .h-listeGorunum tr:hover td { background: #f8fafc; }
+  .h-listeGorunum td.h-yaklasiyor { color: #b45309; font-weight: 600; }
+  .h-listeGorunum td.h-gecmis { color: var(--hata); font-weight: 700; }
+
+  .h-modalKok { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+  .h-modalKok.hidden { display: none; }
+  .h-modalKutu { background: #fff; border-radius: 12px; width: min(560px, 100%); max-height: 90vh; overflow-y: auto; padding: 18px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .h-modalKutu.h-genis { width: min(720px, 100%); }
+  .h-modalBas { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .h-modalBas h3 { margin: 0; font-size: 16px; }
+  .h-modalKapatBtn { border: none; background: transparent; font-size: 18px; cursor: pointer; color: var(--metin-soluk); }
+
+  .h-turIzgara { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .h-turKart { border: 1px solid var(--kenarlik); border-radius: 10px; padding: 12px; cursor: pointer; text-align: left; background: #fff; }
+  .h-turKart:hover { border-color: var(--celik-mavi); background: #eff6ff; }
+  .h-turKart .h-ic { font-size: 22px; }
+  .h-turKart .h-lb { font-weight: 600; margin-top: 4px; }
+
+  .h-formIzgara { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .h-formIzgara .h-tam { grid-column: 1 / -1; }
+  .h-formIzgara label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--metin-soluk); }
+  .h-formIzgara label > * { font-size: 13px; color: var(--metin); width: 100%; }
+
+  .h-modalAlt { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .h-modalAlt button { width: auto; }
+
+  .h-detayBas { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .h-detayBas .h-no { font-family: monospace; font-weight: 700; }
+  .h-durumRozet { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: #f1f5f9; font-size: 12px; font-weight: 600; }
+  .h-detayMeta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 13px; margin: 10px 0; }
+  .h-detayMeta div span { color: var(--metin-soluk); display: block; font-size: 11px; }
+  .h-fotoSatir { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .h-fotoSatir img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 1px solid var(--kenarlik); }
+  .h-gecmisListe { display: flex; flex-direction: column; gap: 6px; font-size: 12px; margin: 8px 0; max-height: 140px; overflow-y: auto; }
+  .h-gecmisListe .h-satir { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--kenarlik); padding-bottom: 4px; }
+  .h-eylemSatiri { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .h-eylemSatiri button { width: auto; }
+
+  .h-toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 300; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+  .h-toast.hidden { display: none; }
+  .h-toast.danger { background: var(--hata); }
+
+  @media (max-width: 900px) {
+    .h-yan { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">🗺️ Saha Dijital Haritası</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+  </div>
+
+  <div class="h-sayfa">
+    <div class="h-app">
+      <div class="h-ust">
+        <select id="tesisSelect"></select>
+        <button type="button" class="ikincil" id="tesisEkleBtn" style="width:auto;">+ Tesis</button>
+        <button type="button" class="ikincil sil" id="tesisSilBtn" style="width:auto;">🗑️ Tesisi Sil</button>
+        <button type="button" class="ikincil" id="tesisGorselBtn" style="width:auto;">🖼️ Görsel</button>
+        <input type="file" id="tesisGorselDosya" accept="image/png,image/jpeg,image/webp" style="display:none;">
+
+        <div class="h-aramaSarmal">
+          <input type="text" id="haritaAramaKutusu" placeholder="Ara: göz duşu, yangın tüpü, açık uygunsuzluk...">
+        </div>
+
+        <div class="h-ustBosluk"></div>
+
+        <div class="sekme-cubugu">
+          <button type="button" id="sekmeHaritaBtn">Harita</button>
+          <button type="button" id="sekmeListeBtn" class="sekme-seciliDegil">Liste</button>
+        </div>
+
+        <button type="button" class="ikincil" id="etiketEkleBtn" style="width:auto;">🏷️ Bina Adı Ekle</button>
+        <button type="button" class="ikincil" id="okEkleBtn" style="width:auto;">➡️ Kaçış Oku Ekle</button>
+        <button type="button" class="ikincil" id="jpegIndirBtn" style="width:auto;">📥 JPEG İndir</button>
+        <button type="button" class="birincil" id="noktaEkleBtn" style="width:auto;">📍 Nokta Ekle</button>
+      </div>
+
+      <div class="h-govde">
+        <aside class="h-yan">
+          <div class="h-panel">
+            <div class="h-panelBaslik">Katmanlar</div>
+            <label class="h-katmanSatir" style="margin-bottom:6px;">
+              <input type="checkbox" id="etiketlerGorunurCheck" checked>
+              <span>🏷️ Bina Adı Etiketleri</span>
+            </label>
+            <label class="h-katmanSatir" style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px dashed var(--kenarlik);">
+              <input type="checkbox" id="oklarGorunurCheck" checked>
+              <span>➡️ Kaçış Okları</span>
+            </label>
+            <div id="katmanListesi" class="h-katmanListe"></div>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+              <button type="button" class="ikincil" id="katmanlarTumunuSecBtn" style="width:auto; font-size:11px; padding:4px 8px;">Tümünü Seç</button>
+              <button type="button" class="ikincil" id="katmanlarTumunuKaldirBtn" style="width:auto; font-size:11px; padding:4px 8px;">Tümünü Kaldır</button>
+            </div>
+          </div>
+
+          <div class="h-panel">
+            <div class="h-panelBaslik">Filtreler</div>
+            <label class="h-alan">Kat
+              <select id="filtreKat"><option value="">Tümü</option></select>
+            </label>
+            <label class="h-alan">Bölüm
+              <select id="filtreBolum"><option value="">Tümü</option></select>
+            </label>
+            <label class="h-alan">Durum
+              <select id="filtreDurum"><option value="">Tümü</option></select>
+            </label>
+            <button type="button" class="ikincil" id="filtreTemizleBtn" style="width:100%; font-size:12px; padding:6px;">Filtreleri Temizle</button>
+          </div>
+
+          <div class="h-panel">
+            <div class="h-panelBaslik">Hızlı Arama</div>
+            <div id="hizliCipler" class="h-cipSatir"></div>
+          </div>
+        </aside>
+
+        <section class="h-icerik">
+          <div id="haritaGorunumu" class="h-haritaGorunum">
+            <div class="h-haritaArac">
+              <button type="button" class="ikincil" id="zoomOutBtn" style="width:auto; padding:4px 10px;">−</button>
+              <span id="zoomEtiketi" class="h-zoomEtiket">100%</span>
+              <button type="button" class="ikincil" id="zoomInBtn" style="width:auto; padding:4px 10px;">+</button>
+              <button type="button" class="ikincil" id="zoomSifirlaBtn" style="width:auto; padding:4px 10px;">Sıfırla</button>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--metin-soluk); margin:0 0 0 8px;">
+                Simge Boyutu
+                <input type="range" id="simgeBoyutuAlani" min="14" max="60" step="1" style="width:100px; margin:0;">
+                <span id="simgeBoyutuDeger" style="width:24px;">30</span>
+              </label>
+              <span class="h-ipucu" id="eklemeIpucu"></span>
+            </div>
+            <div id="haritaTuval" class="h-tuval">
+              <div id="haritaSahne" class="h-sahne">
+                <img id="haritaGorseli" alt="Tesis haritası">
+                <svg id="haritaOklarSvg" class="h-oklarSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+              </div>
+              <div id="haritaBos" class="h-bos">
+                <b>Bu tesis için harita görseli yok</b>
+                <span>Google Earth ekran görüntüsü veya kroki yükleyin.</span>
+                <button type="button" class="birincil" id="haritaBosGorselBtn" style="width:auto;">Görsel Seç</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="listeGorunumu" class="h-listeGorunum hidden">
+            <table>
+              <thead>
+                <tr><th>Tür</th><th>No</th><th>Başlık</th><th>Kat</th><th>Bölüm</th><th>Durum</th><th>Sonraki Kontrol</th><th></th></tr>
+              </thead>
+              <tbody id="kayitTabloGovde"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="haritaModalKok" class="h-modalKok hidden"></div>
+  <div id="haritaToast" class="h-toast hidden"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <!-- Diğer modüllerle köprü (bkz. ui.js HARITA_DIS_KAYNAKLAR) — sadece
+       repository.js'leri dahil edilir: bu dosyalar bağımsız, isim çakışması
+       olmayan (modül önekli) düz fonksiyonlardır, model.js/service.js'e
+       gerek yok. -->
+  <script src="../uygunsuzluk/repository.js"></script>
+  <script src="../risk/repository.js"></script>
+  <script src="../acil-durum/repository.js"></script>
+  <script src="model.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' saha dijital haritası';
+          haritaSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>
