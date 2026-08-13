@@ -786,11 +786,23 @@ function haritaDonusumUygula() {
   el('zoomEtiketi').textContent = Math.round(state.zoom * 100) + '%';
 }
 
+// Görseli her zaman %100 (gerçek piksel boyutu) yerine, kanvasa SIĞACAK
+// şekilde açar — aksi halde büyük bir fotoğraf (özellikle telefon
+// kamerasından yüklenen yüksek çözünürlüklü görseller), telefon ekranındaki
+// küçük kanvas alanına göre çok büyük kaldığından sadece görselin küçük,
+// çoğunlukla boş bir köşesi görünürdü (kullanıcı: "fotoğraf tarafı
+// [ekranda görünmüyor]"). Görsel kanvastan küçükse gereksiz büyütülmez
+// (zoom en fazla %100'de kalır).
 function haritaZoomSifirla() {
   const tuval = el('haritaTuval');
-  state.zoom = 1;
-  state.panX = Math.max(0, (tuval.clientWidth - el('haritaSahne').offsetWidth) / 2);
-  state.panY = Math.max(0, (tuval.clientHeight - el('haritaSahne').offsetHeight) / 2);
+  const sahne = el('haritaSahne');
+  const genislikOrani = sahne.offsetWidth ? tuval.clientWidth / sahne.offsetWidth : 1;
+  const yukseklikOrani = sahne.offsetHeight ? tuval.clientHeight / sahne.offsetHeight : 1;
+  state.zoom = Math.min(1, genislikOrani, yukseklikOrani) || 1;
+  const olcekliGenislik = sahne.offsetWidth * state.zoom;
+  const olcekliYukseklik = sahne.offsetHeight * state.zoom;
+  state.panX = Math.max(0, (tuval.clientWidth - olcekliGenislik) / 2);
+  state.panY = Math.max(0, (tuval.clientHeight - olcekliYukseklik) / 2);
   haritaDonusumUygula();
 }
 
