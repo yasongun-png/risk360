@@ -5,19 +5,31 @@ function getFirmalar() {
   const kullanici = oturumdakiKullanici();
   if (!kullanici) return [];
   const tumFirmalar = oku('isg_firmalar', []);
-  return tumFirmalar.filter(f => f.sahipId === kullanici.id);
+  if (kullaniciAdminMi(kullanici)) {
+    return tumFirmalar.filter(f => f.sahipId === kullanici.id);
+  }
+  // İK rolü: sadece kendisine açıkça atanmış firmalar (bkz. core/auth.js
+  // ikKullaniciEkle/ikKullaniciGuncelle erisimFirmaIdleri).
+  const izinliIdler = new Set(kullanici.erisimFirmaIdleri || []);
+  return tumFirmalar.filter(f => izinliIdler.has(f.id));
 }
 
-// Firmayı SADECE oturumdaki kullanıcı sahibiyse döndürür — aksi halde localStorage
-// (ör. isg_aktif_firma) üzerinden başka bir kullanıcının firmaId'sini vermek,
-// o firmanın verisine erişim için yeterli olurdu (bkz. aktifFirmaAyarla,
-// tenantAnahtarFirma). Aynı kullanıcının yönettiği farklı bir firmaya
-// (ör. olay-kaza modülünde çapraz firma kopyalama) erişim hâlâ mümkündür.
+// Firmayı SADECE oturumdaki kullanıcının erişimi varsa döndürür — aksi halde
+// localStorage (ör. isg_aktif_firma) üzerinden başka bir kullanıcının
+// firmaId'sini vermek, o firmanın verisine erişim için yeterli olurdu (bkz.
+// aktifFirmaAyarla, tenantAnahtarFirma). Admin için "sahiplik", İK rolü için
+// "erisimFirmaIdleri" ile atanmış olmak gerekir. Aynı kullanıcının yönettiği
+// farklı bir firmaya (ör. olay-kaza modülünde çapraz firma kopyalama) erişim
+// hâlâ mümkündür.
 function getFirmaById(firmaId) {
   const kullanici = oturumdakiKullanici();
   if (!kullanici) return null;
   const tumFirmalar = oku('isg_firmalar', []);
-  return tumFirmalar.find(f => f.id === firmaId && f.sahipId === kullanici.id) || null;
+  if (kullaniciAdminMi(kullanici)) {
+    return tumFirmalar.find(f => f.id === firmaId && f.sahipId === kullanici.id) || null;
+  }
+  const izinliIdler = new Set(kullanici.erisimFirmaIdleri || []);
+  return izinliIdler.has(firmaId) ? (tumFirmalar.find(f => f.id === firmaId) || null) : null;
 }
 
 function firmaEkle(ad, kullaniciId, tehlikeSinifi, sektor) {

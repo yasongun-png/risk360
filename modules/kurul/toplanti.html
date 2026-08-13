@@ -470,7 +470,7 @@
   <script src="service.js"></script>
   <script src="toplanti-ui.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliModul('kurul');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;

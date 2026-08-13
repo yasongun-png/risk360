@@ -32,7 +32,7 @@
       const firmalar = getFirmalar();
       const icerikAlani = document.getElementById('icerikAlani');
 
-      if (firmalar.length === 0) {
+      if (firmalar.length === 0 && kullaniciAdminMi(kullanici)) {
         document.getElementById('altBaslik').textContent = 'Henüz kayıtlı firmanız yok';
         icerikAlani.innerHTML = `
           <p style="font-size:13px; color:var(--metin-soluk); margin-bottom:18px;">
@@ -42,6 +42,13 @@
              style="display:block; text-align:center; text-decoration:none; padding:12px;">
             + Firma Ekle
           </a>
+        `;
+      } else if (firmalar.length === 0) {
+        document.getElementById('altBaslik').textContent = 'Size henüz firma atanmadı';
+        icerikAlani.innerHTML = `
+          <p style="font-size:13px; color:var(--metin-soluk); margin-bottom:18px;">
+            Devam edebilmeniz için yöneticinizin size en az bir firma ataması gerekiyor.
+          </p>
         `;
       } else if (firmalar.length === 1) {
         aktifFirmaAyarla(firmalar[0].id);

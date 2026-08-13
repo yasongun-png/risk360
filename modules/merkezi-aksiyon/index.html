@@ -53,7 +53,7 @@
   <script src="service.js"></script>
   <script src="ui.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliModul('merkezi-aksiyon');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;

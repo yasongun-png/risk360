@@ -286,7 +286,7 @@
   <script src="cikti.js"></script>
   <script src="ui.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliModul('risk');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;

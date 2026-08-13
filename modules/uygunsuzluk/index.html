@@ -312,7 +312,7 @@
   <script src="ui.js"></script>
   <script src="cikti.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliModul('uygunsuzluk');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;

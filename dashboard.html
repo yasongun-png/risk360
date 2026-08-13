@@ -18,10 +18,8 @@
   <div class="icerik">
     <div class="dashboard-ust">
       <div class="aktif-firma-rozeti" id="aktifFirmaRozeti"></div>
-      <div class="baglanti-grubu">
+      <div class="baglanti-grubu" id="baglantiGrubu">
         <a href="firma-sec.html">Firma Değiştir</a>
-        <a href="firma-yonetim.html">Firma Yönetimi</a>
-        <a href="ayarlar.html">⚙️ Ayarlar</a>
       </div>
     </div>
 
@@ -41,28 +39,28 @@
     const kullanici = girisGerekli();
 
     const MODULLER = [
-      { ikon: '👥', baslik: 'Personel Yönetimi', aciklama: 'Personel kayıtları ve TC Kimlik doğrulaması', baglanti: 'modules/personel/index.html', aktif: true },
-      { ikon: '🎓', baslik: 'Eğitim Yönetimi', aciklama: 'Zorunlu İSG eğitimleri ve sertifika takibi', baglanti: 'modules/egitim/index.html', aktif: true },
-      { ikon: '📅', baslik: 'Yıllık Değerlendirme ve Planlama', aciklama: 'Eğitim planı, yıllık çalışma planı ve yıllık değerlendirme raporu', baglanti: 'modules/yillik-plan/index.html', aktif: true },
-      { ikon: '⚠️', baslik: 'Risk Değerlendirmesi', aciklama: 'Tehlike tespiti ve risk skorlama', baglanti: 'modules/risk/index.html', aktif: true },
-      { ikon: '🏛️', baslik: 'İSG Kurulu', aciklama: 'Kurul toplantıları ve karar takibi', baglanti: 'modules/kurul/index.html', aktif: true },
-      { ikon: '🚨', baslik: 'Acil Durum Yönetimi', aciklama: 'Ekipler, ekipman, tatbikat ve acil durum planı', baglanti: 'modules/acil-durum/index.html', aktif: true },
-      { ikon: '🧪', baslik: 'Kimyasal Yönetimi', aciklama: 'Kimyasal envanteri, GBF/SDS takibi ve depolama uyumsuzluğu uyarıları', baglanti: 'modules/kimyasal/index.html', aktif: true },
-      { ikon: '🛠️', baslik: 'Periyodik Kontrol', aciklama: 'Basınçlı kap, kaldırma ekipmanı, elektrik tesisatı vb. yasal periyodik muayene takibi', baglanti: 'modules/periyodik-kontrol/index.html', aktif: true },
-      { ikon: '🦺', baslik: 'KKD Takibi', aciklama: 'KKD envanteri, zimmet takibi ve kullanım ihlali tutanakları', baglanti: 'modules/kkd/index.html', aktif: true },
-      { ikon: '📋', baslik: 'Olay / Kaza Takibi', aciklama: 'İş kazası, ramak kala ve kök neden analizi', baglanti: 'modules/olay-kaza/index.html', aktif: true },
-      { ikon: '✅', baslik: 'Uygunsuzluk', aciklama: 'Düzeltici, önleyici faaliyet ve onay akışı', baglanti: 'modules/uygunsuzluk/index.html', aktif: true },
-      { ikon: '🏗️', baslik: 'Yüklenici Yönetimi', aciklama: 'Yüklenici firma ve personel evrak uygunluğu', baglanti: 'modules/yuklenici/index.html', aktif: true },
-      { ikon: '🧑‍🎓', baslik: 'Stajyer Yönetimi', aciklama: 'Stajyer kayıtları ve Temel Eğitim Belgesi', baglanti: 'modules/stajyer/index.html', aktif: true },
-      { ikon: '📝', baslik: 'Sınav Oluşturucu', aciklama: 'Soru bankası, rastgele sınav oluşturma ve sonuç takibi', baglanti: 'modules/sinav/index.html', aktif: true },
-      { ikon: '🔍', baslik: 'Saha Denetim', aciklama: 'Konu bazlı kontrol listeleri, puanlama ve DÖF aktarımı', baglanti: 'modules/saha-denetim/index.html', aktif: true },
-      { ikon: '📦', baslik: 'İSG Malzeme Talep', aciklama: 'KKD/malzeme talep oluru, Word çıktısı ve olur takip listesi', baglanti: 'modules/malzeme-talep/index.html', aktif: true },
-      { ikon: '🧾', baslik: 'İş İzinleri', aciklama: 'Sıcak çalışma, kapalı alan, yüksekte çalışma vb. çalışma izin belgeleri', baglanti: 'modules/is-izni/index.html', aktif: true },
-      { ikon: '📌', baslik: 'Merkezi Aksiyon Takibi', aciklama: 'Tüm modüllerden doğan aksiyonların tekilleştirilmesi', baglanti: 'modules/merkezi-aksiyon/index.html', aktif: true },
-      { ikon: '📊', baslik: 'Raporlar', aciklama: 'Tüm modüllerden derlenen İSG performans özeti, KPI kartları ve grafikler', baglanti: 'modules/raporlar/index.html', aktif: true },
-      { ikon: '📖', baslik: 'Tespit ve Öneri Defteri', aciklama: 'İSG uzmanı/işyeri hekimi tespit-öneri kayıtları, tebliğ ve kapanış takibi', baglanti: 'modules/tespit-oneri/index.html', aktif: true },
-      { ikon: '🖋️', baslik: 'Hizmet Sözleşmeleri', aciklama: 'İSG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmesi takibi', baglanti: 'modules/hizmet-sozlesmesi/index.html', aktif: true },
-      { ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true }
+      { anahtar: 'personel', ikon: '👥', baslik: 'Personel Yönetimi', aciklama: 'Personel kayıtları ve TC Kimlik doğrulaması', baglanti: 'modules/personel/index.html', aktif: true },
+      { anahtar: 'egitim', ikon: '🎓', baslik: 'Eğitim Yönetimi', aciklama: 'Zorunlu İSG eğitimleri ve sertifika takibi', baglanti: 'modules/egitim/index.html', aktif: true },
+      { anahtar: 'yillik-plan', ikon: '📅', baslik: 'Yıllık Değerlendirme ve Planlama', aciklama: 'Eğitim planı, yıllık çalışma planı ve yıllık değerlendirme raporu', baglanti: 'modules/yillik-plan/index.html', aktif: true },
+      { anahtar: 'risk', ikon: '⚠️', baslik: 'Risk Değerlendirmesi', aciklama: 'Tehlike tespiti ve risk skorlama', baglanti: 'modules/risk/index.html', aktif: true },
+      { anahtar: 'kurul', ikon: '🏛️', baslik: 'İSG Kurulu', aciklama: 'Kurul toplantıları ve karar takibi', baglanti: 'modules/kurul/index.html', aktif: true },
+      { anahtar: 'acil-durum', ikon: '🚨', baslik: 'Acil Durum Yönetimi', aciklama: 'Ekipler, ekipman, tatbikat ve acil durum planı', baglanti: 'modules/acil-durum/index.html', aktif: true },
+      { anahtar: 'kimyasal', ikon: '🧪', baslik: 'Kimyasal Yönetimi', aciklama: 'Kimyasal envanteri, GBF/SDS takibi ve depolama uyumsuzluğu uyarıları', baglanti: 'modules/kimyasal/index.html', aktif: true },
+      { anahtar: 'periyodik-kontrol', ikon: '🛠️', baslik: 'Periyodik Kontrol', aciklama: 'Basınçlı kap, kaldırma ekipmanı, elektrik tesisatı vb. yasal periyodik muayene takibi', baglanti: 'modules/periyodik-kontrol/index.html', aktif: true },
+      { anahtar: 'kkd', ikon: '🦺', baslik: 'KKD Takibi', aciklama: 'KKD envanteri, zimmet takibi ve kullanım ihlali tutanakları', baglanti: 'modules/kkd/index.html', aktif: true },
+      { anahtar: 'olay-kaza', ikon: '📋', baslik: 'Olay / Kaza Takibi', aciklama: 'İş kazası, ramak kala ve kök neden analizi', baglanti: 'modules/olay-kaza/index.html', aktif: true },
+      { anahtar: 'uygunsuzluk', ikon: '✅', baslik: 'Uygunsuzluk', aciklama: 'Düzeltici, önleyici faaliyet ve onay akışı', baglanti: 'modules/uygunsuzluk/index.html', aktif: true },
+      { anahtar: 'yuklenici', ikon: '🏗️', baslik: 'Yüklenici Yönetimi', aciklama: 'Yüklenici firma ve personel evrak uygunluğu', baglanti: 'modules/yuklenici/index.html', aktif: true },
+      { anahtar: 'stajyer', ikon: '🧑‍🎓', baslik: 'Stajyer Yönetimi', aciklama: 'Stajyer kayıtları ve Temel Eğitim Belgesi', baglanti: 'modules/stajyer/index.html', aktif: true },
+      { anahtar: 'sinav', ikon: '📝', baslik: 'Sınav Oluşturucu', aciklama: 'Soru bankası, rastgele sınav oluşturma ve sonuç takibi', baglanti: 'modules/sinav/index.html', aktif: true },
+      { anahtar: 'saha-denetim', ikon: '🔍', baslik: 'Saha Denetim', aciklama: 'Konu bazlı kontrol listeleri, puanlama ve DÖF aktarımı', baglanti: 'modules/saha-denetim/index.html', aktif: true },
+      { anahtar: 'malzeme-talep', ikon: '📦', baslik: 'İSG Malzeme Talep', aciklama: 'KKD/malzeme talep oluru, Word çıktısı ve olur takip listesi', baglanti: 'modules/malzeme-talep/index.html', aktif: true },
+      { anahtar: 'is-izni', ikon: '🧾', baslik: 'İş İzinleri', aciklama: 'Sıcak çalışma, kapalı alan, yüksekte çalışma vb. çalışma izin belgeleri', baglanti: 'modules/is-izni/index.html', aktif: true },
+      { anahtar: 'merkezi-aksiyon', ikon: '📌', baslik: 'Merkezi Aksiyon Takibi', aciklama: 'Tüm modüllerden doğan aksiyonların tekilleştirilmesi', baglanti: 'modules/merkezi-aksiyon/index.html', aktif: true },
+      { anahtar: 'raporlar', ikon: '📊', baslik: 'Raporlar', aciklama: 'Tüm modüllerden derlenen İSG performans özeti, KPI kartları ve grafikler', baglanti: 'modules/raporlar/index.html', aktif: true },
+      { anahtar: 'tespit-oneri', ikon: '📖', baslik: 'Tespit ve Öneri Defteri', aciklama: 'İSG uzmanı/işyeri hekimi tespit-öneri kayıtları, tebliğ ve kapanış takibi', baglanti: 'modules/tespit-oneri/index.html', aktif: true },
+      { anahtar: 'hizmet-sozlesmesi', ikon: '🖋️', baslik: 'Hizmet Sözleşmeleri', aciklama: 'İSG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmesi takibi', baglanti: 'modules/hizmet-sozlesmesi/index.html', aktif: true },
+      { anahtar: 'harita', ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true }
     ];
 
     if (kullanici) {
@@ -73,6 +71,14 @@
         window.location.href = 'index.html';
       });
 
+      if (kullaniciAdminMi(kullanici)) {
+        document.getElementById('baglantiGrubu').insertAdjacentHTML('beforeend', `
+          <a href="firma-yonetim.html">Firma Yönetimi</a>
+          <a href="kullanicilar.html">👥 Kullanıcılar</a>
+          <a href="ayarlar.html">⚙️ Ayarlar</a>
+        `);
+      }
+
       const aktifFirma = aktifFirmaGetir();
       if (!aktifFirma) {
         window.location.href = 'firma-sec.html';
@@ -81,7 +87,8 @@
         rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${_dbKacir(aktifFirma.ad)}`;
 
         const grid = document.getElementById('modulGrid');
-        MODULLER.forEach(modul => {
+        const gosterilecekModuller = kullaniciAdminMi(kullanici) ? MODULLER : MODULLER.filter(m => IK_IZINLI_MODULLER.includes(m.anahtar));
+        gosterilecekModuller.forEach(modul => {
           const kart = document.createElement(modul.aktif ? 'a' : 'div');
           kart.className = 'modul-kart ' + (modul.aktif ? 'aktif' : 'pasif');
           if (modul.aktif) kart.href = modul.baglanti;

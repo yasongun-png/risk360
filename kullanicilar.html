@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İSG Platform - Kullanıcılar</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .kk-satir {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--kart-bg);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: var(--golge);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .kk-satir .sol { display: flex; flex-direction: column; gap: 2px; }
+  .kk-satir .sol .ad { font-weight: 600; }
+  .kk-satir .sol .kullanici-adi { font-size: 12px; color: var(--metin-soluk); }
+  .kk-satir .sol .firmalar { font-size: 12px; color: var(--metin-soluk); margin-top: 4px; }
+  .kk-satir .islemler { display: flex; gap: 10px; }
+  .mini-buton {
+    border: none; background: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--celik-mavi);
+    padding: 6px 10px; border-radius: 6px;
+  }
+  .mini-buton.sil { color: var(--hata); }
+  .mini-buton:hover { background: #f0f3f7; }
+  .geri-link { font-size: 13px; color: var(--celik-mavi); text-decoration: none; }
+  .firma-secim-listesi { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin: 10px 0; }
+  .firma-secim-listesi label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; }
+  .firma-secim-listesi input[type="checkbox"] { width: auto; margin: 0; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik" style="max-width: 680px;">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Kullanıcılar</h2>
+    <p style="color:#6b7280; font-size:13px;">
+      İK personeli için kısıtlı hesaplar oluşturabilirsiniz. Bu hesaplar
+      sadece Personel ve Eğitim modüllerine, ve sadece burada seçtiğiniz
+      firma(lar)a erişebilir — diğer modüllere ve firmalara erişemezler.
+    </p>
+
+    <div class="hata-mesaji" id="hataMesaji"></div>
+
+    <button type="button" class="birincil" id="yeniKullaniciBtn" style="width:auto; padding:11px 20px; margin:16px 0;">+ Yeni İK Kullanıcısı</button>
+
+    <div id="kullaniciListesi"></div>
+    <div class="bos-durum" id="bosDurum">Henüz İK kullanıcısı eklenmedi.</div>
+  </div>
+
+  <div class="modal-katman" id="kkModalKatman">
+    <div class="modal-kutu">
+      <h3 id="kkModalBaslik">Yeni İK Kullanıcısı</h3>
+
+      <label for="kkAdSoyad">Ad Soyad</label>
+      <input type="text" id="kkAdSoyad" required>
+
+      <label for="kkKullaniciAdi">Kullanıcı Adı</label>
+      <input type="text" id="kkKullaniciAdi" autocomplete="off" required>
+
+      <label for="kkSifre" id="kkSifreEtiket">Şifre</label>
+      <input type="password" id="kkSifre" autocomplete="new-password">
+      <p id="kkSifreNot" style="font-size:11px; color:var(--metin-soluk); margin-top:-6px;">En az 4 karakter.</p>
+
+      <label>Erişebileceği Firmalar</label>
+      <div class="firma-secim-listesi" id="kkFirmaListesi"></div>
+
+      <div class="alan-hatasi" id="kkModalHata"></div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="kkModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="kkModalKaydetBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    function _kkKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    const session = girisGerekliAdmin();
+    let _duzenlenenId = null;
+
+    if (session) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + session.adSoyad;
+
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+
+      document.getElementById('yeniKullaniciBtn').addEventListener('click', () => kkModalAc(null));
+      document.getElementById('kkModalIptalBtn').addEventListener('click', kkModalKapat);
+      document.getElementById('kkModalKaydetBtn').addEventListener('click', kkKaydet);
+
+      renderListe();
+    }
+
+    function _firmaAdlariGetir(erisimFirmaIdleri) {
+      const idler = new Set(erisimFirmaIdleri || []);
+      return getFirmalar().filter(f => idler.has(f.id)).map(f => f.ad);
+    }
+
+    function renderListe() {
+      const liste = document.getElementById('kullaniciListesi');
+      const bosDurum = document.getElementById('bosDurum');
+      liste.innerHTML = '';
+      const kullanicilar = ikKullanicilariGetir();
+
+      if (!kullanicilar.length) {
+        bosDurum.classList.add('gorunur');
+        return;
+      }
+      bosDurum.classList.remove('gorunur');
+
+      kullanicilar.forEach(k => {
+        const firmaAdlari = _firmaAdlariGetir(k.erisimFirmaIdleri);
+        const satir = document.createElement('div');
+        satir.className = 'kk-satir';
+        satir.innerHTML = `
+          <div class="sol">
+            <span class="ad">${_kkKacir(k.adSoyad)}</span>
+            <span class="kullanici-adi">@${_kkKacir(k.kullaniciAdi)}</span>
+            <span class="firmalar">${firmaAdlari.length ? '🏢 ' + _kkKacir(firmaAdlari.join(', ')) : '⚠️ Hiç firma atanmadı'}</span>
+          </div>
+          <div class="islemler">
+            <button class="mini-buton" data-duzenle="${k.id}">Düzenle</button>
+            <button class="mini-buton" data-sifre="${k.id}">Şifre Değiştir</button>
+            <button class="mini-buton sil" data-sil="${k.id}">Sil</button>
+          </div>
+        `;
+        liste.appendChild(satir);
+      });
+
+      liste.querySelectorAll('[data-duzenle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const kullanicilar = ikKullanicilariGetir();
+          const kayit = kullanicilar.find(k => k.id === btn.getAttribute('data-duzenle'));
+          if (kayit) kkModalAc(kayit);
+        });
+      });
+
+      liste.querySelectorAll('[data-sifre]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const yeniSifre = prompt('Yeni şifre (en az 4 karakter):', '');
+          if (yeniSifre === null) return;
+          const sonuc = await ikKullaniciSifreDegistir(btn.getAttribute('data-sifre'), yeniSifre);
+          if (!sonuc.basarili) { alert(sonuc.hata); return; }
+          alert('Şifre güncellendi.');
+        });
+      });
+
+      liste.querySelectorAll('[data-sil]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const kullanicilar = ikKullanicilariGetir();
+          const kayit = kullanicilar.find(k => k.id === btn.getAttribute('data-sil'));
+          if (!kayit) return;
+          const onay = confirm(`"${kayit.adSoyad}" kullanıcısını silmek istediğinize emin misiniz?`);
+          if (onay) {
+            ikKullaniciSil(kayit.id);
+            renderListe();
+          }
+        });
+      });
+    }
+
+    function kkModalAc(kayit) {
+      _duzenlenenId = kayit ? kayit.id : null;
+      document.getElementById('kkModalBaslik').textContent = kayit ? 'Kullanıcıyı Düzenle' : 'Yeni İK Kullanıcısı';
+      document.getElementById('kkAdSoyad').value = kayit ? kayit.adSoyad : '';
+      document.getElementById('kkKullaniciAdi').value = kayit ? kayit.kullaniciAdi : '';
+      document.getElementById('kkKullaniciAdi').disabled = !!kayit;
+      document.getElementById('kkSifre').value = '';
+
+      // Düzenlemede kullanıcı adı ve şifre burada değiştirilmez (kullanıcı adı
+      // sabit kalır, şifre için ayrı "Şifre Değiştir" butonu kullanılır) —
+      // yanlışlıkla boş şifreyle üzerine yazmayı önler.
+      const sifreAlaniGoster = !kayit;
+      document.getElementById('kkSifreEtiket').style.display = sifreAlaniGoster ? '' : 'none';
+      document.getElementById('kkSifre').style.display = sifreAlaniGoster ? '' : 'none';
+      document.getElementById('kkSifreNot').style.display = sifreAlaniGoster ? '' : 'none';
+
+      const firmaListesi = document.getElementById('kkFirmaListesi');
+      const seciliIdler = new Set(kayit ? (kayit.erisimFirmaIdleri || []) : []);
+      firmaListesi.innerHTML = getFirmalar().map(f => `
+        <label>
+          <input type="checkbox" value="${f.id}" ${seciliIdler.has(f.id) ? 'checked' : ''}>
+          ${_kkKacir(f.ad)}
+        </label>
+      `).join('') || '<div style="font-size:12px; color:var(--metin-soluk);">Önce Firma Yönetimi\'nden bir firma eklemelisiniz.</div>';
+
+      document.getElementById('kkModalHata').textContent = '';
+      document.getElementById('kkModalKatman').classList.add('acik');
+    }
+
+    function kkModalKapat() {
+      document.getElementById('kkModalKatman').classList.remove('acik');
+      _duzenlenenId = null;
+    }
+
+    async function kkKaydet() {
+      const adSoyad = document.getElementById('kkAdSoyad').value;
+      const kullaniciAdi = document.getElementById('kkKullaniciAdi').value;
+      const sifre = document.getElementById('kkSifre').value;
+      const secilenFirmaIdleri = Array.from(document.getElementById('kkFirmaListesi').querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      const hataEl = document.getElementById('kkModalHata');
+
+      const sonuc = _duzenlenenId
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri)
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri);
+
+      if (!sonuc.basarili) {
+        hataEl.textContent = sonuc.hata;
+        return;
+      }
+
+      kkModalKapat();
+      renderListe();
+    }
+  </script>
+</body>
+</html>

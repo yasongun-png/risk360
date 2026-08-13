@@ -148,7 +148,7 @@
   <script src="service.js"></script>
   <script src="ui.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliModul('tespit-oneri');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;

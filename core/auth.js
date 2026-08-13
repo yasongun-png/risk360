@@ -74,6 +74,142 @@ function girisGerekli() {
   return kullanici;
 }
 
+// ---- Roller ----
+//
+// rol alanı olmayan (ör. seed 'admin' kaydı) ya da rol==='admin' olan
+// kullanıcılar TAM yetkilidir: kendi sahipId'siyle eşleşen tüm firmaları
+// yönetir, firma ekleyip/silebilir, İK kullanıcısı oluşturabilir.
+// rol==='ik' olanlar KISITLI kullanıcılardır: firma sahibi değildir, sadece
+// kendilerine erisimFirmaIdleri ile açıkça atanmış firmaları görebilir ve
+// sadece IK_IZINLI_MODULLER listesindeki modüllere girebilir (bkz.
+// girisGerekliModul, core/tenant.js getFirmalar/getFirmaById).
+const IK_IZINLI_MODULLER = ['personel', 'egitim'];
+
+function kullaniciAdminMi(kullanici) {
+  return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
+}
+
+// Modül sayfalarının (modules/<ad>/index.html) girisGerekli() yerine
+// çağırması gereken hâl: oturum kontrolünün yanına, İK rolündeki
+// kullanıcıların sadece kendilerine izinli modüllere girebilmesini de ekler.
+function girisGerekliModul(modulAnahtari) {
+  const kullanici = girisGerekli();
+  if (!kullanici) return null;
+  if (!kullaniciAdminMi(kullanici) && !IK_IZINLI_MODULLER.includes(modulAnahtari)) {
+    alert('Bu modüle erişim yetkiniz yok.');
+    window.location.href = _authKokYolu + 'dashboard.html';
+    return null;
+  }
+  return kullanici;
+}
+
+// Sadece tam yetkili (admin) kullanıcıların girebileceği sayfalar için
+// (firma-yonetim.html, ayarlar.html, kullanicilar.html).
+function girisGerekliAdmin() {
+  const kullanici = girisGerekli();
+  if (!kullanici) return null;
+  if (!kullaniciAdminMi(kullanici)) {
+    alert('Bu sayfaya erişim yetkiniz yok.');
+    window.location.href = _authKokYolu + 'dashboard.html';
+    return null;
+  }
+  return kullanici;
+}
+
+// ---- İK kullanıcı yönetimi (admin tarafından) ----
+//
+// Her İK kullanıcısı bir admin tarafından (olusturanId) oluşturulur ve
+// SADECE o admin tarafından görülür/düzenlenir — firmaların sahipId'yle
+// izole edilmesiyle aynı mantık.
+
+function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
+  const temiz = (kullaniciAdi || '').trim().toLowerCase();
+  if (!temiz) return false;
+  const kullanicilar = oku('isg_kullanicilar', []);
+  return !kullanicilar.some(k => k.kullaniciAdi.toLowerCase() === temiz && k.id !== haricId);
+}
+
+function ikKullanicilariGetir() {
+  const admin = oturumdakiKullanici();
+  if (!admin) return [];
+  return oku('isg_kullanicilar', []).filter(k => k.rol === 'ik' && k.olusturanId === admin.id);
+}
+
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+
+  const temizKullaniciAdi = (kullaniciAdi || '').trim();
+  const temizAdSoyad = (adSoyad || '').trim();
+  if (!temizKullaniciAdi) return { basarili: false, hata: 'Kullanıcı adı boş olamaz.' };
+  if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
+  if (!sifre || sifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
+  if (!kullaniciAdiMusaitMi(temizKullaniciAdi)) return { basarili: false, hata: 'Bu kullanıcı adı zaten kullanılıyor.' };
+
+  // Sadece BU admin'in sahip olduğu firmalar atanabilir (kullaniciAdminMi(admin)
+  // burada zaten kesin — girisGerekliAdmin bu sayfaya girişi zaten sınırlar).
+  const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
+  const gecerliFirmaIdleri = (Array.isArray(firmaIdleri) ? firmaIdleri : []).filter(id => sahipOlunanFirmalar.has(id));
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const yeniKullanici = {
+    id: rastgeleId(),
+    kullaniciAdi: temizKullaniciAdi,
+    sifre: await _sifreOzetiCikar(sifre),
+    adSoyad: temizAdSoyad,
+    rol: 'ik',
+    olusturanId: admin.id,
+    erisimFirmaIdleri: gecerliFirmaIdleri
+  };
+  kullanicilar.push(yeniKullanici);
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true, kullanici: yeniKullanici };
+}
+
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+
+  const temizAdSoyad = (adSoyad || '').trim();
+  if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === id && k.rol === 'ik' && k.olusturanId === admin.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
+  kayit.adSoyad = temizAdSoyad;
+  kayit.erisimFirmaIdleri = (Array.isArray(firmaIdleri) ? firmaIdleri : []).filter(fid => sahipOlunanFirmalar.has(fid));
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true, kullanici: kayit };
+}
+
+async function ikKullaniciSifreDegistir(id, yeniSifre) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  if (!yeniSifre || yeniSifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === id && k.rol === 'ik' && k.olusturanId === admin.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  kayit.sifre = await _sifreOzetiCikar(yeniSifre);
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true };
+}
+
+function ikKullaniciSil(id) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === id && k.rol === 'ik' && k.olusturanId === admin.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  yaz('isg_kullanicilar', kullanicilar.filter(k => k.id !== id));
+  return { basarili: true };
+}
+
 function cikisYap() {
   localStorage.removeItem('isg_oturum');
   localStorage.removeItem('isg_aktif_firma');
