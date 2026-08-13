@@ -183,7 +183,9 @@ const SEKTORLER = ['İnşaat', 'Kimya', 'Tekstil', 'Metal / Makine', 'Gıda', 'E
 function ilkYuklemeyiHazirla() {
   if (!localStorage.getItem('isg_kullanicilar')) {
     localStorage.setItem('isg_kullanicilar', JSON.stringify([
-      { id: 'u-admin', kullaniciAdi: 'admin', sifre: '123456', adSoyad: 'Yönetici Kullanıcı' }
+      // sifre SHA-256 özeti olarak saklanır (bkz. core/auth.js) — düz metin
+      // "Ya105017" değil, onun özeti.
+      { id: 'u-admin', kullaniciAdi: 'yasongun', sifre: '26745bd3ca43f69fc7a7da631158f09058e567925b88cb9286205e2cf6a07b3a', adSoyad: 'Yönetici Kullanıcı' }
     ]));
   }
   if (!localStorage.getItem('isg_firmalar')) {
