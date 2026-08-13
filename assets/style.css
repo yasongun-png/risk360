@@ -1,4 +1,10 @@
 :root {
+  /* Uygulama karanlık tema tanımlamıyor (tüm renkler sabit/açık tema) —
+     bunu tarayıcıya bildirmezsek Android/Chrome'un otomatik "karanlık mod
+     zorlama" özelliği sayfayı kendi kendine ters çevirip, özellikle Saha
+     Dijital Haritası'ndaki kareli (checkered) boş kanvas arka planı gibi
+     yerlerde bozuk/koyu lacivert bloklar gibi görsel hatalara yol açıyordu. */
+  color-scheme: light;
   --celik-mavi: #1d4ed8;
   --celik-mavi-koyu: #1e3a8a;
   --arka-plan: #f4f6f9;
