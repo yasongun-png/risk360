@@ -10,19 +10,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 10px;
     padding: 14px 18px;
     background: var(--kart-bg);
     border-radius: 8px;
     margin-bottom: 10px;
     box-shadow: var(--golge);
   }
-  .firma-satir .sol { display: flex; align-items: center; gap: 12px; }
+  .firma-satir .sol { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; row-gap: 8px; }
   .firma-satir .rozet {
     width: 34px; height: 34px; border-radius: 8px;
     color: white; display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
   }
-  .firma-satir .islemler { display: flex; gap: 10px; }
+  .firma-satir .islemler { display: flex; gap: 10px; flex-wrap: wrap; }
   .mini-buton {
     border: none; background: none; cursor: pointer;
     font-size: 12px; font-weight: 600; color: var(--celik-mavi);
@@ -30,10 +33,13 @@
   }
   .mini-buton.sil { color: var(--hata); }
   .mini-buton:hover { background: #f0f3f7; }
-  .ekle-form { display: flex; gap: 10px; margin: 20px 0; }
-  .ekle-form input { flex: 1; margin: 0; }
+  .ekle-form { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+  .ekle-form input { flex: 1; margin: 0; min-width: 200px; }
   .ekle-form button { width: auto; margin: 0; padding: 11px 20px; white-space: nowrap; }
   .geri-link { font-size: 13px; color: var(--celik-mavi); text-decoration: none; }
+  @media (max-width: 640px) {
+    .tehlike-sinifi-sec, .sektor-sec { width: 100% !important; }
+  }
 </style>
 </head>
 <body>
