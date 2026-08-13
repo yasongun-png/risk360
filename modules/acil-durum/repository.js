@@ -2,6 +2,7 @@
 
 function _ekipAnahtari() { return tenantAnahtar('acil_durum_ekipleri'); }
 function _ekipmanAnahtari() { return tenantAnahtar('acil_durum_ekipmanlari'); }
+function _yanginTupuAnahtari() { return tenantAnahtar('acil_durum_yangin_tupleri'); }
 function _tatbikatAnahtari() { return tenantAnahtar('acil_durum_tatbikatlari'); }
 function _senaryoAnahtari() { return tenantAnahtar('acil_durum_senaryolari'); }
 function _planAnahtari() { return tenantAnahtar('acil_durum_plani'); }
@@ -18,6 +19,17 @@ function _genelGuncelle(anahtarFn, id, veriler) {
   return l[i];
 }
 function _genelSil(anahtarFn, id) { _genelListeKaydet(anahtarFn, _genelListeGetir(anahtarFn).filter(x => x.id !== id)); }
+// _genelGuncelle'nin aksine Firestore yazımının GERÇEKTEN bitmesini bekler
+// (bkz. modules/uygunsuzluk/repository.js uygunsuzlukGuncelleRepoVeBekle —
+// harita köprüsündeki konumGuncelle'de sayfa değişmeden önce yazımın
+// bitmesini garantilemek için kullanılır).
+function _genelGuncelleVeBekle(anahtarFn, id, veriler) {
+  const l = _genelListeGetir(anahtarFn);
+  const i = l.findIndex(x => x.id === id);
+  if (i === -1) return Promise.resolve(null);
+  l[i] = Object.assign({}, l[i], veriler);
+  return yazVeSonucuGetir(anahtarFn(), l).then(() => l[i]);
+}
 
 function ekipUyeleriTumunuGetir() { return _genelListeGetir(_ekipAnahtari); }
 function ekipUyesiEkleRepo(k) { return _genelEkle(_ekipAnahtari, k); }
@@ -28,8 +40,16 @@ function ekipUyesiIdIleGetirRepo(id) { return ekipUyeleriTumunuGetir().find(x =>
 function ekipmanlariTumunuGetir() { return _genelListeGetir(_ekipmanAnahtari); }
 function ekipmanEkleRepo(k) { return _genelEkle(_ekipmanAnahtari, k); }
 function ekipmanGuncelleRepo(id, v) { return _genelGuncelle(_ekipmanAnahtari, id, v); }
+function ekipmanGuncelleRepoVeBekle(id, v) { return _genelGuncelleVeBekle(_ekipmanAnahtari, id, v); }
 function ekipmanSilRepo(id) { _genelSil(_ekipmanAnahtari, id); }
 function ekipmanIdIleGetirRepo(id) { return ekipmanlariTumunuGetir().find(x => x.id === id) || null; }
+
+function yanginTupleriTumunuGetir() { return _genelListeGetir(_yanginTupuAnahtari); }
+function yanginTupuEkleRepo(k) { return _genelEkle(_yanginTupuAnahtari, k); }
+function yanginTupuGuncelleRepo(id, v) { return _genelGuncelle(_yanginTupuAnahtari, id, v); }
+function yanginTupuGuncelleRepoVeBekle(id, v) { return _genelGuncelleVeBekle(_yanginTupuAnahtari, id, v); }
+function yanginTupuSilRepo(id) { _genelSil(_yanginTupuAnahtari, id); }
+function yanginTupuIdIleGetirRepo(id) { return yanginTupleriTumunuGetir().find(x => x.id === id) || null; }
 
 function tatbikatlariTumunuGetir() { return _genelListeGetir(_tatbikatAnahtari); }
 function tatbikatEkleRepo(k) { return _genelEkle(_tatbikatAnahtari, k); }

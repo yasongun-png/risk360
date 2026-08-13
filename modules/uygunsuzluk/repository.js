@@ -40,6 +40,20 @@ function uygunsuzlukGuncelleRepo(id, veriler) {
   return liste[index];
 }
 
+// uygunsuzlukGuncelleRepo'nun aksine Firestore yazımının GERÇEKTEN bitmesini
+// bekleyen Promise döner (bkz. core/data.js yazVeSonucuGetir). Harita
+// köprüsündeki "konumGuncelle" burayı kullanır — çünkü hemen ardından
+// window.location.href ile sayfa değişiyor; fire-and-forget yaz() sayfa
+// değişirken yarıda kesilip konum kaydını sessizce kaybedebiliyordu
+// (kullanıcı bildirdi: harita ekleniyor ama kalıcı olmuyordu).
+function uygunsuzlukGuncelleRepoVeBekle(id, veriler) {
+  const liste = uygunsuzlukTumunuGetir();
+  const index = liste.findIndex(k => k.id === id);
+  if (index === -1) return Promise.resolve(null);
+  liste[index] = Object.assign({}, liste[index], veriler);
+  return yazVeSonucuGetir(_uygunsuzlukAnahtari(), liste).then(() => liste[index]);
+}
+
 function uygunsuzlukSilRepo(id) {
   _uygunsuzlukKaydet(uygunsuzlukTumunuGetir().filter(k => k.id !== id));
 }

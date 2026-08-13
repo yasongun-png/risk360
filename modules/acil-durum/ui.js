@@ -4,6 +4,7 @@ let _adGorunum = 'ekipler';
 let _adFirma = null;
 let _duzenlenenEkipId = null;
 let _duzenlenenEkipmanId = null;
+let _duzenlenenYanginTupuId = null;
 // Saha Dijital Haritası'ndan "Nokta Ekle" ile buraya yönlendirildiğinde
 // (bkz. modules/harita/ui.js) taşınan konum — form kaydedilirken yeni kayda
 // eklenir. Düzenlemede kullanılmaz.
@@ -40,6 +41,13 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('ekipmanModalIptalBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanForm').addEventListener('submit', ekipmanFormGonderildi);
   document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
+
+  // Yangın Tüpü
+  document.getElementById('yeniYanginTupuBtn').addEventListener('click', () => yanginTupuModalAc());
+  document.getElementById('yanginTupuModalKapatBtn').addEventListener('click', yanginTupuModalKapat);
+  document.getElementById('yanginTupuModalIptalBtn').addEventListener('click', yanginTupuModalKapat);
+  document.getElementById('yanginTupuForm').addEventListener('submit', yanginTupuFormGonderildi);
+  document.getElementById('yanginTupuAramaKutusu').addEventListener('input', e => yanginTupleriniCiz(e.target.value));
 
   // Tatbikat
   document.getElementById('yeniTatbikatBtn').addEventListener('click', () => tatbikatModalAc());
@@ -100,6 +108,32 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol' },
   { anahtar: 'sonrakiKontrol', baslik: 'Sonraki Kontrol' },
+  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+];
+
+const YANGIN_TUPU_IMPORT_KOLONLARI = [
+  { anahtar: 'tip', baslik: 'Tip' },
+  { anahtar: 'kapasite', baslik: 'Kapasite' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'lokasyon', baslik: 'Lokasyon' },
+  { anahtar: 'doluTarihi', baslik: 'Dolum Tarihi' },
+  { anahtar: 'yillikBakimTarihi', baslik: 'Yıllık Bakım Tarihi' },
+  { anahtar: 'hidrostatikTestTarihi', baslik: 'Hidrostatik Test Tarihi' },
+  { anahtar: 'sonrakiHidrostatikTest', baslik: 'Sonraki Hidrostatik Test' },
+  { anahtar: 'sorumlu', baslik: 'Sorumlu' },
+  { anahtar: 'durum', baslik: 'Durum' },
+  { anahtar: 'bulgular', baslik: 'Bulgular' },
+  { anahtar: 'notlar', baslik: 'Notlar' }
+];
+
+const YANGIN_TUPU_EXPORT_KOLONLARI = [
+  { anahtar: 'tupNo', baslik: 'Tüp No' },
+  { anahtar: 'tip', baslik: 'Tip' },
+  { anahtar: 'kapasite', baslik: 'Kapasite' },
+  { anahtar: 'lokasyon', baslik: 'Lokasyon' },
+  { anahtar: 'doluTarihi', baslik: 'Dolum Tarihi' },
+  { anahtar: 'sonrakiYillikBakim', baslik: 'Sonraki Yıllık Bakım' },
+  { anahtar: 'sonrakiHidrostatikTest', baslik: 'Sonraki Hidrostatik Test' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' }
 ];
 
@@ -167,6 +201,34 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     });
   });
 
+  document.getElementById('yanginTupuSablonIndirBtn').addEventListener('click', () => {
+    excelSablonIndir(YANGIN_TUPU_IMPORT_KOLONLARI, 'acil_durum_yangin_tupu_sablonu.xlsx');
+  });
+  document.getElementById('yanginTupuDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(yanginTupleriniGetir(''), YANGIN_TUPU_EXPORT_KOLONLARI, 'acil_durum_yangin_tupleri.xlsx');
+  });
+  document.getElementById('yanginTupuYazdirBtn').addEventListener('click', () => {
+    raporListesiYazdir('Yangın Tüpleri', _adFirma ? _adFirma.ad : '', YANGIN_TUPU_EXPORT_KOLONLARI, yanginTupleriniGetir(document.getElementById('yanginTupuAramaKutusu').value));
+  });
+  document.getElementById('yanginTupuIceAktarBtn').addEventListener('click', () => document.getElementById('yanginTupuIceAktarDosya').click());
+  document.getElementById('yanginTupuIceAktarDosya').addEventListener('change', e => {
+    const dosya = e.target.files[0];
+    excelIceAktar(dosya, YANGIN_TUPU_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      satirlar.forEach(satir => {
+        satir.doluTarihi = excelTarihiNormallestir(satir.doluTarihi);
+        satir.yillikBakimTarihi = excelTarihiNormallestir(satir.yillikBakimTarihi);
+        satir.hidrostatikTestTarihi = excelTarihiNormallestir(satir.hidrostatikTestTarihi);
+        satir.sonrakiHidrostatikTest = excelTarihiNormallestir(satir.sonrakiHidrostatikTest);
+        if (!['Aktif', 'Pasif', 'İptal'].includes(satir.durum)) satir.durum = 'Aktif';
+      });
+      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, yanginTupuEkle);
+      alert(excelIceAktarOzetMesaji(sonuc));
+      yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
+    });
+  });
+
   document.getElementById('tatbikatDisaAktarBtn').addEventListener('click', () => {
     excelDisaAktar(tatbikatlariGetir(''), TATBIKAT_EXPORT_KOLONLARI, 'acil_durum_tatbikatlari.xlsx');
   });
@@ -187,13 +249,14 @@ function gorunumDegistir(gorunum) {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
-  ['ekipler', 'uygunluk', 'ekipman', 'tatbikat', 'senaryo'].forEach(g => {
+  ['ekipler', 'uygunluk', 'ekipman', 'yanginTupu', 'tatbikat', 'senaryo'].forEach(g => {
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
   if (gorunum === 'ekipler') ekipleriCiz('');
   else if (gorunum === 'uygunluk') uygunlugCiz();
   else if (gorunum === 'ekipman') ekipmanlariCiz('');
+  else if (gorunum === 'yanginTupu') yanginTupleriniCiz('');
   else if (gorunum === 'tatbikat') tatbikatlariCiz('');
   else if (gorunum === 'senaryo') senaryolariCiz('');
 }
@@ -480,6 +543,131 @@ function ekipmanFormGonderildi(e) {
   _bekleyenHaritaKonum = null;
   ekipmanModalKapat();
   ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+}
+
+// ==================== YANGIN TÜPÜ ====================
+
+function yanginTupleriniCiz(aramaMetni) {
+  const govde = document.getElementById('yanginTupuTabloGovde');
+  const bosDurum = document.getElementById('yanginTupuBosDurum');
+  const liste = yanginTupleriniGetir(aramaMetni);
+
+  govde.innerHTML = '';
+  if (liste.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen yangın tüpü bulunamadı.' : 'Henüz yangın tüpü eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(t => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${t.tupNo}</td><td>${t.tip}</td><td>${t.kapasite || '-'}</td><td>${t.lokasyon}</td>
+      <td>${t.doluTarihi || '-'}</td><td>${t.sonrakiYillikBakim || '-'}</td><td>${t.sonrakiHidrostatikTest || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => yanginTupuModalAc(yanginTupuIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
+    if (confirm('Bu yangın tüpünü silmek istediğinize emin misiniz?')) { yanginTupuSil(btn.getAttribute('data-sil')); yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value); }
+  }));
+}
+
+function yanginTupuModalAc(tup) {
+  _duzenlenenYanginTupuId = tup ? tup.id : null;
+  document.getElementById('yanginTupuModalBaslik').textContent = tup ? 'Yangın Tüpünü Düzenle' : 'Yeni Yangın Tüpü';
+  document.getElementById('yanginTupuTip').innerHTML = YANGIN_TUPU_TIPLERI.map(t => `<option ${tup && tup.tip === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('yanginTupuKapasite').value = tup ? tup.kapasite : '';
+  document.getElementById('yanginTupuBolum').value = tup ? tup.bolum : '';
+  document.getElementById('yanginTupuLokasyon').value = tup ? tup.lokasyon : '';
+  document.getElementById('yanginTupuDoluTarihi').value = tup ? tup.doluTarihi : '';
+  document.getElementById('yanginTupuYillikBakimTarihi').value = tup ? tup.yillikBakimTarihi : '';
+  document.getElementById('yanginTupuSonrakiYillikBakim').value = tup ? tup.sonrakiYillikBakim : '';
+  document.getElementById('yanginTupuHidrostatikTestTarihi').value = tup ? tup.hidrostatikTestTarihi : '';
+  document.getElementById('yanginTupuSonrakiHidrostatikTest').value = tup ? tup.sonrakiHidrostatikTest : '';
+  document.getElementById('yanginTupuSorumlu').value = tup ? tup.sorumlu : '';
+  document.getElementById('yanginTupuDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${tup && tup.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('yanginTupuBulgular').value = tup ? tup.bulgular : '';
+  document.getElementById('yanginTupuNotlar').value = tup ? tup.notlar : '';
+  _yanginTupuKonumAlaniCiz(tup);
+  temizleFormHatalari('yanginTupuForm');
+  document.getElementById('yanginTupuModalKatman').classList.add('acik');
+}
+
+// Saha Dijital Haritası köprüsü — bkz. _ekipmanKonumAlaniCiz ile aynı desen.
+function _yanginTupuKonumAlaniCiz(tup) {
+  const kutu = document.getElementById('yanginTupuKonumAlani');
+  if (!kutu) return;
+  if (_bekleyenHaritaKonum && !tup) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">📍 Haritadan seçilen konum bu kayda kaydedilince eklenecek.</div>';
+    return;
+  }
+  if (!tup) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Konum eklemek için önce kaydı oluşturup tekrar açın.</div>';
+    return;
+  }
+  const donusUrl = encodeURIComponent(location.pathname + '?ac=' + tup.id + '&hedef=yanginTupu');
+  if (tup.haritaTesisId) {
+    kutu.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px;">
+        <span>📍 Haritada işaretli</span>
+        <button type="button" class="tablo-buton" id="yanginTupuKonumGorBtn">Haritada Gör</button>
+      </div>`;
+    document.getElementById('yanginTupuKonumGorBtn').addEventListener('click', () => {
+      window.location.href = `../harita/index.html?odaklanKaynak=acilDurumYanginTupu&odaklanId=${tup.id}`;
+    });
+  } else {
+    kutu.innerHTML = `<button type="button" class="tablo-buton" id="yanginTupuKonumEkleBtn">📍 Haritada Konum Ekle</button>`;
+    document.getElementById('yanginTupuKonumEkleBtn').addEventListener('click', () => {
+      window.location.href = `../harita/index.html?konumKaynak=acilDurumYanginTupu&konumId=${tup.id}&donus=${donusUrl}`;
+    });
+  }
+}
+
+function yanginTupuModalKapat() {
+  document.getElementById('yanginTupuModalKatman').classList.remove('acik');
+  _duzenlenenYanginTupuId = null;
+}
+
+function yanginTupuFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('yanginTupuForm');
+
+  const veriler = {
+    tip: document.getElementById('yanginTupuTip').value,
+    kapasite: document.getElementById('yanginTupuKapasite').value,
+    bolum: document.getElementById('yanginTupuBolum').value,
+    lokasyon: document.getElementById('yanginTupuLokasyon').value,
+    doluTarihi: document.getElementById('yanginTupuDoluTarihi').value,
+    yillikBakimTarihi: document.getElementById('yanginTupuYillikBakimTarihi').value,
+    sonrakiYillikBakim: document.getElementById('yanginTupuSonrakiYillikBakim').value,
+    hidrostatikTestTarihi: document.getElementById('yanginTupuHidrostatikTestTarihi').value,
+    sonrakiHidrostatikTest: document.getElementById('yanginTupuSonrakiHidrostatikTest').value,
+    sorumlu: document.getElementById('yanginTupuSorumlu').value,
+    durum: document.getElementById('yanginTupuDurum').value,
+    bulgular: document.getElementById('yanginTupuBulgular').value,
+    notlar: document.getElementById('yanginTupuNotlar').value
+  };
+
+  if (!_duzenlenenYanginTupuId && _bekleyenHaritaKonum) {
+    veriler.haritaTesisId = _bekleyenHaritaKonum.tesisId;
+    veriler.haritaX = _bekleyenHaritaKonum.x;
+    veriler.haritaY = _bekleyenHaritaKonum.y;
+  }
+
+  const sonuc = _duzenlenenYanginTupuId ? yanginTupuGuncelle(_duzenlenenYanginTupuId, veriler) : yanginTupuEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'yanginTupu'); return; }
+
+  _bekleyenHaritaKonum = null;
+  yanginTupuModalKapat();
+  yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
 }
 
 // ==================== TATBİKAT ====================

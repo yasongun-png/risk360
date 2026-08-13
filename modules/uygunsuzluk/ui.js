@@ -8,6 +8,9 @@ let _duzenlenenKayitId = null;
 let _bekleyenHaritaKonum = null;
 let _usFotoOncesi = '';
 let _usFotoSonrasi = '';
+// Ek 3 öncesi/sonrası çifti (kullanıcı isteği) — { oncesi2, sonrasi2, oncesi3, sonrasi3, oncesi4, sonrasi4 }.
+let _usEkFoto = { oncesi2: '', sonrasi2: '', oncesi3: '', sonrasi3: '', oncesi4: '', sonrasi4: '' };
+const _US_EK_FOTO_SIRA = [2, 3, 4];
 let _secilenKonuId = '';
 
 // Konu/Defter dropdown'ını doldurur; seçim hâlâ mevcutsa korunur.
@@ -144,8 +147,22 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniKaydetBtn').addEventListener('click', raporMetniKaydet);
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('uygunsuzluk', 'Uygunsuzluk'));
+  document.getElementById('konuTasiKapatBtn').addEventListener('click', konuTasiModalKapat);
+  document.getElementById('konuTasiIptalBtn').addEventListener('click', konuTasiModalKapat);
+  document.getElementById('konuTasiKaydetBtn').addEventListener('click', () => {
+    if (!_konuTasiKayitId) return;
+    const hedefKonuId = document.getElementById('konuTasiSecim').value;
+    const sonuc = uygunsuzlukKonuTasi(_konuTasiKayitId, hedefKonuId);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    konuTasiModalKapat();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
   _usFotoAlaniniHazirla('fotoOncesiDosya', 'fotoOncesiOnizleme', () => _usFotoOncesi, v => { _usFotoOncesi = v; });
   _usFotoAlaniniHazirla('fotoSonrasiDosya', 'fotoSonrasiOnizleme', () => _usFotoSonrasi, v => { _usFotoSonrasi = v; });
+  _US_EK_FOTO_SIRA.forEach(n => {
+    _usFotoAlaniniHazirla(`fotoOncesi${n}Dosya`, `fotoOncesi${n}Onizleme`, () => _usEkFoto['oncesi' + n], v => { _usEkFoto['oncesi' + n] = v; });
+    _usFotoAlaniniHazirla(`fotoSonrasi${n}Dosya`, `fotoSonrasi${n}Onizleme`, () => _usEkFoto['sonrasi' + n], v => { _usEkFoto['sonrasi' + n] = v; });
+  });
 
   document.getElementById('iceAktarBtn').addEventListener('click', () => document.getElementById('iceAktarDosya').click());
   document.getElementById('iceAktarDosya').addEventListener('change', e => {
@@ -370,8 +387,7 @@ async function uygunsuzlukFormunuYazdir(id) {
     { etiket: 'Kaynak', deger: k.kaynakTuru },
     { etiket: 'Risk Seviyesi', deger: k.riskSeviyesi },
     { etiket: 'Kök Neden', deger: k.kokNeden },
-    { etiket: 'Düzeltici Faaliyet', deger: k.duzelticiFaaliyet },
-    { etiket: 'Önleyici Faaliyet', deger: k.onleyiciFaaliyet },
+    { etiket: 'Faaliyet Önerisi', deger: k.duzelticiFaaliyet },
     { etiket: 'Sorumlu / Atayan', deger: [k.sorumlu, k.atayan].filter(Boolean).join(' / ') },
     { etiket: 'Bildirim Tarihi / Termin', deger: [k.bildirimTarihi, k.termin].filter(Boolean).join(' / ') },
     { etiket: 'Maliyet / Satın Alma', deger: [k.maliyet, k.satinAlmaDurumu].filter(Boolean).join(' / ') },
@@ -423,22 +439,31 @@ function gorunumDegistir(gorunum) {
   else ozetiCiz();
 }
 
+// Saha Dijital Haritası köprüsü — _konumAlaniCiz'daki linklerle aynı URL
+// mantığı, ama tablo satırından tek tıkla, modalı açmadan gidilebilsin diye.
+function _islemHaritaUrlUret(k) {
+  return k.haritaTesisId
+    ? `../harita/index.html?odaklanKaynak=uygunsuzluk&odaklanId=${k.id}`
+    : `../harita/index.html?konumKaynak=uygunsuzluk&konumId=${k.id}&donus=${encodeURIComponent(location.pathname + '?ac=' + k.id)}`;
+}
+
 function _islemButonlariUret(k) {
   const butonlar = [
     `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`,
-    `<button class="tablo-buton" data-form="${k.id}">Yazdır</button>`,
-    `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`
+    `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`,
+    `<a class="tablo-buton${k.haritaTesisId ? ' sil' : ''}" href="${_islemHaritaUrlUret(k)}" style="text-decoration:none;" title="${k.haritaTesisId ? 'Haritada Gör' : 'Haritada Konum Ekle'}">🗺️ Harita</a>`,
+    // Konusu olmayan ("Tüm Konular" seçiliyken oluşturulmuş, sahipsiz)
+    // kayıtları fark etmek kolay olsun diye turuncu renkte gösterilir.
+    `<button class="tablo-buton" data-konu-tasi="${k.id}" style="${k.konuId ? '' : 'color:#d97706; font-weight:700;'}" title="${k.konuId ? 'Başka konuya taşı' : 'Bu kayıt hiçbir konuya atanmamış — taşımak için tıklayın'}">📁 Konu Taşı</button>`
   ];
 
   if (k.durum === 'Onay Bekliyor') {
     butonlar.push(`<button class="tablo-buton" data-onayla="${k.id}">Onayla</button>`);
     butonlar.push(`<button class="tablo-buton sil" data-reddet="${k.id}">Reddet</button>`);
-  } else if (k.durum !== 'Kapalı' && k.durum !== 'İptal') {
-    butonlar.push(`<button class="tablo-buton" data-kapat="${k.id}">Kapat</button>`);
   }
 
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
-  return butonlar.join(' ');
+  return `<div style="display:flex; flex-wrap:wrap; gap:2px;">${butonlar.join('')}</div>`;
 }
 
 function _usFotoHucresiUret(deger, etiket) {
@@ -475,6 +500,7 @@ function kayitlariCiz(aramaMetni) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td>${_islemButonlariUret(k)}</td>
       <td>${_usKacir(k.aksiyonNo)}</td>
       <td>${_usKacir(k.bolum)}</td>
       <td>${gunAyYil(k.bildirimTarihi) || '-'}</td>
@@ -487,7 +513,6 @@ function kayitlariCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.durumGoruntu)}">${_usKacir(k.durumGoruntu)}</span></td>
       <td>${gunAyYil(k.kapanisTarihi) || '-'}</td>
       <td><div class="us-kapanis-hucre" title="${_usKacir(k.kanitAciklamasi || '')}">${_usKacir(k.kanitAciklamasi) || '-'}</div></td>
-      <td>${_islemButonlariUret(k)}</td>
     `;
     govde.appendChild(satir);
   });
@@ -514,6 +539,27 @@ function kayitlariCiz(aramaMetni) {
     const sebep = prompt('Red sebebi:', '');
     if (sebep !== null) { uygunsuzlukReddet(btn.getAttribute('data-reddet'), '', sebep); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
+  govde.querySelectorAll('[data-konu-tasi]').forEach(btn => btn.addEventListener('click', () => {
+    konuTasiModalAc(uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-konu-tasi')));
+  }));
+}
+
+let _konuTasiKayitId = null;
+
+function konuTasiModalAc(kayit) {
+  if (!kayit) return;
+  _konuTasiKayitId = kayit.id;
+  document.getElementById('konuTasiKayitEtiketi').textContent = `${kayit.aksiyonNo} — ${kayit.baslik}` + (kayit.konuAdi ? ` (şu an: ${kayit.konuAdi})` : ' (şu an: konusu yok)');
+  const konular = uygunsuzlukKonulariniGetir();
+  document.getElementById('konuTasiSecim').innerHTML =
+    '<option value="">— Konu Yok (sahipsiz) —</option>' +
+    konular.map(k => `<option value="${k.id}" ${k.id === kayit.konuId ? 'selected' : ''}>${_usKacir(k.ad)}</option>`).join('');
+  document.getElementById('konuTasiKatmani').classList.add('acik');
+}
+
+function konuTasiModalKapat() {
+  document.getElementById('konuTasiKatmani').classList.remove('acik');
+  _konuTasiKayitId = null;
 }
 
 function ozetiCiz() {
@@ -594,7 +640,6 @@ function kayitModalAc(kayit) {
 
   document.getElementById('kokNeden').value = kayit ? kayit.kokNeden : '';
   document.getElementById('duzelticiFaaliyet').value = kayit ? kayit.duzelticiFaaliyet : '';
-  document.getElementById('onleyiciFaaliyet').value = kayit ? kayit.onleyiciFaaliyet : '';
 
   document.getElementById('sorumlu').value = kayit ? kayit.sorumlu : '';
   bolumButonlariCiz('sorumluBolumButonlari', 'sorumlu', 'tekli');
@@ -616,6 +661,13 @@ function kayitModalAc(kayit) {
   _usFotoSonrasi = kayit ? (kayit.fotoSonrasi || '') : '';
   _usFotoOnizlemeCiz('fotoOncesiOnizleme', _usFotoOncesi, () => { _usFotoOncesi = ''; _usFotoOnizlemeCiz('fotoOncesiOnizleme', '', null); });
   _usFotoOnizlemeCiz('fotoSonrasiOnizleme', _usFotoSonrasi, () => { _usFotoSonrasi = ''; _usFotoOnizlemeCiz('fotoSonrasiOnizleme', '', null); });
+
+  _US_EK_FOTO_SIRA.forEach(n => {
+    _usEkFoto['oncesi' + n] = kayit ? (kayit['fotoOncesi' + n] || '') : '';
+    _usEkFoto['sonrasi' + n] = kayit ? (kayit['fotoSonrasi' + n] || '') : '';
+    _usFotoOnizlemeCiz(`fotoOncesi${n}Onizleme`, _usEkFoto['oncesi' + n], () => { _usEkFoto['oncesi' + n] = ''; _usFotoOnizlemeCiz(`fotoOncesi${n}Onizleme`, '', null); });
+    _usFotoOnizlemeCiz(`fotoSonrasi${n}Onizleme`, _usEkFoto['sonrasi' + n], () => { _usEkFoto['sonrasi' + n] = ''; _usFotoOnizlemeCiz(`fotoSonrasi${n}Onizleme`, '', null); });
+  });
 
   _konumAlaniCiz(kayit);
 
@@ -678,7 +730,6 @@ function formGonderildi(e) {
     riskSeviyesi: document.getElementById('riskSeviyesi').value,
     kokNeden: document.getElementById('kokNeden').value,
     duzelticiFaaliyet: document.getElementById('duzelticiFaaliyet').value,
-    onleyiciFaaliyet: document.getElementById('onleyiciFaaliyet').value,
     sorumlu: document.getElementById('sorumlu').value,
     atayan: document.getElementById('atayan').value,
     bildirimTarihi: document.getElementById('bildirimTarihi').value,
@@ -690,6 +741,12 @@ function formGonderildi(e) {
     yasalDayanak: document.getElementById('yasalDayanak').value,
     fotoOncesi: _usFotoOncesi,
     fotoSonrasi: _usFotoSonrasi,
+    fotoOncesi2: _usEkFoto.oncesi2,
+    fotoSonrasi2: _usEkFoto.sonrasi2,
+    fotoOncesi3: _usEkFoto.oncesi3,
+    fotoSonrasi3: _usEkFoto.sonrasi3,
+    fotoOncesi4: _usEkFoto.oncesi4,
+    fotoSonrasi4: _usEkFoto.sonrasi4,
     durum: document.getElementById('durum').value,
     kapanisTarihi: document.getElementById('kapanisTarihi').value,
     kanitAciklamasi: document.getElementById('kanitAciklamasi').value

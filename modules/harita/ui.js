@@ -46,7 +46,7 @@ const HARITA_DIS_KAYNAKLAR = {
     turler: ['uygunsuzluk'],
     tumunuGetir: () => uygunsuzlukTumunuGetir(),
     idIleGetir: id => uygunsuzlukIdIleGetirRepo(id),
-    konumGuncelle: (id, tesisId, x, y) => uygunsuzlukGuncelleRepo(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
+    konumGuncelle: (id, tesisId, x, y) => uygunsuzlukGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
     yeniKayitUrl: (tesisId, x, y) => `../uygunsuzluk/index.html?yeniKonum=1&tesisId=${tesisId}&x=${x}&y=${y}`,
     acUrl: id => `../uygunsuzluk/index.html?ac=${id}`,
     modulAdi: 'Uygunsuzluk',
@@ -63,7 +63,7 @@ const HARITA_DIS_KAYNAKLAR = {
     turler: ['risk'],
     tumunuGetir: () => riskTumunuGetir(),
     idIleGetir: id => riskIdIleGetirRepo(id),
-    konumGuncelle: (id, tesisId, x, y) => riskGuncelleRepo(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
+    konumGuncelle: (id, tesisId, x, y) => riskGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
     yeniKayitUrl: (tesisId, x, y) => `../risk/index.html?yeniKonum=1&tesisId=${tesisId}&x=${x}&y=${y}`,
     acUrl: id => `../risk/index.html?ac=${id}`,
     modulAdi: 'Risk Değerlendirmesi',
@@ -77,10 +77,10 @@ const HARITA_DIS_KAYNAKLAR = {
     })
   },
   acilDurumEkipman: {
-    turler: ['yangin_tupu', 'yangin', 'acil_ekipman', 'cikis', 'toplanma'],
+    turler: ['yangin', 'acil_ekipman', 'cikis', 'toplanma'],
     tumunuGetir: () => ekipmanlariTumunuGetir(),
     idIleGetir: id => ekipmanIdIleGetirRepo(id),
-    konumGuncelle: (id, tesisId, x, y) => ekipmanGuncelleRepo(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
+    konumGuncelle: (id, tesisId, x, y) => ekipmanGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
     yeniKayitUrl: (tesisId, x, y) => `../acil-durum/index.html?yeniKonum=1&tesisId=${tesisId}&x=${x}&y=${y}`,
     acUrl: id => `../acil-durum/index.html?ac=${id}`,
     modulAdi: 'Acil Durum Yönetimi',
@@ -95,6 +95,25 @@ const HARITA_DIS_KAYNAKLAR = {
         kontrolGecmisi: [], olusturmaTarihi: k.olusturmaTarihi, guncellemeTarihi: k.olusturmaTarihi
       };
     }
+  },
+  // Yangın Tüpü artık Ekipman sekmesinin bir türü değil, kendi ayrı modülü
+  // (bkz. modules/acil-durum yanginTupu*) — haritadaki 🧯 katmanı buradan besleniyor.
+  acilDurumYanginTupu: {
+    turler: ['yangin_tupu'],
+    tumunuGetir: () => yanginTupleriTumunuGetir(),
+    idIleGetir: id => yanginTupuIdIleGetirRepo(id),
+    konumGuncelle: (id, tesisId, x, y) => yanginTupuGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
+    yeniKayitUrl: (tesisId, x, y) => `../acil-durum/index.html?yeniKonum=1&hedef=yanginTupu&tesisId=${tesisId}&x=${x}&y=${y}`,
+    acUrl: id => `../acil-durum/index.html?ac=${id}&hedef=yanginTupu`,
+    modulAdi: 'Yangın Tüpü Takibi',
+    normallestir: k => ({
+      kaynak: 'acilDurumYanginTupu', kaynakId: k.id, id: 'x-adyt-' + k.id, tesisId: k.haritaTesisId,
+      x: Number(k.haritaX) || 0, y: Number(k.haritaY) || 0,
+      tur: 'yangin_tupu', altTur: '', no: k.tupNo, baslik: k.tip + (k.kapasite ? ' (' + k.kapasite + ')' : ''), aciklama: k.bulgular,
+      kat: '', bolum: k.bolum, durum: k.durum, fotograflar: [],
+      ek: { 'Dolum Tarihi': k.doluTarihi, 'Sonraki Yıllık Bakım': k.sonrakiYillikBakim, 'Sonraki Hidrostatik Test': k.sonrakiHidrostatikTest, 'Sorumlu': k.sorumlu },
+      kontrolGecmisi: [], olusturmaTarihi: k.olusturmaTarihi, guncellemeTarihi: k.olusturmaTarihi
+    })
   }
 };
 
@@ -163,7 +182,8 @@ async function haritaSayfasiniBaslat() {
     const disKayit = kaynak.idIleGetir(odaklanId);
     if (disKayit && disKayit.haritaTesisId && state.tesisler.some(t => t.id === disKayit.haritaTesisId)) {
       state.aktifTesisId = disKayit.haritaTesisId;
-      odaklanacakMarkerId = 'x-' + (odaklanKaynak === 'acilDurumEkipman' ? 'ade' : odaklanKaynak) + '-' + odaklanId;
+      const _odaklanOnEkleri = { acilDurumEkipman: 'ade', acilDurumYanginTupu: 'adyt' };
+      odaklanacakMarkerId = 'x-' + (_odaklanOnEkleri[odaklanKaynak] || odaklanKaynak) + '-' + odaklanId;
     }
   } else if (konumKaynak && konumId && HARITA_DIS_KAYNAKLAR[konumKaynak]) {
     _konumSecimBaglami = { kaynak: konumKaynak, id: konumId, donus: donus || '../harita/index.html' };
@@ -333,8 +353,11 @@ function haritaIsaretleriCiz() {
     // amaçlı olarak simgenin ÜSTÜNDE küçük bir etiket halinde gösterilir.
     const yukseklikEtiketi = (r.ek && r.ek.yukseklik)
       ? `<span class="h-nokta-yukseklik">${_haritaKacir(r.ek.yukseklik)}m</span>` : '';
-    nokta.innerHTML = `${yukseklikEtiketi}<span class="h-nokta-simge" style="font-size:${simgeBoyutu}px;">${haritaIkonAl(r)}</span><span class="h-nokta-kod">${_haritaKacir(r.no)}</span>`;
-    nokta.title = `${r.no} — ${r.baslik || haritaTipBilgisi(r.tur).etiket}`;
+    // Bölüm bilgisi varsa (kullanıcı isteği), kod etiketinin altında ayrı
+    // küçük bir etiket olarak gösterilir.
+    const bolumEtiketi = r.bolum ? `<span class="h-nokta-bolum">${_haritaKacir(r.bolum)}</span>` : '';
+    nokta.innerHTML = `${yukseklikEtiketi}<span class="h-nokta-simge" style="font-size:${simgeBoyutu}px;">${haritaIkonAl(r)}</span><span class="h-nokta-kod">${_haritaKacir(r.no)}</span>${bolumEtiketi}`;
+    nokta.title = `${r.no} — ${r.baslik || haritaTipBilgisi(r.tur).etiket}${r.bolum ? ' (' + r.bolum + ')' : ''}`;
     nokta.addEventListener('click', e => { e.stopPropagation(); haritaDetayModaliAc(r.id); });
     sahne.appendChild(nokta);
   });
@@ -799,7 +822,7 @@ function haritaEklemeModunuAyarla(acik) {
   if (state.sekme !== 'harita') haritaSekmeDegistir('harita');
 }
 
-function haritaTuvalTiklandi(e) {
+async function haritaTuvalTiklandi(e) {
   if (state.suruklemeHareketEtti) { state.suruklemeHareketEtti = false; return; }
   if (!_konumSecimBaglami && !state.eklemeModu && !state.etiketEklemeModu) return;
   const sahne = el('haritaSahne');
@@ -811,11 +834,17 @@ function haritaTuvalTiklandi(e) {
 
   if (_konumSecimBaglami) {
     const kaynak = HARITA_DIS_KAYNAKLAR[_konumSecimBaglami.kaynak];
-    kaynak.konumGuncelle(_konumSecimBaglami.id, state.aktifTesisId, x, y);
-    haritaToast('Konum kaydedildi, yönlendiriliyorsunuz…');
+    const kayitId = _konumSecimBaglami.id;
     const donusUrl = _konumSecimBaglami.donus;
     _konumSecimBaglami = null;
-    setTimeout(() => { window.location.href = donusUrl; }, 400);
+    haritaToast('Konum kaydediliyor…');
+    // Firestore yazımının GERÇEKTEN bitmesi beklenir — önceden burada
+    // sabit 400ms sonra yönlendiriliyordu, bu da yazım henüz sunucuya
+    // ulaşmadan sayfa değişip konumun sessizce kaybolmasına yol açabiliyordu
+    // (kullanıcı bildirdi: harita ekleniyor ama kalıcı olmuyordu).
+    await kaynak.konumGuncelle(kayitId, state.aktifTesisId, x, y);
+    haritaToast('Konum kaydedildi, yönlendiriliyorsunuz…');
+    window.location.href = donusUrl;
     return;
   }
 
@@ -1076,13 +1105,22 @@ function haritaDisKaynakDetayAc(r) {
       <div><span>Bölüm</span>${_haritaKacir(r.bolum || '—')}</div>
     </div>
     ${ekHtml}
-    <div style="font-size:12px; color:var(--metin-soluk); margin:10px 0;">Bu kayıt ${kaynak.modulAdi} modülünden geliyor — düzenlemek için o modülü açın.</div>
+    <div style="font-size:12px; color:var(--metin-soluk); margin:10px 0;">Bu kayıt ${kaynak.modulAdi} modülünden geliyor — düzenlemek için o modülü açın. Haritadan kaldırmak kaydı SİLMEZ, sadece konum işaretini temizler.</div>
     <div class="h-eylemSatiri">
       <button class="birincil" id="disKaynakAcBtn" style="width:auto;">${kaynak.modulAdi}'nda Aç</button>
+      <button class="ikincil" id="disKaynakKaldirBtn" style="width:auto;">📍 Haritadan Kaldır</button>
     </div>
   `, true);
 
   document.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', haritaModalKapat));
+  document.getElementById('disKaynakKaldirBtn').addEventListener('click', async () => {
+    if (!confirm('Bu işaret haritadan kaldırılsın mı? ' + kaynak.modulAdi + ' kaydının kendisi silinmez, sadece konum bağlantısı temizlenir.')) return;
+    await kaynak.konumGuncelle(r.kaynakId, '', 0, 0);
+    haritaKayitlariYukle(state.aktifTesisId);
+    haritaModalKapat();
+    await haritaHepsiniCiz();
+    haritaToast('Haritadan kaldırıldı.');
+  });
   document.getElementById('disKaynakAcBtn').addEventListener('click', () => {
     window.location.href = kaynak.acUrl(r.kaynakId);
   });

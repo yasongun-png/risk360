@@ -19,7 +19,10 @@
     <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
     <div class="dashboard-ust" style="margin-top:14px;">
       <h2 style="margin:0;">Acil Durum Yönetimi</h2>
-      <a href="plan.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">📄 Acil Durum Planı</a>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="../harita/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🗺️ Haritayı Aç</a>
+        <a href="plan.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">📄 Acil Durum Planı</a>
+      </div>
     </div>
     <p style="color:#6b7280; font-size:13px;" id="firmaEtiketi"></p>
 
@@ -27,6 +30,7 @@
       <button type="button" data-sekme="ekipler">Ekipler</button>
       <button type="button" data-sekme="uygunluk" class="sekme-seciliDegil">Uygunluk Değerlendirmesi</button>
       <button type="button" data-sekme="ekipman" class="sekme-seciliDegil">Ekipman</button>
+      <button type="button" data-sekme="yanginTupu" class="sekme-seciliDegil">Yangın Tüpü</button>
       <button type="button" data-sekme="tatbikat" class="sekme-seciliDegil">Tatbikatlar</button>
       <button type="button" data-sekme="senaryo" class="sekme-seciliDegil">Senaryolar</button>
     </div>
@@ -78,6 +82,28 @@
         </table>
       </div>
       <div class="bos-durum" id="ekipmanBosDurum"></div>
+    </div>
+
+    <!-- YANGIN TÜPÜ -->
+    <div id="bolum-yanginTupu" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="yanginTupuAramaKutusu" class="arama-kutusu" placeholder="Tip, bölüm veya lokasyona göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="yanginTupuSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="yanginTupuIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="yanginTupuIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="yanginTupuDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="yanginTupuYazdirBtn">Yazdır</button>
+          <button type="button" class="birincil" id="yeniYanginTupuBtn" style="width:auto;">+ Yangın Tüpü Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Tüp No</th><th>Tip</th><th>Kapasite</th><th>Lokasyon</th><th>Dolum Tarihi</th><th>Sonraki Yıllık Bakım</th><th>Sonraki Hidrostatik Test</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="yanginTupuTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="yanginTupuBosDurum"></div>
     </div>
 
     <!-- TATBİKAT -->
@@ -253,6 +279,88 @@
     </div>
   </div>
 
+  <!-- YANGIN TÜPÜ MODAL -->
+  <div class="modal-katman" id="yanginTupuModalKatman">
+    <div class="modal-kutu" style="max-width:600px;">
+      <h3 id="yanginTupuModalBaslik">Yeni Yangın Tüpü</h3>
+      <form id="yanginTupuForm">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yanginTupuTip">Tip</label>
+            <select id="yanginTupuTip"></select>
+            <div class="alan-hatasi" id="yanginTupuTipHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="yanginTupuKapasite">Kapasite</label>
+            <input type="text" id="yanginTupuKapasite" placeholder="örn. 6 kg">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yanginTupuBolum">Bölüm</label>
+            <input type="text" id="yanginTupuBolum">
+          </div>
+          <div>
+            <label for="yanginTupuLokasyon">Lokasyon</label>
+            <input type="text" id="yanginTupuLokasyon">
+            <div class="alan-hatasi" id="yanginTupuLokasyonHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <label for="yanginTupuDoluTarihi">Dolum Tarihi</label>
+        <input type="date" id="yanginTupuDoluTarihi">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yanginTupuYillikBakimTarihi">Yıllık Bakım Tarihi</label>
+            <input type="date" id="yanginTupuYillikBakimTarihi">
+          </div>
+          <div>
+            <label for="yanginTupuSonrakiYillikBakim">Sonraki Yıllık Bakım <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa otomatik hesaplanır)</span></label>
+            <input type="date" id="yanginTupuSonrakiYillikBakim">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yanginTupuHidrostatikTestTarihi">Hidrostatik Test Tarihi</label>
+            <input type="date" id="yanginTupuHidrostatikTestTarihi">
+          </div>
+          <div>
+            <label for="yanginTupuSonrakiHidrostatikTest">Sonraki Test <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa +4 yıl hesaplanır)</span></label>
+            <input type="date" id="yanginTupuSonrakiHidrostatikTest">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="yanginTupuSorumlu">Sorumlu</label>
+            <input type="text" id="yanginTupuSorumlu">
+          </div>
+          <div>
+            <label for="yanginTupuDurum">Durum</label>
+            <select id="yanginTupuDurum"></select>
+          </div>
+        </div>
+
+        <label for="yanginTupuBulgular">Bulgular</label>
+        <textarea id="yanginTupuBulgular"></textarea>
+        <label for="yanginTupuNotlar">Notlar</label>
+        <textarea id="yanginTupuNotlar"></textarea>
+
+        <label>Konum</label>
+        <div id="yanginTupuKonumAlani" style="margin:-8px 0 14px;"></div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="yanginTupuModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="yanginTupuModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <!-- TATBİKAT MODAL -->
   <div class="modal-katman" id="tatbikatModalKatman">
     <div class="modal-kutu" style="max-width:600px;">
@@ -410,15 +518,17 @@
           const acKayitId = parametreler.get('ac');
           if (acKayitId) {
             const acilacakEkipman = ekipmanIdIleGetirRepo(acKayitId);
+            const acilacakYanginTupu = !acilacakEkipman ? yanginTupuIdIleGetirRepo(acKayitId) : null;
             if (acilacakEkipman) { gorunumDegistir('ekipman'); ekipmanModalAc(acilacakEkipman); }
+            else if (acilacakYanginTupu) { gorunumDegistir('yanginTupu'); yanginTupuModalAc(acilacakYanginTupu); }
           } else if (parametreler.get('yeniKonum') === '1') {
             _bekleyenHaritaKonum = {
               tesisId: parametreler.get('tesisId') || '',
               x: Number(parametreler.get('x')) || 0,
               y: Number(parametreler.get('y')) || 0
             };
-            gorunumDegistir('ekipman');
-            ekipmanModalAc(null);
+            if (parametreler.get('hedef') === 'yanginTupu') { gorunumDegistir('yanginTupu'); yanginTupuModalAc(null); }
+            else { gorunumDegistir('ekipman'); ekipmanModalAc(null); }
           }
         });
       }

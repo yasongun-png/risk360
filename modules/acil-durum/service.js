@@ -136,6 +136,70 @@ function ekipmanSil(id) {
   return { basarili: true };
 }
 
+// ---- Yangın Tüpleri ----
+
+function _yanginTupuZenginlestir(t) {
+  const tarihler = [t.sonrakiYillikBakim, t.sonrakiHidrostatikTest].filter(Boolean);
+  // En yakın (veya en gecikmiş) tarihe göre durum türetilir — iki ayrı süre
+  // takip edildiği için (yıllık bakım + hidrostatik test), hangisi önce
+  // gelirse görünür durumu o belirler.
+  const enYakinTarih = tarihler.length
+    ? tarihler.reduce((a, b) => (gunFarkiHesapla(a) <= gunFarkiHesapla(b) ? a : b))
+    : '';
+  return Object.assign({}, t, { durumGoruntu: durumTuret(enYakinTarih, t.durum, ['İptal', 'Pasif']) });
+}
+
+function yanginTupleriniGetir(aramaMetni) {
+  let liste = yanginTupleriTumunuGetir().map(_yanginTupuZenginlestir);
+  if (!aramaMetni) return liste;
+  const kucuk = aramaMetni.trim().toLowerCase();
+  return liste.filter(t =>
+    t.tip.toLowerCase().includes(kucuk) ||
+    t.lokasyon.toLowerCase().includes(kucuk) ||
+    t.bolum.toLowerCase().includes(kucuk)
+  );
+}
+
+function yanginTupuEkle(veriler) {
+  const dogrulama = yanginTupuDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  // Sahadaki fiziksel tüp etiketleriyle aynı biçim: "YSC01", "YSC02"...
+  const tupNo = yanginTupuSonrakiNoUret(yanginTupleriTumunuGetir());
+  const yeni = yanginTupuOlustur(Object.assign({}, veriler, { tupNo }));
+  yanginTupuEkleRepo(yeni);
+  return { basarili: true, tup: yeni };
+}
+
+function yanginTupuGuncelle(id, veriler) {
+  const dogrulama = yanginTupuDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const sonrakiYillikBakim = veriler.sonrakiYillikBakim || (veriler.yillikBakimTarihi ? gunEkle(veriler.yillikBakimTarihi, YANGIN_TUPU_YILLIK_BAKIM_GUN) : '');
+  const sonrakiHidrostatikTest = veriler.sonrakiHidrostatikTest || (veriler.hidrostatikTestTarihi ? gunEkle(veriler.hidrostatikTestTarihi, YANGIN_TUPU_HIDROSTATIK_TEST_GUN) : '');
+  const guncellenen = yanginTupuGuncelleRepo(id, {
+    tip: veriler.tip,
+    kapasite: (veriler.kapasite || '').trim(),
+    bolum: (veriler.bolum || '').trim(),
+    lokasyon: veriler.lokasyon.trim(),
+    doluTarihi: veriler.doluTarihi || '',
+    yillikBakimTarihi: veriler.yillikBakimTarihi || '',
+    sonrakiYillikBakim,
+    hidrostatikTestTarihi: veriler.hidrostatikTestTarihi || '',
+    sonrakiHidrostatikTest,
+    sorumlu: (veriler.sorumlu || '').trim(),
+    durum: veriler.durum || 'Aktif',
+    bulgular: (veriler.bulgular || '').trim(),
+    notlar: (veriler.notlar || '').trim()
+  });
+  return { basarili: true, tup: guncellenen };
+}
+
+function yanginTupuSil(id) {
+  yanginTupuSilRepo(id);
+  return { basarili: true };
+}
+
 // ---- Tatbikatlar ----
 
 function _tatbikatZenginlestir(t) {

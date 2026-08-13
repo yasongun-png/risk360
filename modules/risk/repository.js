@@ -37,6 +37,18 @@ function riskGuncelleRepo(id, veriler) {
   return liste[index];
 }
 
+// riskGuncelleRepo'nun aksine Firestore yazımının GERÇEKTEN bitmesini bekler
+// (bkz. modules/uygunsuzluk/repository.js uygunsuzlukGuncelleRepoVeBekle —
+// harita köprüsündeki konumGuncelle'de sayfa değişmeden önce yazımın
+// bitmesini garantilemek için kullanılır).
+function riskGuncelleRepoVeBekle(id, veriler) {
+  const liste = riskTumunuGetir();
+  const index = liste.findIndex(r => r.id === id);
+  if (index === -1) return Promise.resolve(null);
+  liste[index] = Object.assign({}, liste[index], veriler);
+  return yazVeSonucuGetir(_riskAnahtari(), liste).then(() => liste[index]);
+}
+
 function riskSilRepo(id) {
   _riskKaydet(riskTumunuGetir().filter(r => r.id !== id));
 }

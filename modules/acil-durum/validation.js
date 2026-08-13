@@ -14,6 +14,13 @@ function ekipmanDogrula(veriler) {
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
 
+function yanginTupuDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.tip) hatalar.tip = 'Tip zorunludur.';
+  if (!veriler.lokasyon || !veriler.lokasyon.trim()) hatalar.lokasyon = 'Lokasyon zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
 function tatbikatDogrula(veriler) {
   const hatalar = {};
   if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Tatbikat adı zorunludur.';
