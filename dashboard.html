@@ -87,16 +87,23 @@
         rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${_dbKacir(aktifFirma.ad)}`;
 
         const grid = document.getElementById('modulGrid');
-        const gosterilecekModuller = kullaniciAdminMi(kullanici) ? MODULLER : MODULLER.filter(m => IK_IZINLI_MODULLER.includes(m.anahtar));
-        gosterilecekModuller.forEach(modul => {
-          const kart = document.createElement(modul.aktif ? 'a' : 'div');
-          kart.className = 'modul-kart ' + (modul.aktif ? 'aktif' : 'pasif');
-          if (modul.aktif) kart.href = modul.baglanti;
+        const admin = kullaniciAdminMi(kullanici);
+        MODULLER.forEach(modul => {
+          // İK rolü tüm modülleri GÖRÜR ama sadece kendisine izinli olanlara
+          // girebilir — diğerleri soluk (pasif) ve tıklanamaz gösterilir
+          // (kullanıcı isteği: "diğer uygulamalarda görünsün ama soluk
+          // şekilde girmesinler").
+          const erisilebilir = modul.aktif && (admin || IK_IZINLI_MODULLER.includes(modul.anahtar));
+          const kart = document.createElement(erisilebilir ? 'a' : 'div');
+          kart.className = 'modul-kart ' + (erisilebilir ? 'aktif' : 'pasif');
+          if (erisilebilir) kart.href = modul.baglanti;
+          const etiket = !modul.aktif ? '<span class="yakinda-etiket">YAKINDA</span>'
+            : (!erisilebilir ? '<span class="yakinda-etiket">YETKİNİZ YOK</span>' : '');
           kart.innerHTML = `
             <div class="ikon">${modul.ikon}</div>
             <div class="baslik">${modul.baslik}</div>
             <div class="aciklama">${modul.aciklama}</div>
-            ${modul.aktif ? '' : '<span class="yakinda-etiket">YAKINDA</span>'}
+            ${etiket}
           `;
           grid.appendChild(kart);
         });
