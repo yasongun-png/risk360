@@ -9,9 +9,15 @@ const EKIP_TURLERI = ['Koordinasyon', 'Söndürme', 'Kurtarma', 'Koruma', 'İlk 
 const EKIP_ROLLERI = ['Acil Durum Sorumlusu', 'Acil Durum Koordinatörü', 'Ekip Başı', 'Ekip Üyesi', 'Gözetmen'];
 const VARDIYALAR = ['A', 'B', 'C', 'D', 'G', '08-16', '16-24', '00-08', 'Genel'];
 
-const EKIPMAN_TURLERI = ['Yangın Tüpü', 'Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Acil Duş', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Diğer'];
+// "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Acil Duş', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Diğer'];
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
 const SENARYO_TURLERI = ['Yangın', 'Patlama', 'Kimyasal Yayılım', 'Amonyak Kaçağı', 'Asit Dökülmesi', 'Deprem', 'Kapalı Alan', 'Çevresel Olay', 'Diğer'];
+
+const YANGIN_TUPU_TIPLERI = ['Kuru Kimyevi Toz (KKT)', 'CO2', 'Köpük', 'Su', 'Diğer'];
+// TS 11748: yıllık bakım periyodu; basınçlı kap hidrostatik testi tipik olarak 4 yılda bir.
+const YANGIN_TUPU_YILLIK_BAKIM_GUN = 365;
+const YANGIN_TUPU_HIDROSTATIK_TEST_GUN = 1460;
 
 // Md.11: Söndürme/Kurtarma/Koruma ekiplerinin her biri için tehlike sınıfına göre bu sayıya
 // kadar her çalışan grubunda en az 1 destek elemanı.
@@ -61,6 +67,17 @@ function sonrakiNoUret(onEk, mevcutListe, alanAdi) {
   // sıfırla doldurma yok. Eski "ADE0005" gibi kayıtlar da aynı düzenli
   // ifadeyle (sondaki rakamlar) doğru okunduğu için numaralandırma bozulmaz.
   return onEk + ' ' + (maks + 1);
+}
+
+// Yangın tüpleri sahadaki fiziksel etiketlerle aynı biçimde numaralanır
+// (kullanıcı isteği): "YSC01", "YSC02" — boşluksuz, 2 haneli sıfırla dolgu.
+function yanginTupuSonrakiNoUret(mevcutListe) {
+  let maks = 0;
+  mevcutListe.forEach(item => {
+    const m = String(item.tupNo || '').match(/(\d+)$/);
+    if (m) maks = Math.max(maks, parseInt(m[1], 10));
+  });
+  return 'YSC' + String(maks + 1).padStart(2, '0');
 }
 
 // ---- Uygunluk Değerlendirmesi hesaplamaları (Md.11, Md.19) ----
@@ -167,6 +184,36 @@ function ekipmanOlustur(veriler) {
     periyotGun,
     sonKontrol,
     sonrakiKontrol,
+    sorumlu: (veriler.sorumlu || '').trim(),
+    durum: veriler.durum || 'Aktif',
+    bulgular: (veriler.bulgular || '').trim(),
+    notlar: (veriler.notlar || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
+
+    // Saha Dijital Haritası köprüsü — bkz. modules/harita.
+    haritaTesisId: veriler.haritaTesisId || '',
+    haritaX: veriler.haritaX !== undefined ? veriler.haritaX : '',
+    haritaY: veriler.haritaY !== undefined ? veriler.haritaY : ''
+  };
+}
+
+function yanginTupuOlustur(veriler) {
+  const yillikBakimTarihi = veriler.yillikBakimTarihi || '';
+  const hidrostatikTestTarihi = veriler.hidrostatikTestTarihi || '';
+  const sonrakiYillikBakim = veriler.sonrakiYillikBakim || (yillikBakimTarihi ? gunEkle(yillikBakimTarihi, YANGIN_TUPU_YILLIK_BAKIM_GUN) : '');
+  const sonrakiHidrostatikTest = veriler.sonrakiHidrostatikTest || (hidrostatikTestTarihi ? gunEkle(hidrostatikTestTarihi, YANGIN_TUPU_HIDROSTATIK_TEST_GUN) : '');
+  return {
+    id: veriler.id || rastgeleId(),
+    tupNo: veriler.tupNo || '',
+    tip: veriler.tip || 'Kuru Kimyevi Toz (KKT)',
+    kapasite: (veriler.kapasite || '').trim(),
+    bolum: (veriler.bolum || '').trim(),
+    lokasyon: (veriler.lokasyon || '').trim(),
+    doluTarihi: veriler.doluTarihi || '',
+    yillikBakimTarihi,
+    sonrakiYillikBakim,
+    hidrostatikTestTarihi,
+    sonrakiHidrostatikTest,
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
     bulgular: (veriler.bulgular || '').trim(),

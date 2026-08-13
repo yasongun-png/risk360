@@ -96,15 +96,24 @@ function aksiyonOnEkiUret(bolum) {
   return (temiz || 'AKS').padEnd(3, 'X');
 }
 
-function sonrakiAksiyonNoUret(bolum, mevcutListe) {
+// Numaralandırma her yıl yeniden 1'den başlar (kullanıcı isteği), bölüm
+// bazında. Yıl, sayının sonuna ".YYYY" olarak eklenir (ör. "TOR0007.2026").
+// Hangi kaydın hangi yıla ait olduğu, aksiyonNo'nun kendisinden değil (eski
+// kayıtlarda yıl eki yoktu) o kaydın bildirimTarihi'nden okunur — böylece
+// yıl içinde eklenen eski-formatlı kayıtlar da sayaca dahil olur, sadece
+// takvim yılı değiştiğinde sayaç doğal olarak sıfırlanır.
+function sonrakiAksiyonNoUret(bolum, mevcutListe, yilStr) {
   const onEk = aksiyonOnEkiUret(bolum);
+  const yil = yilStr || String(new Date().getFullYear());
   let maks = 0;
   mevcutListe.forEach(item => {
-    if (!String(item.aksiyonNo || '').startsWith(onEk)) return;
-    const kuyruk = parseInt(String(item.aksiyonNo).slice(3), 10);
+    const no = String(item.aksiyonNo || '');
+    if (!no.startsWith(onEk)) return;
+    if (String(item.bildirimTarihi || '').slice(0, 4) !== yil) return;
+    const kuyruk = parseInt(no.slice(3).split('.')[0], 10);
     if (Number.isFinite(kuyruk) && kuyruk > maks) maks = kuyruk;
   });
-  return onEk + String(maks + 1).padStart(4, '0');
+  return onEk + String(maks + 1).padStart(4, '0') + '.' + yil;
 }
 
 function uygunsuzlukGecikmisMi(kayit, bugunStr) {
@@ -141,7 +150,6 @@ function uygunsuzlukKaydiOlustur(veriler) {
 
     kokNeden: (veriler.kokNeden || '').trim(),
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
-    onleyiciFaaliyet: (veriler.onleyiciFaaliyet || '').trim(),
 
     sorumlu: (veriler.sorumlu || '').trim(),
     atayan: (veriler.atayan || '').trim(),
@@ -163,6 +171,12 @@ function uygunsuzlukKaydiOlustur(veriler) {
 
     fotoOncesi: veriler.fotoOncesi || '',
     fotoSonrasi: veriler.fotoSonrasi || '',
+    fotoOncesi2: veriler.fotoOncesi2 || '',
+    fotoSonrasi2: veriler.fotoSonrasi2 || '',
+    fotoOncesi3: veriler.fotoOncesi3 || '',
+    fotoSonrasi3: veriler.fotoSonrasi3 || '',
+    fotoOncesi4: veriler.fotoOncesi4 || '',
+    fotoSonrasi4: veriler.fotoSonrasi4 || '',
 
     durum: veriler.durum || 'Açık',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),

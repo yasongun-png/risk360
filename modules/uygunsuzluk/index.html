@@ -17,7 +17,10 @@
 
   <div class="icerik">
     <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
-    <h2 style="margin-top:14px;">Uygunsuzluk</h2>
+    <div class="dashboard-ust" style="margin-top:14px;">
+      <h2 style="margin:0;">Uygunsuzluk</h2>
+      <a href="../harita/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🗺️ Haritayı Aç</a>
+    </div>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
 
     <div class="sekme-cubugu">
@@ -65,17 +68,20 @@
         </div>
       </div>
       <div class="tablo-scroll">
-        <table class="veri-tablosu" style="table-layout:fixed; min-width:1320px;">
+        <table class="veri-tablosu" style="table-layout:fixed; min-width:1350px;">
           <colgroup>
-            <col style="width:60px;"><col style="width:95px;"><col style="width:85px;">
+            <col style="width:180px;">
+            <col style="width:90px;"><col style="width:95px;"><col style="width:85px;">
             <col style="width:260px;">
             <col style="width:80px;"><col style="width:80px;"><col style="width:100px;">
             <col style="width:56px;"><col style="width:56px;"><col style="width:80px;">
             <col style="width:85px;">
-            <col style="width:140px;"><col style="width:140px;">
+            <col style="width:140px;">
           </colgroup>
           <thead>
-            <tr><th>No</th><th>Tesis / Birim</th><th>Bildirim Tarihi</th><th>Uygunsuzluk Tanımı</th><th>Risk Seviyesi</th><th>Termin</th><th>Sorumlu</th><th>Öncesi</th><th>Sonrası</th><th>Durum</th><th>Kapanış Tarihi</th><th>Kapanış Açıklaması</th><th>İşlemler</th></tr>
+            <!-- Kaydırma gerektirmeden hep tıklanabilir olsun diye (sticky sütun bu
+                 tabloda güvenilir çalışmadığı için) İşlemler en başa alındı. -->
+            <tr><th>İşlemler</th><th>No</th><th>Tesis / Birim</th><th>Bildirim Tarihi</th><th>Uygunsuzluk Tanımı</th><th>Risk Seviyesi</th><th>Termin</th><th>Sorumlu</th><th>Öncesi</th><th>Sonrası</th><th>Durum</th><th>Kapanış Tarihi</th><th>Kapanış Açıklaması</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>
@@ -103,6 +109,21 @@
         <button type="button" class="birincil" id="raporMetniKaydetBtn">Kaydet</button>
       </div>
       <button type="button" class="tablo-buton" id="raporMetniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- KONU TAŞI MODAL -->
+  <div class="modal-katman" id="konuTasiKatmani">
+    <div class="modal-kutu" style="max-width:440px;">
+      <h3>Kaydı Başka Konuya Taşı</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;" id="konuTasiKayitEtiketi"></p>
+      <label for="konuTasiSecim">Hedef Konu / Defter</label>
+      <select id="konuTasiSecim"></select>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="konuTasiIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="konuTasiKaydetBtn">Taşı</button>
+      </div>
+      <button type="button" class="tablo-buton" id="konuTasiKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -143,10 +164,8 @@
         <div class="form-bolum-baslik">Kök Neden ve Faaliyetler</div>
         <label for="kokNeden">Kök Neden</label>
         <input type="text" id="kokNeden">
-        <label for="duzelticiFaaliyet">Düzeltici Faaliyet</label>
+        <label for="duzelticiFaaliyet">Faaliyet Önerisi</label>
         <textarea id="duzelticiFaaliyet"></textarea>
-        <label for="onleyiciFaaliyet">Önleyici Faaliyet</label>
-        <textarea id="onleyiciFaaliyet"></textarea>
 
         <div class="form-bolum-baslik">Sorumluluk ve Takip</div>
         <div class="form-satir-ikili">
@@ -185,6 +204,45 @@
             <label for="fotoSonrasiDosya">Sonrası Fotoğrafı</label>
             <input type="file" id="fotoSonrasiDosya" accept="image/*">
             <div id="fotoSonrasiOnizleme" style="margin-top:6px;"></div>
+          </div>
+        </div>
+
+        <!-- Ek 3 öncesi/sonrası çifti (kullanıcı isteği) — doluysa PDF'in
+             2. sayfasında ayrı bir tablo olarak gösterilir (bkz. cikti.js). -->
+        <div class="form-satir-ikili">
+          <div>
+            <label for="fotoOncesi2Dosya">Öncesi Fotoğrafı 2</label>
+            <input type="file" id="fotoOncesi2Dosya" accept="image/*">
+            <div id="fotoOncesi2Onizleme" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <label for="fotoSonrasi2Dosya">Sonrası Fotoğrafı 2</label>
+            <input type="file" id="fotoSonrasi2Dosya" accept="image/*">
+            <div id="fotoSonrasi2Onizleme" style="margin-top:6px;"></div>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="fotoOncesi3Dosya">Öncesi Fotoğrafı 3</label>
+            <input type="file" id="fotoOncesi3Dosya" accept="image/*">
+            <div id="fotoOncesi3Onizleme" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <label for="fotoSonrasi3Dosya">Sonrası Fotoğrafı 3</label>
+            <input type="file" id="fotoSonrasi3Dosya" accept="image/*">
+            <div id="fotoSonrasi3Onizleme" style="margin-top:6px;"></div>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="fotoOncesi4Dosya">Öncesi Fotoğrafı 4</label>
+            <input type="file" id="fotoOncesi4Dosya" accept="image/*">
+            <div id="fotoOncesi4Onizleme" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <label for="fotoSonrasi4Dosya">Sonrası Fotoğrafı 4</label>
+            <input type="file" id="fotoSonrasi4Dosya" accept="image/*">
+            <div id="fotoSonrasi4Onizleme" style="margin-top:6px;"></div>
           </div>
         </div>
 
@@ -245,6 +303,8 @@
   <script src="../../core/excel.js"></script>
   <script src="../../core/rapor.js"></script>
   <script src="../../core/form-ayarlari.js"></script>
+  <!-- Bildirim Formu PDF'inin sonundaki konum krokisi için (bkz. cikti.js) -->
+  <script src="../harita/repository.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>

@@ -74,6 +74,7 @@
   .h-nokta-simge { font-size: 30px; line-height: 1; }
   .h-nokta-kod { font-size: 8px; background: #111827dd; color: #fff; padding: 1px 4px; border-radius: 3px; margin-top: 2px; white-space: nowrap; }
   .h-nokta-yukseklik { font-size: 8px; background: #795548dd; color: #fff; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px; white-space: nowrap; order: -1; }
+  .h-nokta-bolum { font-size: 7px; background: #1e40afcc; color: #fff; padding: 1px 4px; border-radius: 3px; margin-top: 1px; white-space: nowrap; }
 
   .h-etiket {
     position: absolute; transform: translate(-50%, -50%);
@@ -150,7 +151,14 @@
 
   <div class="icerik">
     <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
-    <h2 style="margin-top:14px;">🗺️ Saha Dijital Haritası</h2>
+    <div class="dashboard-ust" style="margin-top:14px;">
+      <h2 style="margin:0;">🗺️ Saha Dijital Haritası</h2>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="../uygunsuzluk/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🔺 Uygunsuzluk</a>
+        <a href="../risk/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">💀 Risk Değerlendirmesi</a>
+        <a href="../acil-durum/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🚨 Acil Durum</a>
+      </div>
+    </div>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
   </div>
 

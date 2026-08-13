@@ -28,7 +28,10 @@ function uygunsuzluklariGetir(aramaMetni, filtreler) {
     const aKapali = a.durum === 'Kapalı' || a.durum === 'İptal';
     const bKapali = b.durum === 'Kapalı' || b.durum === 'İptal';
     if (aKapali !== bKapali) return aKapali ? 1 : -1;
-    return (b.bildirimTarihi || '').localeCompare(a.bildirimTarihi || '');
+    // Bildirim tarihi geriye dönük girilebildiği için (kullanıcı isteği)
+    // sıralama gerçek giriş anına (olusturmaTarihi) göre yapılır — en son
+    // eklenen açık kayıt en üstte görünür.
+    return (b.olusturmaTarihi || '').localeCompare(a.olusturmaTarihi || '');
   });
 }
 
@@ -36,7 +39,8 @@ function uygunsuzlukEkle(veriler) {
   const dogrulama = uygunsuzlukDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  const aksiyonNo = sonrakiAksiyonNoUret(veriler.bolum, uygunsuzlukTumunuGetir());
+  const yil = (veriler.bildirimTarihi || bugunIso()).slice(0, 4);
+  const aksiyonNo = sonrakiAksiyonNoUret(veriler.bolum, uygunsuzlukTumunuGetir(), yil);
   // Elle "Yeni Kayıt" formunda durum her zaman Açık'tır; ama içe aktarımda
   // (ör. eski sistemden zaten kapanmış kayıtlar gelirse) verilen durum korunur.
   const durum = UYGUNSUZLUK_DURUMLARI.includes(veriler.durum) ? veriler.durum : 'Açık';
@@ -69,7 +73,8 @@ async function uygunsuzlukTopluEkle(verilerListesi) {
       hatalar.push(`Satır ${index + 2}: ${Object.values(dogrulama.hatalar)[0]}`);
       return;
     }
-    const aksiyonNo = sonrakiAksiyonNoUret(veriler.bolum, mevcutListe.concat(yeniKayitlar));
+    const yil = (veriler.bildirimTarihi || bugunIso()).slice(0, 4);
+    const aksiyonNo = sonrakiAksiyonNoUret(veriler.bolum, mevcutListe.concat(yeniKayitlar), yil);
     const durum = UYGUNSUZLUK_DURUMLARI.includes(veriler.durum) ? veriler.durum : 'Açık';
     const kapaliMi = durum === 'Kapalı' || durum === 'İptal';
     const onayDurumu = kapaliMi
@@ -106,7 +111,6 @@ function uygunsuzlukGuncelle(id, veriler) {
     riskSeviyesi: veriler.riskSeviyesi || 'Orta',
     kokNeden: (veriler.kokNeden || '').trim(),
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
-    onleyiciFaaliyet: (veriler.onleyiciFaaliyet || '').trim(),
     sorumlu: veriler.sorumlu.trim(),
     atayan: (veriler.atayan || '').trim(),
     bildirimTarihi: veriler.bildirimTarihi || bugunIso(),
@@ -118,6 +122,12 @@ function uygunsuzlukGuncelle(id, veriler) {
     yasalDayanak: (veriler.yasalDayanak || '').trim(),
     fotoOncesi: veriler.fotoOncesi || '',
     fotoSonrasi: veriler.fotoSonrasi || '',
+    fotoOncesi2: veriler.fotoOncesi2 || '',
+    fotoSonrasi2: veriler.fotoSonrasi2 || '',
+    fotoOncesi3: veriler.fotoOncesi3 || '',
+    fotoSonrasi3: veriler.fotoSonrasi3 || '',
+    fotoOncesi4: veriler.fotoOncesi4 || '',
+    fotoSonrasi4: veriler.fotoSonrasi4 || '',
     durum: veriler.durum || 'Açık',
     kapanisTarihi: veriler.kapanisTarihi || '',
     kanitAciklamasi: (veriler.kanitAciklamasi || '').trim()
@@ -142,6 +152,22 @@ function uygunsuzlukKapat(id, kanitAciklamasi) {
     kapanisTarihi: bugunIso(),
     kanitAciklamasi: (kanitAciklamasi || '').trim()
   });
+  return { basarili: true, kayit: guncellenen };
+}
+
+// Kaydı başka bir konuya/deftere taşır (kullanıcı isteği: "Tüm Konular"
+// seçiliyken oluşturulan kayıtlar hiçbir gerçek konuya atanmadan
+// "sahipsiz" kalıyordu — bununla sonradan doğru konuya taşınabilirler).
+// konuId boş bırakılırsa kayıt konusuz bırakılır (yine "Tüm Konular"da
+// görünmeye devam eder).
+function uygunsuzlukKonuTasi(id, konuId) {
+  const konu = konuId ? uygunsuzlukKonulariTumunuGetir().find(k => k.id === konuId) : null;
+  if (konuId && !konu) return { basarili: false, hata: 'Konu bulunamadı.' };
+  const guncellenen = uygunsuzlukGuncelleRepo(id, {
+    konuId: konu ? konu.id : '',
+    konuAdi: konu ? konu.ad : ''
+  });
+  if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
   return { basarili: true, kayit: guncellenen };
 }
 
