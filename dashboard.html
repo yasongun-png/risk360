@@ -21,7 +21,31 @@
         🔔<span id="bildirimSayaci" style="display:none; position:absolute; top:-6px; right:-9px; background:var(--hata,#dc2626); color:#fff; border-radius:9px; font-size:10px; font-weight:700; padding:1px 5px;"></span>
       </span>
       <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="sifremiDegistirLinki" style="margin-right:14px;">🔑 Şifremi Değiştir</a>
       <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="sdModalKatman">
+    <div class="modal-kutu">
+      <h3>Şifremi Değiştir</h3>
+
+      <label for="sdMevcutSifre">Mevcut Şifre</label>
+      <input type="password" id="sdMevcutSifre" autocomplete="current-password">
+
+      <label for="sdYeniSifre">Yeni Şifre</label>
+      <input type="password" id="sdYeniSifre" autocomplete="new-password">
+      <p style="font-size:11px; color:var(--metin-soluk); margin-top:-6px;">En az 4 karakter.</p>
+
+      <label for="sdYeniSifreTekrar">Yeni Şifre (Tekrar)</label>
+      <input type="password" id="sdYeniSifreTekrar" autocomplete="new-password">
+
+      <div class="alan-hatasi" id="sdModalHata"></div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="sdModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="sdModalKaydetBtn">Kaydet</button>
+      </div>
     </div>
   </div>
 
@@ -145,8 +169,45 @@
       ciz();
     }
 
+    function sdModalAc() {
+      document.getElementById('sdMevcutSifre').value = '';
+      document.getElementById('sdYeniSifre').value = '';
+      document.getElementById('sdYeniSifreTekrar').value = '';
+      document.getElementById('sdModalHata').textContent = '';
+      document.getElementById('sdModalKatman').classList.add('acik');
+    }
+
+    function sdModalKapat() {
+      document.getElementById('sdModalKatman').classList.remove('acik');
+    }
+
+    async function sdKaydet() {
+      const mevcutSifre = document.getElementById('sdMevcutSifre').value;
+      const yeniSifre = document.getElementById('sdYeniSifre').value;
+      const yeniSifreTekrar = document.getElementById('sdYeniSifreTekrar').value;
+      const hataEl = document.getElementById('sdModalHata');
+
+      if (yeniSifre !== yeniSifreTekrar) {
+        hataEl.textContent = 'Yeni şifreler birbiriyle eşleşmiyor.';
+        return;
+      }
+
+      const sonuc = await kendiSifresiniDegistir(mevcutSifre, yeniSifre);
+      if (!sonuc.basarili) {
+        hataEl.textContent = sonuc.hata;
+        return;
+      }
+
+      sdModalKapat();
+      alert('Şifreniz güncellendi.');
+    }
+
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+
+      document.getElementById('sifremiDegistirLinki').addEventListener('click', sdModalAc);
+      document.getElementById('sdModalIptalBtn').addEventListener('click', sdModalKapat);
+      document.getElementById('sdModalKaydetBtn').addEventListener('click', sdKaydet);
 
       document.getElementById('cikisLinki').addEventListener('click', () => {
         cikisYap();

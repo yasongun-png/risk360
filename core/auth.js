@@ -48,6 +48,30 @@ async function girisYap(kullaniciAdi, sifre) {
   return { basarili: true, kullanici: bulunan };
 }
 
+// Oturumdaki kullanıcının KENDİ şifresini değiştirmesi (mevcut şifreyi bilmesi
+// şart) — admin'in başka bir kullanıcının şifresini SIFIRLAMASINDAN
+// (ikKullaniciSifreDegistir, eski şifreyi bilmeye gerek yok) farklıdır.
+// Kullanıcı isteği: "isterse kullanıcılar kendi şifre değişikliğini
+// yapabilsin". Şifreler tek yönlü özet olarak saklandığından (bkz. yukarıdaki
+// güvenlik notu) admin bile mevcut şifreyi GÖREMEZ, sadece sıfırlayabilir.
+async function kendiSifresiniDegistir(mevcutSifre, yeniSifre) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  if (!yeniSifre || yeniSifre.length < 4) return { basarili: false, hata: 'Yeni şifre en az 4 karakter olmalı.' };
+
+  const girilenOzet = await _sifreOzetiCikar(mevcutSifre || '');
+  const dogru = _sifreOzetiGibiMi(kullanici.sifre) ? kullanici.sifre === girilenOzet : kullanici.sifre === mevcutSifre;
+  if (!dogru) return { basarili: false, hata: 'Mevcut şifre hatalı.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === kullanici.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  kayit.sifre = await _sifreOzetiCikar(yeniSifre);
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true };
+}
+
 function oturumdakiKullanici() {
   const oturum = oku('isg_oturum', null);
   if (!oturum) return null;
