@@ -12,6 +12,10 @@ let _bekleyenHaritaKonum = null;
 let _duzenlenenTatbikatId = null;
 let _duzenlenenSenaryoId = null;
 
+function _adKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function rozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
@@ -275,14 +279,14 @@ function ekipleriCiz(aramaMetni) {
   uyeler.forEach(u => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${u.atamaNo}</td>
-      <td>${u.personelAdi}</td>
-      <td>${u.bolum || '-'}</td>
-      <td>${u.ekipTuru}</td>
-      <td>${u.rol}</td>
-      <td>${u.vardiya}</td>
+      <td>${_adKacir(u.atamaNo)}</td>
+      <td>${_adKacir(u.personelAdi)}</td>
+      <td>${_adKacir(u.bolum) || '-'}</td>
+      <td>${_adKacir(u.ekipTuru)}</td>
+      <td>${_adKacir(u.rol)}</td>
+      <td>${_adKacir(u.vardiya)}</td>
       <td>${u.gecerlilikTarihi || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(u.durumGoruntu)}">${u.durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(u.durumGoruntu)}">${_adKacir(u.durumGoruntu)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${u.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${u.id}">Sil</button>
@@ -309,7 +313,7 @@ function ekipModalAc(uye) {
 
   const personeller = personelleriGetir('', false);
   document.getElementById('ekipPersonelId').innerHTML = '<option value="">— Personel seçiniz —</option>' +
-    personeller.map(p => `<option value="${p.id}" ${uye && uye.personelId === p.id ? 'selected' : ''}>${p.adSoyad} (${p.sicilNo})</option>`).join('');
+    personeller.map(p => `<option value="${p.id}" ${uye && uye.personelId === p.id ? 'selected' : ''}>${_adKacir(p.adSoyad)} (${_adKacir(p.sicilNo)})</option>`).join('');
 
   document.getElementById('ekipBolum').value = uye ? uye.bolum : '';
   document.getElementById('ekipTuru').innerHTML = EKIP_TURLERI.map(t => `<option ${uye && uye.ekipTuru === t ? 'selected' : ''}>${t}</option>`).join('');
@@ -393,12 +397,12 @@ function uygunlugCiz() {
   }
 
   const gecmisUyelerHtml = sonuc.egitimiGecmisUyeler.length
-    ? `<ul style="font-size:13px; padding-left:20px;">${sonuc.egitimiGecmisUyeler.map(u => `<li>${u.personelAdi} — ${u.ekipTuru} (geçerlilik: ${u.gecerlilikTarihi})</li>`).join('')}</ul>`
+    ? `<ul style="font-size:13px; padding-left:20px;">${sonuc.egitimiGecmisUyeler.map(u => `<li>${_adKacir(u.personelAdi)} — ${_adKacir(u.ekipTuru)} (geçerlilik: ${u.gecerlilikTarihi})</li>`).join('')}</ul>`
     : '<div class="bos-durum gorunur">Eğitimi geçmiş ekip üyesi yok.</div>';
 
   kutu.innerHTML = `
     <div class="istatistik-grid">
-      <div class="istatistik-kutu"><span>Tehlike Sınıfı</span><b style="font-size:16px;">${g.tehlikeSinifi}</b></div>
+      <div class="istatistik-kutu"><span>Tehlike Sınıfı</span><b style="font-size:16px;">${_adKacir(g.tehlikeSinifi)}</b></div>
       <div class="istatistik-kutu"><span>Çalışan Sayısı</span><b>${g.calisanSayisi}</b></div>
       <div class="istatistik-kutu"><span>Genel Durum</span><b>${sonuc.genelDegerlendirme.uygun ? 'Uygun' : sonuc.genelDegerlendirme.toplamEksik + ' Kişi Eksik'}</b></div>
       <div class="istatistik-kutu"><span>Plan Yenileme Süresi</span><b>${g.planYenilemeYili} Yıl</b></div>
@@ -437,9 +441,9 @@ function ekipmanlariCiz(aramaMetni) {
   liste.forEach(e => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${e.ekipmanNo}</td><td>${e.tur}</td><td>${e.ad}</td><td>${e.lokasyon}</td>
+      <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.ad)}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${e.durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${e.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${e.id}">Sil</button>
@@ -684,9 +688,9 @@ function tatbikatlariCiz(aramaMetni) {
   liste.forEach(t => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${t.tatbikatNo}</td><td>${t.baslik}</td><td>${t.tur}</td>
+      <td>${_adKacir(t.tatbikatNo)}</td><td>${_adKacir(t.baslik)}</td><td>${_adKacir(t.tur)}</td>
       <td>${t.planlananTarih || '-'}</td><td>${t.gerceklesmeTarihi || '-'}</td><td>${t.katilimciSayisi || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${_adKacir(t.durumGoruntu)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
@@ -763,9 +767,9 @@ function senaryolariCiz(aramaMetni) {
   liste.forEach(s => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${s.senaryoNo}</td><td>${s.baslik}</td><td>${s.tur}</td><td>${s.sorumluEkip}</td>
+      <td>${_adKacir(s.senaryoNo)}</td><td>${_adKacir(s.baslik)}</td><td>${_adKacir(s.tur)}</td><td>${_adKacir(s.sorumluEkip)}</td>
       <td>${s.gozdenGecirmeTarihi || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(s.durumGoruntu)}">${s.durumGoruntu}</span></td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(s.durumGoruntu)}">${_adKacir(s.durumGoruntu)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${s.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${s.id}">Sil</button>

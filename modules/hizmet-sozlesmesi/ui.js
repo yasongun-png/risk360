@@ -3,6 +3,10 @@
 let _hsDuzenlenenKayitId = null;
 let _hsSozlesmeBelgesi = '';
 
+function _hsKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function _hsBelgeOnizlemeCiz(url) {
   const kutu = document.getElementById('sozlesmeBelgesiOnizleme');
   kutu.innerHTML = url
@@ -152,14 +156,14 @@ function hsKayitlariCiz(aramaMetni) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${k.sozlesmeNo}<br><small style="color:var(--metin-soluk);">${k.gorevTuru}</small></td>
-      <td>${k.adSoyad}</td>
-      <td>${k.belgeNo || '-'}${k.belgeSinifi ? ' — ' + k.belgeSinifi : ''}</td>
+      <td>${_hsKacir(k.sozlesmeNo)}<br><small style="color:var(--metin-soluk);">${_hsKacir(k.gorevTuru)}</small></td>
+      <td>${_hsKacir(k.adSoyad)}</td>
+      <td>${_hsKacir(k.belgeNo) || '-'}${k.belgeSinifi ? ' — ' + _hsKacir(k.belgeSinifi) : ''}</td>
       <td>${gunAyYil(k.sozlesmeBaslangicTarihi) || '-'}</td>
       <td>${gunAyYil(k.sozlesmeBitisTarihi) || '-'}</td>
-      <td>${k.ayrilanSure || '-'}</td>
+      <td>${_hsKacir(k.ayrilanSure) || '-'}</td>
       <td>${_hsBelgeHucresiUret(k.sozlesmeBelgesi)}</td>
-      <td><span class="genel-rozet rozet-${hsRozetSinifAdi(k.durum)}">${k.durum}</span></td>
+      <td><span class="genel-rozet rozet-${hsRozetSinifAdi(k.durum)}">${_hsKacir(k.durum)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-yazdir="${k.id}">Yazdır</button>

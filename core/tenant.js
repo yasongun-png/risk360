@@ -1,16 +1,46 @@
 // Firma (tenant) yönetimi: sınırsız firma ekleme, yeniden adlandırma, silme
 // ve aktif firma seçimi. data.js ve auth.js'ten sonra yüklenmelidir.
 
+// Bir admin, kendi oluşturduğu (sahipId) firmaların yanı sıra, başka bir
+// admin'in kendisini "ortak yönetici" olarak eklediği firmalara da erişebilir
+// (bkz. firma.ortakAdminIdleri) — birden fazla tam yetkili kullanıcının aynı
+// şirket grubunu birlikte yönetebilmesi için (kullanıcı isteği: "ikinci bir
+// tam yetkili hesap, aynı firmaları görebilsin").
+function _firmaAdminErisimVarMi(firma, kullanici) {
+  if (firma.sahipId === kullanici.id) return true;
+  return Array.isArray(firma.ortakAdminIdleri) && firma.ortakAdminIdleri.includes(kullanici.id);
+}
+
 function getFirmalar() {
   const kullanici = oturumdakiKullanici();
   if (!kullanici) return [];
   const tumFirmalar = oku('isg_firmalar', []);
-  return tumFirmalar.filter(f => f.sahipId === kullanici.id);
+  if (kullaniciAdminMi(kullanici)) {
+    return tumFirmalar.filter(f => _firmaAdminErisimVarMi(f, kullanici));
+  }
+  // İK rolü: sadece kendisine açıkça atanmış firmalar (bkz. core/auth.js
+  // ikKullaniciEkle/ikKullaniciGuncelle erisimFirmaIdleri).
+  const izinliIdler = new Set(kullanici.erisimFirmaIdleri || []);
+  return tumFirmalar.filter(f => izinliIdler.has(f.id));
 }
 
+// Firmayı SADECE oturumdaki kullanıcının erişimi varsa döndürür — aksi halde
+// localStorage (ör. isg_aktif_firma) üzerinden başka bir kullanıcının
+// firmaId'sini vermek, o firmanın verisine erişim için yeterli olurdu (bkz.
+// aktifFirmaAyarla, tenantAnahtarFirma). Admin için "sahiplik veya ortak
+// yöneticilik", İK rolü için "erisimFirmaIdleri" ile atanmış olmak gerekir.
+// Aynı kullanıcının yönettiği farklı bir firmaya (ör. olay-kaza modülünde
+// çapraz firma kopyalama) erişim hâlâ mümkündür.
 function getFirmaById(firmaId) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return null;
   const tumFirmalar = oku('isg_firmalar', []);
-  return tumFirmalar.find(f => f.id === firmaId) || null;
+  if (kullaniciAdminMi(kullanici)) {
+    const firma = tumFirmalar.find(f => f.id === firmaId);
+    return firma && _firmaAdminErisimVarMi(firma, kullanici) ? firma : null;
+  }
+  const izinliIdler = new Set(kullanici.erisimFirmaIdleri || []);
+  return izinliIdler.has(firmaId) ? (tumFirmalar.find(f => f.id === firmaId) || null) : null;
 }
 
 function firmaEkle(ad, kullaniciId, tehlikeSinifi, sektor) {
@@ -215,6 +245,9 @@ function firmaSil(firmaId) {
 }
 
 function aktifFirmaAyarla(firmaId) {
+  // Sahiplik kontrolü: kullanıcı yalnızca kendi firmalarından birini aktif
+  // firma yapabilir (bkz. getFirmaById).
+  if (!getFirmaById(firmaId)) return;
   localStorage.setItem('isg_aktif_firma', firmaId);
 }
 

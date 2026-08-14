@@ -13,6 +13,10 @@
 //            satır olarak eklenir, aynı isim zaten varsa tekrar eklenmez
 //            (eski üretim uygulamasındaki uygunsuzluk-takip'teki "addResponsible"
 //            ile birebir aynı davranış).
+function _bbKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function bolumButonlariCiz(kutuId, girdiId, mod) {
   const kutu = document.getElementById(kutuId);
   if (!kutu) return;
@@ -25,9 +29,10 @@ function bolumButonlariCiz(kutuId, girdiId, mod) {
     return;
   }
 
-  kutu.innerHTML = bolumler.map(b =>
-    `<button type="button" class="tablo-buton" data-bolum-buton="${b.replace(/"/g, '&quot;')}" style="font-size:11px; padding:4px 8px;">${b}</button>`
-  ).join(' ');
+  kutu.innerHTML = bolumler.map(b => {
+    const guvenli = _bbKacir(b);
+    return `<button type="button" class="tablo-buton" data-bolum-buton="${guvenli}" style="font-size:11px; padding:4px 8px;">${guvenli}</button>`;
+  }).join(' ');
 
   kutu.querySelectorAll('[data-bolum-buton]').forEach(btn => {
     btn.addEventListener('click', () => {

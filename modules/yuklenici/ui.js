@@ -11,6 +11,10 @@ function ykRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+function _ykKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 // YYYY-MM-DD -> GG.AA.YYYY (eski uygulamadaki fmtTR ile aynı gösterim).
 function formatTarihGoster(isoTarih) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(isoTarih || '')) return '-';
@@ -186,11 +190,11 @@ function dashboardCiz() {
   aksiyonGovde.innerHTML = satirlar.length
     ? satirlar.map(r => `
       <tr>
-        <td>${r.tur}</td>
-        <td>${r.firma}</td>
-        <td>${r.kimlik}</td>
-        <td><span class="genel-rozet ${r.durum === 'Giriş Engeli' ? 'rozet-uygun-degil' : 'rozet-yaklasiyor'}">${r.durum}</span></td>
-        <td>${r.sebep}</td>
+        <td>${_ykKacir(r.tur)}</td>
+        <td>${_ykKacir(r.firma)}</td>
+        <td>${_ykKacir(r.kimlik)}</td>
+        <td><span class="genel-rozet ${r.durum === 'Giriş Engeli' ? 'rozet-uygun-degil' : 'rozet-yaklasiyor'}">${_ykKacir(r.durum)}</span></td>
+        <td>${_ykKacir(r.sebep)}</td>
         <td>${r.sonTarih ? formatTarihGoster(r.sonTarih) : 'İSG ile görüşün'}</td>
         <td>${r.kalanGun === null || r.kalanGun === undefined ? '-' : r.kalanGun}</td>
         <td>
@@ -209,7 +213,7 @@ function dashboardCiz() {
   });
 
   document.getElementById('dashFirmaGovde').innerHTML = veri.firmaBazliSorun.length
-    ? veri.firmaBazliSorun.map(x => `<tr><td>${x.firma || '-'}</td><td>${x.kritik}</td><td>${x.uyari}</td><td>${x.toplam}</td></tr>`).join('')
+    ? veri.firmaBazliSorun.map(x => `<tr><td>${_ykKacir(x.firma) || '-'}</td><td>${x.kritik}</td><td>${x.uyari}</td><td>${x.toplam}</td></tr>`).join('')
     : '<tr><td colspan="4" style="text-align:center;">Veri yok</td></tr>';
 
   document.getElementById('dashBelgeGovde').innerHTML = veri.belgeBazliSorun.length
@@ -404,10 +408,10 @@ function firmalariCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${f.firmaNo}</td>
-      <td>${f.firmaAdi}</td>
-      <td>${f.yetkiliAdi || '-'}</td>
-      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.riskSeviyesi)}">${f.riskSeviyesi}</span></td>
-      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.durum)}">${f.durum}</span></td>
+      <td>${_ykKacir(f.firmaAdi)}</td>
+      <td>${_ykKacir(f.yetkiliAdi) || '-'}</td>
+      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.riskSeviyesi)}">${_ykKacir(f.riskSeviyesi)}</span></td>
+      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.durum)}">${_ykKacir(f.durum)}</span></td>
       <td>${_uygunlukOzetiHtml(f)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${f.id}">Düzenle</button>
@@ -497,9 +501,9 @@ function kisileriCiz(aramaMetni) {
     const sonTarihMetni = k.girisSonTarih.sonTarih ? formatTarihGoster(k.girisSonTarih.sonTarih) : '-';
     satir.innerHTML = `
       <td>${k.personelNo}</td>
-      <td>${k.adSoyad}${k.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
-      <td>${k.firmaAdi}</td>
-      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(k.durumGoruntu)}">${k.durumGoruntu}</span>${k.kritikSebep ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">${k.kritikSebep.sebep}</div>` : ''}</td>
+      <td>${_ykKacir(k.adSoyad)}${k.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
+      <td>${_ykKacir(k.firmaAdi)}</td>
+      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(k.durumGoruntu)}">${_ykKacir(k.durumGoruntu)}</span>${k.kritikSebep ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">${_ykKacir(k.kritikSebep.sebep)}</div>` : ''}</td>
       <td>${sonTarihMetni}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
@@ -519,7 +523,7 @@ function kisileriCiz(aramaMetni) {
 // kişi/araç modallarındaki firma listesi bir arama kutusuyla daraltılabilir.
 function _yukleniciFirmaListesiCiz(selectEl, firmalar, seciliId) {
   selectEl.innerHTML = '<option value="">— Firma seçiniz —</option>' +
-    firmalar.map(f => `<option value="${f.id}" ${seciliId === f.id ? 'selected' : ''}>${f.firmaAdi}</option>`).join('');
+    firmalar.map(f => `<option value="${f.id}" ${seciliId === f.id ? 'selected' : ''}>${_ykKacir(f.firmaAdi)}</option>`).join('');
 }
 
 function _yukleniciFirmaAramaBagla(aramaId, selectId, firmalar) {
@@ -626,9 +630,9 @@ function araclariCiz(aramaMetni) {
     if (a.pasif) satir.style.opacity = '0.55';
     satir.innerHTML = `
       <td>${a.aracNo}</td>
-      <td>${a.firmaAdi}${a.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
-      <td>${a.tur}</td>
-      <td>${a.kimlik}</td>
+      <td>${_ykKacir(a.firmaAdi)}${a.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
+      <td>${_ykKacir(a.tur)}</td>
+      <td>${_ykKacir(a.kimlik)}</td>
       <td>${_aracBelgeRozetHtml(a.ptmOk)}</td>
       <td>${_aracBelgeRozetHtml(a.ruhsatOk)}</td>
       <td>${_aracBelgeRozetHtml(a.zmsOk)}</td>
@@ -746,9 +750,9 @@ function ziyaretcileriCiz() {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${formatTarihGoster(z.tarih)}</td>
-      <td>${z.adSoyad}</td>
-      <td>${z.firma || '-'}</td>
-      <td>${z.ziyaretEdilen || '-'}</td>
+      <td>${_ykKacir(z.adSoyad)}</td>
+      <td>${_ykKacir(z.firma) || '-'}</td>
+      <td>${_ykKacir(z.ziyaretEdilen) || '-'}</td>
       <td><button class="tablo-buton sil" data-sil="${z.id}">Sil</button></td>
     `;
     govde.appendChild(satir);
@@ -803,12 +807,12 @@ function kayitlariCiz(aramaMetni) {
     if (r.pasif) satir.style.opacity = '0.55';
     satir.innerHTML = `
       <td><input type="checkbox" data-kayit-sec data-kind="${r.kind}" data-id="${r.id}"></td>
-      <td>${r.tur}</td>
-      <td>${r.firma}</td>
-      <td>${r.kimlik}</td>
+      <td>${_ykKacir(r.tur)}</td>
+      <td>${_ykKacir(r.firma)}</td>
+      <td>${_ykKacir(r.kimlik)}</td>
       <td>${r.uygunSayisi}/${r.toplamSayisi}</td>
       <td>${r.kayitTarihi ? formatTarihGoster(r.kayitTarihi) : '-'}</td>
-      <td>${r.egitmen}</td>
+      <td>${_ykKacir(r.egitmen)}</td>
       <td>
         <span class="genel-rozet ${r.pasif ? 'rozet-pasif' : 'rozet-uygun'}" style="font-size:10px;">${r.pasif ? 'Pasif' : 'Aktif'}</span>
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-pasif-degistir2="${r.id}" data-yeni-pasif="${r.pasif ? 'false' : 'true'}">${r.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>` : ''}
@@ -863,7 +867,7 @@ function ozetiCiz() {
     <div class="kart" style="margin-bottom:14px;">
       <div class="card-title" style="margin-bottom:8px;"><h3 style="margin:0; font-size:14px;">${baslik}</h3></div>
       ${satirlar.length
-        ? satirlar.map(([k, v]) => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--kenarlik);"><span>${k}</span><strong>${v}</strong></div>`).join('')
+        ? satirlar.map(([k, v]) => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--kenarlik);"><span>${_ykKacir(k)}</span><strong>${v}</strong></div>`).join('')
         : '<div class="bos-durum gorunur">Veri yok.</div>'}
     </div>
   `;
@@ -890,7 +894,7 @@ function ozetiCiz() {
       <table class="veri-tablosu">
         <thead><tr><th>Firma No</th><th>Firma Adı</th><th>Uygunluk Durumu</th></tr></thead>
         <tbody>
-          ${ozet.uygunOlmayanFirmalar.map(f => `<tr><td>${f.firmaNo}</td><td>${f.firmaAdi}</td><td>${_uygunlukOzetiHtml(f)}</td></tr>`).join('') || '<tr><td colspan="3">Tüm firmalar uygun.</td></tr>'}
+          ${ozet.uygunOlmayanFirmalar.map(f => `<tr><td>${f.firmaNo}</td><td>${_ykKacir(f.firmaAdi)}</td><td>${_uygunlukOzetiHtml(f)}</td></tr>`).join('') || '<tr><td colspan="3">Tüm firmalar uygun.</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -900,7 +904,7 @@ function ozetiCiz() {
       <table class="veri-tablosu">
         <thead><tr><th>Personel No</th><th>Ad Soyad</th><th>Firma</th><th>Uygunluk Durumu</th></tr></thead>
         <tbody>
-          ${ozet.uygunOlmayanKisiler.map(k => `<tr><td>${k.personelNo}</td><td>${k.adSoyad}</td><td>${k.firmaAdi}</td><td>${_kisiUygunlukOzetiHtml(k)}</td></tr>`).join('') || '<tr><td colspan="4">Tüm personel uygun.</td></tr>'}
+          ${ozet.uygunOlmayanKisiler.map(k => `<tr><td>${k.personelNo}</td><td>${_ykKacir(k.adSoyad)}</td><td>${_ykKacir(k.firmaAdi)}</td><td>${_kisiUygunlukOzetiHtml(k)}</td></tr>`).join('') || '<tr><td colspan="4">Tüm personel uygun.</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -910,7 +914,7 @@ function ozetiCiz() {
       <table class="veri-tablosu">
         <thead><tr><th>Araç No</th><th>Plaka / Seri No</th><th>Firma</th><th>Uygunluk Durumu</th></tr></thead>
         <tbody>
-          ${ozet.uygunOlmayanAraclar.map(a => `<tr><td>${a.aracNo}</td><td>${a.kimlik}</td><td>${a.firmaAdi}</td><td><span class="genel-rozet rozet-uygun-degil">Uygun Değil</span></td></tr>`).join('') || '<tr><td colspan="4">Tüm araç/ekipman uygun.</td></tr>'}
+          ${ozet.uygunOlmayanAraclar.map(a => `<tr><td>${a.aracNo}</td><td>${_ykKacir(a.kimlik)}</td><td>${_ykKacir(a.firmaAdi)}</td><td><span class="genel-rozet rozet-uygun-degil">Uygun Değil</span></td></tr>`).join('') || '<tr><td colspan="4">Tüm araç/ekipman uygun.</td></tr>'}
         </tbody>
       </table>
     </div>

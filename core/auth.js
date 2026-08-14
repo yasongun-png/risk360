@@ -1,17 +1,91 @@
 // Kimlik doğrulama ve oturum yönetimi (mock). data.js'ten sonra yüklenmelidir.
+//
+// GÜVENLİK NOTU: isg_kullanicilar "küçük senkron" anahtarlardandır ve
+// Firestore'a senkronize edilir (bkz. core/data.js) — bu yüzden şifreler
+// artık düz metin DEĞİL, SHA-256 özeti olarak saklanır/karşılaştırılır.
+// Bu yine de tuzsuz (salt'sız) bir özet olduğundan tam bir çözüm değildir;
+// gerçek çözüm gerçek bir sunucu tarafı kimlik doğrulamasına (ör. Firebase
+// Authentication + tuzlu/bcrypt özet) geçmektir — bu, client-only bu
+// mimaride tek başına yapılamaz.
+async function _sifreOzetiCikar(sifre) {
+  const veri = new TextEncoder().encode(sifre);
+  const ozetBuffer = await crypto.subtle.digest('SHA-256', veri);
+  return Array.from(new Uint8Array(ozetBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-function girisYap(kullaniciAdi, sifre) {
+function _sifreOzetiGibiMi(deger) {
+  return typeof deger === 'string' && /^[0-9a-f]{64}$/.test(deger);
+}
+
+async function girisYap(kullaniciAdi, sifre) {
   const kullanicilar = oku('isg_kullanicilar', []);
   const bulunan = kullanicilar.find(
     k => k.kullaniciAdi.toLowerCase() === (kullaniciAdi || '').trim().toLowerCase()
   );
+  if (!bulunan) return { basarili: false, hata: 'Kullanıcı adı veya şifre hatalı.' };
 
-  if (!bulunan || bulunan.sifre !== sifre) {
-    return { basarili: false, hata: 'Kullanıcı adı veya şifre hatalı.' };
+  const girilenOzet = await _sifreOzetiCikar(sifre);
+  let dogru;
+  if (_sifreOzetiGibiMi(bulunan.sifre)) {
+    dogru = bulunan.sifre === girilenOzet;
+  } else {
+    // Eski/seed kayıt henüz düz metin: doğruysa bu girişte SHA-256 özetine
+    // göçürülür, böylece bundan sonra bir daha düz metin saklanmaz.
+    dogru = bulunan.sifre === sifre;
+    if (dogru) {
+      const tumKullanicilar = oku('isg_kullanicilar', []);
+      const kayit = tumKullanicilar.find(k => k.id === bulunan.id);
+      if (kayit) {
+        kayit.sifre = girilenOzet;
+        yaz('isg_kullanicilar', tumKullanicilar);
+      }
+    }
   }
 
-  yaz('isg_oturum', { kullaniciId: bulunan.id });
+  if (!dogru) return { basarili: false, hata: 'Kullanıcı adı veya şifre hatalı.' };
+
+  // Admin için giriş/çıkış geçmişi tutulur (bkz. giris-kayitlari.html,
+  // kullanıcı isteği: "kimlerin kaç defa girip çıktığını, ne kadar süre açık
+  // kaldığını görmek istiyorum"). Kayıt id'si isg_oturum'a da yazılır ki
+  // cikisYap() hangi kaydı kapatacağını bilsin.
+  const oturumKayitId = rastgeleId();
+  const gecmis = oku('isg_oturum_gecmisi', []);
+  gecmis.push({
+    id: oturumKayitId,
+    kullaniciId: bulunan.id,
+    kullaniciAdi: bulunan.kullaniciAdi,
+    adSoyad: bulunan.adSoyad,
+    girisZamani: new Date().toISOString(),
+    cikisZamani: null
+  });
+  yaz('isg_oturum_gecmisi', gecmis.slice(-1000));
+
+  yaz('isg_oturum', { kullaniciId: bulunan.id, oturumKayitId });
   return { basarili: true, kullanici: bulunan };
+}
+
+// Oturumdaki kullanıcının KENDİ şifresini değiştirmesi (mevcut şifreyi bilmesi
+// şart) — admin'in başka bir kullanıcının şifresini SIFIRLAMASINDAN
+// (ikKullaniciSifreDegistir, eski şifreyi bilmeye gerek yok) farklıdır.
+// Kullanıcı isteği: "isterse kullanıcılar kendi şifre değişikliğini
+// yapabilsin". Şifreler tek yönlü özet olarak saklandığından (bkz. yukarıdaki
+// güvenlik notu) admin bile mevcut şifreyi GÖREMEZ, sadece sıfırlayabilir.
+async function kendiSifresiniDegistir(mevcutSifre, yeniSifre) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  if (!yeniSifre || yeniSifre.length < 4) return { basarili: false, hata: 'Yeni şifre en az 4 karakter olmalı.' };
+
+  const girilenOzet = await _sifreOzetiCikar(mevcutSifre || '');
+  const dogru = _sifreOzetiGibiMi(kullanici.sifre) ? kullanici.sifre === girilenOzet : kullanici.sifre === mevcutSifre;
+  if (!dogru) return { basarili: false, hata: 'Mevcut şifre hatalı.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === kullanici.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  kayit.sifre = await _sifreOzetiCikar(yeniSifre);
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true };
 }
 
 function oturumdakiKullanici() {
@@ -40,9 +114,208 @@ function girisGerekli() {
   return kullanici;
 }
 
+// ---- Roller ----
+//
+// rol alanı olmayan (ör. seed 'admin' kaydı) ya da rol==='admin' olan
+// kullanıcılar TAM yetkilidir: kendi sahipId'siyle eşleşen tüm firmaları
+// yönetir, firma ekleyip/silebilir, İK kullanıcısı oluşturabilir.
+// rol==='ik' olanlar KISITLI kullanıcılardır: firma sahibi değildir, sadece
+// kendilerine erisimFirmaIdleri ile açıkça atanmış firmaları görebilir ve
+// sadece IK_IZINLI_MODULLER listesindeki modüllere girebilir (bkz.
+// girisGerekliModul, core/tenant.js getFirmalar/getFirmaById).
+// rol==='duzenleyici' olanlar İK ile AYNI erişim mekanizmasını (erisimFirmaIdleri)
+// kullanır ama TÜM modüllere girebilir — sadece SİLME işlemleri engellenir
+// (bkz. kullaniciSilebilirMi, her modülün service.js'indeki xSil fonksiyonları)
+// ve her yeni kayıt eklemesinde admin'e bildirim düşer (bkz. core/data.js yaz()
+// içindeki _yaziEkBildirimKontrolEt). Kullanıcı isteği: "yeni birşey
+// eklediğinde admine bilgi gitsin", "veri silme kapalı olsun".
+//
+// İK rolü de ARTIK tüm modüllere girip verileri GÖREBİLİR, ama sadece
+// IK_IZINLI_MODULLER'de (Personel/Eğitim) yeni kayıt EKLEYEBİLİR (diğer
+// modüllerde ekleme core/data.js -> _yaziEklemeEngelle tarafından reddedilir)
+// ve HİÇBİR modülde silemez (kullaniciSilebilirMi). Kullanıcı isteği: "ik
+// kullanıcıları da sadece eğitim ve personel modüllerine giriş yapabilsin
+// ekleme yapsın ama silemesin, diğer modülleri sadece görsün ekleme
+// yapamasın".
+const IK_IZINLI_MODULLER = ['personel', 'egitim'];
+
+function kullaniciAdminMi(kullanici) {
+  return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
+}
+
+// Admin, düzenleyici VE İK artık TÜM modüllere girip görüntüleyebilir —
+// modül bazlı gerçek kısıtlama artık "girebilir mi" değil, "ekleyebilir mi"
+// (bkz. kullaniciEklemeYapabilirMi) ve "silebilir mi" (kullaniciSilebilirMi)
+// sorularında uygulanıyor.
+function kullaniciModuleErisebilirMi(kullanici) {
+  return !!kullanici;
+}
+
+// Admin ve düzenleyici her modülde ekleyebilir; İK SADECE IK_IZINLI_MODULLER'de
+// (Personel/Eğitim) ekleyebilir, diğer modüllerde sadece görüntüler.
+function kullaniciEklemeYapabilirMi(kullanici, modulAnahtari) {
+  if (!kullanici) return false;
+  if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
+  if (kullanici.rol === 'ik') return IK_IZINLI_MODULLER.includes(modulAnahtari);
+  return false;
+}
+
+// Sadece tam yetkili admin silebilir; rol==='duzenleyici' ve rol==='ik'
+// HİÇBİR kaydı silemez (kullanıcı isteği: mcakir/ksahbaz için "veri silme
+// kapalı olsun", İK için "ekleme yapsın ama silemesin").
+function kullaniciSilebilirMi(kullanici) {
+  return !!kullanici && kullanici.rol !== 'duzenleyici' && kullanici.rol !== 'ik';
+}
+
+// Modüllerin xSil() fonksiyonlarının başında çağrılır: yetkisizse kullanıcıya
+// net bir mesaj gösterir ve false döner (çağıran taraf işlemi iptal eder).
+function _silmeYetkisiKontrolEt() {
+  if (kullaniciSilebilirMi(oturumdakiKullanici())) return true;
+  alert('Bu işlem için silme yetkiniz yok. Gerekiyorsa yöneticinize başvurun.');
+  return false;
+}
+
+// Modül sayfalarının (modules/<ad>/index.html) girisGerekli() yerine
+// çağırması gereken hâl. Artık TÜM roller tüm modüllere girip görüntüleyebilir
+// (bkz. kullaniciModuleErisebilirMi) — asıl kısıtlama modül içindeki ekleme/
+// silme işlemlerinde uygulanır (kullaniciEklemeYapabilirMi, kullaniciSilebilirMi).
+function girisGerekliModul(modulAnahtari) {
+  return girisGerekli();
+}
+
+// Sadece tam yetkili (admin) kullanıcıların girebileceği sayfalar için
+// (firma-yonetim.html, ayarlar.html, kullanicilar.html).
+function girisGerekliAdmin() {
+  const kullanici = girisGerekli();
+  if (!kullanici) return null;
+  if (!kullaniciAdminMi(kullanici)) {
+    alert('Bu sayfaya erişim yetkiniz yok.');
+    window.location.href = _authKokYolu + 'dashboard.html';
+    return null;
+  }
+  return kullanici;
+}
+
+// ---- Kısıtlı kullanıcı yönetimi (admin tarafından) ----
+//
+// Her kısıtlı kullanıcı (İK veya düzenleyici) bir admin tarafından
+// (olusturanId) oluşturulur ve SADECE o admin tarafından görülür/düzenlenir —
+// firmaların sahipId'yle izole edilmesiyle aynı mantık. İki rol de aynı
+// erisimFirmaIdleri mekanizmasını kullanır; farkları modül/silme yetkisidir
+// (bkz. kullaniciModuleErisebilirMi, kullaniciSilebilirMi).
+const KISITLI_ROLLER = ['ik', 'duzenleyici'];
+
+function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
+  const temiz = (kullaniciAdi || '').trim().toLowerCase();
+  if (!temiz) return false;
+  const kullanicilar = oku('isg_kullanicilar', []);
+  return !kullanicilar.some(k => k.kullaniciAdi.toLowerCase() === temiz && k.id !== haricId);
+}
+
+function ikKullanicilariGetir() {
+  const admin = oturumdakiKullanici();
+  if (!admin) return [];
+  return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+}
+
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+
+  const temizKullaniciAdi = (kullaniciAdi || '').trim();
+  const temizAdSoyad = (adSoyad || '').trim();
+  const temizRol = rol === 'duzenleyici' ? 'duzenleyici' : 'ik';
+  if (!temizKullaniciAdi) return { basarili: false, hata: 'Kullanıcı adı boş olamaz.' };
+  if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
+  if (!sifre || sifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
+  if (!kullaniciAdiMusaitMi(temizKullaniciAdi)) return { basarili: false, hata: 'Bu kullanıcı adı zaten kullanılıyor.' };
+
+  // Sadece BU admin'in sahip olduğu firmalar atanabilir (kullaniciAdminMi(admin)
+  // burada zaten kesin — girisGerekliAdmin bu sayfaya girişi zaten sınırlar).
+  const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
+  const gecerliFirmaIdleri = (Array.isArray(firmaIdleri) ? firmaIdleri : []).filter(id => sahipOlunanFirmalar.has(id));
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const yeniKullanici = {
+    id: rastgeleId(),
+    kullaniciAdi: temizKullaniciAdi,
+    sifre: await _sifreOzetiCikar(sifre),
+    adSoyad: temizAdSoyad,
+    rol: temizRol,
+    olusturanId: admin.id,
+    erisimFirmaIdleri: gecerliFirmaIdleri
+  };
+  kullanicilar.push(yeniKullanici);
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true, kullanici: yeniKullanici };
+}
+
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+
+  const temizAdSoyad = (adSoyad || '').trim();
+  if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
+  kayit.adSoyad = temizAdSoyad;
+  kayit.erisimFirmaIdleri = (Array.isArray(firmaIdleri) ? firmaIdleri : []).filter(fid => sahipOlunanFirmalar.has(fid));
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true, kullanici: kayit };
+}
+
+async function ikKullaniciSifreDegistir(id, yeniSifre) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  if (!yeniSifre || yeniSifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  kayit.sifre = await _sifreOzetiCikar(yeniSifre);
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true };
+}
+
+function ikKullaniciSil(id) {
+  const admin = oturumdakiKullanici();
+  if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  yaz('isg_kullanicilar', kullanicilar.filter(k => k.id !== id));
+  return { basarili: true };
+}
+
 function cikisYap() {
+  // Açık oturum kaydını kapat (bkz. girisYap) — tarayıcı kapatılıp "Çıkış
+  // Yap" hiç tıklanmazsa bu satır hiç çalışmaz, o kayıt çıkış zamansız
+  // ("Kapatılmadı") kalır; bu, sunucu tarafı oturum takibi olmayan
+  // client-only bir uygulamanın doğal sınırıdır.
+  const oturum = oku('isg_oturum', null);
+  if (oturum && oturum.oturumKayitId) {
+    const gecmis = oku('isg_oturum_gecmisi', []);
+    const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
+    if (kayit && !kayit.cikisZamani) {
+      kayit.cikisZamani = new Date().toISOString();
+      yaz('isg_oturum_gecmisi', gecmis);
+    }
+  }
   localStorage.removeItem('isg_oturum');
   localStorage.removeItem('isg_aktif_firma');
+}
+
+// Sadece admin görebilir (bkz. giris-kayitlari.html). En yeni giriş en
+// üstte olacak şekilde döner.
+function girisGecmisiGetir() {
+  return oku('isg_oturum_gecmisi', []).slice().reverse();
 }
 
 // Aktif firmaya göre izole edilmiş bir localStorage anahtarı üretir.
@@ -62,8 +335,11 @@ function tenantAnahtar(modulAdi) {
 // aktif-firma varsayımını parametreye çevirir, izolasyon mantığı aynıdır.
 function tenantAnahtarFirma(firmaId, modulAdi) {
   if (!firmaId) return null;
-  const firmalar = oku('isg_firmalar', []);
-  const firma = firmalar.find(f => f.id === firmaId);
-  const slug = firma ? firma.slug : firmaId;
-  return `isg_${slug}_${modulAdi}`;
+  // getFirmaById (core/tenant.js) sahiplik kontrolü yapar: firma oturumdaki
+  // kullanıcıya ait değilse null döner ve burada anahtar üretilmez. Böylece
+  // localStorage.isg_aktif_firma'yı devtools'tan başka bir firmaId'ye
+  // değiştirmek, o firmanın verisine erişim sağlamaz.
+  const firma = getFirmaById(firmaId);
+  if (!firma) return null;
+  return `isg_${firma.slug}_${modulAdi}`;
 }

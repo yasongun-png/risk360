@@ -1,4 +1,10 @@
 :root {
+  /* Uygulama karanlık tema tanımlamıyor (tüm renkler sabit/açık tema) —
+     bunu tarayıcıya bildirmezsek Android/Chrome'un otomatik "karanlık mod
+     zorlama" özelliği sayfayı kendi kendine ters çevirip, özellikle Saha
+     Dijital Haritası'ndaki kareli (checkered) boş kanvas arka planı gibi
+     yerlerde bozuk/koyu lacivert bloklar gibi görsel hatalara yol açıyordu. */
+  color-scheme: light;
   --celik-mavi: #1d4ed8;
   --celik-mavi-koyu: #1e3a8a;
   --arka-plan: #f4f6f9;
@@ -798,3 +804,51 @@ li.org-dugum { margin-bottom: 12px; }
 }
 
 .rp-ay-etiket { font-size: 10px; color: var(--metin-soluk); }
+
+/* ==================== Mobil / telefon uyumluluğu ====================
+   Sayfaların çoğu bu tek CSS dosyasını paylaştığı için, ekranı daraltan
+   sabit sütun sayılı grid'ler ve üst çubuk burada tek noktadan düzeltilir
+   (kullanıcı isteği: "cepten de açacağım, cepte açılabilir olsun"). */
+@media (max-width: 640px) {
+  .ust-cubuk {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .icerik { padding: 0 14px; margin: 20px auto; }
+
+  .giris-kutu { padding: 28px 20px; }
+
+  .baglanti-grubu { flex-wrap: wrap; row-gap: 6px; }
+
+  .modul-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .modul-kart { padding: 14px; }
+
+  .istatistik-grid, .rapor-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rapor-meta-grid .span2 { grid-column: span 2; }
+
+  .form-satir-ikili { grid-template-columns: 1fr; gap: 0; }
+
+  .modal-katman { padding: 12px; }
+
+  .modal-kutu { padding: 18px; max-height: 94vh; }
+
+  .arac-cubugu .arama-kutusu { max-width: none; width: 100%; }
+
+  .rp-cubuk-satir { grid-template-columns: 110px 1fr 30px; }
+
+  .rp-aylik-grafik { overflow-x: auto; grid-auto-columns: minmax(34px, 1fr); grid-template-columns: repeat(12, minmax(34px, 1fr)); width: auto; min-width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .modul-grid { grid-template-columns: 1fr; }
+
+  .istatistik-grid, .rapor-meta-grid { grid-template-columns: 1fr; }
+
+  .rapor-meta-grid .span2 { grid-column: span 1; }
+}

@@ -22,6 +22,7 @@ function denetimBaslat(veriler) {
 }
 
 function denetimSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   denetimSilRepo(id);
   return { basarili: true };
 }

@@ -66,6 +66,7 @@ function envanterGuncelle(id, veriler) {
 }
 
 function envanterSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   envanterSilRepo(id);
   return { basarili: true };
 }
@@ -146,6 +147,7 @@ function zimmetGuncelle(id, veriler) {
 }
 
 function zimmetSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   zimmetSilRepo(id);
   return { basarili: true };
 }
@@ -234,6 +236,7 @@ function ihlalGuncelle(id, veriler) {
 }
 
 function ihlalSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   ihlalSilRepo(id);
   return { basarili: true };
 }

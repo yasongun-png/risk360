@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="../../assets/icons/favicon-32.png">
 <title>İSG Platform - Saha Dijital Haritası</title>
 <link rel="stylesheet" href="../../assets/style.css">
 <style>
@@ -288,7 +295,7 @@
   <script src="service.js"></script>
   <script src="ui.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliModul('harita');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
@@ -308,5 +315,6 @@
       }
     }
   </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('../../sw.js'); }</script>
 </body>
 </html>

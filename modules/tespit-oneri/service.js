@@ -48,6 +48,7 @@ function tespitOneriGuncelle(id, veriler) {
 }
 
 function tespitOneriSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   tespitOneriSilRepo(id);
   return { basarili: true };
 }

@@ -186,10 +186,14 @@ function izinOlustur(veriler) {
       korlemeListesi: (veriler.izolasyon && veriler.izolasyon.korlemeListesi || '').trim()
     },
 
+    // onayDurumu ve durum kasıtlı olarak veriler'den ALINMAZ: aksi halde
+    // oluşturma formundan doğrudan "Onaylandı"/"Aktif" seçilerek onay adımı
+    // atlanabilirdi. Bu ikisi yalnızca izinOnayVer/izinReddet/izinAktifEt/
+    // izinDurdur/izinKapat üzerinden değişir.
     onaycilar: Array.isArray(veriler.onaycilar) ? veriler.onaycilar : [],
-    onayDurumu: veriler.onayDurumu || (veriler.riskSeviyesi === 'Kritik' ? 'Bekliyor' : 'Gerekmiyor'),
+    onayDurumu: veriler.riskSeviyesi === 'Kritik' ? 'Bekliyor' : 'Gerekmiyor',
 
-    durum: veriler.durum || 'Taslak',
+    durum: 'Taslak',
     kapanisNotu: (veriler.kapanisNotu || '').trim(),
     kapanisTarihi: veriler.kapanisTarihi || '',
     notlar: (veriler.notlar || '').trim(),

@@ -62,15 +62,18 @@ function izinGuncelle(id, veriler) {
     kontrolMaddeleri: veriler.kontrolMaddeleri,
     gazOlcumu: veriler.gazOlcumu,
     izolasyon: veriler.izolasyon,
-    onayDurumu: veriler.onayDurumu,
-    durum: veriler.durum,
     notlar: (veriler.notlar || '').trim()
+    // onayDurumu ve durum burada KASITLI OLARAK güncellenmiyor: genel
+    // düzenleme formundan doğrudan "Onaylandı"/"Aktif" yazılarak onay adımı
+    // atlanamasın diye, bu iki alan yalnızca izinOnayVer/izinReddet/
+    // izinAktifEt/izinDurdur/izinKapat üzerinden değişir.
   });
   if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
   return { basarili: true, kayit: guncellenen };
 }
 
 function izinSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   izinSilRepo(id);
   return { basarili: true };
 }
@@ -86,20 +89,27 @@ function _izinOnayDurumunuYenidenHesapla(onaycilar) {
 // gibi) — her "Onay Ver" tıklaması listeye yeni, zaten karar verilmiş bir
 // onaycı satırı ekler. Tümü Onaylandı ise genel onayDurumu Onaylandı'ya,
 // herhangi biri Reddedildi ise Reddedildi'ye döner.
-function izinOnayVer(id, ad, rol) {
+// Onaylayan kimliği artık serbest metinle (prompt) değil, oturum açmış
+// kullanıcıdan alınır — aksi halde herhangi biri devtools/konsoldan veya
+// prompt kutusuna istediği bir adı yazarak onayı sahteleyebilirdi.
+function izinOnayVer(id, rol) {
   const izin = izinIdIleGetirRepo(id);
   if (!izin) return { basarili: false, hata: 'Kayıt bulunamadı.' };
-  const yeniOnayci = Object.assign(onayciOlustur({ ad, rol, durum: 'Onaylandı' }), { onayTarihi: new Date().toISOString() });
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  const yeniOnayci = Object.assign(onayciOlustur({ ad: kullanici.adSoyad, rol, durum: 'Onaylandı' }), { onayTarihi: new Date().toISOString() });
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);
   const onayDurumu = _izinOnayDurumunuYenidenHesapla(onaycilar);
   const durum = onayDurumu === 'Onaylandı' ? 'Onaylandı' : izin.durum;
   return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu, durum }) };
 }
 
-function izinReddet(id, ad, rol, sebep) {
+function izinReddet(id, rol, sebep) {
   const izin = izinIdIleGetirRepo(id);
   if (!izin) return { basarili: false, hata: 'Kayıt bulunamadı.' };
-  const yeniOnayci = Object.assign(onayciOlustur({ ad, rol, durum: 'Reddedildi', not: sebep }), { onayTarihi: new Date().toISOString() });
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  const yeniOnayci = Object.assign(onayciOlustur({ ad: kullanici.adSoyad, rol, durum: 'Reddedildi', not: sebep }), { onayTarihi: new Date().toISOString() });
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);
   return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu: 'Reddedildi', durum: 'Reddedildi' }) };
 }

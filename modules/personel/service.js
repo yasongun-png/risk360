@@ -94,6 +94,7 @@ function personelGuncelle(id, veriler) {
 }
 
 function personelSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   personelSilRepo(id);
   return { basarili: true };
 }

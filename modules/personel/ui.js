@@ -4,6 +4,10 @@ let _duzenlenenPersonelId = null;
 let _arsivGorunumu = false;
 let _seciliPersonelIdleri = new Set();
 
+function _prsKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 // esanlamlar listeleri, eski isg platformundaki Personel Excel dışa aktarım
 // başlıklarını (bkz. app-import-export.js -> exportExcel) da kapsar; böylece o
 // uygulamadan alınan bir Excel dosyası hiç değiştirilmeden buraya içe
@@ -134,21 +138,21 @@ function tabloyuCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" class="satir-secim" data-secim="${p.id}" ${_seciliPersonelIdleri.has(p.id) ? 'checked' : ''}></td>
-      <td>${p.sicilNo}</td>
-      <td>${p.adSoyad}</td>
-      <td>${p.isveren || '-'}</td>
-      <td>${p.bolum}</td>
-      <td>${p.gorev}</td>
+      <td>${_prsKacir(p.sicilNo)}</td>
+      <td>${_prsKacir(p.adSoyad)}</td>
+      <td>${_prsKacir(p.isveren) || '-'}</td>
+      <td>${_prsKacir(p.bolum)}</td>
+      <td>${_prsKacir(p.gorev)}</td>
       <td>${p.iseGirisTarihi || '-'}</td>
       ${_arsivGorunumu ? `<td>${p.istenCikisTarihi || '-'}</td>` : ''}
-      <td>${p.egitimSeviyesi || '-'}</td>
-      <td>${p.okulu || '-'}</td>
-      <td>${p.mv || '-'}</td>
-      <td>${p.engelliMi || 'HAYIR'}</td>
-      <td>${p.sendikaliMi || 'HAYIR'}</td>
-      <td>${p.kapsami || '-'}</td>
+      <td>${_prsKacir(p.egitimSeviyesi) || '-'}</td>
+      <td>${_prsKacir(p.okulu) || '-'}</td>
+      <td>${_prsKacir(p.mv) || '-'}</td>
+      <td>${_prsKacir(p.engelliMi) || 'HAYIR'}</td>
+      <td>${_prsKacir(p.sendikaliMi) || 'HAYIR'}</td>
+      <td>${_prsKacir(p.kapsami) || '-'}</td>
       <td>${p.kidemYil ?? '-'}</td>
-      <td>${p.lojman || 'YOK'}</td>
+      <td>${_prsKacir(p.lojman) || 'YOK'}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${p.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${p.id}">Sil</button>
@@ -193,7 +197,7 @@ function pozisyonSecimleriniDoldur(seciliId) {
   const yollar = pozisyonYollariniGetir();
 
   secim.innerHTML = '<option value="">— Seçilmedi —</option>' +
-    yollar.map(y => `<option value="${y.id}" ${y.id === seciliId ? 'selected' : ''}>${y.yol}</option>`).join('');
+    yollar.map(y => `<option value="${y.id}" ${y.id === seciliId ? 'selected' : ''}>${_prsKacir(y.yol)}</option>`).join('');
 }
 
 function modalAc(personel) {
@@ -204,7 +208,7 @@ function modalAc(personel) {
   const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
   const isverenler = firma && Array.isArray(firma.isverenler) ? firma.isverenler : [];
   document.getElementById('isveren').innerHTML = '<option value="">— Seçilmedi —</option>' +
-    isverenler.map(i => `<option ${personel && personel.isveren === i ? 'selected' : ''}>${i}</option>`).join('');
+    isverenler.map(i => `<option ${personel && personel.isveren === i ? 'selected' : ''}>${_prsKacir(i)}</option>`).join('');
   document.getElementById('bolum').value = personel ? personel.bolum : '';
   document.getElementById('gorev').value = personel ? personel.gorev : '';
   pozisyonSecimleriniDoldur(personel ? personel.pozisyonId : '');

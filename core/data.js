@@ -32,7 +32,7 @@ const VARSAYILAN_FIREBASE_CONFIG = {
 };
 
 const _YEREL_SADECE_ANAHTARLAR = new Set(['isg_oturum']);
-const _KUCUK_SENKRON_ANAHTARLAR = new Set(['isg_kullanicilar', 'isg_firmalar', 'isg_risk_sablonlari']);
+const _KUCUK_SENKRON_ANAHTARLAR = new Set(['isg_kullanicilar', 'isg_firmalar', 'isg_risk_sablonlari', 'isg_bildirimler', 'isg_oturum_gecmisi']);
 
 let _bulutDb = null;
 let _bulutApp = null;
@@ -48,7 +48,17 @@ const _bulutFirmaCallbackleri = [];
 
 function oku(anahtar, varsayilan) {
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar) && !_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
-    return Object.prototype.hasOwnProperty.call(_bulutOnbellek, anahtar) ? _bulutOnbellek[anahtar] : varsayilan;
+    if (!Object.prototype.hasOwnProperty.call(_bulutOnbellek, anahtar)) return varsayilan;
+    const deger = _bulutOnbellek[anahtar];
+    // _bulutOnbellek[anahtar]'ı DOĞRUDAN döndürmek yerine (dizi ise) sığ bir
+    // kopyasını veririz: repository katmanındaki standart desen "const liste =
+    // xTumunuGetir(); liste.push(yeni); xKaydet(liste)" şeklindedir — canlı
+    // referans döndürülseydi liste.push() önbelleği DAHA yaz() çağrılmadan
+    // mutasyona uğratır, bu da "önceki/sonraki" karşılaştırması yapan kodların
+    // (bkz. _yaziEkBildirimKontrolEt) iki tarafı da aynı (zaten değişmiş)
+    // diziyle karşılaştırmasına, dolayısıyla eklemeleri asla fark edememesine
+    // yol açar. Kopyalama bunu kalıcı olarak önler.
+    return Array.isArray(deger) ? deger.slice() : deger;
   }
   const ham = localStorage.getItem(anahtar);
   if (ham === null) return varsayilan;
@@ -72,7 +82,90 @@ function _yerelYazDene(anahtar, deger) {
   }
 }
 
+// rol==='duzenleyici' kullanıcılar silemez ama TÜM modüllere ekleme/düzenleme
+// yapabilir (bkz. core/auth.js) — admin'in bunu görebilmesi için, bu
+// kullanıcılardan biri bir anahtara yeni bir kayıt eklediğinde (dizi boyu
+// arttığında) 'isg_bildirimler'e bir satır düşülür. Modüllerin Ekle
+// fonksiyonlarının HER BİRİNE dokunmadan tek bir yerden (yaz()) yakalamak
+// için: değişiklikten ÖNCEKİ diziyle karşılaştırılır, sadece UZAYAN diziler
+// "yeni kayıt" sayılır (güncelleme/silme bildirilmez). Kullanıcı isteği:
+// "yeni birşey eklediğinde admine bilgi gitsin".
+// Yeni eklenen kaydın "kim ne yaptı" bildiriminde okunabilir bir etiketle
+// görünmesi için, kayıt nesnesindeki yaygın isim/başlık alanlarından ilk
+// doluyu kullanır (modüller arası ortak bir şema olmadığından tahmine
+// dayalı ama pratikte hemen hepsini kapsar).
+function _bildirimIcinKayitEtiketi(kayit) {
+  if (!kayit || typeof kayit !== 'object') return '';
+  const adaylar = ['adSoyad', 'ad', 'baslik', 'konu', 'aciklama', 'unvan', 'ekipmanAdi', 'malzemeAdi', 'sicilNo', 'tesisAdi'];
+  for (const alan of adaylar) {
+    if (kayit[alan]) return String(kayit[alan]);
+  }
+  return '';
+}
+
+function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
+  if (anahtar === 'isg_bildirimler' || !Array.isArray(yeniDeger)) return;
+  try {
+    const kullanici = oturumdakiKullanici();
+    if (!kullanici || kullanici.rol !== 'duzenleyici') return;
+    const eskiDeger = oku(anahtar, []);
+    if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return;
+    const eskiIdler = new Set(eskiDeger.map(k => k && k.id));
+    const yeniKayitlar = yeniDeger.filter(k => k && k.id && !eskiIdler.has(k.id));
+    const kayitEtiketleri = yeniKayitlar.map(_bildirimIcinKayitEtiketi).filter(Boolean);
+    const bildirimler = oku('isg_bildirimler', []);
+    bildirimler.push({
+      id: rastgeleId(),
+      kullaniciAdi: kullanici.kullaniciAdi,
+      adSoyad: kullanici.adSoyad,
+      anahtar,
+      kayitEtiketleri,
+      tarih: new Date().toISOString(),
+      okunduMu: false
+    });
+    yaz('isg_bildirimler', bildirimler.slice(-300));
+  } catch (e) {
+    console.warn('Ekleme bildirimi oluşturulamadı:', e);
+  }
+}
+
+// 'isg_<slug>_<modulAdi>' biçimindeki bir anahtardan modül adını çıkarır
+// (bkz. core/tenant.js tenantAnahtarFirma). Firma eşleşmezse (ör. henüz
+// senkron olmamış veya firma-bağımsız bir anahtarsa) anahtarın kendisini
+// (isg_ öneki atılmış hâlini) döndürür.
+function _anahtardanModulAdiCikar(anahtar) {
+  const govde = String(anahtar || '').replace(/^isg_/, '');
+  const firmalar = oku('isg_firmalar', []);
+  for (const f of firmalar) {
+    const onEk = f.slug + '_';
+    if (govde === f.slug) return '';
+    if (govde.startsWith(onEk)) return govde.slice(onEk.length);
+  }
+  return govde;
+}
+
+// rol==='ik' kullanıcılar artık TÜM modülleri görüntüleyebilir ama sadece
+// IK_IZINLI_MODULLER'de (Personel/Eğitim) yeni kayıt ekleyebilir — diğer
+// modüllerde sadece görüntüleme yapabilirler (bkz. core/auth.js
+// kullaniciEklemeYapabilirMi). Bu, tek bir yerden (yaz()) TÜM modülleri
+// kapsayacak şekilde uygulanır. Kullanıcı isteği: "diğer modülleri sadece
+// görsün ekleme yapamasın".
+function _yaziEklemeEngelleMi(anahtar, yeniDeger) {
+  if (!Array.isArray(yeniDeger)) return false;
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici || kullanici.rol !== 'ik') return false;
+  const eskiDeger = oku(anahtar, []);
+  if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return false;
+  const modulAdi = _anahtardanModulAdiCikar(anahtar);
+  return !IK_IZINLI_MODULLER.includes(modulAdi);
+}
+
 function yaz(anahtar, deger) {
+  if (_yaziEklemeEngelleMi(anahtar, deger)) {
+    alert('Bu modülde yeni kayıt ekleme yetkiniz yok. Sadece Personel ve Eğitim modüllerine kayıt ekleyebilirsiniz.');
+    return;
+  }
+  _yaziEkBildirimKontrolEt(anahtar, deger);
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar)) {
     if (_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
       _yerelYazDene(anahtar, JSON.stringify(deger));
@@ -183,7 +276,9 @@ const SEKTORLER = ['İnşaat', 'Kimya', 'Tekstil', 'Metal / Makine', 'Gıda', 'E
 function ilkYuklemeyiHazirla() {
   if (!localStorage.getItem('isg_kullanicilar')) {
     localStorage.setItem('isg_kullanicilar', JSON.stringify([
-      { id: 'u-admin', kullaniciAdi: 'admin', sifre: '123456', adSoyad: 'Yönetici Kullanıcı' }
+      // sifre SHA-256 özeti olarak saklanır (bkz. core/auth.js) — düz metin
+      // "Ya105017" değil, onun özeti.
+      { id: 'u-admin', kullaniciAdi: 'yasongun', sifre: '26745bd3ca43f69fc7a7da631158f09058e567925b88cb9286205e2cf6a07b3a', adSoyad: 'Yönetici Kullanıcı' }
     ]));
   }
   if (!localStorage.getItem('isg_firmalar')) {
@@ -265,7 +360,16 @@ function _bulutBaslat() {
     // İlk senkronizasyonda buluttan hiç gelmeyen (yani bu cihazda ilk kurulumda
     // yerelde üretilen) küçük anahtarları buluta gönder ki diğer cihazlar da
     // aynı kullanıcı/firma listesini görebilsin.
-    if (!_bulutKucukHazir) {
+    //
+    // KRİTİK: onSnapshot, sunucuya hiç sorulmadan ÖNCE yerel/boş bir önbellek
+    // durumuyla bir kez, sonra sunucudan doğrulanan gerçek veriyle bir kez
+    // daha tetiklenebilir (snapshot.metadata.fromCache). Bunu görmezden gelip
+    // "bulutta bu anahtar yok" sanıp yerel (o an boş olabilecek) veriyi
+    // buluta YAZMAK, gerçek bulut verisinin üzerine yazıp KALICI VERİ KAYBINA
+    // yol açar — gerçekten yaşandı (firma/kullanıcı listesi böyle silindi).
+    // Bu yüzden "eksik anahtarı tamamla" adımı SADECE sunucudan doğrulanmış
+    // (fromCache === false) bir snapshot'ta çalışır.
+    if (!_bulutKucukHazir && !snapshot.metadata.fromCache) {
       _KUCUK_SENKRON_ANAHTARLAR.forEach(anahtar => {
         if (!gelenAnahtarlar.has(anahtar)) {
           const yerelDeger = oku(anahtar, null);

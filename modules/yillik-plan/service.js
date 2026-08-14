@@ -20,6 +20,7 @@ function egitimPlaniGuncelle(yil, id, alan, deger) {
 }
 
 function egitimPlaniSil(yil, id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   egitimPlaniYilKaydet(yil, egitimPlaniYilGetir(yil).filter(s => s.id !== id));
 }
 
@@ -58,6 +59,7 @@ function calismaPlaniGuncelle(yil, id, alan, deger) {
 }
 
 function calismaPlaniSil(yil, id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   calismaPlaniYilKaydet(yil, calismaPlaniYilGetir(yil).filter(s => s.id !== id));
 }
 
@@ -151,6 +153,7 @@ function raporSatiriGuncelle(yil, id, alan, deger) {
 }
 
 function raporSatiriSil(yil, id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const rapor = raporYilGetir(yil);
   if (!rapor) return;
   rapor.rows = rapor.rows.filter(s => s.id !== id);

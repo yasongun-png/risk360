@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="assets/icons/favicon-32.png">
 <title>İSG Platform - Ayarlar</title>
 <link rel="stylesheet" href="assets/style.css">
 <style>
@@ -78,7 +85,7 @@
   <script src="core/auth.js"></script>
   <script src="core/tenant.js"></script>
   <script>
-    const kullanici = girisGerekli();
+    const kullanici = girisGerekliAdmin();
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
@@ -106,13 +113,18 @@
       try {
         return JSON.parse(metin);
       } catch (e) {
-        try {
-          const fn = new Function('return (' + metin + ')');
-          const sonuc = fn();
-          return (sonuc && typeof sonuc === 'object') ? sonuc : null;
-        } catch (e2) {
-          return null;
-        }
+        // Firebase konsolundan kopyalanan snippet'ler genelde geçerli JSON
+        // değildir (ör. "const firebaseConfig = { apiKey: '...', ... };").
+        // Yapıştırılan metni ASLA çalıştırmadan (eval/new Function GÜVENLİ
+        // DEĞİL — kötü niyetli bir "yapılandırma" yapıştırıldığında keyfi kod
+        // çalıştırır), sadece bilinen alan adlarını regex ile çıkarırız.
+        const alanlar = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId', 'measurementId'];
+        const config = {};
+        alanlar.forEach(alan => {
+          const eslesme = metin.match(new RegExp(alan + '\\s*:\\s*["\']([^"\']*)["\']'));
+          if (eslesme) config[alan] = eslesme[1];
+        });
+        return Object.keys(config).length ? config : null;
       }
     }
 
@@ -146,5 +158,6 @@
       window.location.reload();
     }
   </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
 </body>
 </html>

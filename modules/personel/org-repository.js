@@ -51,6 +51,7 @@ function _altSoyunToplaId(liste, id) {
 }
 
 function pozisyonSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const liste = pozisyonTumunuGetir();
   const silinecekIdler = _altSoyunToplaId(liste, id);
   const kalanlar = liste.filter(p => !silinecekIdler.includes(p.id));

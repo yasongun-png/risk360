@@ -101,6 +101,7 @@ function egitimKaydiGuncelle(id, veriler) {
 }
 
 function egitimKaydiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   egitimKaydiSilRepo(id);
   return { basarili: true };
 }

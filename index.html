@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="assets/icons/favicon-32.png">
 <title>İSG Platform - Giriş</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -23,10 +30,6 @@
 
         <button type="submit" class="birincil">Giriş Yap</button>
       </form>
-
-      <p style="font-size:12px; color:var(--metin-soluk); text-align:center; margin-top:18px;">
-        Demo giriş: <strong>admin</strong> / <strong>123456</strong>
-      </p>
     </div>
   </div>
 
@@ -45,16 +48,35 @@
       const kullaniciAdi = document.getElementById('kullaniciAdi').value;
       const sifre = document.getElementById('sifre').value;
       const hataMesaji = document.getElementById('hataMesaji');
+      const girisBtn = document.querySelector('#girisForm button[type=submit]');
 
-      const sonuc = girisYap(kullaniciAdi, sifre);
-      if (!sonuc.basarili) {
-        hataMesaji.textContent = sonuc.hata;
-        hataMesaji.classList.add('gorunur');
-        return;
-      }
-
-      window.location.href = 'firma-sec.html';
+      // girisYap() artık 'isg_oturum_gecmisi' (giriş/çıkış geçmişi) okuyup
+      // yazıyor — bu yeni bir belge olduğundan, bu cihaz buluttan
+      // DOĞRULANMIŞ (fromCache=false) ilk senkronu almadan okuyup yazarsa,
+      // başka bir cihazın o an eklemiş olabileceği geçmişin üzerine
+      // yazabilir (bkz. core/data.js _bulutBaslat fromCache koruması —
+      // aynı riskin bir örneği, orada yaşanan veri kaybından ders alındı).
+      // Bu yüzden giriş, bulut senkronu doğrulanana kadar bekletilir.
+      girisBtn.disabled = true;
+      let devamEtti = false;
+      const devamEt = async () => {
+        if (devamEtti) return;
+        devamEtti = true;
+        const sonuc = await girisYap(kullaniciAdi, sifre);
+        girisBtn.disabled = false;
+        if (!sonuc.basarili) {
+          hataMesaji.textContent = sonuc.hata;
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+        window.location.href = 'firma-sec.html';
+      };
+      // Bağlantı çok yavaşsa/koptuysa kullanıcı sonsuza dek beklemesin —
+      // makul bir süre sonra yine de devam edilir (bkz. yukarıdaki not).
+      setTimeout(devamEt, 8000);
+      bulutHazirOlduğunda(devamEt);
     });
   </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
 </body>
 </html>
