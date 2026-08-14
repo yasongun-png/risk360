@@ -86,6 +86,12 @@
         `);
       }
 
+      // Yeni bir cihaz/tarayıcıda bulut henüz ilk senkronunu yapmadan
+      // aktifFirmaGetir() çağrılırsa firma verisi buluttan gelmemiş
+      // görünüp "firma yok" sanılıp firma-sec.html'e geri atılabiliyordu —
+      // bkz. bulutHazirOlduğunda (core/data.js). Bulut kapalıysa bu
+      // callback zaten anında çalışır.
+      bulutHazirOlduğunda(() => {
       const aktifFirma = aktifFirmaGetir();
       if (!aktifFirma) {
         window.location.href = 'firma-sec.html';
@@ -115,6 +121,7 @@
           grid.appendChild(kart);
         });
       }
+      });
     }
   </script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
