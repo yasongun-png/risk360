@@ -124,6 +124,15 @@ function olayKazaSayfasiniBaslat() {
   document.getElementById('isKazasiFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('is-kazasi'));
   document.getElementById('ramakKalaFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Ramak Kala'));
   document.getElementById('tehlikeBildirimFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Tehlike Bildirimi'));
+  // Sahadaki barkodu okutunca açılan AYNI sayfa (ramak-kala-bildir.html) —
+  // kullanıcı isteği: ofisten/masabaşından da aynı basit formla bildirim
+  // girilebilsin, tam kaza formunu doldurmaya gerek kalmasın. Yeni sekmede
+  // açılır ki liste ekranındaki mevcut filtre/arama durumu kaybolmasın.
+  document.getElementById('ramakKalaBildirBtn').addEventListener('click', () => {
+    const firma = aktifFirmaGetir();
+    if (!firma) return;
+    window.open('../../ramak-kala-bildir.html?firma=' + encodeURIComponent(firma.slug), '_blank');
+  });
 
   document.getElementById('temelOlayTipi').addEventListener('change', _okKisiBolumleriniGuncelle);
   document.getElementById('kisiPersonelId').addEventListener('change', kisiPersonelSecildi);
