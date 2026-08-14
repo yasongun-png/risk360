@@ -82,6 +82,13 @@
             <input type="text" id="rkAdSoyad" placeholder="İsteğe bağlı — boş bırakabilirsiniz">
           </div>
 
+          <div class="rk-alan">
+            <label for="rkFotoDosya">Fotoğraf (isteğe bağlı)</label>
+            <button type="button" class="ikincil" id="rkFotoSecBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Ekle</button>
+            <input type="file" id="rkFotoDosya" accept="image/*" capture="environment" style="display:none;">
+            <div id="rkFotoOnizleme" style="margin-top:8px;"></div>
+          </div>
+
           <div class="hata-mesaji" id="rkHataMesaji"></div>
 
           <button type="submit" class="birincil rk-gonder-btn" id="rkGonderBtn">Gönder</button>
@@ -113,9 +120,24 @@
     const _rkSlug = (_rkParams.get('firma') || '').trim();
     let _rkFirma = null;
     let _rkSecilenTip = '';
+    let _rkFotoUrl = '';
 
     function _rkOlayAnahtari() {
       return 'isg_' + _rkFirma.slug + '_olay-kaza';
+    }
+
+    function _rkFotoOnizlemeCiz() {
+      const kutu = document.getElementById('rkFotoOnizleme');
+      kutu.innerHTML = _rkFotoUrl
+        ? `<div style="display:flex; align-items:center; gap:10px;">
+             <img data-foto-ref="${_rkFotoUrl}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik,#e5e7eb);">
+             <button type="button" id="rkFotoKaldirBtn" style="border:none; background:none; color:var(--hata,#dc2626); font-size:12px; font-weight:600; cursor:pointer;">Kaldır</button>
+           </div>`
+        : '';
+      if (_rkFotoUrl) {
+        document.getElementById('rkFotoKaldirBtn').addEventListener('click', () => { _rkFotoUrl = ''; _rkFotoOnizlemeCiz(); });
+        fotoReferanslariCoz(kutu);
+      }
     }
 
     // Anonim (giriş yapılmamış) bildirimde core/data.js -> yaz()'daki
@@ -165,6 +187,26 @@
         });
       });
 
+      document.getElementById('rkFotoSecBtn').addEventListener('click', () => document.getElementById('rkFotoDosya').click());
+      document.getElementById('rkFotoDosya').addEventListener('change', async e => {
+        const dosya = e.target.files[0];
+        e.target.value = '';
+        if (!dosya) return;
+        const secBtn = document.getElementById('rkFotoSecBtn');
+        secBtn.disabled = true;
+        secBtn.textContent = 'Yükleniyor…';
+        try {
+          const sonuc = await fotoYukle(dosya, 'olay-kaza/' + _rkFirma.slug + '-barkod');
+          _rkFotoUrl = sonuc.url;
+          _rkFotoOnizlemeCiz();
+        } catch (hata) {
+          alert(hata.message || 'Fotoğraf yüklenemedi.');
+        } finally {
+          secBtn.disabled = false;
+          secBtn.textContent = '📷 Fotoğraf Ekle';
+        }
+      });
+
       document.getElementById('rkForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const hataMesaji = document.getElementById('rkHataMesaji');
@@ -208,6 +250,7 @@
             bolum: document.getElementById('rkBolum').value.trim(),
             adSoyad: adSoyad,
             aciklama: aciklama,
+            olayYeriFotograflari: _rkFotoUrl ? [{ url: _rkFotoUrl }] : [],
             kayitNo: sonrakiKayitNoUret(mevcutListe)
           });
           mevcutListe.push(yeniKayit);
@@ -215,6 +258,7 @@
           if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
           _rkBildirimGonder(yeniKayit);
 
+          _rkFotoUrl = '';
           document.getElementById('rkFormAlani').classList.add('gizli');
           document.getElementById('rkBasariDurumu').classList.remove('gizli');
         } catch (hata) {
@@ -230,6 +274,8 @@
     document.getElementById('rkYeniBildirimBtn').addEventListener('click', () => {
       document.getElementById('rkForm').reset();
       _rkSecilenTip = '';
+      _rkFotoUrl = '';
+      _rkFotoOnizlemeCiz();
       document.querySelectorAll('.rk-tip-buton').forEach(b => b.classList.remove('secili'));
       const gonderBtn = document.getElementById('rkGonderBtn');
       gonderBtn.disabled = false;
