@@ -2,6 +2,7 @@
 
 function orgSayfasiniBaslat() {
   document.getElementById('pozisyonForm').addEventListener('submit', pozisyonFormGonderildi);
+  document.getElementById('orgYazdirBtn').addEventListener('click', orgYazdir);
   agaciCiz();
 }
 
@@ -76,4 +77,50 @@ function dugumCiz(dugum, tumPersonel) {
       }
     </li>
   `;
+}
+
+// Uygulama içindeki ağaç görünümü (yönetim için, girintili liste) yazdırmaya
+// uygun değil — klasik kutu + bağlantı çizgili şema burada ayrıca üretilir.
+function _orgDugumYazdirCiz(dugum, tumPersonel) {
+  const atananlar = tumPersonel.filter(p => p.pozisyonId === dugum.id);
+  const isimHtml = atananlar.length
+    ? `<div class="org-print-isim">${atananlar.map(p => p.adSoyad).join('<br>')}</div>`
+    : '';
+
+  return `
+    <li>
+      <div class="org-print-kutu">
+        <div class="org-print-ad">${dugum.ad}</div>
+        ${isimHtml}
+      </div>
+      ${dugum.cocuklar.length
+        ? `<ul>${dugum.cocuklar.map(c => _orgDugumYazdirCiz(c, tumPersonel)).join('')}</ul>`
+        : ''
+      }
+    </li>
+  `;
+}
+
+function orgYazdir(e) {
+  if (e) e.preventDefault();
+  const kokler = pozisyonAgaciOlustur();
+  if (kokler.length === 0) {
+    alert('Yazdırılacak bir organizasyon şeması yok.');
+    return;
+  }
+
+  const tumPersonel = personelleriGetir('', false);
+  const firma = aktifFirmaGetir();
+
+  const mount = document.getElementById('yazdirmaAlani');
+  mount.innerHTML = `
+    <div class="doc-title">ORGANİZASYON ŞEMASI</div>
+    <div class="doc-meta" style="text-align:center;"><b>${firma ? firma.ad : ''}</b></div>
+    <ul class="org-print-agac">${kokler.map(k => _orgDugumYazdirCiz(k, tumPersonel)).join('')}</ul>
+  `;
+  mount.style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
+  }, 80);
 }
