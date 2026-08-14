@@ -165,7 +165,7 @@
         });
       });
 
-      document.getElementById('rkForm').addEventListener('submit', function (e) {
+      document.getElementById('rkForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const hataMesaji = document.getElementById('rkHataMesaji');
         hataMesaji.classList.remove('gorunur');
@@ -188,9 +188,16 @@
         // Beklenmeyen bir hata (ör. eksik script/tanımsız fonksiyon) burada
         // yakalanmazsa buton "Gönderiliyor…" yazısında SONSUZA DEK takılı
         // kalır — kullanıcıya hiçbir geri bildirim vermeden (yaşanmış hata:
-        // core/auth.js dahil edilmemişti, yaz() içindeki oturumdakiKullanici()
-        // çağrısı sessizce patlayıp formu kilitliyordu). Bu yüzden tüm yazma
-        // işlemi try/catch içine alınır; hata olursa buton eski haline döner.
+        // core/auth.js dahil edilmemişti). Bu yüzden tüm yazma işlemi
+        // try/catch içine alınır; hata olursa buton eski haline döner.
+        //
+        // Ayrıca sıradan yaz() BEKLENMEDEN (fire-and-forget) Firestore'a
+        // yazar — bu, ağ/izin hatası olduğunda kullanıcıya "gönderildi"
+        // YALANI söylenmesine yol açabilirdi (yaşanmış: kullanıcı formu
+        // gönderdi, "alındı" gördü, ama kayıt Olay/Kaza modülünde hiç
+        // görünmedi). Bu yüzden burada yazVeSonucuGetir() ile yazımın
+        // GERÇEKTEN Firestore'a ulaştığı doğrulanmadan başarı ekranı
+        // gösterilmez.
         try {
           const anahtar = _rkOlayAnahtari();
           const mevcutListe = oku(anahtar, []);
@@ -204,14 +211,15 @@
             kayitNo: sonrakiKayitNoUret(mevcutListe)
           });
           mevcutListe.push(yeniKayit);
-          yaz(anahtar, mevcutListe);
+          const sonuc = await yazVeSonucuGetir(anahtar, mevcutListe);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
           _rkBildirimGonder(yeniKayit);
 
           document.getElementById('rkFormAlani').classList.add('gizli');
           document.getElementById('rkBasariDurumu').classList.remove('gizli');
         } catch (hata) {
           console.error('Ramak kala bildirimi gönderilemedi:', hata);
-          hataMesaji.textContent = 'Bir hata oluştu, bildirim gönderilemedi. Lütfen tekrar deneyin.';
+          hataMesaji.textContent = 'Bir hata oluştu, bildirim gönderilemedi. Lütfen tekrar deneyin (bağlantınızı kontrol edin).';
           hataMesaji.classList.add('gorunur');
           gonderBtn.disabled = false;
           gonderBtn.textContent = 'Gönder';
