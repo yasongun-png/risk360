@@ -80,6 +80,19 @@ function _yerelYazDene(anahtar, deger) {
 // için: değişiklikten ÖNCEKİ diziyle karşılaştırılır, sadece UZAYAN diziler
 // "yeni kayıt" sayılır (güncelleme/silme bildirilmez). Kullanıcı isteği:
 // "yeni birşey eklediğinde admine bilgi gitsin".
+// Yeni eklenen kaydın "kim ne yaptı" bildiriminde okunabilir bir etiketle
+// görünmesi için, kayıt nesnesindeki yaygın isim/başlık alanlarından ilk
+// doluyu kullanır (modüller arası ortak bir şema olmadığından tahmine
+// dayalı ama pratikte hemen hepsini kapsar).
+function _bildirimIcinKayitEtiketi(kayit) {
+  if (!kayit || typeof kayit !== 'object') return '';
+  const adaylar = ['adSoyad', 'ad', 'baslik', 'konu', 'aciklama', 'unvan', 'ekipmanAdi', 'malzemeAdi', 'sicilNo', 'tesisAdi'];
+  for (const alan of adaylar) {
+    if (kayit[alan]) return String(kayit[alan]);
+  }
+  return '';
+}
+
 function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
   if (anahtar === 'isg_bildirimler' || !Array.isArray(yeniDeger)) return;
   try {
@@ -87,12 +100,16 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
     if (!kullanici || kullanici.rol !== 'duzenleyici') return;
     const eskiDeger = oku(anahtar, []);
     if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return;
+    const eskiIdler = new Set(eskiDeger.map(k => k && k.id));
+    const yeniKayitlar = yeniDeger.filter(k => k && k.id && !eskiIdler.has(k.id));
+    const kayitEtiketleri = yeniKayitlar.map(_bildirimIcinKayitEtiketi).filter(Boolean);
     const bildirimler = oku('isg_bildirimler', []);
     bildirimler.push({
       id: rastgeleId(),
       kullaniciAdi: kullanici.kullaniciAdi,
       adSoyad: kullanici.adSoyad,
       anahtar,
+      kayitEtiketleri,
       tarih: new Date().toISOString(),
       okunduMu: false
     });
