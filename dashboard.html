@@ -345,7 +345,10 @@
         rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${_dbKacir(aktifFirma.ad)}`;
 
         const grid = document.getElementById('modulGrid');
-        MODULLER.forEach(modul => {
+        // Kullanıcı isteği: "modülleri isimlerine göre sırala" — dashboard
+        // kartları artık başlığa göre alfabetik (tr-TR) sıralanır.
+        const siraliModuller = MODULLER.slice().sort((a, b) => a.baslik.localeCompare(b.baslik, 'tr'));
+        siraliModuller.forEach(modul => {
           // Artık TÜM roller (admin/düzenleyici/İK) her modüle girip
           // görüntüleyebilir — asıl kısıtlama modül İÇİNDE uygulanır: İK
           // sadece Personel/Eğitim'de yeni kayıt ekleyebilir, diğerlerinde
