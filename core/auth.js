@@ -44,7 +44,23 @@ async function girisYap(kullaniciAdi, sifre) {
 
   if (!dogru) return { basarili: false, hata: 'Kullanıcı adı veya şifre hatalı.' };
 
-  yaz('isg_oturum', { kullaniciId: bulunan.id });
+  // Admin için giriş/çıkış geçmişi tutulur (bkz. giris-kayitlari.html,
+  // kullanıcı isteği: "kimlerin kaç defa girip çıktığını, ne kadar süre açık
+  // kaldığını görmek istiyorum"). Kayıt id'si isg_oturum'a da yazılır ki
+  // cikisYap() hangi kaydı kapatacağını bilsin.
+  const oturumKayitId = rastgeleId();
+  const gecmis = oku('isg_oturum_gecmisi', []);
+  gecmis.push({
+    id: oturumKayitId,
+    kullaniciId: bulunan.id,
+    kullaniciAdi: bulunan.kullaniciAdi,
+    adSoyad: bulunan.adSoyad,
+    girisZamani: new Date().toISOString(),
+    cikisZamani: null
+  });
+  yaz('isg_oturum_gecmisi', gecmis.slice(-1000));
+
+  yaz('isg_oturum', { kullaniciId: bulunan.id, oturumKayitId });
   return { basarili: true, kullanici: bulunan };
 }
 
@@ -279,8 +295,27 @@ function ikKullaniciSil(id) {
 }
 
 function cikisYap() {
+  // Açık oturum kaydını kapat (bkz. girisYap) — tarayıcı kapatılıp "Çıkış
+  // Yap" hiç tıklanmazsa bu satır hiç çalışmaz, o kayıt çıkış zamansız
+  // ("Kapatılmadı") kalır; bu, sunucu tarafı oturum takibi olmayan
+  // client-only bir uygulamanın doğal sınırıdır.
+  const oturum = oku('isg_oturum', null);
+  if (oturum && oturum.oturumKayitId) {
+    const gecmis = oku('isg_oturum_gecmisi', []);
+    const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
+    if (kayit && !kayit.cikisZamani) {
+      kayit.cikisZamani = new Date().toISOString();
+      yaz('isg_oturum_gecmisi', gecmis);
+    }
+  }
   localStorage.removeItem('isg_oturum');
   localStorage.removeItem('isg_aktif_firma');
+}
+
+// Sadece admin görebilir (bkz. giris-kayitlari.html). En yeni giriş en
+// üstte olacak şekilde döner.
+function girisGecmisiGetir() {
+  return oku('isg_oturum_gecmisi', []).slice().reverse();
 }
 
 // Aktif firmaya göre izole edilmiş bir localStorage anahtarı üretir.

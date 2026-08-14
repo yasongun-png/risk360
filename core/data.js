@@ -32,7 +32,7 @@ const VARSAYILAN_FIREBASE_CONFIG = {
 };
 
 const _YEREL_SADECE_ANAHTARLAR = new Set(['isg_oturum']);
-const _KUCUK_SENKRON_ANAHTARLAR = new Set(['isg_kullanicilar', 'isg_firmalar', 'isg_risk_sablonlari', 'isg_bildirimler']);
+const _KUCUK_SENKRON_ANAHTARLAR = new Set(['isg_kullanicilar', 'isg_firmalar', 'isg_risk_sablonlari', 'isg_bildirimler', 'isg_oturum_gecmisi']);
 
 let _bulutDb = null;
 let _bulutApp = null;

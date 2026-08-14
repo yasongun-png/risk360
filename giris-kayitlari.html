@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>İSG Platform - Giriş Kayıtları</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .gk-ozet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 16px 0 24px;
+  }
+  .gk-ozet-kart {
+    background: var(--kart-bg);
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: var(--golge);
+  }
+  .gk-ozet-kart .ad { font-weight: 600; font-size: 13px; }
+  .gk-ozet-kart .sayi { font-size: 22px; font-weight: 700; color: var(--celik-mavi); margin: 4px 0; }
+  .gk-ozet-kart .detay { font-size: 11px; color: var(--metin-soluk); }
+  table.gk-tablo { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--kart-bg); border-radius: 8px; overflow: hidden; box-shadow: var(--golge); }
+  table.gk-tablo th, table.gk-tablo td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--kenarlik); }
+  table.gk-tablo th { background: #f8fafc; font-weight: 600; }
+  .gk-acik-etiket { color: var(--celik-mavi); font-weight: 600; }
+  .geri-link { font-size: 13px; color: var(--celik-mavi); text-decoration: none; }
+  .gk-tablo-sarici { overflow-x: auto; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik" style="max-width: 900px;">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Giriş Kayıtları</h2>
+    <p style="color:#6b7280; font-size:13px;">
+      Kimin kaç defa giriş yaptığı ve her oturumun ne kadar açık kaldığı.
+      "Kapatılmadı" ibaresi, o oturumda "Çıkış Yap" butonuna basılmadan
+      tarayıcının kapatılmış olabileceği anlamına gelir — bu durumda gerçek
+      süre bilinemez.
+    </p>
+
+    <div class="gk-ozet-grid" id="ozetGrid"></div>
+
+    <div class="gk-tablo-sarici">
+      <table class="gk-tablo">
+        <thead>
+          <tr>
+            <th>Kullanıcı</th>
+            <th>Giriş</th>
+            <th>Çıkış</th>
+            <th>Süre</th>
+          </tr>
+        </thead>
+        <tbody id="kayitGovde"></tbody>
+      </table>
+    </div>
+    <div class="bos-durum" id="bosDurum">Henüz giriş kaydı yok.</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    function _gkKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function _gkSureFormatla(ms) {
+      if (ms == null || ms < 0) return '—';
+      const dk = Math.round(ms / 60000);
+      if (dk < 1) return '< 1 dk';
+      if (dk < 60) return dk + ' dk';
+      const saat = Math.floor(dk / 60);
+      const kalanDk = dk % 60;
+      return saat + ' sa ' + (kalanDk ? kalanDk + ' dk' : '');
+    }
+
+    function _gkTarihFormatla(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('tr-TR');
+    }
+
+    const session = girisGerekliAdmin();
+
+    if (session) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + session.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+
+      bulutHazirOlduğunda(() => {
+        const kayitlar = girisGecmisiGetir();
+
+        // ---- Özet (kullanıcı başına giriş sayısı + toplam süre) ----
+        const ozet = {};
+        kayitlar.forEach(k => {
+          const anahtarKey = k.kullaniciId;
+          if (!ozet[anahtarKey]) ozet[anahtarKey] = { adSoyad: k.adSoyad, kullaniciAdi: k.kullaniciAdi, sayi: 0, toplamMs: 0, acikSayisi: 0 };
+          ozet[anahtarKey].sayi++;
+          if (k.cikisZamani) {
+            ozet[anahtarKey].toplamMs += (new Date(k.cikisZamani) - new Date(k.girisZamani));
+          } else {
+            ozet[anahtarKey].acikSayisi++;
+          }
+        });
+
+        const ozetGrid = document.getElementById('ozetGrid');
+        ozetGrid.innerHTML = Object.values(ozet).sort((a, b) => b.sayi - a.sayi).map(o => `
+          <div class="gk-ozet-kart">
+            <div class="ad">${_gkKacir(o.adSoyad || o.kullaniciAdi)}</div>
+            <div class="sayi">${o.sayi} giriş</div>
+            <div class="detay">Toplam süre: ${_gkSureFormatla(o.toplamMs)}${o.acikSayisi ? ' · ' + o.acikSayisi + ' kapatılmadı' : ''}</div>
+          </div>
+        `).join('') || '<div style="font-size:12px; color:var(--metin-soluk);">Veri yok.</div>';
+
+        // ---- Detaylı liste ----
+        const govde = document.getElementById('kayitGovde');
+        const bosDurum = document.getElementById('bosDurum');
+        if (!kayitlar.length) {
+          bosDurum.classList.add('gorunur');
+          return;
+        }
+        bosDurum.classList.remove('gorunur');
+
+        govde.innerHTML = kayitlar.slice(0, 500).map(k => {
+          const sure = k.cikisZamani ? _gkSureFormatla(new Date(k.cikisZamani) - new Date(k.girisZamani)) : '<span class="gk-acik-etiket">Kapatılmadı</span>';
+          return `
+            <tr>
+              <td>${_gkKacir(k.adSoyad || k.kullaniciAdi)} <span style="color:var(--metin-soluk);">(@${_gkKacir(k.kullaniciAdi)})</span></td>
+              <td>${_gkTarihFormatla(k.girisZamani)}</td>
+              <td>${k.cikisZamani ? _gkTarihFormatla(k.cikisZamani) : '<span class="gk-acik-etiket">—</span>'}</td>
+              <td>${sure}</td>
+            </tr>
+          `;
+        }).join('');
+      });
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
+</body>
+</html>
