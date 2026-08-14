@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>Ramak Kala / Tehlike Bildirimi</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* Bu sayfa giriş yapmadan (barkod/QR ile) açılır — üst çubuk, menü vb.
+     hiçbir şey yok, sahadaki bir çalışanın telefonunda tek ekranda
+     doldurup gönderebileceği tek bir kart. */
+  body { background: var(--arka-plan, #f3f4f6); }
+  .rk-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
+  .rk-kart { width: 100%; max-width: 480px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
+  .rk-baslik { text-align: center; margin-bottom: 4px; font-size: 19px; font-weight: 800; }
+  .rk-firma { text-align: center; color: var(--celik-mavi-koyu, #1d4ed8); font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+  .rk-not { font-size: 12px; color: var(--metin-soluk, #6b7280); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+  .rk-tip-grup { display: flex; gap: 8px; margin-bottom: 16px; }
+  .rk-tip-buton {
+    flex: 1; padding: 14px 8px; border-radius: 10px; border: 2px solid var(--kenarlik, #e5e7eb);
+    background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; line-height: 1.3;
+  }
+  .rk-tip-buton.secili { border-color: #1d4ed8; background: #eef2ff; color: #1d4ed8; }
+  .rk-alan { margin-bottom: 14px; }
+  .rk-alan label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--metin-soluk, #6b7280); }
+  .rk-bolum-hizli { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .rk-bolum-hizli button { border: 1px solid var(--kenarlik, #e5e7eb); background: #f9fafb; border-radius: 999px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+  .rk-gonder-btn { width: 100%; padding: 15px; font-size: 15px; margin-top: 6px; }
+  .rk-durum { text-align: center; padding: 30px 6px; }
+  .rk-durum .ikon { font-size: 46px; margin-bottom: 10px; }
+  .rk-durum h2 { margin: 0 0 8px; font-size: 18px; }
+  .rk-durum p { color: var(--metin-soluk, #6b7280); font-size: 13px; margin: 0 0 20px; }
+  .gizli { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="rk-sahne">
+    <div class="rk-kart">
+
+      <div id="rkYukleniyor">
+        <div class="rk-baslik">🛡️ Yükleniyor…</div>
+      </div>
+
+      <div id="rkHataDurumu" class="rk-durum gizli">
+        <div class="ikon">⚠️</div>
+        <h2>Bağlantı Geçersiz</h2>
+        <p>Bu barkod/link geçerli bir işyerine ait değil. Lütfen İSG ekibinizle iletişime geçin.</p>
+      </div>
+
+      <div id="rkFormAlani" class="gizli">
+        <div class="rk-baslik">⚠️ Ramak Kala / Tehlike Bildirimi</div>
+        <div class="rk-firma" id="rkFirmaAdi"></div>
+        <div class="rk-not">
+          Sahada gördüğünüz bir tehlikeyi veya ramak kala olayını buradan hemen bildirebilirsiniz.
+          İsminizi yazmak <b>zorunlu değildir</b>.
+        </div>
+
+        <form id="rkForm">
+          <div class="rk-alan">
+            <label>Ne bildiriyorsunuz?</label>
+            <div class="rk-tip-grup">
+              <button type="button" class="rk-tip-buton" data-tip="Ramak Kala">⚠️ Ramak Kala<br><span style="font-weight:400; font-size:11px;">(neredeyse olacaktı)</span></button>
+              <button type="button" class="rk-tip-buton" data-tip="Tehlike Bildirimi">🚧 Tehlike Bildirimi<br><span style="font-weight:400; font-size:11px;">(mevcut bir tehlike)</span></button>
+            </div>
+          </div>
+
+          <div class="rk-alan">
+            <label for="rkAciklama">Ne oldu / ne gördünüz? *</label>
+            <textarea id="rkAciklama" rows="4" placeholder="Kısaca anlatın..." required></textarea>
+          </div>
+
+          <div class="rk-alan">
+            <label for="rkBolum">Bölüm / Konum (isteğe bağlı)</label>
+            <input type="text" id="rkBolum" placeholder="Örn. Üretim Sahası, Depo...">
+            <div class="rk-bolum-hizli" id="rkBolumHizli"></div>
+          </div>
+
+          <div class="rk-alan">
+            <label for="rkAdSoyad">Adınız (isteğe bağlı)</label>
+            <input type="text" id="rkAdSoyad" placeholder="İsteğe bağlı — boş bırakabilirsiniz">
+          </div>
+
+          <div class="rk-alan">
+            <label for="rkFotoDosya">Fotoğraf (isteğe bağlı)</label>
+            <button type="button" class="ikincil" id="rkFotoSecBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Ekle</button>
+            <input type="file" id="rkFotoDosya" accept="image/*" capture="environment" style="display:none;">
+            <div id="rkFotoOnizleme" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="hata-mesaji" id="rkHataMesaji"></div>
+
+          <button type="submit" class="birincil rk-gonder-btn" id="rkGonderBtn">Gönder</button>
+        </form>
+      </div>
+
+      <div id="rkBasariDurumu" class="rk-durum gizli">
+        <div class="ikon">✅</div>
+        <h2>Bildiriminiz Alındı</h2>
+        <p>Teşekkürler — bildiriminiz İSG ekibine iletildi.</p>
+        <button type="button" class="ikincil" id="rkYeniBildirimBtn" style="width:auto; padding:10px 22px;">Yeni Bildirim Gönder</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="modules/olay-kaza/model.js"></script>
+  <script>
+    // (GitHub Pages yeniden derlemesini tetiklemek için eklenen zararsız yorum satırı.)
+    function _rkKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    const _rkParams = new URLSearchParams(window.location.search);
+    const _rkSlug = (_rkParams.get('firma') || '').trim();
+    let _rkFirma = null;
+    let _rkSecilenTip = '';
+    let _rkFotoUrl = '';
+
+    // KRİTİK: olay-kaza modülünün gerçek deposu bu klasör adıyla değil
+    // (bkz. modules/olay-kaza/repository.js -> _olayAnahtari(), tenantAnahtar
+    // ile 'olay_kaza_kayitlari' üretir) farklı bir anahtarla çalışıyor.
+    // Önceki sürüm buraya "isg_<slug>_olay-kaza" (klasör adı) yazıyordu —
+    // bu, modülün hiç okumadığı, tamamen ayrı/sahipsiz bir belgeydi; barkod
+    // ile gönderilen bildirimler bu yüzden Olay/Kaza modülünde HİÇ
+    // görünmüyordu (🔔 zilinde görünmesi ayrı bir konu — o sadece etiket
+    // metni için anahtar adını kullanıyor, gerçek veriyi değil).
+    function _rkOlayAnahtari() {
+      return 'isg_' + _rkFirma.slug + '_olay_kaza_kayitlari';
+    }
+
+    function _rkFotoOnizlemeCiz() {
+      const kutu = document.getElementById('rkFotoOnizleme');
+      kutu.innerHTML = _rkFotoUrl
+        ? `<div style="display:flex; align-items:center; gap:10px;">
+             <img data-foto-ref="${_rkFotoUrl}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik,#e5e7eb);">
+             <button type="button" id="rkFotoKaldirBtn" style="border:none; background:none; color:var(--hata,#dc2626); font-size:12px; font-weight:600; cursor:pointer;">Kaldır</button>
+           </div>`
+        : '';
+      if (_rkFotoUrl) {
+        document.getElementById('rkFotoKaldirBtn').addEventListener('click', () => { _rkFotoUrl = ''; _rkFotoOnizlemeCiz(); });
+        fotoReferanslariCoz(kutu);
+      }
+    }
+
+    // Anonim (giriş yapılmamış) bildirimde core/data.js -> yaz()'daki
+    // otomatik "yeni kayıt" bildirimi ASLA tetiklenmez (sadece oturum açmış
+    // 'duzenleyici' rolü için çalışır, bkz. _yaziEkBildirimKontrolEt) —
+    // bu yüzden admin'in 🔔 ziline aynı 'isg_bildirimler' anahtarına elle
+    // bir satır düşülerek manuel bildirilir. kucukVeriYazVeSonucuGetir ile
+    // BEKLENİR — kullanıcı "Bildiriminiz Alındı" ekranını görüp sekmeyi
+    // hemen kapatabileceğinden, bu yazımın tamamlandığından emin olunmadan
+    // asıl kayıt "başarılı" sayılmaz (yaşanmış: ana kayıt kaydoluyordu ama
+    // admin'e hiç bildirim gitmiyordu).
+    async function _rkBildirimGonder(kayit) {
+      const bildirimler = oku('isg_bildirimler', []);
+      bildirimler.push({
+        id: rastgeleId(),
+        kullaniciAdi: 'Barkod',
+        adSoyad: kayit.adSoyad ? kayit.adSoyad : 'İsimsiz Bildirim (Barkod)',
+        anahtar: _rkOlayAnahtari(),
+        kayitEtiketleri: [kayit.olayTipi + ': ' + kayit.aciklama.slice(0, 60)],
+        tarih: new Date().toISOString(),
+        okunduMu: false
+      });
+      const sonuc = await kucukVeriYazVeSonucuGetir('isg_bildirimler', bildirimler.slice(-300));
+      if (!sonuc.basarili) console.warn('Barkod bildirimi oluşturulamadı:', sonuc.hata);
+    }
+
+    function _rkBolumHizliCiz() {
+      const kutu = document.getElementById('rkBolumHizli');
+      const bolumler = Array.isArray(_rkFirma.bolumler) ? _rkFirma.bolumler : [];
+      if (!bolumler.length) { kutu.innerHTML = ''; return; }
+      kutu.innerHTML = bolumler.map(b => `<button type="button" data-b="${_rkKacir(b)}">${_rkKacir(b)}</button>`).join('');
+      kutu.querySelectorAll('[data-b]').forEach(btn => {
+        btn.addEventListener('click', () => { document.getElementById('rkBolum').value = btn.getAttribute('data-b'); });
+      });
+    }
+
+    function _rkFormuBaslat() {
+      document.getElementById('rkYukleniyor').classList.add('gizli');
+      document.getElementById('rkFormAlani').classList.remove('gizli');
+      document.getElementById('rkFirmaAdi').textContent = _rkFirma.ad;
+      _rkBolumHizliCiz();
+
+      document.querySelectorAll('.rk-tip-buton').forEach(btn => {
+        btn.addEventListener('click', () => {
+          _rkSecilenTip = btn.getAttribute('data-tip');
+          document.querySelectorAll('.rk-tip-buton').forEach(b => b.classList.toggle('secili', b === btn));
+          document.getElementById('rkHataMesaji').classList.remove('gorunur');
+        });
+      });
+
+      document.getElementById('rkFotoSecBtn').addEventListener('click', () => document.getElementById('rkFotoDosya').click());
+      document.getElementById('rkFotoDosya').addEventListener('change', async e => {
+        const dosya = e.target.files[0];
+        e.target.value = '';
+        if (!dosya) return;
+        const secBtn = document.getElementById('rkFotoSecBtn');
+        secBtn.disabled = true;
+        secBtn.textContent = 'Yükleniyor…';
+        try {
+          const sonuc = await fotoYukle(dosya, 'olay-kaza/' + _rkFirma.slug + '-barkod');
+          _rkFotoUrl = sonuc.url;
+          _rkFotoOnizlemeCiz();
+        } catch (hata) {
+          alert(hata.message || 'Fotoğraf yüklenemedi.');
+        } finally {
+          secBtn.disabled = false;
+          secBtn.textContent = '📷 Fotoğraf Ekle';
+        }
+      });
+
+      document.getElementById('rkForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const hataMesaji = document.getElementById('rkHataMesaji');
+        hataMesaji.classList.remove('gorunur');
+
+        const aciklamaHam = document.getElementById('rkAciklama').value.trim();
+        if (!_rkSecilenTip || !aciklamaHam) {
+          hataMesaji.textContent = 'Lütfen bildirim türünü seçin ve açıklama yazın.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+
+        const adSoyad = document.getElementById('rkAdSoyad').value.trim();
+        const simdi = new Date();
+        const aciklama = '(Barkod ile bildirildi' + (adSoyad ? ' — ' + adSoyad : ' — isim belirtilmedi') + ') ' + aciklamaHam;
+
+        const gonderBtn = document.getElementById('rkGonderBtn');
+        gonderBtn.disabled = true;
+        gonderBtn.textContent = 'Gönderiliyor…';
+
+        // Beklenmeyen bir hata (ör. eksik script/tanımsız fonksiyon) burada
+        // yakalanmazsa buton "Gönderiliyor…" yazısında SONSUZA DEK takılı
+        // kalır — kullanıcıya hiçbir geri bildirim vermeden (yaşanmış hata:
+        // core/auth.js dahil edilmemişti). Bu yüzden tüm yazma işlemi
+        // try/catch içine alınır; hata olursa buton eski haline döner.
+        //
+        // Ayrıca sıradan yaz() BEKLENMEDEN (fire-and-forget) Firestore'a
+        // yazar — bu, ağ/izin hatası olduğunda kullanıcıya "gönderildi"
+        // YALANI söylenmesine yol açabilirdi (yaşanmış: kullanıcı formu
+        // gönderdi, "alındı" gördü, ama kayıt Olay/Kaza modülünde hiç
+        // görünmedi). Bu yüzden burada yazVeSonucuGetir() ile yazımın
+        // GERÇEKTEN Firestore'a ulaştığı doğrulanmadan başarı ekranı
+        // gösterilmez.
+        try {
+          const anahtar = _rkOlayAnahtari();
+          const mevcutListe = oku(anahtar, []);
+          const yeniKayit = olayKaydiOlustur({
+            olayTipi: _rkSecilenTip,
+            kazaTarihi: simdi.toISOString().slice(0, 10),
+            kazaSaati: simdi.toTimeString().slice(0, 5),
+            bolum: document.getElementById('rkBolum').value.trim(),
+            adSoyad: adSoyad,
+            aciklama: aciklama,
+            olayYeriFotograflari: _rkFotoUrl ? [{ url: _rkFotoUrl }] : [],
+            kayitNo: sonrakiKayitNoUret(mevcutListe)
+          });
+          mevcutListe.push(yeniKayit);
+          const sonuc = await yazVeSonucuGetir(anahtar, mevcutListe);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
+          await _rkBildirimGonder(yeniKayit);
+
+          _rkFotoUrl = '';
+          document.getElementById('rkFormAlani').classList.add('gizli');
+          document.getElementById('rkBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('Ramak kala bildirimi gönderilemedi:', hata);
+          hataMesaji.textContent = 'Bir hata oluştu, bildirim gönderilemedi. Lütfen tekrar deneyin (bağlantınızı kontrol edin).';
+          hataMesaji.classList.add('gorunur');
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'Gönder';
+        }
+      });
+    }
+
+    document.getElementById('rkYeniBildirimBtn').addEventListener('click', () => {
+      document.getElementById('rkForm').reset();
+      _rkSecilenTip = '';
+      _rkFotoUrl = '';
+      _rkFotoOnizlemeCiz();
+      document.querySelectorAll('.rk-tip-buton').forEach(b => b.classList.remove('secili'));
+      const gonderBtn = document.getElementById('rkGonderBtn');
+      gonderBtn.disabled = false;
+      gonderBtn.textContent = 'Gönder';
+      document.getElementById('rkBasariDurumu').classList.add('gizli');
+      document.getElementById('rkFormAlani').classList.remove('gizli');
+    });
+
+    if (!_rkSlug) {
+      document.getElementById('rkYukleniyor').classList.add('gizli');
+      document.getElementById('rkHataDurumu').classList.remove('gizli');
+    } else {
+      bulutHazirOlduğunda(() => {
+        const firmalar = oku('isg_firmalar', []);
+        _rkFirma = firmalar.find(f => f.slug === _rkSlug) || null;
+        if (!_rkFirma) {
+          document.getElementById('rkYukleniyor').classList.add('gizli');
+          document.getElementById('rkHataDurumu').classList.remove('gizli');
+          return;
+        }
+        bulutFirmaHazirOlduğunda(_rkFirma.slug, _rkFormuBaslat);
+      });
+    }
+  </script>
+</body>
+</html>

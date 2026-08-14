@@ -112,9 +112,29 @@ function olayKazaSayfasiniBaslat() {
     }
   });
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
-  document.getElementById('olayTipiFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
+  document.getElementById('olayTipiFiltre').addEventListener('change', () => {
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+    _okHizliTipButonDurumunuGuncelle();
+  });
   document.getElementById('durumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
+  // Ramak Kala / Tehlike Bildirimi / İş Kazaları listelerine tek tıkla
+  // ulaşmak için (kullanıcı isteği) — "Olay Tipi" dropdown'ını o değere
+  // ayarlayıp aynı filtrelemeyi tetikler; zaten seçiliyse tekrar tıklamak
+  // filtreyi kaldırır.
+  document.getElementById('isKazasiFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('is-kazasi'));
+  document.getElementById('ramakKalaFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Ramak Kala'));
+  document.getElementById('tehlikeBildirimFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Tehlike Bildirimi'));
+  // Sahadaki barkodu okutunca açılan AYNI sayfa (ramak-kala-bildir.html) —
+  // kullanıcı isteği: ofisten/masabaşından da aynı basit formla bildirim
+  // girilebilsin, tam kaza formunu doldurmaya gerek kalmasın. Yeni sekmede
+  // açılır ki liste ekranındaki mevcut filtre/arama durumu kaybolmasın.
+  document.getElementById('ramakKalaBildirBtn').addEventListener('click', () => {
+    const firma = aktifFirmaGetir();
+    if (!firma) return;
+    window.open('../../ramak-kala-bildir.html?firma=' + encodeURIComponent(firma.slug), '_blank');
+  });
 
+  document.getElementById('temelOlayTipi').addEventListener('change', _okKisiBolumleriniGuncelle);
   document.getElementById('kisiPersonelId').addEventListener('change', kisiPersonelSecildi);
   ['fkO', 'fkF', 'fkS'].forEach(id => document.getElementById(id).addEventListener('change', fineKinneyHesabiCiz));
   document.getElementById('aksiyonEkleBtn').addEventListener('click', aksiyonSatiriEkle);
@@ -144,7 +164,7 @@ function olayKazaSayfasiniBaslat() {
   });
   document.getElementById('listeYazdirBtn').addEventListener('click', () => {
     const filtreler = {
-      olayTipi: document.getElementById('olayTipiFiltre').value,
+      olayTipi: _okOlayTipiFiltreDegeri(),
       durum: document.getElementById('durumFiltre').value
     };
     raporListesiYazdir('Olay / Kaza Kayıtları', '', OLAY_EXPORT_KOLONLARI, olayKayitlariniGetir(document.getElementById('aramaKutusu').value, filtreler));
@@ -164,7 +184,7 @@ function olayKazaSayfasiniBaslat() {
 
   document.getElementById('jsonDisaAktarBtn').addEventListener('click', () => {
     const filtreler = {
-      olayTipi: document.getElementById('olayTipiFiltre').value,
+      olayTipi: _okOlayTipiFiltreDegeri(),
       durum: document.getElementById('durumFiltre').value
     };
     const veri = olayKayitlariniJsonaAktar(document.getElementById('aramaKutusu').value, filtreler);
@@ -256,11 +276,51 @@ function gorunumDegistir(gorunum) {
 
 // ==================== KAYITLAR ====================
 
+function _okHizliTipFiltreUygula(tip) {
+  const secim = document.getElementById('olayTipiFiltre');
+  secim.value = secim.value === tip ? '' : tip;
+  kayitlariCiz(document.getElementById('aramaKutusu').value);
+  _okHizliTipButonDurumunuGuncelle();
+}
+
+function _okHizliTipButonDurumunuGuncelle() {
+  const secilen = document.getElementById('olayTipiFiltre').value;
+  document.getElementById('isKazasiFiltreBtn').classList.toggle('filtre-aktif', secilen === 'is-kazasi');
+  document.getElementById('ramakKalaFiltreBtn').classList.toggle('filtre-aktif', secilen === 'Ramak Kala');
+  document.getElementById('tehlikeBildirimFiltreBtn').classList.toggle('filtre-aktif', secilen === 'Tehlike Bildirimi');
+}
+
+// "İş Kazaları" dropdown seçeneği tek bir olayTipi değil, yaralanma içeren
+// tüm tipleri (İlk Yardım, Tıbbi Tedavi, LTI, DART, Ölüm — bkz. model.js
+// OLAY_KISI_ZORUNLU_TIPLERI) birden kapsar; bu yüzden filtreler.olayTipi'ye
+// geçmeden önce dizi olarak açılır (service.js buna göre güncellendi).
+function _okOlayTipiFiltreDegeri() {
+  const secilen = document.getElementById('olayTipiFiltre').value;
+  return secilen === 'is-kazasi' ? OLAY_KISI_ZORUNLU_TIPLERI : secilen;
+}
+
+// Ramak Kala / Tehlike Bildirimi kayıtları artık barkod ile giriş
+// yapılmadan (bkz. ramak-kala-bildir.html) da oluşturulabildiğinden, bölüm/
+// isim gibi serbest metin alanları artık anonim/güvenilmeyen girdi
+// içerebilir — tabloya yazdırılmadan önce kaçırılır (XSS'e karşı).
+function _okKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+// Olayın anlatımı (özellikle barkod ile gelen Ramak Kala/Tehlike
+// Bildirimi kayıtlarında bölüm/kişi dışında tek gerçek içerik budur)
+// listede hiç görünmüyordu, sadece Düzenle açılınca okunabiliyordu —
+// kullanıcı isteği: "uygulama olay/kaza modül ekranında görmem lazım".
+// Uygunsuzluk modülündeki .us-tanim-hucre ile aynı kırpma/tooltip deseni.
+function _okAciklamaHucresiUret(k) {
+  return `<div class="us-tanim-hucre" title="${_okKacir(k.aciklama)}">${_okKacir(k.aciklama) || '-'}</div>`;
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
   const filtreler = {
-    olayTipi: document.getElementById('olayTipiFiltre').value,
+    olayTipi: _okOlayTipiFiltreDegeri(),
     durum: document.getElementById('durumFiltre').value
   };
   const kayitlar = olayKayitlariniGetir(aramaMetni, filtreler);
@@ -275,15 +335,21 @@ function kayitlariCiz(aramaMetni) {
 
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
+    const fotograflar = Array.isArray(k.olayYeriFotograflari) ? k.olayYeriFotograflari : [];
+    const fotoHucresi = fotograflar.length
+      ? `<img data-foto-ref="${_okKacir(fotograflar[0].url)}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);">${fotograflar.length > 1 ? `<span style="font-size:10px; color:var(--metin-soluk);"> +${fotograflar.length - 1}</span>` : ''}`
+      : '-';
     satir.innerHTML = `
-      <td>${k.kayitNo}</td>
-      <td>${k.olayTipi}</td>
+      <td>${_okKacir(k.kayitNo)}</td>
+      <td>${_okKacir(k.olayTipi)}</td>
       <td>${k.kazaTarihi}${k.kazaSaati ? ' ' + k.kazaSaati : ''}</td>
-      <td>${k.bolum}</td>
-      <td>${k.adSoyad}${k.personelFirmaId ? ' <span style="font-size:11px; color:var(--metin-soluk);">(' + (_digerFirmaAdiGetir(k.personelFirmaId)) + ')</span>' : ''}</td>
-      <td>${k.yaralanmaTuru || '-'}</td>
+      <td>${_okKacir(k.bolum)}</td>
+      <td>${_okKacir(k.adSoyad)}${k.personelFirmaId ? ' <span style="font-size:11px; color:var(--metin-soluk);">(' + _okKacir(_digerFirmaAdiGetir(k.personelFirmaId)) + ')</span>' : ''}</td>
+      <td>${_okAciklamaHucresiUret(k)}</td>
+      <td>${_okKacir(k.yaralanmaTuru) || '-'}</td>
       <td>${k.fkRP !== null ? k.fkRP : '-'}</td>
-      <td><span class="genel-rozet rozet-${okRozetSinifAdi(k.durum)}">${k.durum}</span></td>
+      <td>${fotoHucresi}</td>
+      <td><span class="genel-rozet rozet-${okRozetSinifAdi(k.durum)}">${_okKacir(k.durum)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-rapor="${k.id}">Rapor PDF</button>
@@ -293,6 +359,7 @@ function kayitlariCiz(aramaMetni) {
     `;
     govde.appendChild(satir);
   });
+  fotoReferanslariCoz(govde);
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(olayKaydiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-rapor]').forEach(btn => btn.addEventListener('click', async () => {
@@ -467,6 +534,22 @@ function tanikListesiniCiz() {
   });
 }
 
+// Formda sorulan sorular olay tipine göre farklılaşsın diye (kullanıcı
+// isteği) — Ramak Kala/Tehlike Bildirimi/Maddi Hasar/Çevresel Olay ve acil
+// durum türü olaylarda (Yangın, Patlama vb.) yaralı olması beklenmez, bu
+// yüzden "Kişi Bilgileri (Mağdur)" ve "Yaralanma Bilgileri" bölümleri hiç
+// gösterilmez. Aynı ayrım zaten validation.js'te OLAY_KISI_ZORUNLU_TIPLERI
+// ile "zorunlu mu" için kullanılıyordu — burada "gösterilsin mi" için de
+// aynı liste kullanılır. Tip henüz seçilmemişse (yeni kayıt, boş seçim)
+// bölümler görünür kalır, admin'i şaşırtacak şekilde önceden gizlenmez.
+function _okKisiBolumleriniGuncelle() {
+  const tip = document.getElementById('temelOlayTipi').value;
+  const goster = !tip || OLAY_KISI_ZORUNLU_TIPLERI.includes(tip);
+  ['kisiBilgileriBaslik', 'kisiBilgileriIcerik', 'yaralanmaBilgileriBaslik', 'yaralanmaBilgileriIcerik'].forEach(id => {
+    document.getElementById(id).style.display = goster ? '' : 'none';
+  });
+}
+
 function kayitModalAc(kayitHam) {
   // Model bu oturumda genişletildi (5N1K, kronoloji, tanık ifadeleri
   // vb. yeni alanlar eklendi) — bu alanlar eklenmeden ÖNCE oluşturulmuş eski
@@ -484,6 +567,7 @@ function kayitModalAc(kayitHam) {
   // Temel bilgiler
   document.getElementById('temelKayitNo').value = kayit ? (kayit.kayitNo || '') : '';
   _secimDoldur('temelOlayTipi', OLAY_TIPLERI, kayit ? kayit.olayTipi : '');
+  _okKisiBolumleriniGuncelle();
   document.getElementById('temelKazaTarihi').value = kayit ? kayit.kazaTarihi : '';
   document.getElementById('temelKazaSaati').value = kayit ? kayit.kazaSaati : '';
   document.getElementById('temelBolum').value = kayit ? kayit.bolum : '';

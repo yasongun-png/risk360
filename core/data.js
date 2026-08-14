@@ -241,6 +241,24 @@ function yazVeSonucuGetir(anahtar, deger) {
   return Promise.resolve({ basarili: true });
 }
 
+// yazVeSonucuGetir()'in "küçük senkron" anahtarlar (ör. isg_bildirimler)
+// için eşleniği — yazVeSonucuGetir bu tür anahtarlarda normal fire-and-forget
+// yaz()'a düşüp anında "başarılı" döner, gerçekten Firestore'a ulaşıp
+// ulaşmadığını BEKLEMEZ. Anonim/giriş yapılmamış sayfalarda (ör.
+// ramak-kala-bildir.html) kullanıcı "gönderildi" ekranını görür görmez
+// sekmeyi kapatabileceğinden, bu ikinci (bildirim) yazımının sayfa
+// kapanmadan GERÇEKTEN tamamlandığından emin olunması gerekir.
+function kucukVeriYazVeSonucuGetir(anahtar, deger) {
+  if (_bulutAktif && _KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
+    _yerelYazDene(anahtar, JSON.stringify(deger));
+    return _bulutDb.collection('kucuk_veri').doc(anahtar).set({ deger })
+      .then(() => ({ basarili: true }))
+      .catch(e => { console.error('Firestore yazma hatasi:', e); return { basarili: false, hata: e }; });
+  }
+  yaz(anahtar, deger);
+  return Promise.resolve({ basarili: true });
+}
+
 // yaz()'ın "büyük veri" yolunun, o an aktif olan firma bağlamından (ambient
 // _bulutFirmaSlugu) BAĞIMSIZ hâli: birden çok firmayı aynı anda yönetip
 // hiçbirinin "aktif" olmadığı sayfalarda (ör. firma-yonetim.html) kullanılır,

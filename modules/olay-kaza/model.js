@@ -4,7 +4,7 @@
 // SIDDET_SECENEKLERI, riskPuaniHesapla, riskDuzeyiGetir).
 
 const OLAY_TIPLERI = [
-  'Ramak Kala', 'İlk Yardım', 'Tıbbi Tedavi', 'Kayıp Gün (LTI)', 'Kısıtlı İş / Transfer (DART)', 'Maddi Hasar', 'Çevresel Olay', 'Ölüm',
+  'Ramak Kala', 'Tehlike Bildirimi', 'İlk Yardım', 'Tıbbi Tedavi', 'Kayıp Gün (LTI)', 'Kısıtlı İş / Transfer (DART)', 'Maddi Hasar', 'Çevresel Olay', 'Ölüm',
   // Acil durum türü olaylar — kullanıcı isteği: "yangın vb. acil durum
   // olaylarını da seçebileyim" (İşyerlerinde Acil Durumlar Hakkında Yönetmelik'te
   // sayılan tehlike kaynaklarına paralel).

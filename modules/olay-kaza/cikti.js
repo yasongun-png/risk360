@@ -172,7 +172,7 @@ async function kazaRaporuPdfOlustur(id) {
         ${_okAlanSatiri('Kaza Yeri', k.kazaYeri, 'Kaza Tarihi / Saati', [gunAyYil(k.kazaTarihi), k.kazaSaati].filter(Boolean).join(' – '))}
         ${_okAlanSatiri('Mağdur', magdur, 'Görevi / Kıdemi', gorevKidem)}
         ${_okAlanSatiri('Tehlikeli Madde', k.tehlikeliMadde, 'Tanık Sayısı', k.tanikSayisi ?? '')}
-        ${_okAlanSatiri('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv)}
+        ${(OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi) || k.yaralanmaTuru || k.yaralananUzuv) ? _okAlanSatiri('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv) : ''}
         ${_okAlanSatiri('Kayıp Gün', k.kayipGun ?? '', 'DART Gün', k.dartGun ?? '')}
         ${(k.fkO && k.fkF && k.fkS) ? `<tr><td class="lbl">Fine-Kinney (O/F/Ş/RP)</td><td class="val" colspan="3">O: ${_okKacir(k.fkO)} &nbsp; F: ${_okKacir(k.fkF)} &nbsp; Ş: ${_okKacir(k.fkS)} &nbsp; RP: ${_okKacir(_okRpRozet(fkRP))}</td></tr>` : ''}
       </table>` },
@@ -388,7 +388,7 @@ async function kazaRaporuWordOlustur(id) {
         _okWordIkiliSatir('Kaza Yeri', k.kazaYeri, 'Kaza Tarihi / Saati', [gunAyYil(k.kazaTarihi), k.kazaSaati].filter(Boolean).join(' – ')),
         _okWordIkiliSatir('Mağdur', magdur, 'Görevi / Kıdemi', gorevKidem),
         _okWordIkiliSatir('Tehlikeli Madde', k.tehlikeliMadde, 'Tanık Sayısı', k.tanikSayisi ?? ''),
-        _okWordIkiliSatir('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv),
+        ...((OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi) || k.yaralanmaTuru || k.yaralananUzuv) ? [_okWordIkiliSatir('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv)] : []),
         _okWordIkiliSatir('Kayıp Gün', k.kayipGun ?? '', 'DART Gün', k.dartGun ?? ''),
         ...((k.fkO && k.fkF && k.fkS) ? [_okWordTekliSatir('Fine-Kinney (O/F/Ş/RP)', `O: ${k.fkO}  F: ${k.fkF}  Ş: ${k.fkS}  RP: ${_okRpRozet(fkRP)}`)] : [])
       ]

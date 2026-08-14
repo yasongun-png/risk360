@@ -38,12 +38,17 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="olayTipiFiltre" style="width:auto; margin:0;">
             <option value="">Tüm Olay Tipleri</option>
+            <option value="is-kazasi">🩹 İş Kazaları (Yaralanmalı)</option>
           </select>
           <select id="durumFiltre" style="width:auto; margin:0;">
             <option value="">Tüm Durumlar</option>
             <option>Açık</option>
             <option>Kapalı</option>
           </select>
+          <button type="button" class="ikincil" id="isKazasiFiltreBtn">🩹 İş Kazaları</button>
+          <button type="button" class="ikincil" id="ramakKalaFiltreBtn">⚠️ Ramak Kala</button>
+          <button type="button" class="ikincil" id="tehlikeBildirimFiltreBtn">🚧 Tehlike Bildirimi</button>
+          <button type="button" class="birincil" id="ramakKalaBildirBtn">📷 Ramak Kala Bildir</button>
           <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
           <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
@@ -59,7 +64,7 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th>Kayıt No</th><th>Olay Tipi</th><th>Tarih</th><th>Bölüm</th><th>Kişi</th><th>Yaralanma Türü</th><th>Fine-Kinney RP</th><th>Durum</th><th>İşlemler</th></tr>
+            <tr><th>Kayıt No</th><th>Olay Tipi</th><th>Tarih</th><th>Bölüm</th><th>Kişi</th><th>Olay Anlatımı</th><th>Yaralanma Türü</th><th>Fine-Kinney RP</th><th>Fotoğraf</th><th>Durum</th><th>İşlemler</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>
@@ -119,8 +124,8 @@
         <div id="olayFotoOnizleme" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
         </div>
 
-        <div class="form-bolum-baslik katlanir" data-bolum-toggle>Kişi Bilgileri (Mağdur)</div>
-        <div class="form-bolum-icerik">
+        <div class="form-bolum-baslik katlanir" data-bolum-toggle id="kisiBilgileriBaslik">Kişi Bilgileri (Mağdur)</div>
+        <div class="form-bolum-icerik" id="kisiBilgileriIcerik">
         <label for="kisiPersonelId">Personel</label>
         <select id="kisiPersonelId"></select>
         <div class="alan-hatasi" id="adSoyadHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
@@ -167,8 +172,8 @@
         </div>
         </div>
 
-        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Yaralanma Bilgileri</div>
-        <div class="form-bolum-icerik kapali">
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle id="yaralanmaBilgileriBaslik">Yaralanma Bilgileri</div>
+        <div class="form-bolum-icerik kapali" id="yaralanmaBilgileriIcerik">
         <div class="form-satir-ikili">
           <div>
             <label for="siniflandirmaYaralanmaTuru">Yaralanma Türü</label>

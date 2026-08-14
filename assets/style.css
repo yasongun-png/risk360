@@ -109,6 +109,11 @@ button.ikincil:hover { background: #f0f3f7; }
 button.ikincil.sil { color: var(--hata); border-color: #fecaca; }
 button.ikincil.sil:hover { background: #fef2f2; }
 
+/* Aç/kapa hızlı filtre butonları (ör. Olay/Kaza modülündeki Ramak Kala /
+   Tehlike Bildirimi kısayolları) — seçiliyken vurgulanır. */
+button.ikincil.filtre-aktif { border-color: var(--celik-mavi, #1d4ed8); background: #eef2ff; color: var(--celik-mavi, #1d4ed8); }
+button.ikincil.filtre-aktif:hover { background: #e0e7ff; }
+
 .hata-mesaji {
   display: none;
   background: #fef2f2;
@@ -543,6 +548,82 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
 
 #yazdirmaAlani .doc-title { text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
 #yazdirmaAlani .doc-meta { font-size: 12px; margin-bottom: 10px; }
+
+/* Organizasyon şeması yazdırma görünümü — klasik kutu + bağlantı çizgili
+   ağaç. Saf CSS'le çizilir (görsel/canvas yok): her <li> üstten bir yatay,
+   ortadan bir dikey çizgiyle bir üst kademeye bağlanır. Uygulama içindeki
+   girintili liste görünümünden (ul.org-agac) ayrıdır, çünkü o görünüm
+   yönetim/tıklama için uygun ama basılı bir şema gibi görünmüyordu. */
+#yazdirmaAlani ul.org-print-agac,
+#yazdirmaAlani ul.org-print-agac ul {
+  list-style: none;
+  margin: 0;
+  padding: 20px 0 0;
+  display: flex;
+  justify-content: center;
+}
+
+#yazdirmaAlani ul.org-print-agac { padding-top: 10px; }
+
+#yazdirmaAlani ul.org-print-agac li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 10px 0;
+}
+
+#yazdirmaAlani ul.org-print-agac li::before,
+#yazdirmaAlani ul.org-print-agac li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 20px;
+  border-top: 1px solid #000;
+}
+
+#yazdirmaAlani ul.org-print-agac li::before { right: 50%; }
+#yazdirmaAlani ul.org-print-agac li::after { left: 50%; border-left: 1px solid #000; }
+
+#yazdirmaAlani ul.org-print-agac li:only-child { padding-top: 0; }
+#yazdirmaAlani ul.org-print-agac li:only-child::before,
+#yazdirmaAlani ul.org-print-agac li:only-child::after { display: none; }
+
+#yazdirmaAlani ul.org-print-agac li:first-child::before,
+#yazdirmaAlani ul.org-print-agac li:last-child::after { border-top: none; }
+
+#yazdirmaAlani ul.org-print-agac li:last-child::before { border-right: 1px solid #000; }
+#yazdirmaAlani ul.org-print-agac li:first-child::after { border-left: 1px solid #000; }
+
+#yazdirmaAlani ul.org-print-agac > li::before,
+#yazdirmaAlani ul.org-print-agac > li::after,
+#yazdirmaAlani ul.org-print-agac > li:only-child::before,
+#yazdirmaAlani ul.org-print-agac > li:only-child::after { display: none; }
+
+#yazdirmaAlani ul.org-print-agac li > ul::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  width: 0;
+  height: 20px;
+  border-left: 1px solid #000;
+}
+
+#yazdirmaAlani .org-print-kutu {
+  display: inline-block;
+  border: 1px solid #000;
+  border-radius: 5px;
+  padding: 6px 12px;
+  background: #fff;
+  color: #000;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+#yazdirmaAlani .org-print-ad { font-weight: 700; }
+#yazdirmaAlani .org-print-isim { font-weight: 400; font-size: 10px; margin-top: 3px; color: #333; }
 
 /* Genel amaçlı durum rozeti (Acil Durum, Kurul vb. modüllerde kullanılır) */
 .genel-rozet {
