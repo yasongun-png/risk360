@@ -8,7 +8,10 @@ function olayKayitlariniGetir(aramaMetni, filtreler) {
   const f = filtreler || {};
   let liste = olayKayitlariTumunuGetir().map(_olayZenginlestir);
 
-  if (f.olayTipi) liste = liste.filter(k => k.olayTipi === f.olayTipi);
+  // f.olayTipi bir dizi de olabilir ("İş Kazaları" hızlı filtresi birden
+  // fazla tipi (İlk Yardım, Tıbbi Tedavi, LTI, DART, Ölüm) birden kapsar —
+  // bkz. ui.js _okOlayTipiFiltreDegeri).
+  if (f.olayTipi) liste = liste.filter(k => Array.isArray(f.olayTipi) ? f.olayTipi.includes(k.olayTipi) : k.olayTipi === f.olayTipi);
   if (f.durum) liste = liste.filter(k => k.durum === f.durum);
   if (f.bolum) liste = liste.filter(k => k.bolum === f.bolum);
 

@@ -117,9 +117,11 @@ function olayKazaSayfasiniBaslat() {
     _okHizliTipButonDurumunuGuncelle();
   });
   document.getElementById('durumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
-  // Ramak Kala / Tehlike Bildirimi listelerine tek tıkla ulaşmak için
-  // (kullanıcı isteği) — "Olay Tipi" dropdown'ını o tipe ayarlayıp aynı
-  // filtrelemeyi tetikler; zaten seçiliyse tekrar tıklamak filtreyi kaldırır.
+  // Ramak Kala / Tehlike Bildirimi / İş Kazaları listelerine tek tıkla
+  // ulaşmak için (kullanıcı isteği) — "Olay Tipi" dropdown'ını o değere
+  // ayarlayıp aynı filtrelemeyi tetikler; zaten seçiliyse tekrar tıklamak
+  // filtreyi kaldırır.
+  document.getElementById('isKazasiFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('is-kazasi'));
   document.getElementById('ramakKalaFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Ramak Kala'));
   document.getElementById('tehlikeBildirimFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Tehlike Bildirimi'));
 
@@ -152,7 +154,7 @@ function olayKazaSayfasiniBaslat() {
   });
   document.getElementById('listeYazdirBtn').addEventListener('click', () => {
     const filtreler = {
-      olayTipi: document.getElementById('olayTipiFiltre').value,
+      olayTipi: _okOlayTipiFiltreDegeri(),
       durum: document.getElementById('durumFiltre').value
     };
     raporListesiYazdir('Olay / Kaza Kayıtları', '', OLAY_EXPORT_KOLONLARI, olayKayitlariniGetir(document.getElementById('aramaKutusu').value, filtreler));
@@ -172,7 +174,7 @@ function olayKazaSayfasiniBaslat() {
 
   document.getElementById('jsonDisaAktarBtn').addEventListener('click', () => {
     const filtreler = {
-      olayTipi: document.getElementById('olayTipiFiltre').value,
+      olayTipi: _okOlayTipiFiltreDegeri(),
       durum: document.getElementById('durumFiltre').value
     };
     const veri = olayKayitlariniJsonaAktar(document.getElementById('aramaKutusu').value, filtreler);
@@ -273,15 +275,25 @@ function _okHizliTipFiltreUygula(tip) {
 
 function _okHizliTipButonDurumunuGuncelle() {
   const secilen = document.getElementById('olayTipiFiltre').value;
+  document.getElementById('isKazasiFiltreBtn').classList.toggle('filtre-aktif', secilen === 'is-kazasi');
   document.getElementById('ramakKalaFiltreBtn').classList.toggle('filtre-aktif', secilen === 'Ramak Kala');
   document.getElementById('tehlikeBildirimFiltreBtn').classList.toggle('filtre-aktif', secilen === 'Tehlike Bildirimi');
+}
+
+// "İş Kazaları" dropdown seçeneği tek bir olayTipi değil, yaralanma içeren
+// tüm tipleri (İlk Yardım, Tıbbi Tedavi, LTI, DART, Ölüm — bkz. model.js
+// OLAY_KISI_ZORUNLU_TIPLERI) birden kapsar; bu yüzden filtreler.olayTipi'ye
+// geçmeden önce dizi olarak açılır (service.js buna göre güncellendi).
+function _okOlayTipiFiltreDegeri() {
+  const secilen = document.getElementById('olayTipiFiltre').value;
+  return secilen === 'is-kazasi' ? OLAY_KISI_ZORUNLU_TIPLERI : secilen;
 }
 
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
   const filtreler = {
-    olayTipi: document.getElementById('olayTipiFiltre').value,
+    olayTipi: _okOlayTipiFiltreDegeri(),
     durum: document.getElementById('durumFiltre').value
   };
   const kayitlar = olayKayitlariniGetir(aramaMetni, filtreler);
