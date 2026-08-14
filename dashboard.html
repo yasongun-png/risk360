@@ -137,12 +137,15 @@
 
         const liste = document.getElementById('bildirimListesi');
         const bos = document.getElementById('bildirimBos');
-        const siraliBildirimler = bildirimler.slice().reverse().slice(0, 50);
+        // Okunmuş bildirimler artık listede de gösterilmez (kullanıcı isteği:
+        // "okunduğunda artık sayıdan düşsün ve görünmesin") — sadece okunmamış
+        // olanlar (en yeni üstte) listelenir.
+        const siraliBildirimler = okunmamis.slice().reverse().slice(0, 50);
         bos.style.display = siraliBildirimler.length ? 'none' : 'block';
         liste.innerHTML = siraliBildirimler.map(b => {
           const etiketler = Array.isArray(b.kayitEtiketleri) ? b.kayitEtiketleri.filter(Boolean) : [];
           return `
-          <div style="border-left:3px solid ${b.okunduMu ? 'var(--kenarlik,#e5e7eb)' : 'var(--celik-mavi,#1d4ed8)'}; padding:6px 10px; font-size:12px;">
+          <div style="border-left:3px solid var(--celik-mavi,#1d4ed8); padding:6px 10px; font-size:12px;">
             <div><strong>${_dbKacir(b.adSoyad || b.kullaniciAdi)}</strong> yeni kayıt ekledi${etiketler.length ? ': <strong>' + _dbKacir(etiketler.join(', ')) + '</strong>' : ''}</div>
             <div style="color:var(--metin-soluk,#6b7280);">${_dbKacir(_bildirimEtiketiCoz(b.anahtar))}</div>
             <div style="color:var(--metin-soluk,#6b7280);">${new Date(b.tarih).toLocaleString('tr-TR')}</div>
