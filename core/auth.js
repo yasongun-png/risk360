@@ -89,24 +89,42 @@ function girisGerekli() {
 // ve her yeni kayıt eklemesinde admin'e bildirim düşer (bkz. core/data.js yaz()
 // içindeki _yaziEkBildirimKontrolEt). Kullanıcı isteği: "yeni birşey
 // eklediğinde admine bilgi gitsin", "veri silme kapalı olsun".
+//
+// İK rolü de ARTIK tüm modüllere girip verileri GÖREBİLİR, ama sadece
+// IK_IZINLI_MODULLER'de (Personel/Eğitim) yeni kayıt EKLEYEBİLİR (diğer
+// modüllerde ekleme core/data.js -> _yaziEklemeEngelle tarafından reddedilir)
+// ve HİÇBİR modülde silemez (kullaniciSilebilirMi). Kullanıcı isteği: "ik
+// kullanıcıları da sadece eğitim ve personel modüllerine giriş yapabilsin
+// ekleme yapsın ama silemesin, diğer modülleri sadece görsün ekleme
+// yapamasın".
 const IK_IZINLI_MODULLER = ['personel', 'egitim'];
 
 function kullaniciAdminMi(kullanici) {
   return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
 }
 
-// Admin ve düzenleyici TÜM modüllere girebilir; İK sadece IK_IZINLI_MODULLER'e.
-function kullaniciModuleErisebilirMi(kullanici, modulAnahtari) {
-  if (!kullanici) return false;
-  if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
-  return IK_IZINLI_MODULLER.includes(modulAnahtari);
+// Admin, düzenleyici VE İK artık TÜM modüllere girip görüntüleyebilir —
+// modül bazlı gerçek kısıtlama artık "girebilir mi" değil, "ekleyebilir mi"
+// (bkz. kullaniciEklemeYapabilirMi) ve "silebilir mi" (kullaniciSilebilirMi)
+// sorularında uygulanıyor.
+function kullaniciModuleErisebilirMi(kullanici) {
+  return !!kullanici;
 }
 
-// Admin ve İK silebilir; rol==='duzenleyici' HİÇBİR kaydı silemez (kullanıcı
-// isteği: "yeni birşey eklediğinde admine bilgi gitsin", "veri silme kapalı
-// olsun" — mcakir ve ksahbaz için).
+// Admin ve düzenleyici her modülde ekleyebilir; İK SADECE IK_IZINLI_MODULLER'de
+// (Personel/Eğitim) ekleyebilir, diğer modüllerde sadece görüntüler.
+function kullaniciEklemeYapabilirMi(kullanici, modulAnahtari) {
+  if (!kullanici) return false;
+  if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
+  if (kullanici.rol === 'ik') return IK_IZINLI_MODULLER.includes(modulAnahtari);
+  return false;
+}
+
+// Sadece tam yetkili admin silebilir; rol==='duzenleyici' ve rol==='ik'
+// HİÇBİR kaydı silemez (kullanıcı isteği: mcakir/ksahbaz için "veri silme
+// kapalı olsun", İK için "ekleme yapsın ama silemesin").
 function kullaniciSilebilirMi(kullanici) {
-  return !!kullanici && kullanici.rol !== 'duzenleyici';
+  return !!kullanici && kullanici.rol !== 'duzenleyici' && kullanici.rol !== 'ik';
 }
 
 // Modüllerin xSil() fonksiyonlarının başında çağrılır: yetkisizse kullanıcıya
@@ -118,17 +136,11 @@ function _silmeYetkisiKontrolEt() {
 }
 
 // Modül sayfalarının (modules/<ad>/index.html) girisGerekli() yerine
-// çağırması gereken hâl: oturum kontrolünün yanına, İK/düzenleyici rolündeki
-// kullanıcıların sadece kendilerine izinli modüllere girebilmesini de ekler.
+// çağırması gereken hâl. Artık TÜM roller tüm modüllere girip görüntüleyebilir
+// (bkz. kullaniciModuleErisebilirMi) — asıl kısıtlama modül içindeki ekleme/
+// silme işlemlerinde uygulanır (kullaniciEklemeYapabilirMi, kullaniciSilebilirMi).
 function girisGerekliModul(modulAnahtari) {
-  const kullanici = girisGerekli();
-  if (!kullanici) return null;
-  if (!kullaniciModuleErisebilirMi(kullanici, modulAnahtari)) {
-    alert('Bu modüle erişim yetkiniz yok.');
-    window.location.href = _authKokYolu + 'dashboard.html';
-    return null;
-  }
-  return kullanici;
+  return girisGerekli();
 }
 
 // Sadece tam yetkili (admin) kullanıcıların girebileceği sayfalar için

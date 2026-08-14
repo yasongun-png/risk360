@@ -177,16 +177,20 @@
 
         const grid = document.getElementById('modulGrid');
         MODULLER.forEach(modul => {
-          // İK/düzenleyici rolleri tüm modülleri GÖRÜR ama sadece kendisine
-          // izinli olanlara girebilir — diğerleri soluk (pasif) ve
-          // tıklanamaz gösterilir (kullanıcı isteği: "diğer uygulamalarda
-          // görünsün ama soluk şekilde girmesinler").
-          const erisilebilir = modul.aktif && kullaniciModuleErisebilirMi(kullanici, modul.anahtar);
+          // Artık TÜM roller (admin/düzenleyici/İK) her modüle girip
+          // görüntüleyebilir — asıl kısıtlama modül İÇİNDE uygulanır: İK
+          // sadece Personel/Eğitim'de yeni kayıt ekleyebilir, diğerlerinde
+          // sadece görüntüler (kullaniciEklemeYapabilirMi); hiçbir kısıtlı
+          // rol hiçbir yerde silemez (kullaniciSilebilirMi). Kullanıcı
+          // isteği: "diğer modülleri sadece görsün ekleme yapamasın".
+          const erisilebilir = modul.aktif && kullaniciModuleErisebilirMi(kullanici);
+          const sadeceGoruntuleme = erisilebilir && !kullaniciEklemeYapabilirMi(kullanici, modul.anahtar);
           const kart = document.createElement(erisilebilir ? 'a' : 'div');
           kart.className = 'modul-kart ' + (erisilebilir ? 'aktif' : 'pasif');
           if (erisilebilir) kart.href = modul.baglanti;
           const etiket = !modul.aktif ? '<span class="yakinda-etiket">YAKINDA</span>'
-            : (!erisilebilir ? '<span class="yakinda-etiket">YETKİNİZ YOK</span>' : '');
+            : (!erisilebilir ? '<span class="yakinda-etiket">YETKİNİZ YOK</span>'
+            : (sadeceGoruntuleme ? '<span class="yakinda-etiket">SADECE GÖRÜNTÜLEME</span>' : ''));
           kart.innerHTML = `
             <div class="ikon">${modul.ikon}</div>
             <div class="baslik">${modul.baslik}</div>

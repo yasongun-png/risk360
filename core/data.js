@@ -48,7 +48,17 @@ const _bulutFirmaCallbackleri = [];
 
 function oku(anahtar, varsayilan) {
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar) && !_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
-    return Object.prototype.hasOwnProperty.call(_bulutOnbellek, anahtar) ? _bulutOnbellek[anahtar] : varsayilan;
+    if (!Object.prototype.hasOwnProperty.call(_bulutOnbellek, anahtar)) return varsayilan;
+    const deger = _bulutOnbellek[anahtar];
+    // _bulutOnbellek[anahtar]'ı DOĞRUDAN döndürmek yerine (dizi ise) sığ bir
+    // kopyasını veririz: repository katmanındaki standart desen "const liste =
+    // xTumunuGetir(); liste.push(yeni); xKaydet(liste)" şeklindedir — canlı
+    // referans döndürülseydi liste.push() önbelleği DAHA yaz() çağrılmadan
+    // mutasyona uğratır, bu da "önceki/sonraki" karşılaştırması yapan kodların
+    // (bkz. _yaziEkBildirimKontrolEt) iki tarafı da aynı (zaten değişmiş)
+    // diziyle karşılaştırmasına, dolayısıyla eklemeleri asla fark edememesine
+    // yol açar. Kopyalama bunu kalıcı olarak önler.
+    return Array.isArray(deger) ? deger.slice() : deger;
   }
   const ham = localStorage.getItem(anahtar);
   if (ham === null) return varsayilan;
@@ -119,7 +129,42 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
   }
 }
 
+// 'isg_<slug>_<modulAdi>' biçimindeki bir anahtardan modül adını çıkarır
+// (bkz. core/tenant.js tenantAnahtarFirma). Firma eşleşmezse (ör. henüz
+// senkron olmamış veya firma-bağımsız bir anahtarsa) anahtarın kendisini
+// (isg_ öneki atılmış hâlini) döndürür.
+function _anahtardanModulAdiCikar(anahtar) {
+  const govde = String(anahtar || '').replace(/^isg_/, '');
+  const firmalar = oku('isg_firmalar', []);
+  for (const f of firmalar) {
+    const onEk = f.slug + '_';
+    if (govde === f.slug) return '';
+    if (govde.startsWith(onEk)) return govde.slice(onEk.length);
+  }
+  return govde;
+}
+
+// rol==='ik' kullanıcılar artık TÜM modülleri görüntüleyebilir ama sadece
+// IK_IZINLI_MODULLER'de (Personel/Eğitim) yeni kayıt ekleyebilir — diğer
+// modüllerde sadece görüntüleme yapabilirler (bkz. core/auth.js
+// kullaniciEklemeYapabilirMi). Bu, tek bir yerden (yaz()) TÜM modülleri
+// kapsayacak şekilde uygulanır. Kullanıcı isteği: "diğer modülleri sadece
+// görsün ekleme yapamasın".
+function _yaziEklemeEngelleMi(anahtar, yeniDeger) {
+  if (!Array.isArray(yeniDeger)) return false;
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici || kullanici.rol !== 'ik') return false;
+  const eskiDeger = oku(anahtar, []);
+  if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return false;
+  const modulAdi = _anahtardanModulAdiCikar(anahtar);
+  return !IK_IZINLI_MODULLER.includes(modulAdi);
+}
+
 function yaz(anahtar, deger) {
+  if (_yaziEklemeEngelleMi(anahtar, deger)) {
+    alert('Bu modülde yeni kayıt ekleme yetkiniz yok. Sadece Personel ve Eğitim modüllerine kayıt ekleyebilirsiniz.');
+    return;
+  }
   _yaziEkBildirimKontrolEt(anahtar, deger);
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar)) {
     if (_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
