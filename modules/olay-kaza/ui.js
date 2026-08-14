@@ -289,6 +289,14 @@ function _okOlayTipiFiltreDegeri() {
   return secilen === 'is-kazasi' ? OLAY_KISI_ZORUNLU_TIPLERI : secilen;
 }
 
+// Ramak Kala / Tehlike Bildirimi kayıtları artık barkod ile giriş
+// yapılmadan (bkz. ramak-kala-bildir.html) da oluşturulabildiğinden, bölüm/
+// isim gibi serbest metin alanları artık anonim/güvenilmeyen girdi
+// içerebilir — tabloya yazdırılmadan önce kaçırılır (XSS'e karşı).
+function _okKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
@@ -308,15 +316,20 @@ function kayitlariCiz(aramaMetni) {
 
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
+    const fotograflar = Array.isArray(k.olayYeriFotograflari) ? k.olayYeriFotograflari : [];
+    const fotoHucresi = fotograflar.length
+      ? `<img data-foto-ref="${_okKacir(fotograflar[0].url)}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);">${fotograflar.length > 1 ? `<span style="font-size:10px; color:var(--metin-soluk);"> +${fotograflar.length - 1}</span>` : ''}`
+      : '-';
     satir.innerHTML = `
-      <td>${k.kayitNo}</td>
-      <td>${k.olayTipi}</td>
+      <td>${_okKacir(k.kayitNo)}</td>
+      <td>${_okKacir(k.olayTipi)}</td>
       <td>${k.kazaTarihi}${k.kazaSaati ? ' ' + k.kazaSaati : ''}</td>
-      <td>${k.bolum}</td>
-      <td>${k.adSoyad}${k.personelFirmaId ? ' <span style="font-size:11px; color:var(--metin-soluk);">(' + (_digerFirmaAdiGetir(k.personelFirmaId)) + ')</span>' : ''}</td>
-      <td>${k.yaralanmaTuru || '-'}</td>
+      <td>${_okKacir(k.bolum)}</td>
+      <td>${_okKacir(k.adSoyad)}${k.personelFirmaId ? ' <span style="font-size:11px; color:var(--metin-soluk);">(' + _okKacir(_digerFirmaAdiGetir(k.personelFirmaId)) + ')</span>' : ''}</td>
+      <td>${_okKacir(k.yaralanmaTuru) || '-'}</td>
       <td>${k.fkRP !== null ? k.fkRP : '-'}</td>
-      <td><span class="genel-rozet rozet-${okRozetSinifAdi(k.durum)}">${k.durum}</span></td>
+      <td>${fotoHucresi}</td>
+      <td><span class="genel-rozet rozet-${okRozetSinifAdi(k.durum)}">${_okKacir(k.durum)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-rapor="${k.id}">Rapor PDF</button>
@@ -326,6 +339,7 @@ function kayitlariCiz(aramaMetni) {
     `;
     govde.appendChild(satir);
   });
+  fotoReferanslariCoz(govde);
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(olayKaydiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-rapor]').forEach(btn => btn.addEventListener('click', async () => {
