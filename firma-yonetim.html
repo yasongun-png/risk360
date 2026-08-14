@@ -90,6 +90,29 @@
     </div>
   </div>
 
+  <div class="modal-katman" id="barkodModalKatman">
+    <div class="modal-kutu">
+      <h3 id="barkodModalBaslik">Ramak Kala / Tehlike Bildirimi Barkodu</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Bu QR kodu yazdırıp sahaya asın. Çalışanlar telefonlarıyla taratarak, giriş
+        yapmadan, isimsiz de olabilecek şekilde ramak kala / tehlike bildirimi
+        gönderebilir. Bildirim otomatik olarak Olay/Kaza kayıtlarına düşer ve
+        size 🔔 bildirim gelir.
+      </p>
+      <div style="text-align:center; margin:14px 0;">
+        <img id="barkodQrGorsel" style="width:220px; height:220px; border:1px solid var(--kenarlik);" alt="QR Kod">
+      </div>
+      <label>Bağlantı</label>
+      <input type="text" id="barkodLinkKutusu" readonly onclick="this.select()">
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="barkodModalKapatBtn">Kapat</button>
+        <button type="button" class="birincil" id="barkodYazdirBtn">🖨️ Poster Yazdır</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
   <div class="modal-katman" id="isverenlerModalKatman">
     <div class="modal-kutu">
       <h3 id="isverenlerModalBaslik">İşverenler</h3>
@@ -155,6 +178,36 @@
       document.getElementById('isverenlerModalIptalBtn').addEventListener('click', () => {
         document.getElementById('isverenlerModalKatman').classList.remove('acik');
       });
+
+      document.getElementById('barkodModalKapatBtn').addEventListener('click', () => {
+        document.getElementById('barkodModalKatman').classList.remove('acik');
+      });
+      document.getElementById('barkodYazdirBtn').addEventListener('click', () => {
+        const firma = _barkodAktifFirma;
+        if (!firma) return;
+        const url = _barkodUrlUret(firma.slug);
+        const mount = document.getElementById('yazdirmaAlani');
+        mount.innerHTML = `
+          <div style="text-align:center;">
+            <div class="doc-title">RAMAK KALA / TEHLİKE BİLDİRİMİ</div>
+            <div class="doc-meta"><b>${_fyKacir(firma.ad)}</b></div>
+            <p style="font-size:13px; margin:14px 0;">Bir tehlike mi gördünüz? Ramak kala mı yaşadınız?<br>Bu kodu telefonunuzla okutup hemen bildirin.</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}" style="width:300px; height:300px;" alt="QR Kod">
+            <p style="font-size:11px; color:#555; margin-top:14px;">İsim vermeden de gönderebilirsiniz.</p>
+          </div>
+        `;
+        mount.style.display = 'block';
+        // Poster'daki QR görseli harici bir servisten (api.qrserver.com)
+        // yükleniyor — sabit bir gecikme yerine görselin GERÇEKTEN
+        // yüklenmesi beklenir, yoksa yavaş bağlantıda boş kutuyla yazdırılır.
+        const qrImg = mount.querySelector('img');
+        const yazdirVeTemizle = () => {
+          window.print();
+          setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
+        };
+        if (qrImg.complete) yazdirVeTemizle();
+        else { qrImg.addEventListener('load', yazdirVeTemizle); qrImg.addEventListener('error', yazdirVeTemizle); }
+      });
       document.getElementById('isverenlerModalKaydetBtn').addEventListener('click', () => {
         const satirlar = document.getElementById('isverenlerTextarea').value.split('\n');
         firmaIsverenleriAyarla(_duzenlenenIsverenlerFirmaId, satirlar);
@@ -164,6 +217,15 @@
 
     let _duzenlenenBolumlerFirmaId = null;
     let _duzenlenenIsverenlerFirmaId = null;
+    let _barkodAktifFirma = null;
+
+    // ramak-kala-bildir.html bu sayfayla aynı dizinde (repo kökünde) —
+    // bu sayfanın konumundan (GitHub Pages alt yolu/özel domain fark etmeksizin)
+    // türetilir, sabit bir domain YAZILMAZ.
+    function _barkodUrlUret(slug) {
+      const taban = window.location.href.replace(/firma-yonetim\.html.*$/, '');
+      return taban + 'ramak-kala-bildir.html?firma=' + encodeURIComponent(slug);
+    }
 
     function renderListe() {
       const liste = document.getElementById('firmaListesi');
@@ -192,6 +254,7 @@
             <input type="file" accept="image/*" data-logo-dosya="${firma.id}" style="display:none;">
             <button class="mini-buton" data-bolumler="${firma.id}">Bölümler</button>
             <button class="mini-buton" data-isverenler="${firma.id}">İşverenler</button>
+            <button class="mini-buton" data-barkod="${firma.id}">📷 Ramak Kala Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
             <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>
           </div>
@@ -239,6 +302,18 @@
           document.getElementById('bolumlerModalBaslik').textContent = `${firma.ad} — Bölümler`;
           document.getElementById('bolumlerTextarea').value = (Array.isArray(firma.bolumler) ? firma.bolumler : []).join('\n');
           document.getElementById('bolumlerModalKatman').classList.add('acik');
+        });
+      });
+
+      liste.querySelectorAll('[data-barkod]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const firma = getFirmaById(btn.getAttribute('data-barkod'));
+          _barkodAktifFirma = firma;
+          document.getElementById('barkodModalBaslik').textContent = firma.ad + ' — Ramak Kala / Tehlike Bildirimi Barkodu';
+          const url = _barkodUrlUret(firma.slug);
+          document.getElementById('barkodLinkKutusu').value = url;
+          document.getElementById('barkodQrGorsel').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+          document.getElementById('barkodModalKatman').classList.add('acik');
         });
       });
 
