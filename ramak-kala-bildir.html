@@ -144,23 +144,24 @@
     // otomatik "yeni kayıt" bildirimi ASLA tetiklenmez (sadece oturum açmış
     // 'duzenleyici' rolü için çalışır, bkz. _yaziEkBildirimKontrolEt) —
     // bu yüzden admin'in 🔔 ziline aynı 'isg_bildirimler' anahtarına elle
-    // bir satır düşülerek manuel bildirilir.
-    function _rkBildirimGonder(kayit) {
-      try {
-        const bildirimler = oku('isg_bildirimler', []);
-        bildirimler.push({
-          id: rastgeleId(),
-          kullaniciAdi: 'Barkod',
-          adSoyad: kayit.adSoyad ? kayit.adSoyad : 'İsimsiz Bildirim (Barkod)',
-          anahtar: _rkOlayAnahtari(),
-          kayitEtiketleri: [kayit.olayTipi + ': ' + kayit.aciklama.slice(0, 60)],
-          tarih: new Date().toISOString(),
-          okunduMu: false
-        });
-        yaz('isg_bildirimler', bildirimler.slice(-300));
-      } catch (e) {
-        console.warn('Barkod bildirimi oluşturulamadı:', e);
-      }
+    // bir satır düşülerek manuel bildirilir. kucukVeriYazVeSonucuGetir ile
+    // BEKLENİR — kullanıcı "Bildiriminiz Alındı" ekranını görüp sekmeyi
+    // hemen kapatabileceğinden, bu yazımın tamamlandığından emin olunmadan
+    // asıl kayıt "başarılı" sayılmaz (yaşanmış: ana kayıt kaydoluyordu ama
+    // admin'e hiç bildirim gitmiyordu).
+    async function _rkBildirimGonder(kayit) {
+      const bildirimler = oku('isg_bildirimler', []);
+      bildirimler.push({
+        id: rastgeleId(),
+        kullaniciAdi: 'Barkod',
+        adSoyad: kayit.adSoyad ? kayit.adSoyad : 'İsimsiz Bildirim (Barkod)',
+        anahtar: _rkOlayAnahtari(),
+        kayitEtiketleri: [kayit.olayTipi + ': ' + kayit.aciklama.slice(0, 60)],
+        tarih: new Date().toISOString(),
+        okunduMu: false
+      });
+      const sonuc = await kucukVeriYazVeSonucuGetir('isg_bildirimler', bildirimler.slice(-300));
+      if (!sonuc.basarili) console.warn('Barkod bildirimi oluşturulamadı:', sonuc.hata);
     }
 
     function _rkBolumHizliCiz() {
@@ -256,7 +257,7 @@
           mevcutListe.push(yeniKayit);
           const sonuc = await yazVeSonucuGetir(anahtar, mevcutListe);
           if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
-          _rkBildirimGonder(yeniKayit);
+          await _rkBildirimGonder(yeniKayit);
 
           _rkFotoUrl = '';
           document.getElementById('rkFormAlani').classList.add('gizli');
