@@ -125,6 +125,7 @@ function olayKazaSayfasiniBaslat() {
   document.getElementById('ramakKalaFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Ramak Kala'));
   document.getElementById('tehlikeBildirimFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Tehlike Bildirimi'));
 
+  document.getElementById('temelOlayTipi').addEventListener('change', _okKisiBolumleriniGuncelle);
   document.getElementById('kisiPersonelId').addEventListener('change', kisiPersonelSecildi);
   ['fkO', 'fkF', 'fkS'].forEach(id => document.getElementById(id).addEventListener('change', fineKinneyHesabiCiz));
   document.getElementById('aksiyonEkleBtn').addEventListener('click', aksiyonSatiriEkle);
@@ -524,6 +525,22 @@ function tanikListesiniCiz() {
   });
 }
 
+// Formda sorulan sorular olay tipine göre farklılaşsın diye (kullanıcı
+// isteği) — Ramak Kala/Tehlike Bildirimi/Maddi Hasar/Çevresel Olay ve acil
+// durum türü olaylarda (Yangın, Patlama vb.) yaralı olması beklenmez, bu
+// yüzden "Kişi Bilgileri (Mağdur)" ve "Yaralanma Bilgileri" bölümleri hiç
+// gösterilmez. Aynı ayrım zaten validation.js'te OLAY_KISI_ZORUNLU_TIPLERI
+// ile "zorunlu mu" için kullanılıyordu — burada "gösterilsin mi" için de
+// aynı liste kullanılır. Tip henüz seçilmemişse (yeni kayıt, boş seçim)
+// bölümler görünür kalır, admin'i şaşırtacak şekilde önceden gizlenmez.
+function _okKisiBolumleriniGuncelle() {
+  const tip = document.getElementById('temelOlayTipi').value;
+  const goster = !tip || OLAY_KISI_ZORUNLU_TIPLERI.includes(tip);
+  ['kisiBilgileriBaslik', 'kisiBilgileriIcerik', 'yaralanmaBilgileriBaslik', 'yaralanmaBilgileriIcerik'].forEach(id => {
+    document.getElementById(id).style.display = goster ? '' : 'none';
+  });
+}
+
 function kayitModalAc(kayitHam) {
   // Model bu oturumda genişletildi (5N1K, kronoloji, tanık ifadeleri
   // vb. yeni alanlar eklendi) — bu alanlar eklenmeden ÖNCE oluşturulmuş eski
@@ -541,6 +558,7 @@ function kayitModalAc(kayitHam) {
   // Temel bilgiler
   document.getElementById('temelKayitNo').value = kayit ? (kayit.kayitNo || '') : '';
   _secimDoldur('temelOlayTipi', OLAY_TIPLERI, kayit ? kayit.olayTipi : '');
+  _okKisiBolumleriniGuncelle();
   document.getElementById('temelKazaTarihi').value = kayit ? kayit.kazaTarihi : '';
   document.getElementById('temelKazaSaati').value = kayit ? kayit.kazaSaati : '';
   document.getElementById('temelBolum').value = kayit ? kayit.bolum : '';
