@@ -44,7 +44,20 @@
       const firmalar = getFirmalar();
       const icerikAlani = document.getElementById('icerikAlani');
 
-      if (firmalar.length === 0 && kullaniciAdminMi(kullanici)) {
+      // Bulut bağlantısı hiç kurulamadıysa (ör. ağ sorunu), "hiç firma yok"
+      // demek YANLIŞ ve kafa karıştırıcı olurdu — firmalar büyük ihtimalle
+      // kayıtlı, sadece şu an gösterilemiyor. Bunu ayrı ve net bir mesajla
+      // belirtip yeniden denemeyi kolaylaştırıyoruz.
+      if (firmalar.length === 0 && !bulutDurumu().aktif) {
+        document.getElementById('altBaslik').textContent = 'Bağlantı kurulamadı';
+        icerikAlani.innerHTML = `
+          <p style="font-size:13px; color:var(--hata); margin-bottom:18px;">
+            Sunucuya bağlanılamadı (internet bağlantınızı kontrol edin). Firmalarınız muhtemelen kayıtlı, şu an sadece gösterilemiyor.
+          </p>
+          <button type="button" class="birincil" id="yenidenDeneBtn">Yeniden Dene</button>
+        `;
+        document.getElementById('yenidenDeneBtn').addEventListener('click', () => window.location.reload());
+      } else if (firmalar.length === 0 && kullaniciAdminMi(kullanici)) {
         document.getElementById('altBaslik').textContent = 'Henüz kayıtlı firmanız yok';
         icerikAlani.innerHTML = `
           <p style="font-size:13px; color:var(--metin-soluk); margin-bottom:18px;">
