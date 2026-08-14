@@ -297,6 +297,15 @@ function _okKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// Olayın anlatımı (özellikle barkod ile gelen Ramak Kala/Tehlike
+// Bildirimi kayıtlarında bölüm/kişi dışında tek gerçek içerik budur)
+// listede hiç görünmüyordu, sadece Düzenle açılınca okunabiliyordu —
+// kullanıcı isteği: "uygulama olay/kaza modül ekranında görmem lazım".
+// Uygunsuzluk modülündeki .us-tanim-hucre ile aynı kırpma/tooltip deseni.
+function _okAciklamaHucresiUret(k) {
+  return `<div class="us-tanim-hucre" title="${_okKacir(k.aciklama)}">${_okKacir(k.aciklama) || '-'}</div>`;
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
@@ -326,6 +335,7 @@ function kayitlariCiz(aramaMetni) {
       <td>${k.kazaTarihi}${k.kazaSaati ? ' ' + k.kazaSaati : ''}</td>
       <td>${_okKacir(k.bolum)}</td>
       <td>${_okKacir(k.adSoyad)}${k.personelFirmaId ? ' <span style="font-size:11px; color:var(--metin-soluk);">(' + _okKacir(_digerFirmaAdiGetir(k.personelFirmaId)) + ')</span>' : ''}</td>
+      <td>${_okAciklamaHucresiUret(k)}</td>
       <td>${_okKacir(k.yaralanmaTuru) || '-'}</td>
       <td>${k.fkRP !== null ? k.fkRP : '-'}</td>
       <td>${fotoHucresi}</td>
