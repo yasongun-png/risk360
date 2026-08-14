@@ -267,7 +267,16 @@ function _bulutBaslat() {
     // İlk senkronizasyonda buluttan hiç gelmeyen (yani bu cihazda ilk kurulumda
     // yerelde üretilen) küçük anahtarları buluta gönder ki diğer cihazlar da
     // aynı kullanıcı/firma listesini görebilsin.
-    if (!_bulutKucukHazir) {
+    //
+    // KRİTİK: onSnapshot, sunucuya hiç sorulmadan ÖNCE yerel/boş bir önbellek
+    // durumuyla bir kez, sonra sunucudan doğrulanan gerçek veriyle bir kez
+    // daha tetiklenebilir (snapshot.metadata.fromCache). Bunu görmezden gelip
+    // "bulutta bu anahtar yok" sanıp yerel (o an boş olabilecek) veriyi
+    // buluta YAZMAK, gerçek bulut verisinin üzerine yazıp KALICI VERİ KAYBINA
+    // yol açar — gerçekten yaşandı (firma/kullanıcı listesi böyle silindi).
+    // Bu yüzden "eksik anahtarı tamamla" adımı SADECE sunucudan doğrulanmış
+    // (fromCache === false) bir snapshot'ta çalışır.
+    if (!_bulutKucukHazir && !snapshot.metadata.fromCache) {
       _KUCUK_SENKRON_ANAHTARLAR.forEach(anahtar => {
         if (!gelenAnahtarlar.has(anahtar)) {
           const yerelDeger = oku(anahtar, null);
