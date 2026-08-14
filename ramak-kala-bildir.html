@@ -122,8 +122,16 @@
     let _rkSecilenTip = '';
     let _rkFotoUrl = '';
 
+    // KRİTİK: olay-kaza modülünün gerçek deposu bu klasör adıyla değil
+    // (bkz. modules/olay-kaza/repository.js -> _olayAnahtari(), tenantAnahtar
+    // ile 'olay_kaza_kayitlari' üretir) farklı bir anahtarla çalışıyor.
+    // Önceki sürüm buraya "isg_<slug>_olay-kaza" (klasör adı) yazıyordu —
+    // bu, modülün hiç okumadığı, tamamen ayrı/sahipsiz bir belgeydi; barkod
+    // ile gönderilen bildirimler bu yüzden Olay/Kaza modülünde HİÇ
+    // görünmüyordu (🔔 zilinde görünmesi ayrı bir konu — o sadece etiket
+    // metni için anahtar adını kullanıyor, gerçek veriyi değil).
     function _rkOlayAnahtari() {
-      return 'isg_' + _rkFirma.slug + '_olay-kaza';
+      return 'isg_' + _rkFirma.slug + '_olay_kaza_kayitlari';
     }
 
     function _rkFotoOnizlemeCiz() {
