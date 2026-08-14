@@ -106,21 +106,61 @@
       { anahtar: 'harita', ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true }
     ];
 
-    // Bir 'isg_<slug>_<modulAdi>' anahtarından firma adı + modül başlığını
-    // okunur hale getirir (bkz. core/data.js _yaziEkBildirimKontrolEt).
-    function _bildirimEtiketiCoz(anahtar) {
+    // Firestore'da modül verisi 'isg_<slug>_<tenantAnahtar-degeri>' biçiminde
+    // saklanır ve tenantAnahtar()'a verilen değer MODULLER'deki 'anahtar'
+    // (klasör adı) ile HER ZAMAN aynı DEĞİLDİR — çoğu modülün kendine özel,
+    // hatta birden fazla alt anahtarı vardır (bkz. her modülün repository.js
+    // dosyasındaki tenantAnahtar(...) çağrıları). Bildirime tıklandığında
+    // doğru modüle yönlendirebilmek için bu eşleme tablosu gerekli.
+    const _BILDIRIM_ANAHTAR_MODUL_ESLESME = {
+      personel: 'personel',
+      egitim_kayitlari: 'egitim',
+      yillik_egitim_plani: 'yillik-plan', yillik_calisma_plani: 'yillik-plan', yillik_degerlendirme_raporu: 'yillik-plan',
+      risk_kayitlari: 'risk', risk_bolumleri: 'risk',
+      kurul_toplantilari: 'kurul', kurul_kararlari: 'kurul', kurul_olaylari: 'kurul', kurul_imzalari: 'kurul', kurul_ayici_faaliyetler: 'kurul', kurul_denetim: 'kurul',
+      acil_durum_ekipleri: 'acil-durum', acil_durum_ekipmanlari: 'acil-durum', acil_durum_yangin_tupleri: 'acil-durum', acil_durum_tatbikatlari: 'acil-durum', acil_durum_senaryolari: 'acil-durum', acil_durum_plani: 'acil-durum',
+      kimyasal_envanteri: 'kimyasal',
+      periyodik_ekipmanlar: 'periyodik-kontrol', periyodik_kontroller: 'periyodik-kontrol',
+      kkd_envanter: 'kkd', kkd_zimmetler: 'kkd', kkd_ihlaller: 'kkd',
+      olay_kaza_kayitlari: 'olay-kaza', olay_kaza_ayarlari: 'olay-kaza',
+      uygunsuzluk_kayitlari: 'uygunsuzluk', uygunsuzluk_konulari: 'uygunsuzluk',
+      yuklenici_firmalari: 'yuklenici', yuklenici_kisileri: 'yuklenici', yuklenici_araclari: 'yuklenici', yuklenici_ziyaretciler: 'yuklenici',
+      stajyer_kayitlari: 'stajyer',
+      sinav_sorulari: 'sinav', sinav_sinavlar: 'sinav', sinav_sonuclari: 'sinav',
+      saha_denetimleri: 'saha-denetim',
+      malzeme_katalogu: 'malzeme-talep', malzeme_talepleri: 'malzeme-talep',
+      is_izinleri: 'is-izni',
+      tespit_oneri_kayitlari: 'tespit-oneri',
+      hizmet_sozlesmeleri: 'hizmet-sozlesmesi',
+      harita_tesisler: 'harita', harita_kayitlar: 'harita', harita_etiketler: 'harita', harita_oklar: 'harita'
+    };
+
+    // Bir 'isg_<slug>_<tenantAnahtar>' anahtarını { firma, modul } olarak
+    // çözer (modul, MODULLER içindeki eşleşen giriş — yoksa null).
+    function _bildirimHedefiCoz(anahtar) {
       const govde = String(anahtar || '').replace(/^isg_/, '');
       const firmalar = getFirmalar();
-      let eslesenFirma = null, modulAdi = govde;
+      let eslesenFirma = null, altAnahtar = govde;
       firmalar.forEach(f => {
         const onEk = f.slug + '_';
         if (govde === f.slug || govde.startsWith(onEk)) {
           eslesenFirma = f;
-          modulAdi = govde === f.slug ? '' : govde.slice(onEk.length);
+          altAnahtar = govde === f.slug ? '' : govde.slice(onEk.length);
         }
       });
-      const modulEtiket = (MODULLER.find(m => m.anahtar === modulAdi) || {}).baslik || modulAdi;
-      return (eslesenFirma ? eslesenFirma.ad + ' — ' : '') + modulEtiket;
+      const modulAdi = _BILDIRIM_ANAHTAR_MODUL_ESLESME[altAnahtar] || null;
+      const modul = modulAdi ? MODULLER.find(m => m.anahtar === modulAdi) : null;
+      return { firma: eslesenFirma, modul: modul || null };
+    }
+
+    // Bir 'isg_<slug>_<modulAdi>' anahtarından firma adı + modül başlığını
+    // okunur hale getirir (bkz. core/data.js _yaziEkBildirimKontrolEt).
+    function _bildirimEtiketiCoz(anahtar) {
+      const { firma, modul } = _bildirimHedefiCoz(anahtar);
+      const govde = String(anahtar || '').replace(/^isg_/, '');
+      const altAnahtar = firma ? (govde === firma.slug ? '' : govde.slice(firma.slug.length + 1)) : govde;
+      const modulEtiket = modul ? modul.baslik : altAnahtar;
+      return (firma ? firma.ad + ' — ' : '') + modulEtiket;
     }
 
     function _bildirimZiliniKur() {
@@ -144,14 +184,38 @@
         bos.style.display = siraliBildirimler.length ? 'none' : 'block';
         liste.innerHTML = siraliBildirimler.map(b => {
           const etiketler = Array.isArray(b.kayitEtiketleri) ? b.kayitEtiketleri.filter(Boolean) : [];
+          const hedef = _bildirimHedefiCoz(b.anahtar);
+          const tiklanabilirMi = !!(hedef.firma && hedef.modul);
           return `
-          <div style="border-left:3px solid var(--celik-mavi,#1d4ed8); padding:6px 10px; font-size:12px;">
+          <div data-bildirim-id="${b.id}" style="border-left:3px solid var(--celik-mavi,#1d4ed8); padding:6px 10px; font-size:12px; ${tiklanabilirMi ? 'cursor:pointer;' : ''}" ${tiklanabilirMi ? 'title="İlgili modüle gitmek için tıklayın"' : ''}>
             <div><strong>${_dbKacir(b.adSoyad || b.kullaniciAdi)}</strong> yeni kayıt ekledi${etiketler.length ? ': <strong>' + _dbKacir(etiketler.join(', ')) + '</strong>' : ''}</div>
             <div style="color:var(--metin-soluk,#6b7280);">${_dbKacir(_bildirimEtiketiCoz(b.anahtar))}</div>
             <div style="color:var(--metin-soluk,#6b7280);">${new Date(b.tarih).toLocaleString('tr-TR')}</div>
           </div>
         `;
         }).join('');
+
+        // Bildirime tıklandığında ilgili firma/modüle yönlendirir (kullanıcı
+        // isteği: "tıkladığımda ilgili yere yönlendirmeli"). Önce o TEK
+        // bildirim okundu işaretlenir (bkz. yukarıdaki "okunmuş olanlar
+        // listede görünmez" davranışı), sonra gerekiyorsa aktif firma
+        // değiştirilip modül sayfasına gidilir.
+        liste.querySelectorAll('[data-bildirim-id]').forEach(satir => {
+          satir.addEventListener('click', () => {
+            const id = satir.getAttribute('data-bildirim-id');
+            const guncel = oku('isg_bildirimler', []);
+            const kayit = guncel.find(x => x.id === id);
+            if (!kayit) return;
+            const hedef = _bildirimHedefiCoz(kayit.anahtar);
+            yaz('isg_bildirimler', guncel.map(x => x.id === id ? Object.assign({}, x, { okunduMu: true }) : x));
+            if (hedef.firma && hedef.modul) {
+              if (!aktifFirmaGetir() || aktifFirmaGetir().id !== hedef.firma.id) aktifFirmaAyarla(hedef.firma.id);
+              window.location.href = hedef.modul.baglanti;
+            } else {
+              ciz();
+            }
+          });
+        });
       }
 
       zil.addEventListener('click', () => {
