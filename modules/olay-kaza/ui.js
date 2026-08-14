@@ -112,8 +112,16 @@ function olayKazaSayfasiniBaslat() {
     }
   });
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
-  document.getElementById('olayTipiFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
+  document.getElementById('olayTipiFiltre').addEventListener('change', () => {
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+    _okHizliTipButonDurumunuGuncelle();
+  });
   document.getElementById('durumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
+  // Ramak Kala / Tehlike Bildirimi listelerine tek tıkla ulaşmak için
+  // (kullanıcı isteği) — "Olay Tipi" dropdown'ını o tipe ayarlayıp aynı
+  // filtrelemeyi tetikler; zaten seçiliyse tekrar tıklamak filtreyi kaldırır.
+  document.getElementById('ramakKalaFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Ramak Kala'));
+  document.getElementById('tehlikeBildirimFiltreBtn').addEventListener('click', () => _okHizliTipFiltreUygula('Tehlike Bildirimi'));
 
   document.getElementById('kisiPersonelId').addEventListener('change', kisiPersonelSecildi);
   ['fkO', 'fkF', 'fkS'].forEach(id => document.getElementById(id).addEventListener('change', fineKinneyHesabiCiz));
@@ -255,6 +263,19 @@ function gorunumDegistir(gorunum) {
 }
 
 // ==================== KAYITLAR ====================
+
+function _okHizliTipFiltreUygula(tip) {
+  const secim = document.getElementById('olayTipiFiltre');
+  secim.value = secim.value === tip ? '' : tip;
+  kayitlariCiz(document.getElementById('aramaKutusu').value);
+  _okHizliTipButonDurumunuGuncelle();
+}
+
+function _okHizliTipButonDurumunuGuncelle() {
+  const secilen = document.getElementById('olayTipiFiltre').value;
+  document.getElementById('ramakKalaFiltreBtn').classList.toggle('filtre-aktif', secilen === 'Ramak Kala');
+  document.getElementById('tehlikeBildirimFiltreBtn').classList.toggle('filtre-aktif', secilen === 'Tehlike Bildirimi');
+}
 
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');

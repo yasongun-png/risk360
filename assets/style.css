@@ -109,6 +109,11 @@ button.ikincil:hover { background: #f0f3f7; }
 button.ikincil.sil { color: var(--hata); border-color: #fecaca; }
 button.ikincil.sil:hover { background: #fef2f2; }
 
+/* Aç/kapa hızlı filtre butonları (ör. Olay/Kaza modülündeki Ramak Kala /
+   Tehlike Bildirimi kısayolları) — seçiliyken vurgulanır. */
+button.ikincil.filtre-aktif { border-color: var(--celik-mavi, #1d4ed8); background: #eef2ff; color: var(--celik-mavi, #1d4ed8); }
+button.ikincil.filtre-aktif:hover { background: #e0e7ff; }
+
 .hata-mesaji {
   display: none;
   background: #fef2f2;
