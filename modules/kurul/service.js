@@ -142,6 +142,7 @@ function toplantiGuncelle(id, veriler) {
 }
 
 function toplantiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = toplantiIdIleGetirRepo(id);
   toplantiSilRepo(id);
   _denetimEkle('toplanti', id, 'sil', mevcut, null);
@@ -373,6 +374,7 @@ function kararGuncelle(id, veriler) {
 }
 
 function kararSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = kararIdIleGetirRepo(id);
   kararSilRepo(id);
   _denetimEkle('karar', id, 'sil', mevcut, null);
@@ -547,6 +549,7 @@ async function olayTopluEkle(verilerListesi) {
 }
 
 function kurulOlayiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = olayTumunuGetir().find(o => o.id === id) || null;
   olaySilRepo(id);
   _denetimEkle('olay', id, 'sil', mevcut, null);
@@ -648,6 +651,7 @@ function imzaSatiriGuncelle(id, veriler) {
 }
 
 function imzaSatiriSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = imzaTumunuGetir().find(i => i.id === id) || null;
   imzaSilRepo(id);
   _denetimEkle('imza', id, 'sil', mevcut, null);
@@ -720,6 +724,7 @@ function ayIciFaaliyetEkle(toplantiId, veriler) {
 }
 
 function ayIciFaaliyetSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = ayIciFaaliyetTumunuGetir().find(f => f.id === id) || null;
   ayIciFaaliyetSilRepo(id);
   _denetimEkle('ayIciFaaliyet', id, 'sil', mevcut, null);

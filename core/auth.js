@@ -83,19 +83,47 @@ function girisGerekli() {
 // kendilerine erisimFirmaIdleri ile açıkça atanmış firmaları görebilir ve
 // sadece IK_IZINLI_MODULLER listesindeki modüllere girebilir (bkz.
 // girisGerekliModul, core/tenant.js getFirmalar/getFirmaById).
+// rol==='duzenleyici' olanlar İK ile AYNI erişim mekanizmasını (erisimFirmaIdleri)
+// kullanır ama TÜM modüllere girebilir — sadece SİLME işlemleri engellenir
+// (bkz. kullaniciSilebilirMi, her modülün service.js'indeki xSil fonksiyonları)
+// ve her yeni kayıt eklemesinde admin'e bildirim düşer (bkz. core/data.js yaz()
+// içindeki _yaziEkBildirimKontrolEt). Kullanıcı isteği: "yeni birşey
+// eklediğinde admine bilgi gitsin", "veri silme kapalı olsun".
 const IK_IZINLI_MODULLER = ['personel', 'egitim'];
 
 function kullaniciAdminMi(kullanici) {
   return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
 }
 
+// Admin ve düzenleyici TÜM modüllere girebilir; İK sadece IK_IZINLI_MODULLER'e.
+function kullaniciModuleErisebilirMi(kullanici, modulAnahtari) {
+  if (!kullanici) return false;
+  if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
+  return IK_IZINLI_MODULLER.includes(modulAnahtari);
+}
+
+// Admin ve İK silebilir; rol==='duzenleyici' HİÇBİR kaydı silemez (kullanıcı
+// isteği: "yeni birşey eklediğinde admine bilgi gitsin", "veri silme kapalı
+// olsun" — mcakir ve ksahbaz için).
+function kullaniciSilebilirMi(kullanici) {
+  return !!kullanici && kullanici.rol !== 'duzenleyici';
+}
+
+// Modüllerin xSil() fonksiyonlarının başında çağrılır: yetkisizse kullanıcıya
+// net bir mesaj gösterir ve false döner (çağıran taraf işlemi iptal eder).
+function _silmeYetkisiKontrolEt() {
+  if (kullaniciSilebilirMi(oturumdakiKullanici())) return true;
+  alert('Bu işlem için silme yetkiniz yok. Gerekiyorsa yöneticinize başvurun.');
+  return false;
+}
+
 // Modül sayfalarının (modules/<ad>/index.html) girisGerekli() yerine
-// çağırması gereken hâl: oturum kontrolünün yanına, İK rolündeki
+// çağırması gereken hâl: oturum kontrolünün yanına, İK/düzenleyici rolündeki
 // kullanıcıların sadece kendilerine izinli modüllere girebilmesini de ekler.
 function girisGerekliModul(modulAnahtari) {
   const kullanici = girisGerekli();
   if (!kullanici) return null;
-  if (!kullaniciAdminMi(kullanici) && !IK_IZINLI_MODULLER.includes(modulAnahtari)) {
+  if (!kullaniciModuleErisebilirMi(kullanici, modulAnahtari)) {
     alert('Bu modüle erişim yetkiniz yok.');
     window.location.href = _authKokYolu + 'dashboard.html';
     return null;
@@ -116,11 +144,14 @@ function girisGerekliAdmin() {
   return kullanici;
 }
 
-// ---- İK kullanıcı yönetimi (admin tarafından) ----
+// ---- Kısıtlı kullanıcı yönetimi (admin tarafından) ----
 //
-// Her İK kullanıcısı bir admin tarafından (olusturanId) oluşturulur ve
-// SADECE o admin tarafından görülür/düzenlenir — firmaların sahipId'yle
-// izole edilmesiyle aynı mantık.
+// Her kısıtlı kullanıcı (İK veya düzenleyici) bir admin tarafından
+// (olusturanId) oluşturulur ve SADECE o admin tarafından görülür/düzenlenir —
+// firmaların sahipId'yle izole edilmesiyle aynı mantık. İki rol de aynı
+// erisimFirmaIdleri mekanizmasını kullanır; farkları modül/silme yetkisidir
+// (bkz. kullaniciModuleErisebilirMi, kullaniciSilebilirMi).
+const KISITLI_ROLLER = ['ik', 'duzenleyici'];
 
 function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
   const temiz = (kullaniciAdi || '').trim().toLowerCase();
@@ -132,15 +163,16 @@ function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
 function ikKullanicilariGetir() {
   const admin = oturumdakiKullanici();
   if (!admin) return [];
-  return oku('isg_kullanicilar', []).filter(k => k.rol === 'ik' && k.olusturanId === admin.id);
+  return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
-async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri) {
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
   const temizKullaniciAdi = (kullaniciAdi || '').trim();
   const temizAdSoyad = (adSoyad || '').trim();
+  const temizRol = rol === 'duzenleyici' ? 'duzenleyici' : 'ik';
   if (!temizKullaniciAdi) return { basarili: false, hata: 'Kullanıcı adı boş olamaz.' };
   if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
   if (!sifre || sifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
@@ -157,7 +189,7 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri) {
     kullaniciAdi: temizKullaniciAdi,
     sifre: await _sifreOzetiCikar(sifre),
     adSoyad: temizAdSoyad,
-    rol: 'ik',
+    rol: temizRol,
     olusturanId: admin.id,
     erisimFirmaIdleri: gecerliFirmaIdleri
   };
@@ -174,7 +206,7 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri) {
   if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
 
   const kullanicilar = oku('isg_kullanicilar', []);
-  const kayit = kullanicilar.find(k => k.id === id && k.rol === 'ik' && k.olusturanId === admin.id);
+  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
@@ -190,7 +222,7 @@ async function ikKullaniciSifreDegistir(id, yeniSifre) {
   if (!yeniSifre || yeniSifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
 
   const kullanicilar = oku('isg_kullanicilar', []);
-  const kayit = kullanicilar.find(k => k.id === id && k.rol === 'ik' && k.olusturanId === admin.id);
+  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
 
   kayit.sifre = await _sifreOzetiCikar(yeniSifre);
@@ -203,7 +235,7 @@ function ikKullaniciSil(id) {
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
   const kullanicilar = oku('isg_kullanicilar', []);
-  const kayit = kullanicilar.find(k => k.id === id && k.rol === 'ik' && k.olusturanId === admin.id);
+  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
 
   yaz('isg_kullanicilar', kullanicilar.filter(k => k.id !== id));

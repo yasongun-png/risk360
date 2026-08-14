@@ -31,6 +31,7 @@ function soruGuncelle(id, veriler) {
 }
 
 function soruSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   soruSilRepo(id);
   return { basarili: true };
 }
@@ -92,6 +93,7 @@ function sinavEkle(veriler) {
 }
 
 function sinavSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   sinavSilRepo(id);
   return { basarili: true };
 }
@@ -143,6 +145,7 @@ function sinavSonucuKaydet(sinavId, veriler) {
 }
 
 function sinavSonucSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   sonucSilRepo(id);
   return { basarili: true };
 }

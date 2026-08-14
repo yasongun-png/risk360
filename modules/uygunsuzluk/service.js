@@ -136,6 +136,7 @@ function uygunsuzlukGuncelle(id, veriler) {
 }
 
 function uygunsuzlukSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   uygunsuzlukSilRepo(id);
   return { basarili: true };
 }

@@ -67,6 +67,7 @@ function yukleniciFirmaGuncelle(id, veriler) {
 }
 
 function yukleniciFirmaSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciFirmaSilRepo(id);
   return { basarili: true };
 }
@@ -134,6 +135,7 @@ function yukleniciKisiGuncelle(id, veriler) {
 }
 
 function yukleniciKisiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciKisiSilRepo(id);
   return { basarili: true };
 }
@@ -250,6 +252,7 @@ function yukleniciAracGuncelle(id, veriler) {
 }
 
 function yukleniciAracSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciAracSilRepo(id);
   return { basarili: true };
 }
@@ -271,6 +274,7 @@ function yukleniciZiyaretciEkle(veriler) {
 }
 
 function yukleniciZiyaretciSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciZiyaretciSilRepo(id);
   return { basarili: true };
 }
@@ -464,6 +468,7 @@ function yukleniciKayitlariniGetir(aramaMetni) {
 // kaydet) — N ayrı sil çağrısı yerine, aynı race-durumu riskini taşımaz
 // (bkz. egitimPlaniTopluIceAktar'daki gerekçe).
 function yukleniciKayitlariToplusil(secililer) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const personelIdleri = new Set(secililer.filter(s => s.kind === 'personel').map(s => s.id));
   const aracIdleri = new Set(secililer.filter(s => s.kind === 'arac').map(s => s.id));
   if (personelIdleri.size) _yukleniciKisileriKaydet(yukleniciKisileriTumunuGetir().filter(k => !personelIdleri.has(k.id)));

@@ -82,6 +82,7 @@ function kimyasalGuncelle(id, veriler) {
 }
 
 function kimyasalSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   kimyasalSilRepo(id);
   return { basarili: true };
 }

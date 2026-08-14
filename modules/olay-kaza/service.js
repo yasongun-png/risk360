@@ -219,6 +219,7 @@ function olayKaydiGuncelle(id, veriler) {
 }
 
 function olayKaydiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   olayKaydiSilRepo(id);
   return { basarili: true };
 }

@@ -108,6 +108,7 @@ function malzemeGuncelle(id, veriler) {
 }
 
 function malzemeSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   malzemeSilRepo(id);
   return { basarili: true };
 }
@@ -201,6 +202,7 @@ function malzemeTalepDurumGuncelle(id, yeniDurum) {
 }
 
 function malzemeTalepSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   malzemeTalepSilRepo(id);
   return { basarili: true };
 }

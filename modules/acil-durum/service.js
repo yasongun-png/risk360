@@ -52,6 +52,7 @@ function ekipUyesiGuncelle(id, veriler) {
 }
 
 function ekipUyesiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   ekipUyesiSilRepo(id);
   return { basarili: true };
 }
@@ -132,6 +133,7 @@ function ekipmanGuncelle(id, veriler) {
 }
 
 function ekipmanSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   ekipmanSilRepo(id);
   return { basarili: true };
 }
@@ -196,6 +198,7 @@ function yanginTupuGuncelle(id, veriler) {
 }
 
 function yanginTupuSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yanginTupuSilRepo(id);
   return { basarili: true };
 }
@@ -243,6 +246,7 @@ function tatbikatGuncelle(id, veriler) {
 }
 
 function tatbikatSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   tatbikatSilRepo(id);
   return { basarili: true };
 }
@@ -290,6 +294,7 @@ function senaryoGuncelle(id, veriler) {
 }
 
 function senaryoSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   senaryoSilRepo(id);
   return { basarili: true };
 }

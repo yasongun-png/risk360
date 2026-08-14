@@ -17,9 +17,21 @@
   <div class="ust-cubuk">
     <div class="marka">🛡️ İSG Yönetim Platformu</div>
     <div class="kullanici-bilgi">
+      <span id="bildirimZili" style="display:none; position:relative; cursor:pointer; margin-right:6px;" title="Bildirimler">
+        🔔<span id="bildirimSayaci" style="display:none; position:absolute; top:-6px; right:-9px; background:var(--hata,#dc2626); color:#fff; border-radius:9px; font-size:10px; font-weight:700; padding:1px 5px;"></span>
+      </span>
       <span id="kullaniciEtiketi"></span>
       <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
     </div>
+  </div>
+
+  <div id="bildirimPaneli" style="display:none; position:fixed; top:54px; right:16px; width:320px; max-height:70vh; overflow-y:auto; background:var(--kart-bg,#fff); border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.18); padding:14px; z-index:1000;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <strong style="font-size:13px;">Yeni Kayıt Bildirimleri</strong>
+      <button type="button" id="bildirimTemizleBtn" style="border:none; background:none; color:var(--celik-mavi,#1d4ed8); font-size:12px; font-weight:600; cursor:pointer;">Tümünü Okundu İşaretle</button>
+    </div>
+    <div id="bildirimListesi" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <div id="bildirimBos" style="font-size:12px; color:var(--metin-soluk,#6b7280);">Henüz bildirim yok.</div>
   </div>
 
   <div class="icerik">
@@ -70,6 +82,66 @@
       { anahtar: 'harita', ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true }
     ];
 
+    // Bir 'isg_<slug>_<modulAdi>' anahtarından firma adı + modül başlığını
+    // okunur hale getirir (bkz. core/data.js _yaziEkBildirimKontrolEt).
+    function _bildirimEtiketiCoz(anahtar) {
+      const govde = String(anahtar || '').replace(/^isg_/, '');
+      const firmalar = getFirmalar();
+      let eslesenFirma = null, modulAdi = govde;
+      firmalar.forEach(f => {
+        const onEk = f.slug + '_';
+        if (govde === f.slug || govde.startsWith(onEk)) {
+          eslesenFirma = f;
+          modulAdi = govde === f.slug ? '' : govde.slice(onEk.length);
+        }
+      });
+      const modulEtiket = (MODULLER.find(m => m.anahtar === modulAdi) || {}).baslik || modulAdi;
+      return (eslesenFirma ? eslesenFirma.ad + ' — ' : '') + modulEtiket;
+    }
+
+    function _bildirimZiliniKur() {
+      const zil = document.getElementById('bildirimZili');
+      const panel = document.getElementById('bildirimPaneli');
+      zil.style.display = 'inline-block';
+
+      function ciz() {
+        const bildirimler = oku('isg_bildirimler', []);
+        const okunmamis = bildirimler.filter(b => !b.okunduMu);
+        const sayac = document.getElementById('bildirimSayaci');
+        sayac.style.display = okunmamis.length ? 'inline-block' : 'none';
+        sayac.textContent = okunmamis.length > 99 ? '99+' : String(okunmamis.length);
+
+        const liste = document.getElementById('bildirimListesi');
+        const bos = document.getElementById('bildirimBos');
+        const siraliBildirimler = bildirimler.slice().reverse().slice(0, 50);
+        bos.style.display = siraliBildirimler.length ? 'none' : 'block';
+        liste.innerHTML = siraliBildirimler.map(b => `
+          <div style="border-left:3px solid ${b.okunduMu ? 'var(--kenarlik,#e5e7eb)' : 'var(--celik-mavi,#1d4ed8)'}; padding:6px 10px; font-size:12px;">
+            <div><strong>${_dbKacir(b.adSoyad || b.kullaniciAdi)}</strong> yeni kayıt ekledi</div>
+            <div style="color:var(--metin-soluk,#6b7280);">${_dbKacir(_bildirimEtiketiCoz(b.anahtar))}</div>
+            <div style="color:var(--metin-soluk,#6b7280);">${new Date(b.tarih).toLocaleString('tr-TR')}</div>
+          </div>
+        `).join('');
+      }
+
+      zil.addEventListener('click', () => {
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        if (panel.style.display === 'block') ciz();
+      });
+
+      document.getElementById('bildirimTemizleBtn').addEventListener('click', () => {
+        const bildirimler = oku('isg_bildirimler', []).map(b => Object.assign({}, b, { okunduMu: true }));
+        yaz('isg_bildirimler', bildirimler);
+        ciz();
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!panel.contains(e.target) && !zil.contains(e.target)) panel.style.display = 'none';
+      });
+
+      ciz();
+    }
+
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
 
@@ -92,6 +164,7 @@
       // bkz. bulutHazirOlduğunda (core/data.js). Bulut kapalıysa bu
       // callback zaten anında çalışır.
       bulutHazirOlduğunda(() => {
+      if (kullaniciAdminMi(kullanici)) _bildirimZiliniKur();
       const aktifFirma = aktifFirmaGetir();
       if (!aktifFirma) {
         window.location.href = 'firma-sec.html';
@@ -100,13 +173,12 @@
         rozet.innerHTML = `<span class="nokta" style="background:${aktifFirma.renk}"></span> ${_dbKacir(aktifFirma.ad)}`;
 
         const grid = document.getElementById('modulGrid');
-        const admin = kullaniciAdminMi(kullanici);
         MODULLER.forEach(modul => {
-          // İK rolü tüm modülleri GÖRÜR ama sadece kendisine izinli olanlara
-          // girebilir — diğerleri soluk (pasif) ve tıklanamaz gösterilir
-          // (kullanıcı isteği: "diğer uygulamalarda görünsün ama soluk
-          // şekilde girmesinler").
-          const erisilebilir = modul.aktif && (admin || IK_IZINLI_MODULLER.includes(modul.anahtar));
+          // İK/düzenleyici rolleri tüm modülleri GÖRÜR ama sadece kendisine
+          // izinli olanlara girebilir — diğerleri soluk (pasif) ve
+          // tıklanamaz gösterilir (kullanıcı isteği: "diğer uygulamalarda
+          // görünsün ama soluk şekilde girmesinler").
+          const erisilebilir = modul.aktif && kullaniciModuleErisebilirMi(kullanici, modul.anahtar);
           const kart = document.createElement(erisilebilir ? 'a' : 'div');
           kart.className = 'modul-kart ' + (erisilebilir ? 'aktif' : 'pasif');
           if (erisilebilir) kart.href = modul.baglanti;

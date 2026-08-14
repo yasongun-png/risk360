@@ -73,6 +73,7 @@ function izinGuncelle(id, veriler) {
 }
 
 function izinSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   izinSilRepo(id);
   return { basarili: true };
 }

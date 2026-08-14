@@ -32,7 +32,7 @@ const VARSAYILAN_FIREBASE_CONFIG = {
 };
 
 const _YEREL_SADECE_ANAHTARLAR = new Set(['isg_oturum']);
-const _KUCUK_SENKRON_ANAHTARLAR = new Set(['isg_kullanicilar', 'isg_firmalar', 'isg_risk_sablonlari']);
+const _KUCUK_SENKRON_ANAHTARLAR = new Set(['isg_kullanicilar', 'isg_firmalar', 'isg_risk_sablonlari', 'isg_bildirimler']);
 
 let _bulutDb = null;
 let _bulutApp = null;
@@ -72,7 +72,38 @@ function _yerelYazDene(anahtar, deger) {
   }
 }
 
+// rol==='duzenleyici' kullanıcılar silemez ama TÜM modüllere ekleme/düzenleme
+// yapabilir (bkz. core/auth.js) — admin'in bunu görebilmesi için, bu
+// kullanıcılardan biri bir anahtara yeni bir kayıt eklediğinde (dizi boyu
+// arttığında) 'isg_bildirimler'e bir satır düşülür. Modüllerin Ekle
+// fonksiyonlarının HER BİRİNE dokunmadan tek bir yerden (yaz()) yakalamak
+// için: değişiklikten ÖNCEKİ diziyle karşılaştırılır, sadece UZAYAN diziler
+// "yeni kayıt" sayılır (güncelleme/silme bildirilmez). Kullanıcı isteği:
+// "yeni birşey eklediğinde admine bilgi gitsin".
+function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
+  if (anahtar === 'isg_bildirimler' || !Array.isArray(yeniDeger)) return;
+  try {
+    const kullanici = oturumdakiKullanici();
+    if (!kullanici || kullanici.rol !== 'duzenleyici') return;
+    const eskiDeger = oku(anahtar, []);
+    if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return;
+    const bildirimler = oku('isg_bildirimler', []);
+    bildirimler.push({
+      id: rastgeleId(),
+      kullaniciAdi: kullanici.kullaniciAdi,
+      adSoyad: kullanici.adSoyad,
+      anahtar,
+      tarih: new Date().toISOString(),
+      okunduMu: false
+    });
+    yaz('isg_bildirimler', bildirimler.slice(-300));
+  } catch (e) {
+    console.warn('Ekleme bildirimi oluşturulamadı:', e);
+  }
+}
+
 function yaz(anahtar, deger) {
+  _yaziEkBildirimKontrolEt(anahtar, deger);
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar)) {
     if (_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
       _yerelYazDene(anahtar, JSON.stringify(deger));

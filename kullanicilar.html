@@ -56,22 +56,24 @@
     <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
     <h2 style="margin-top:14px;">Kullanıcılar</h2>
     <p style="color:#6b7280; font-size:13px;">
-      İK personeli için kısıtlı hesaplar oluşturabilirsiniz. Bu hesaplar
-      sadece Personel ve Eğitim modüllerine, ve sadece burada seçtiğiniz
-      firma(lar)a erişebilir — diğer modüllere ve firmalara erişemezler.
+      Kısıtlı hesaplar oluşturabilirsiniz. <strong>İK:</strong> sadece Personel
+      ve Eğitim modüllerine erişir. <strong>Düzenleyici:</strong> tüm modüllere
+      erişir ve ekleme/düzenleme yapabilir ama hiçbir kaydı silemez; yeni bir
+      kayıt eklediğinde size bildirim düşer. İkisi de sadece burada seçtiğiniz
+      firma(lar)a erişebilir.
     </p>
 
     <div class="hata-mesaji" id="hataMesaji"></div>
 
-    <button type="button" class="birincil" id="yeniKullaniciBtn" style="width:auto; padding:11px 20px; margin:16px 0;">+ Yeni İK Kullanıcısı</button>
+    <button type="button" class="birincil" id="yeniKullaniciBtn" style="width:auto; padding:11px 20px; margin:16px 0;">+ Yeni Kısıtlı Kullanıcı</button>
 
     <div id="kullaniciListesi"></div>
-    <div class="bos-durum" id="bosDurum">Henüz İK kullanıcısı eklenmedi.</div>
+    <div class="bos-durum" id="bosDurum">Henüz kısıtlı kullanıcı eklenmedi.</div>
   </div>
 
   <div class="modal-katman" id="kkModalKatman">
     <div class="modal-kutu">
-      <h3 id="kkModalBaslik">Yeni İK Kullanıcısı</h3>
+      <h3 id="kkModalBaslik">Yeni Kısıtlı Kullanıcı</h3>
 
       <label for="kkAdSoyad">Ad Soyad</label>
       <input type="text" id="kkAdSoyad" required>
@@ -82,6 +84,12 @@
       <label for="kkSifre" id="kkSifreEtiket">Şifre</label>
       <input type="password" id="kkSifre" autocomplete="new-password">
       <p id="kkSifreNot" style="font-size:11px; color:var(--metin-soluk); margin-top:-6px;">En az 4 karakter.</p>
+
+      <label for="kkRol" id="kkRolEtiket">Rol</label>
+      <select id="kkRol">
+        <option value="ik">İK — sadece Personel ve Eğitim</option>
+        <option value="duzenleyici">Düzenleyici — tüm modüller, silme yok</option>
+      </select>
 
       <label>Erişebileceği Firmalar</label>
       <div class="firma-secim-listesi" id="kkFirmaListesi"></div>
@@ -142,11 +150,12 @@
 
       kullanicilar.forEach(k => {
         const firmaAdlari = _firmaAdlariGetir(k.erisimFirmaIdleri);
+        const rolEtiket = k.rol === 'duzenleyici' ? '✏️ Düzenleyici (silme yok)' : '🗂️ İK';
         const satir = document.createElement('div');
         satir.className = 'kk-satir';
         satir.innerHTML = `
           <div class="sol">
-            <span class="ad">${_kkKacir(k.adSoyad)}</span>
+            <span class="ad">${_kkKacir(k.adSoyad)} <span style="font-weight:400; font-size:11px; color:var(--metin-soluk);">${rolEtiket}</span></span>
             <span class="kullanici-adi">@${_kkKacir(k.kullaniciAdi)}</span>
             <span class="firmalar">${firmaAdlari.length ? '🏢 ' + _kkKacir(firmaAdlari.join(', ')) : '⚠️ Hiç firma atanmadı'}</span>
           </div>
@@ -193,15 +202,17 @@
 
     function kkModalAc(kayit) {
       _duzenlenenId = kayit ? kayit.id : null;
-      document.getElementById('kkModalBaslik').textContent = kayit ? 'Kullanıcıyı Düzenle' : 'Yeni İK Kullanıcısı';
+      document.getElementById('kkModalBaslik').textContent = kayit ? 'Kullanıcıyı Düzenle' : 'Yeni Kısıtlı Kullanıcı';
       document.getElementById('kkAdSoyad').value = kayit ? kayit.adSoyad : '';
       document.getElementById('kkKullaniciAdi').value = kayit ? kayit.kullaniciAdi : '';
       document.getElementById('kkKullaniciAdi').disabled = !!kayit;
       document.getElementById('kkSifre').value = '';
+      document.getElementById('kkRol').value = kayit ? kayit.rol : 'ik';
+      document.getElementById('kkRol').disabled = !!kayit;
 
-      // Düzenlemede kullanıcı adı ve şifre burada değiştirilmez (kullanıcı adı
-      // sabit kalır, şifre için ayrı "Şifre Değiştir" butonu kullanılır) —
-      // yanlışlıkla boş şifreyle üzerine yazmayı önler.
+      // Düzenlemede kullanıcı adı, rol ve şifre burada değiştirilmez (kullanıcı
+      // adı ve rol sabit kalır, şifre için ayrı "Şifre Değiştir" butonu
+      // kullanılır) — yanlışlıkla boş şifreyle üzerine yazmayı önler.
       const sifreAlaniGoster = !kayit;
       document.getElementById('kkSifreEtiket').style.display = sifreAlaniGoster ? '' : 'none';
       document.getElementById('kkSifre').style.display = sifreAlaniGoster ? '' : 'none';
@@ -232,9 +243,10 @@
       const secilenFirmaIdleri = Array.from(document.getElementById('kkFirmaListesi').querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
       const hataEl = document.getElementById('kkModalHata');
 
+      const rol = document.getElementById('kkRol').value;
       const sonuc = _duzenlenenId
         ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri)
-        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri);
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol);
 
       if (!sonuc.basarili) {
         hataEl.textContent = sonuc.hata;

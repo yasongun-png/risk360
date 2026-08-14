@@ -56,6 +56,7 @@ function bolumEkle(ad) {
 // Yalnızca kalıcı listeden çıkarır. "ad" ile silinir (risklerden türeyen
 // bölümlerin kalıcı karşılığı olmayabilir, id'siz gösterilirler).
 function bolumSil(ad) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const kayit = bolumleriTumunuGetir().find(b => b.ad === ad);
   if (!kayit) return { basarili: false, hata: 'Bu bölüm kalıcı listede değil (risk kayıtlarından türemiş olabilir).' };
   bolumSilRepo(kayit.id);
@@ -126,6 +127,7 @@ function riskGuncelle(id, veriler) {
 }
 
 function riskSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   riskSilRepo(id);
   return { basarili: true };
 }
@@ -174,6 +176,7 @@ function riskSablonKaydetKayittan(riskId) {
 }
 
 function riskSablonSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const kullanici = oturumdakiKullanici();
   const sablon = riskSablonlariTumunuGetir().find(s => s.id === id);
   if (!sablon) return { basarili: false, hata: 'Şablon bulunamadı.' };

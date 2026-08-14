@@ -64,6 +64,7 @@ function stajyerGuncelle(id, veriler) {
 }
 
 function stajyerSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   stajyerSilRepo(id);
   return { basarili: true };
 }

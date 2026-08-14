@@ -23,6 +23,7 @@ function haritaTesisGorseliGuncelle(tesisId, gorselUrl) {
 }
 
 function haritaTesisSil(tesisId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   haritaKayitlariTesisIcinTemizleRepo(tesisId);
   haritaEtiketleriTesisIcinTemizleRepo(tesisId);
   haritaOklariTesisIcinTemizleRepo(tesisId);
@@ -46,6 +47,7 @@ function haritaEtiketGuncelle(id, veriler) {
 }
 
 function haritaEtiketSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   haritaEtiketSilRepo(id);
 }
 
@@ -67,6 +69,7 @@ function haritaOkGuncelle(id, veriler) {
 }
 
 function haritaOkSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   haritaOkSilRepo(id);
 }
 
@@ -106,6 +109,7 @@ function haritaKayitGuncelle(id, veriler) {
 }
 
 function haritaKayitSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   return haritaKayitGuncelleRepo(id, { silinmeTarihi: haritaSimdiIso() });
 }
 

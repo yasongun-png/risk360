@@ -87,6 +87,7 @@ function periyodikEkipmanGuncelle(id, veriler) {
 }
 
 function periyodikEkipmanSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   periyodikEkipmanSilRepo(id);
   return { basarili: true };
 }
@@ -150,6 +151,7 @@ function periyodikKontrolGuncelle(id, veriler) {
 }
 
 function periyodikKontrolSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const kayit = periyodikKontrolIdIleGetirRepo(id);
   periyodikKontrolSilRepo(id);
   if (kayit) _periyodikEkipmaniSonKontroleGoreGuncelle(kayit.ekipmanId);
