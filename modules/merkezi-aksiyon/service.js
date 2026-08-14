@@ -12,7 +12,7 @@
 
 const MERKEZI_AKSIYON_KAYNAKLARI = [
   'Uygunsuzluk', 'İSG Kurulu', 'Risk Değerlendirmesi',
-  'Olay / Kaza', 'Acil Durum', 'KKD Zimmet'
+  'Olay / Kaza', 'Acil Durum', 'KKD Zimmet', 'Bakım Talep'
 ];
 
 function _maBugun() { return new Date().toISOString().slice(0, 10); }
@@ -150,6 +150,22 @@ function _maKkdZimmettenTopla() {
     }));
 }
 
+function _maBakimTaleptenTopla() {
+  const kapali = ['Kapatıldı', 'Reddedildi'];
+  return oku(tenantAnahtar('bakim_talepleri'), [])
+    .filter(t => !kapali.includes(t.durum))
+    .map(t => _maSatirOlustur({
+      kaynakModul: 'Bakım Talep',
+      kaynakNo: t.talepNo,
+      baslik: t.talep.isTanimi,
+      sorumlu: t.bakim.degerlendirenKisi || t.talep.acanKisi,
+      termin: (t.bakim.planlanmaTarihi || '').slice(0, 10),
+      durum: t.durum,
+      kapaliDurumlar: kapali,
+      baglanti: '../bakim-talep/index.html'
+    }));
+}
+
 // ---- Genel API ----
 
 function merkeziAksiyonlariGetir(aramaMetni, filtreler) {
@@ -160,7 +176,8 @@ function merkeziAksiyonlariGetir(aramaMetni, filtreler) {
     _maRisktenTopla(),
     _maOlayKazadanTopla(),
     _maAcilDurumdanTopla(),
-    _maKkdZimmettenTopla()
+    _maKkdZimmettenTopla(),
+    _maBakimTaleptenTopla()
   );
 
   if (f.kaynakModul) liste = liste.filter(s => s.kaynakModul === f.kaynakModul);

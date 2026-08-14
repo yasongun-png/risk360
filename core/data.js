@@ -126,7 +126,13 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
       anahtar,
       kayitEtiketleri,
       tarih: new Date().toISOString(),
-      okunduMu: false
+      // Kişi bazlı okundu takibi (bkz. dashboard.html _bildirimZiliniKur):
+      // tek bir paylaşılan "okunduMu" bayrağı yerine, hangi kullanıcı(lar)ın
+      // bu bildirimi gördüğü tutulur — aksi halde hedefli bildirimlerde
+      // (bkz. modules/bakim-talep) bir kullanıcının "tümünü okundu işaretle"
+      // demesi BAŞKA bir kullanıcının hedefli bildirimini de "okunmuş"
+      // gösterirdi.
+      okuyanKullaniciIdleri: []
     });
     yaz('isg_bildirimler', bildirimler.slice(-300));
   } catch (e) {
@@ -134,37 +140,67 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
   }
 }
 
+// tenantAnahtar()'ın ürettiği depolama anahtarı SONEKİ (ör. 'egitim_kayitlari',
+// 'is_izinleri', 'bakim_talepleri'), dashboard.html'deki MODULLER dizisinin
+// 'anahtar' alanıyla (ör. 'egitim', 'is-izni', 'bakim-talep') HEMEN HEMEN HİÇ
+// birebir eşleşmez — her modül repository.js'inde kendi anahtarını seçer.
+// Rol bazlı yazma izni SADECE dashboard'daki modül anahtarına göre tanımlı
+// olduğundan (bkz. core/auth.js IK_IZINLI_MODULLER, BAKIM_TALEP_YAZILABILEN_ROLLER),
+// izne tabi HER modül için soneki buradan açıkça eşlemek gerekir — aksi
+// halde (ör. yalnızca ham soneki karşılaştırmak) İK'nın Eğitim'e bile
+// yazması yanlışlıkla engellenir (bir kez gerçekten yaşandı, testle
+// yakalandı). Henüz izne tabi olmayan modüller bu tabloya eklenmez; ham
+// sonek hiçbir izinli modül adıyla çakışmadığı sürece güvenle geri döner.
+const _MODUL_ANAHTARI_DEPOLAMA_SONEKLERI = {
+  personel: ['personel'],
+  egitim: ['egitim_kayitlari'],
+  'bakim-talep': ['bakim_talepleri', 'bakim_ekipman_envanteri']
+};
+
+function _depolamaSonekindenModulAdiCikar(sonek) {
+  for (const modulAdi in _MODUL_ANAHTARI_DEPOLAMA_SONEKLERI) {
+    if (_MODUL_ANAHTARI_DEPOLAMA_SONEKLERI[modulAdi].includes(sonek)) return modulAdi;
+  }
+  return sonek;
+}
+
 // 'isg_<slug>_<modulAdi>' biçimindeki bir anahtardan modül adını çıkarır
-// (bkz. core/tenant.js tenantAnahtarFirma). Firma eşleşmezse (ör. henüz
-// senkron olmamış veya firma-bağımsız bir anahtarsa) anahtarın kendisini
-// (isg_ öneki atılmış hâlini) döndürür.
+// (bkz. core/tenant.js tenantAnahtarFirma). Hiçbir firma slug'ı eşleşmezse
+// (ör. isg_kullanicilar, isg_firmalar, isg_bildirimler, isg_oturum_gecmisi
+// gibi FİRMA-BAĞIMSIZ genel anahtarlar) null döner — bunlar bir "modül"
+// değildir, kendi ayrı erişim kontrolüne (girisGerekliAdmin, kendi
+// yaz/oku akışları) sahiptir ve _yaziEklemeEngelleMi tarafından hiç
+// engellenmemelidir (bkz. aşağıdaki kullanım — giriş geçmişi/kendi şifre
+// değiştirme gibi işlemler kısıtlı roller için de HER ZAMAN çalışmalı).
 function _anahtardanModulAdiCikar(anahtar) {
   const govde = String(anahtar || '').replace(/^isg_/, '');
   const firmalar = oku('isg_firmalar', []);
   for (const f of firmalar) {
     const onEk = f.slug + '_';
     if (govde === f.slug) return '';
-    if (govde.startsWith(onEk)) return govde.slice(onEk.length);
+    if (govde.startsWith(onEk)) return _depolamaSonekindenModulAdiCikar(govde.slice(onEk.length));
   }
-  return govde;
+  return null;
 }
 
-// rol==='ik' kullanıcılar artık TÜM modülleri görüntüleyebilir ama sadece
-// IK_IZINLI_MODULLER'de (Personel/Eğitim) yazabilir (ekleme/düzenleme) —
-// diğer modüllerde TAMAMEN salt-okunurdur (bkz. core/auth.js
-// kullaniciEklemeYapabilirMi). Bu, tek bir yerden (yaz()) TÜM modülleri
-// kapsayacak şekilde uygulanır. Kullanıcı isteği: "diğer modülleri sadece
-// görsün ekleme yapamasın" — ayrıca Yıllık Plan/Değerlendirme gibi
-// modüllerdeki "işaretleme" (checkbox) alanları YENİ kayıt eklemez, MEVCUT
-// bir kaydı günceller (dizi boyu değişmez); sadece uzayan diziyi engellemek
-// bunu yakalayamıyordu — bu yüzden İK için dizi boyu fark etmeksizin İZİNSİZ
-// modüle HER yazım engellenir (ekleme de, düzenleme de).
+// Kısıtlı roller (İK, Bakım, Birim) SADECE kendilerine izinli modülde
+// yazabilir (ekleme/düzenleme) — diğer modüllerde TAMAMEN salt-okunurdur
+// (bkz. core/auth.js kullaniciEklemeYapabilirMi, tek bir doğruluk kaynağı).
+// Bu, tek bir yerden (yaz()) TÜM modülleri kapsayacak şekilde uygulanır.
+// Kullanıcı isteği: "diğer modülleri sadece görsün ekleme yapamasın" —
+// ayrıca Yıllık Plan/Değerlendirme gibi modüllerdeki "işaretleme" (checkbox)
+// alanları YENİ kayıt eklemez, MEVCUT bir kaydı günceller (dizi boyu
+// değişmez); sadece uzayan diziyi engellemek bunu yakalayamıyordu — bu
+// yüzden dizi boyu fark etmeksizin İZİNSİZ modüle HER yazım engellenir
+// (ekleme de, düzenleme de). Admin/düzenleyici kullaniciEklemeYapabilirMi
+// içinde zaten hep true döndüğü için burada etkilenmezler.
 function _yaziEklemeEngelleMi(anahtar, yeniDeger) {
   if (!Array.isArray(yeniDeger)) return false;
   const kullanici = oturumdakiKullanici();
-  if (!kullanici || kullanici.rol !== 'ik') return false;
+  if (!kullanici) return false;
   const modulAdi = _anahtardanModulAdiCikar(anahtar);
-  return !IK_IZINLI_MODULLER.includes(modulAdi);
+  if (modulAdi === null) return false; // firma-bağımsız genel anahtar — engellenmez
+  return !kullaniciEklemeYapabilirMi(kullanici, modulAdi);
 }
 
 function yaz(anahtar, deger) {

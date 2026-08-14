@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="../../assets/icons/favicon-32.png">
+<title>İSG Platform - Bakım Talep ve Onay</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">Bakım Talep ve Onay</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" data-sekme="talepler">Talepler</button>
+      <button type="button" data-sekme="envanter" class="sekme-seciliDegil">Ekipman Envanteri</button>
+      <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
+    </div>
+
+    <!-- TALEPLER -->
+    <div id="bolum-talepler">
+      <div class="arac-cubugu">
+        <input type="text" id="btAramaKutusu" class="arama-kutusu" placeholder="Talep no, iş tanımı, ekipman veya birime göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="btDurumFiltre" style="width:auto; margin:0;"></select>
+          <select id="btBirimFiltre" style="width:auto; margin:0;"></select>
+          <button type="button" class="birincil" id="btYeniTalepBtn" style="width:auto;">+ Yeni Talep</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Talep No</th><th>Birim</th><th>İş Tanımı</th><th>Öncelik</th><th>Durum</th><th>Açılış</th></tr></thead>
+          <tbody id="btTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="btBosDurum">Eşleşen talep bulunamadı.</div>
+    </div>
+
+    <!-- EKİPMAN ENVANTERİ -->
+    <div id="bolum-envanter" style="display:none;">
+      <p style="font-size:13px; color:var(--metin-soluk);">Talep formlarına girilen ekipman kodlarından kendiliğinden oluşur.</p>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Kod</th><th>Konum</th><th>Toplam Talep</th><th>Son Kullanım</th></tr></thead>
+          <tbody id="btEnvanterTabloGovde"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ÖZET -->
+    <div id="bolum-ozet" style="display:none;">
+      <div id="btOzetKutusu"></div>
+    </div>
+  </div>
+
+  <!-- YENİ TALEP MODALI -->
+  <div class="modal-katman" id="btYeniTalepKatman">
+    <div class="modal-kutu">
+      <h3>Yeni Bakım Talebi</h3>
+
+      <label for="btYtBirim">Talep Eden Birim</label>
+      <select id="btYtBirim"></select>
+
+      <label for="btYtAcanKisi">Talebi Açan Kişi</label>
+      <input type="text" id="btYtAcanKisi">
+
+      <label for="btYtKonum">Konum / Ekipman / Hat</label>
+      <input type="text" id="btYtKonum">
+
+      <label for="btYtEkipmanKodu">Ekipman Kodu <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — envanterde yoksa otomatik eklenir)</span></label>
+      <input type="text" id="btYtEkipmanKodu" list="btEkipmanListesi">
+      <datalist id="btEkipmanListesi"></datalist>
+
+      <label for="btYtIsTanimi">İş Tanımı / Arıza Açıklaması</label>
+      <textarea id="btYtIsTanimi" rows="3"></textarea>
+
+      <label for="btYtOncelik">Öncelik</label>
+      <select id="btYtOncelik"></select>
+
+      <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+        <input type="checkbox" id="btYtEkipmanDurdu" style="width:auto;"> Etkilenen ekipman/hat durdu mu?
+      </label>
+
+      <div class="alan-hatasi" id="btYeniTalepHata"></div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="btYeniTalepIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="btYeniTalepKaydetBtn">Talebi Aç</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAY / ONAY AKIŞI MODALI -->
+  <div class="modal-katman" id="btDetayKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="btDetayBaslik"></h3>
+      <div id="btDetayGovde"></div>
+      <div class="modal-eylemler" style="margin-top:16px;">
+        <button type="button" class="ikincil" id="btDetayKapatBtn">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const kullanici = girisGerekliModul('bakim-talep');
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' bakım talepleri';
+          document.getElementById('btYtOncelik').innerHTML = BAKIM_TALEP_ONCELIKLERI.map(o => `<option>${o}</option>`).join('');
+          document.getElementById('btEkipmanListesi').innerHTML = ekipmanEnvanteriTumunuGetirRepo().map(e => `<option value="${e.kod}">`).join('');
+          bakimTalepSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('../../sw.js'); }</script>
+</body>
+</html>

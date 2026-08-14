@@ -59,8 +59,11 @@
       Kısıtlı hesaplar oluşturabilirsiniz. <strong>İK:</strong> sadece Personel
       ve Eğitim modüllerine erişir. <strong>Düzenleyici:</strong> tüm modüllere
       erişir ve ekleme/düzenleme yapabilir ama hiçbir kaydı silemez; yeni bir
-      kayıt eklediğinde size bildirim düşer. İkisi de sadece burada seçtiğiniz
-      firma(lar)a erişebilir.
+      kayıt eklediğinde size bildirim düşer. <strong>Bakım:</strong> sadece
+      Bakım Talep modülüne erişir, tüm birimlerin taleplerini görür.
+      <strong>Talep Eden Birim:</strong> sadece Bakım Talep modülüne, sadece
+      KENDİ biriminin taleplerine erişir. Hepsi sadece burada seçtiğiniz
+      firma(lar)a erişebilir ve hiçbiri kayıt silemez.
     </p>
 
     <div class="hata-mesaji" id="hataMesaji"></div>
@@ -89,7 +92,14 @@
       <select id="kkRol">
         <option value="ik">İK — sadece Personel ve Eğitim</option>
         <option value="duzenleyici">Düzenleyici — tüm modüller, silme yok</option>
+        <option value="bakim">Bakım — sadece Bakım Talep, tüm birimler</option>
+        <option value="birim">Talep Eden Birim — sadece Bakım Talep, kendi birimi</option>
       </select>
+
+      <div id="kkBirimAlani" style="display:none;">
+        <label for="kkBirim">Birim</label>
+        <select id="kkBirim"></select>
+      </div>
 
       <label>Erişebileceği Firmalar</label>
       <div class="firma-secim-listesi" id="kkFirmaListesi"></div>
@@ -127,6 +137,11 @@
       document.getElementById('yeniKullaniciBtn').addEventListener('click', () => kkModalAc(null));
       document.getElementById('kkModalIptalBtn').addEventListener('click', kkModalKapat);
       document.getElementById('kkModalKaydetBtn').addEventListener('click', kkKaydet);
+      document.getElementById('kkRol').addEventListener('change', () => {
+        _kkBirimAlaniniGuncelle();
+        _kkBirimSecimDoldur();
+      });
+      document.getElementById('kkFirmaListesi').addEventListener('change', _kkBirimSecimDoldur);
 
       renderListe();
     }
@@ -134,6 +149,34 @@
     function _firmaAdlariGetir(erisimFirmaIdleri) {
       const idler = new Set(erisimFirmaIdleri || []);
       return getFirmalar().filter(f => idler.has(f.id)).map(f => f.ad);
+    }
+
+    const KK_ROL_ETIKETLERI = {
+      duzenleyici: '✏️ Düzenleyici (silme yok)',
+      bakim: '🔧 Bakım',
+      birim: '🏭 Talep Eden Birim'
+    };
+
+    function _kkBirimAlaniniGuncelle() {
+      document.getElementById('kkBirimAlani').style.display = document.getElementById('kkRol').value === 'birim' ? '' : 'none';
+    }
+
+    // Birim seçim listesini, o an İŞARETLİ firma(lar)ın bölümler listesinden
+    // (bkz. core/tenant.js firma.bolumler, Firma Yönetimi'nde düzenlenir)
+    // doldurur — ayrı bir "birimler" tablosu kurmaya gerek yok, mevcut
+    // mekanizma yeniden kullanılır.
+    function _kkBirimSecimDoldur() {
+      const secim = document.getElementById('kkBirim');
+      const oncekiSecim = secim.value;
+      const secilenFirmaIdleri = new Set(Array.from(document.getElementById('kkFirmaListesi').querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value));
+      const bolumler = Array.from(new Set(
+        getFirmalar().filter(f => secilenFirmaIdleri.has(f.id)).flatMap(f => Array.isArray(f.bolumler) ? f.bolumler : [])
+      )).sort((a, b) => a.localeCompare(b, 'tr'));
+
+      secim.innerHTML = bolumler.length
+        ? bolumler.map(b => `<option value="${_kkKacir(b)}">${_kkKacir(b)}</option>`).join('')
+        : '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
+      if (bolumler.includes(oncekiSecim)) secim.value = oncekiSecim;
     }
 
     function renderListe() {
@@ -150,7 +193,8 @@
 
       kullanicilar.forEach(k => {
         const firmaAdlari = _firmaAdlariGetir(k.erisimFirmaIdleri);
-        const rolEtiket = k.rol === 'duzenleyici' ? '✏️ Düzenleyici (silme yok)' : '🗂️ İK';
+        const rolEtiket = KK_ROL_ETIKETLERI[k.rol] || '🗂️ İK';
+        const birimSatiri = k.rol === 'birim' ? `<span class="firmalar">🏭 Birim: ${_kkKacir(k.birimAdi || '—')}</span>` : '';
         const satir = document.createElement('div');
         satir.className = 'kk-satir';
         satir.innerHTML = `
@@ -158,6 +202,7 @@
             <span class="ad">${_kkKacir(k.adSoyad)} <span style="font-weight:400; font-size:11px; color:var(--metin-soluk);">${rolEtiket}</span></span>
             <span class="kullanici-adi">@${_kkKacir(k.kullaniciAdi)}</span>
             <span class="firmalar">${firmaAdlari.length ? '🏢 ' + _kkKacir(firmaAdlari.join(', ')) : '⚠️ Hiç firma atanmadı'}</span>
+            ${birimSatiri}
           </div>
           <div class="islemler">
             <button class="mini-buton" data-duzenle="${k.id}">Düzenle</button>
@@ -209,6 +254,7 @@
       document.getElementById('kkSifre').value = '';
       document.getElementById('kkRol').value = kayit ? kayit.rol : 'ik';
       document.getElementById('kkRol').disabled = !!kayit;
+      _kkBirimAlaniniGuncelle();
 
       // Düzenlemede kullanıcı adı, rol ve şifre burada değiştirilmez (kullanıcı
       // adı ve rol sabit kalır, şifre için ayrı "Şifre Değiştir" butonu
@@ -227,6 +273,9 @@
         </label>
       `).join('') || '<div style="font-size:12px; color:var(--metin-soluk);">Önce Firma Yönetimi\'nden bir firma eklemelisiniz.</div>';
 
+      _kkBirimSecimDoldur();
+      if (kayit && kayit.rol === 'birim') document.getElementById('kkBirim').value = kayit.birimAdi || '';
+
       document.getElementById('kkModalHata').textContent = '';
       document.getElementById('kkModalKatman').classList.add('acik');
     }
@@ -244,9 +293,10 @@
       const hataEl = document.getElementById('kkModalHata');
 
       const rol = document.getElementById('kkRol').value;
+      const birimAdi = document.getElementById('kkBirim').value;
       const sonuc = _duzenlenenId
-        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri)
-        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol);
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, birimAdi)
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi);
 
       if (!sonuc.basarili) {
         hataEl.textContent = sonuc.hata;

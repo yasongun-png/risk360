@@ -137,7 +137,16 @@ function girisGerekli() {
 // kullanıcıları da sadece eğitim ve personel modüllerine giriş yapabilsin
 // ekleme yapsın ama silemesin, diğer modülleri sadece görsün ekleme
 // yapamasın".
+//
+// rol==='bakim' (Bakım Bölümü) ve rol==='birim' (Talep Eden Birim) — Bakım
+// Talep ve Onay Modülü için: ikisi de SADECE bakim-talep modülüne
+// yazabilir, diğerleri salt-okunur. 'birim' kullanıcıları ayrıca
+// modules/bakim-talep/service.js içinde KENDİ birimAdi'lerine göre KAYIT
+// bazında da filtrelenir (sadece kendi biriminin taleplerini görür/açar) —
+// bu, modül seviyesinde değil kayıt seviyesinde bir kısıtlama olduğundan
+// burada değil, bakim-talep modülünün kendi service.js'inde uygulanır.
 const IK_IZINLI_MODULLER = ['personel', 'egitim'];
+const BAKIM_TALEP_YAZILABILEN_ROLLER = ['bakim', 'birim'];
 
 function kullaniciAdminMi(kullanici) {
   return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
@@ -152,19 +161,22 @@ function kullaniciModuleErisebilirMi(kullanici) {
 }
 
 // Admin ve düzenleyici her modülde ekleyebilir; İK SADECE IK_IZINLI_MODULLER'de
-// (Personel/Eğitim) ekleyebilir, diğer modüllerde sadece görüntüler.
+// (Personel/Eğitim) ekleyebilir; bakim/birim rolleri SADECE bakim-talep
+// modülünde ekleyebilir; diğer modüllerde sadece görüntülerler.
 function kullaniciEklemeYapabilirMi(kullanici, modulAnahtari) {
   if (!kullanici) return false;
   if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
   if (kullanici.rol === 'ik') return IK_IZINLI_MODULLER.includes(modulAnahtari);
+  if (BAKIM_TALEP_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'bakim-talep';
   return false;
 }
 
-// Sadece tam yetkili admin silebilir; rol==='duzenleyici' ve rol==='ik'
-// HİÇBİR kaydı silemez (kullanıcı isteği: mcakir/ksahbaz için "veri silme
-// kapalı olsun", İK için "ekleme yapsın ama silemesin").
+// Sadece tam yetkili admin silebilir; diğer tüm kısıtlı roller (düzenleyici,
+// İK, bakım, birim) HİÇBİR kaydı silemez (kullanıcı isteği: mcakir/ksahbaz
+// için "veri silme kapalı olsun", İK için "ekleme yapsın ama silemesin" —
+// aynı prensip Bakım Talep modülündeki roller için de geçerli).
 function kullaniciSilebilirMi(kullanici) {
-  return !!kullanici && kullanici.rol !== 'duzenleyici' && kullanici.rol !== 'ik';
+  return kullaniciAdminMi(kullanici);
 }
 
 // Modüllerin xSil() fonksiyonlarının başında çağrılır: yetkisizse kullanıcıya
@@ -198,12 +210,14 @@ function girisGerekliAdmin() {
 
 // ---- Kısıtlı kullanıcı yönetimi (admin tarafından) ----
 //
-// Her kısıtlı kullanıcı (İK veya düzenleyici) bir admin tarafından
+// Her kısıtlı kullanıcı (İK, düzenleyici, bakım, birim) bir admin tarafından
 // (olusturanId) oluşturulur ve SADECE o admin tarafından görülür/düzenlenir —
-// firmaların sahipId'yle izole edilmesiyle aynı mantık. İki rol de aynı
+// firmaların sahipId'yle izole edilmesiyle aynı mantık. Hepsi aynı
 // erisimFirmaIdleri mekanizmasını kullanır; farkları modül/silme yetkisidir
-// (bkz. kullaniciModuleErisebilirMi, kullaniciSilebilirMi).
-const KISITLI_ROLLER = ['ik', 'duzenleyici'];
+// (bkz. kullaniciEklemeYapabilirMi, kullaniciSilebilirMi). 'birim' rolü ayrıca
+// bir birimAdi taşır (Bakım Talep modülünde SADECE o birimin taleplerini
+// görür — bkz. modules/bakim-talep/service.js).
+const KISITLI_ROLLER = ['ik', 'duzenleyici', 'bakim', 'birim'];
 
 function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
   const temiz = (kullaniciAdi || '').trim().toLowerCase();
@@ -218,17 +232,18 @@ function ikKullanicilariGetir() {
   return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
-async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol) {
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
   const temizKullaniciAdi = (kullaniciAdi || '').trim();
   const temizAdSoyad = (adSoyad || '').trim();
-  const temizRol = rol === 'duzenleyici' ? 'duzenleyici' : 'ik';
+  const temizRol = KISITLI_ROLLER.includes(rol) ? rol : 'ik';
   if (!temizKullaniciAdi) return { basarili: false, hata: 'Kullanıcı adı boş olamaz.' };
   if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
   if (!sifre || sifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
   if (!kullaniciAdiMusaitMi(temizKullaniciAdi)) return { basarili: false, hata: 'Bu kullanıcı adı zaten kullanılıyor.' };
+  if (temizRol === 'birim' && !(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
 
   // Sadece BU admin'in sahip olduğu firmalar atanabilir (kullaniciAdminMi(admin)
   // burada zaten kesin — girisGerekliAdmin bu sayfaya girişi zaten sınırlar).
@@ -245,12 +260,13 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol) {
     olusturanId: admin.id,
     erisimFirmaIdleri: gecerliFirmaIdleri
   };
+  if (temizRol === 'birim') yeniKullanici.birimAdi = (birimAdi || '').trim();
   kullanicilar.push(yeniKullanici);
   yaz('isg_kullanicilar', kullanicilar);
   return { basarili: true, kullanici: yeniKullanici };
 }
 
-function ikKullaniciGuncelle(id, adSoyad, firmaIdleri) {
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -260,6 +276,10 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri) {
   const kullanicilar = oku('isg_kullanicilar', []);
   const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+  if (kayit.rol === 'birim') {
+    if (!(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
+    kayit.birimAdi = birimAdi.trim();
+  }
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
   kayit.adSoyad = temizAdSoyad;

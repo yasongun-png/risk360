@@ -584,6 +584,13 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
 /* Hizmet Sözleşmeleri rozetleri */
 .genel-rozet.rozet-feshedildi { background: #f3f4f6; color: var(--metin-soluk); }
 
+/* Bakım Talep ve Onay durum rozetleri */
+.genel-rozet.rozet-yeni { background: #e0e7ff; color: #4338ca; }
+.genel-rozet.rozet-bakim-degerlendirmede, .genel-rozet.rozet-isg-onayinda { background: #fef3c7; color: #b45309; }
+.genel-rozet.rozet-isg-ilave-onlem-istedi { background: #fee2e2; color: #b91c1c; }
+.genel-rozet.rozet-onaylandi-planlandi, .genel-rozet.rozet-bakim-tamamladi { background: #dbeafe; color: #1d4ed8; }
+.genel-rozet.rozet-kapatildi { background: #dcfce7; color: #15803d; }
+
 /* Risk Değerlendirmesi düzey rozetleri */
 .duzey-rozet {
   display: inline-flex;

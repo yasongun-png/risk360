@@ -103,7 +103,8 @@
       { anahtar: 'raporlar', ikon: '📊', baslik: 'Raporlar', aciklama: 'Tüm modüllerden derlenen İSG performans özeti, KPI kartları ve grafikler', baglanti: 'modules/raporlar/index.html', aktif: true },
       { anahtar: 'tespit-oneri', ikon: '📖', baslik: 'Tespit ve Öneri Defteri', aciklama: 'İSG uzmanı/işyeri hekimi tespit-öneri kayıtları, tebliğ ve kapanış takibi', baglanti: 'modules/tespit-oneri/index.html', aktif: true },
       { anahtar: 'hizmet-sozlesmesi', ikon: '🖋️', baslik: 'Hizmet Sözleşmeleri', aciklama: 'İSG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmesi takibi', baglanti: 'modules/hizmet-sozlesmesi/index.html', aktif: true },
-      { anahtar: 'harita', ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true }
+      { anahtar: 'harita', ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true },
+      { anahtar: 'bakim-talep', ikon: '🔧', baslik: 'Bakım Talep ve Onay', aciklama: 'Birimlerden gelen bakım talebi; Bakım değerlendirmesi ve İSG onayından geçip kapanışa kadar tek akış', baglanti: 'modules/bakim-talep/index.html', aktif: true }
     ];
 
     // Bir 'isg_<slug>_<modulAdi>' anahtarından firma adı + modül başlığını
@@ -123,27 +124,50 @@
       return (eslesenFirma ? eslesenFirma.ad + ' — ' : '') + modulEtiket;
     }
 
+    // Bildirim herkese açık (hedefRol/hedefBirim boş) VEYA bu kullanıcının
+    // rolüne/birimine hedefliyse görünür. Admin, gözetim amacıyla HER
+    // bildirimi görür (kullanıcı isteği: "Yönetici/Admin: Tüm kayıtları
+    // görür").
+    function _bildirimKullaniciyaGorunurMu(b, kullanici) {
+      if (!b.hedefRol && !b.hedefBirim) return true;
+      if (kullaniciAdminMi(kullanici)) return true;
+      if (b.hedefBirim) return kullanici.rol === 'birim' && kullanici.birimAdi === b.hedefBirim;
+      if (b.hedefRol === 'bakim') return kullanici.rol === 'bakim';
+      if (b.hedefRol === 'isg') return kullanici.rol === 'duzenleyici';
+      return false;
+    }
+
+    function _bildirimOkunduMu(b, kullanici) {
+      return Array.isArray(b.okuyanKullaniciIdleri) && b.okuyanKullaniciIdleri.includes(kullanici.id);
+    }
+
     function _bildirimZiliniKur() {
       const zil = document.getElementById('bildirimZili');
       const panel = document.getElementById('bildirimPaneli');
       zil.style.display = 'inline-block';
 
+      function gorunurBildirimleriGetir() {
+        return oku('isg_bildirimler', []).filter(b => _bildirimKullaniciyaGorunurMu(b, kullanici));
+      }
+
       function ciz() {
-        const bildirimler = oku('isg_bildirimler', []);
-        const okunmamis = bildirimler.filter(b => !b.okunduMu);
+        const gorunurler = gorunurBildirimleriGetir();
+        const okunmamis = gorunurler.filter(b => !_bildirimOkunduMu(b, kullanici));
         const sayac = document.getElementById('bildirimSayaci');
         sayac.style.display = okunmamis.length ? 'inline-block' : 'none';
         sayac.textContent = okunmamis.length > 99 ? '99+' : String(okunmamis.length);
 
         const liste = document.getElementById('bildirimListesi');
         const bos = document.getElementById('bildirimBos');
-        const siraliBildirimler = bildirimler.slice().reverse().slice(0, 50);
+        const siraliBildirimler = gorunurler.slice().reverse().slice(0, 50);
         bos.style.display = siraliBildirimler.length ? 'none' : 'block';
         liste.innerHTML = siraliBildirimler.map(b => {
           const etiketler = Array.isArray(b.kayitEtiketleri) ? b.kayitEtiketleri.filter(Boolean) : [];
+          const okunduMu = _bildirimOkunduMu(b, kullanici);
+          const eylemFiili = b.hedefRol || b.hedefBirim ? '' : 'yeni kayıt ekledi';
           return `
-          <div style="border-left:3px solid ${b.okunduMu ? 'var(--kenarlik,#e5e7eb)' : 'var(--celik-mavi,#1d4ed8)'}; padding:6px 10px; font-size:12px;">
-            <div><strong>${_dbKacir(b.adSoyad || b.kullaniciAdi)}</strong> yeni kayıt ekledi${etiketler.length ? ': <strong>' + _dbKacir(etiketler.join(', ')) + '</strong>' : ''}</div>
+          <div style="border-left:3px solid ${okunduMu ? 'var(--kenarlik,#e5e7eb)' : 'var(--celik-mavi,#1d4ed8)'}; padding:6px 10px; font-size:12px;">
+            <div><strong>${_dbKacir(b.adSoyad || b.kullaniciAdi)}</strong> ${eylemFiili}${etiketler.length ? (eylemFiili ? ': ' : '') + '<strong>' + _dbKacir(etiketler.join(', ')) + '</strong>' : ''}</div>
             <div style="color:var(--metin-soluk,#6b7280);">${_dbKacir(_bildirimEtiketiCoz(b.anahtar))}</div>
             <div style="color:var(--metin-soluk,#6b7280);">${new Date(b.tarih).toLocaleString('tr-TR')}</div>
           </div>
@@ -157,8 +181,15 @@
       });
 
       document.getElementById('bildirimTemizleBtn').addEventListener('click', () => {
-        const bildirimler = oku('isg_bildirimler', []).map(b => Object.assign({}, b, { okunduMu: true }));
-        yaz('isg_bildirimler', bildirimler);
+        // Sadece BU kullanıcıya görünür olanları kendi adına okundu işaretler
+        // — başka bir kullanıcıya hedefli bildirimlere dokunmaz.
+        const tumBildirimler = oku('isg_bildirimler', []);
+        tumBildirimler.forEach(b => {
+          if (!_bildirimKullaniciyaGorunurMu(b, kullanici)) return;
+          b.okuyanKullaniciIdleri = Array.isArray(b.okuyanKullaniciIdleri) ? b.okuyanKullaniciIdleri : [];
+          if (!b.okuyanKullaniciIdleri.includes(kullanici.id)) b.okuyanKullaniciIdleri.push(kullanici.id);
+        });
+        yaz('isg_bildirimler', tumBildirimler);
         ciz();
       });
 
