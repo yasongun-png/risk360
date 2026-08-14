@@ -107,7 +107,12 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
   if (anahtar === 'isg_bildirimler' || !Array.isArray(yeniDeger)) return;
   try {
     const kullanici = oturumdakiKullanici();
-    if (!kullanici || kullanici.rol !== 'duzenleyici') return;
+    // admin veya düzenleyici yeni kayıt eklediğinde TÜM kullanıcılara görünür
+    // bir bildirim düşer (kullanıcı isteği: "kullanıcı şifresi olan herkeste
+    // zil bildirim kısmı olsun ... admin/düzenleyici yeni kayıt eklediğinde
+    // HERKESE görünsün"). İK'nın kendi (Personel/Eğitim) eklemeleri şimdilik
+    // bildirime dahil değil.
+    if (!kullanici || !(kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici')) return;
     const eskiDeger = oku(anahtar, []);
     if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return;
     const eskiIdler = new Set(eskiDeger.map(k => k && k.id));
