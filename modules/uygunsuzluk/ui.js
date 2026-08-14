@@ -27,6 +27,35 @@ function _konuSecimDoldur() {
   _secilenKonuId = secim.value;
 }
 
+// Bölüm filtresi dropdown'ını, SEÇİLİ KONU kapsamındaki kayıtlarda geçen
+// bölüm adlarıyla doldurur (kullanıcı isteği: "uygunsuzlukları bölüm
+// bazında da filtreleyebilmek istiyorum ama konuların kendi içinde
+// filtrelediğim şekilde" — yani bölüm filtresi, konu seçimini EZMEZ,
+// onun İÇİNDE çalışır). Seçim hâlâ geçerliyse korunur.
+function _usBolumFiltreDoldur() {
+  const secim = document.getElementById('bolumFiltre');
+  const oncekiSecim = secim.value;
+  const bolumler = Array.from(new Set(
+    uygunsuzluklariGetir('', { konuId: _secilenKonuId }).map(k => (k.bolum || '').trim()).filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b, 'tr'));
+
+  secim.innerHTML = '<option value="">Tüm Bölümler</option>' +
+    bolumler.map(b => `<option value="${_usKacir(b)}">${_usKacir(b)}</option>`).join('');
+
+  secim.value = bolumler.includes(oncekiSecim) ? oncekiSecim : '';
+}
+
+// Tüm filtreleri (arama kutusu hariç) tek yerden okur — dışa aktarım, PDF,
+// yazdırma ve tablo çizimi hep aynı filtre setini kullanır.
+function _usAktifFiltreleriGetir() {
+  return {
+    durum: document.getElementById('durumFiltre').value,
+    riskSeviyesi: document.getElementById('riskFiltre').value,
+    bolum: document.getElementById('bolumFiltre').value,
+    konuId: _secilenKonuId
+  };
+}
+
 function _usKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
@@ -99,9 +128,11 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
   document.getElementById('durumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('riskFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
+  document.getElementById('bolumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
 
   document.getElementById('konuSecim').addEventListener('change', e => {
     _secilenKonuId = e.target.value;
+    _usBolumFiltreDoldur();
     if (_usGorunum === 'kayitlar') kayitlariCiz(document.getElementById('aramaKutusu').value);
     else ozetiCiz();
   });
@@ -111,6 +142,7 @@ function uygunsuzlukSayfasiniBaslat() {
     const sonuc = uygunsuzlukKonuEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     _konuSecimDoldur();
+    _usBolumFiltreDoldur();
     document.getElementById('konuSecim').value = sonuc.konu.id;
     _secilenKonuId = sonuc.konu.id;
     kayitlariCiz(document.getElementById('aramaKutusu').value);
@@ -123,6 +155,7 @@ function uygunsuzlukSayfasiniBaslat() {
     const sonuc = uygunsuzlukKonuYenidenAdlandir(_secilenKonuId, yeniAd);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     _konuSecimDoldur();
+    _usBolumFiltreDoldur();
     document.getElementById('konuSecim').value = _secilenKonuId;
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
@@ -131,11 +164,11 @@ function uygunsuzlukSayfasiniBaslat() {
     excelSablonIndir(UYGUNSUZLUK_IMPORT_KOLONLARI, 'uygunsuzluk_sablonu.xlsx');
   });
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
-    const filtreler = { durum: document.getElementById('durumFiltre').value, riskSeviyesi: document.getElementById('riskFiltre').value, konuId: _secilenKonuId };
+    const filtreler = _usAktifFiltreleriGetir();
     excelDisaAktar(_uygunsuzlukExcelSatirlariniHazirla(uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler)), UYGUNSUZLUK_EXPORT_KOLONLARI, 'uygunsuzluk_kayitlari.xlsx');
   });
   document.getElementById('listeYazdirBtn').addEventListener('click', () => {
-    const filtreler = { durum: document.getElementById('durumFiltre').value, riskSeviyesi: document.getElementById('riskFiltre').value, konuId: _secilenKonuId };
+    const filtreler = _usAktifFiltreleriGetir();
     const kayitlar = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler);
     raporListesiYazdir('Uygunsuzluk Listesi', '', UYGUNSUZLUK_EXPORT_KOLONLARI, _uygunsuzlukExcelSatirlariniHazirla(kayitlar));
   });
@@ -180,6 +213,7 @@ function uygunsuzlukSayfasiniBaslat() {
       const sonuc = excelToplulIceAktarSonucOzetle(satirlar, uygunsuzlukEkle);
       alert(excelIceAktarOzetMesaji(sonuc));
       _konuSecimDoldur();
+      _usBolumFiltreDoldur();
       kayitlariCiz(document.getElementById('aramaKutusu').value);
     });
   });
@@ -193,6 +227,7 @@ function uygunsuzlukSayfasiniBaslat() {
   });
 
   _konuSecimDoldur();
+  _usBolumFiltreDoldur();
   _yasalSartlariDoldur();
   gorunumDegistir('kayitlar');
 }
@@ -320,6 +355,7 @@ async function _eskiJsonIceAktar(dosya) {
     }
 
     _konuSecimDoldur();
+    _usBolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   };
   okuyucu.onerror = () => alert('Dosya okunamadı.');
@@ -482,11 +518,7 @@ function _usTanimHucresiUret(k) {
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
-  const filtreler = {
-    durum: document.getElementById('durumFiltre').value,
-    riskSeviyesi: document.getElementById('riskFiltre').value,
-    konuId: _secilenKonuId
-  };
+  const filtreler = _usAktifFiltreleriGetir();
   const kayitlar = uygunsuzluklariGetir(aramaMetni, filtreler);
 
   govde.innerHTML = '';

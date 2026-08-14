@@ -145,17 +145,19 @@ function _anahtardanModulAdiCikar(anahtar) {
 }
 
 // rol==='ik' kullanıcılar artık TÜM modülleri görüntüleyebilir ama sadece
-// IK_IZINLI_MODULLER'de (Personel/Eğitim) yeni kayıt ekleyebilir — diğer
-// modüllerde sadece görüntüleme yapabilirler (bkz. core/auth.js
+// IK_IZINLI_MODULLER'de (Personel/Eğitim) yazabilir (ekleme/düzenleme) —
+// diğer modüllerde TAMAMEN salt-okunurdur (bkz. core/auth.js
 // kullaniciEklemeYapabilirMi). Bu, tek bir yerden (yaz()) TÜM modülleri
 // kapsayacak şekilde uygulanır. Kullanıcı isteği: "diğer modülleri sadece
-// görsün ekleme yapamasın".
+// görsün ekleme yapamasın" — ayrıca Yıllık Plan/Değerlendirme gibi
+// modüllerdeki "işaretleme" (checkbox) alanları YENİ kayıt eklemez, MEVCUT
+// bir kaydı günceller (dizi boyu değişmez); sadece uzayan diziyi engellemek
+// bunu yakalayamıyordu — bu yüzden İK için dizi boyu fark etmeksizin İZİNSİZ
+// modüle HER yazım engellenir (ekleme de, düzenleme de).
 function _yaziEklemeEngelleMi(anahtar, yeniDeger) {
   if (!Array.isArray(yeniDeger)) return false;
   const kullanici = oturumdakiKullanici();
   if (!kullanici || kullanici.rol !== 'ik') return false;
-  const eskiDeger = oku(anahtar, []);
-  if (!Array.isArray(eskiDeger) || yeniDeger.length <= eskiDeger.length) return false;
   const modulAdi = _anahtardanModulAdiCikar(anahtar);
   return !IK_IZINLI_MODULLER.includes(modulAdi);
 }
