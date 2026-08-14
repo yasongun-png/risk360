@@ -229,7 +229,11 @@
       // bkz. bulutHazirOlduğunda (core/data.js). Bulut kapalıysa bu
       // callback zaten anında çalışır.
       bulutHazirOlduğunda(() => {
-      if (kullaniciAdminMi(kullanici)) _bildirimZiliniKur();
+      // Zil artık HERKESTE görünür (kullanıcı isteği: "kullanıcı şifresi
+      // olan herkeste zil bildirim kısmı olsun") — admin/düzenleyici yeni
+      // kayıt eklediğinde tüm kullanıcılara görünür (bkz. core/data.js
+      // _yaziEkBildirimKontrolEt).
+      _bildirimZiliniKur();
       const aktifFirma = aktifFirmaGetir();
       if (!aktifFirma) {
         window.location.href = 'firma-sec.html';

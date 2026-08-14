@@ -137,7 +137,7 @@ const _UC_RAPOR_STIL = `
 `;
 
 async function uygunsuzlukRaporuPdfOlustur() {
-  const filtreler = { durum: document.getElementById('durumFiltre').value, riskSeviyesi: document.getElementById('riskFiltre').value, konuId: _secilenKonuId };
+  const filtreler = _usAktifFiltreleriGetir();
   const kayitlarHam = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!kayitlarHam.length) {
     alert('Seçili filtreler için PDF oluşturulacak kayıt yok.');
