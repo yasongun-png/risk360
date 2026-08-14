@@ -84,7 +84,7 @@
 
           <div class="hata-mesaji" id="rkHataMesaji"></div>
 
-          <button type="submit" class="birincil rk-gonder-btn" id="rkGonderBtn" disabled>Gönder</button>
+          <button type="submit" class="birincil rk-gonder-btn" id="rkGonderBtn">Gönder</button>
         </form>
       </div>
 
@@ -101,6 +101,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
   <script src="modules/olay-kaza/model.js"></script>
   <script>
     function _rkKacir(v) {
@@ -149,12 +150,6 @@
       });
     }
 
-    function _rkGonderDurumunuGuncelle() {
-      const btn = document.getElementById('rkGonderBtn');
-      const aciklamaDolu = document.getElementById('rkAciklama').value.trim().length > 0;
-      btn.disabled = !(_rkSecilenTip && aciklamaDolu);
-    }
-
     function _rkFormuBaslat() {
       document.getElementById('rkYukleniyor').classList.add('gizli');
       document.getElementById('rkFormAlani').classList.remove('gizli');
@@ -165,10 +160,9 @@
         btn.addEventListener('click', () => {
           _rkSecilenTip = btn.getAttribute('data-tip');
           document.querySelectorAll('.rk-tip-buton').forEach(b => b.classList.toggle('secili', b === btn));
-          _rkGonderDurumunuGuncelle();
+          document.getElementById('rkHataMesaji').classList.remove('gorunur');
         });
       });
-      document.getElementById('rkAciklama').addEventListener('input', _rkGonderDurumunuGuncelle);
 
       document.getElementById('rkForm').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -190,23 +184,37 @@
         gonderBtn.disabled = true;
         gonderBtn.textContent = 'Gönderiliyor…';
 
-        const anahtar = _rkOlayAnahtari();
-        const mevcutListe = oku(anahtar, []);
-        const yeniKayit = olayKaydiOlustur({
-          olayTipi: _rkSecilenTip,
-          kazaTarihi: simdi.toISOString().slice(0, 10),
-          kazaSaati: simdi.toTimeString().slice(0, 5),
-          bolum: document.getElementById('rkBolum').value.trim(),
-          adSoyad: adSoyad,
-          aciklama: aciklama,
-          kayitNo: sonrakiKayitNoUret(mevcutListe)
-        });
-        mevcutListe.push(yeniKayit);
-        yaz(anahtar, mevcutListe);
-        _rkBildirimGonder(yeniKayit);
+        // Beklenmeyen bir hata (ör. eksik script/tanımsız fonksiyon) burada
+        // yakalanmazsa buton "Gönderiliyor…" yazısında SONSUZA DEK takılı
+        // kalır — kullanıcıya hiçbir geri bildirim vermeden (yaşanmış hata:
+        // core/auth.js dahil edilmemişti, yaz() içindeki oturumdakiKullanici()
+        // çağrısı sessizce patlayıp formu kilitliyordu). Bu yüzden tüm yazma
+        // işlemi try/catch içine alınır; hata olursa buton eski haline döner.
+        try {
+          const anahtar = _rkOlayAnahtari();
+          const mevcutListe = oku(anahtar, []);
+          const yeniKayit = olayKaydiOlustur({
+            olayTipi: _rkSecilenTip,
+            kazaTarihi: simdi.toISOString().slice(0, 10),
+            kazaSaati: simdi.toTimeString().slice(0, 5),
+            bolum: document.getElementById('rkBolum').value.trim(),
+            adSoyad: adSoyad,
+            aciklama: aciklama,
+            kayitNo: sonrakiKayitNoUret(mevcutListe)
+          });
+          mevcutListe.push(yeniKayit);
+          yaz(anahtar, mevcutListe);
+          _rkBildirimGonder(yeniKayit);
 
-        document.getElementById('rkFormAlani').classList.add('gizli');
-        document.getElementById('rkBasariDurumu').classList.remove('gizli');
+          document.getElementById('rkFormAlani').classList.add('gizli');
+          document.getElementById('rkBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('Ramak kala bildirimi gönderilemedi:', hata);
+          hataMesaji.textContent = 'Bir hata oluştu, bildirim gönderilemedi. Lütfen tekrar deneyin.';
+          hataMesaji.classList.add('gorunur');
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'Gönder';
+        }
       });
     }
 
@@ -215,7 +223,7 @@
       _rkSecilenTip = '';
       document.querySelectorAll('.rk-tip-buton').forEach(b => b.classList.remove('secili'));
       const gonderBtn = document.getElementById('rkGonderBtn');
-      gonderBtn.disabled = true;
+      gonderBtn.disabled = false;
       gonderBtn.textContent = 'Gönder';
       document.getElementById('rkBasariDurumu').classList.add('gizli');
       document.getElementById('rkFormAlani').classList.remove('gizli');
