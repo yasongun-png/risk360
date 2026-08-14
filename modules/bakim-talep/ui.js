@@ -101,12 +101,24 @@ function talepleriCiz() {
 
 // ---- Yeni Talep ----
 
+// Talebi Açan Kişi, giriş yapan hesabın adı değil — Personel listesinden
+// seçilir (kullanıcı isteği: "talebi açan kişi personel listesinden
+// seçilsin", "eskiden belirlediğim kullanıcılar yok" — yani her çalışan
+// için ayrı bir giriş hesabı yok, sadece hangi personelin talep ettiği
+// seçilir).
+function _btAcanKisiSecimDoldur() {
+  const secim = document.getElementById('btYtAcanKisi');
+  const personeller = personelleriGetir('', false).slice().sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
+  secim.innerHTML = personeller.map(p => `<option>${_btKacir(p.adSoyad)}</option>`).join('')
+    || '<option value="">Önce Personel modülünden kayıt ekleyin</option>';
+}
+
 function _btYeniTalepModalAc() {
   document.getElementById('btYtBirim').innerHTML = _btBirimleriGetir().map(b => `<option>${_btKacir(b)}</option>`).join('')
     || '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
   const kullanici = oturumdakiKullanici();
   if (kullanici.rol === 'birim' && kullanici.birimAdi) document.getElementById('btYtBirim').value = kullanici.birimAdi;
-  document.getElementById('btYtAcanKisi').value = kullanici.adSoyad || '';
+  _btAcanKisiSecimDoldur();
   document.getElementById('btYtKonum').value = '';
   document.getElementById('btYtEkipmanKodu').value = '';
   document.getElementById('btYtIsTanimi').value = '';
