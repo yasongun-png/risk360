@@ -190,10 +190,9 @@
         mount.innerHTML = `
           <div style="text-align:center;">
             <div class="doc-title">RAMAK KALA / TEHLİKE BİLDİRİMİ</div>
-            <div class="doc-meta"><b>${_fyKacir(firma.ad)}</b></div>
-            <p style="font-size:13px; margin:14px 0;">Bir tehlike mi gördünüz? Ramak kala mı yaşadınız?<br>Bu kodu telefonunuzla okutup hemen bildirin.</p>
+            <p style="font-size:13px; margin:14px 0;">Tehlike gördüğünüzde veya bir ramak kala olay yaşadığınızda barkodu telefonunuzla okutarak bildirim yapabilirsiniz.</p>
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}" style="width:300px; height:300px;" alt="QR Kod">
-            <p style="font-size:11px; color:#555; margin-top:14px;">İsim vermeden de gönderebilirsiniz.</p>
+            <p style="font-size:11px; color:#555; margin-top:14px;">İsim zorunlu değildir.</p>
           </div>
         `;
         mount.style.display = 'block';
