@@ -19,6 +19,29 @@ function _izTarihSaatUzunGoruntu(iso) {
   return gunAyYil(tarih) + (saat ? ' ' + saat : '');
 }
 
+// Barkod formundan ("Formu Tamamla" / "İmza At") atılan dijital imzalar
+// (izin.imzalar.talepEden/bakim/isg) daha önce bu PDF'te hiç gösterilmiyordu
+// — imza kutuları hep boştu, sadece kağıda elle imza atmak içindi. Artık
+// varsa imza görseli + adı + tarihi burada basılıyor; yoksa eski boş
+// "İmza:" kutusu (elle imzalama için) korunuyor.
+function _izImzaHucre(baslik, varsayilanAd, imzaVerisi) {
+  if (imzaVerisi && imzaVerisi.imzaUrl) {
+    return `
+      <td>
+        <div class="imza-baslik">${_izKacir(baslik)}</div>
+        <div>${_izKacir(imzaVerisi.ad)}</div>
+        <img src="${imzaVerisi.imzaUrl}" style="max-width:100%; max-height:14mm; margin-top:2mm;">
+        <div style="font-size:7.5pt; color:#64748b; margin-top:1mm;">${_izTarihSaatUzunGoruntu(imzaVerisi.tarih)}</div>
+      </td>`;
+  }
+  return `
+    <td>
+      <div class="imza-baslik">${_izKacir(baslik)}</div>
+      <div>${_izKacir(varsayilanAd) || '-'}</div>
+      <div style="margin-top:8mm;">İmza:</div>
+    </td>`;
+}
+
 async function izinFormunuPdfOlustur(izinId) {
   const k = izinIdIleGetirRepo(izinId);
   if (!k) return;
@@ -108,8 +131,9 @@ async function izinFormunuPdfOlustur(izinId) {
 
     <table class="iz-imza">
       <tr>
-        <td><div class="imza-baslik">Talep Eden</div><div>${_izKacir(k.talepEden)}</div><div style="margin-top:8mm;">İmza:</div></td>
-        <td><div class="imza-baslik">Saha Sorumlusu</div><div>${_izKacir(k.sahaSorumlusu)}</div><div style="margin-top:8mm;">İmza:</div></td>
+        ${_izImzaHucre('Talep Eden', k.talepEden, k.imzalar && k.imzalar.talepEden)}
+        ${_izImzaHucre('Bakım Personeli', null, k.imzalar && k.imzalar.bakim)}
+        ${_izImzaHucre('İSG', null, k.imzalar && k.imzalar.isg)}
       </tr>
     </table>
 
@@ -149,7 +173,7 @@ async function izinFormunuPdfOlustur(izinId) {
 
         #izPdfKok table.iz-imza{ width:100%; border-collapse:collapse; margin-top:6mm; page-break-inside:avoid; break-inside:avoid; }
         #izPdfKok table.iz-imza tr{ page-break-inside:avoid; break-inside:avoid; }
-        #izPdfKok table.iz-imza td{ box-shadow: inset 0 0 0 1px #cbd5e1; padding:4mm; width:50%; height:24mm; vertical-align:top; font-size:9pt; }
+        #izPdfKok table.iz-imza td{ box-shadow: inset 0 0 0 1px #cbd5e1; padding:4mm; width:33.33%; height:24mm; vertical-align:top; font-size:9pt; text-align:center; }
         #izPdfKok .imza-baslik{ font-weight:700; color:#0b2c52; margin-bottom:2mm; text-transform:uppercase; }
 
         #izPdfKok .iz-altbilgi{ text-align:center; font-size:7.5pt; color:#64748b; margin-top:5mm; }
