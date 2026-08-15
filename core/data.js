@@ -241,6 +241,37 @@ function yazVeSonucuGetir(anahtar, deger) {
   return Promise.resolve({ basarili: true });
 }
 
+// Barkod ile giriş yapılmadan gönderilen formlarda (ör. ramak-kala-bildir.html,
+// is-izni-bildir.html) kullanıcı isteği: "yapılan cihazın IP'si ve benzersiz
+// tanımı mutlaka yazılsın forma" — hesap/isim olmadığından bu, gönderimi
+// hangi CİHAZDAN yapıldığını sonradan ayırt edebilmenin tek yolu.
+// cihazBenzersizIdGetir(): bu tarayıcıya özel, localStorage'da kalıcı rastgele
+// bir kimlik (gerçek bir donanım/işletim sistemi kimliği DEĞİLDİR — tarayıcı
+// verisi temizlenirse veya başka bir tarayıcı/cihaz kullanılırsa değişir).
+function cihazBenzersizIdGetir() {
+  const anahtar = 'isg_cihaz_id';
+  let id = localStorage.getItem(anahtar);
+  if (!id) {
+    id = rastgeleId() + '-' + rastgeleId();
+    try { localStorage.setItem(anahtar, id); } catch (e) { /* kota dolu olsa bile tek seferlik id döner */ }
+  }
+  return id;
+}
+
+// Genel (public) IP adresini üçüncü taraf bir servisten (api.ipify.org)
+// tek seferlik çeker — sunucu tarafı olmayan bu mimaride istemcinin kendi
+// IP'sini başka türlü öğrenmesinin yolu yoktur. Ağ hatasında/başarısızlıkta
+// boş döner (form gönderimini ASLA engellemez).
+async function genelIpAdresiGetir() {
+  try {
+    const yanit = await fetch('https://api.ipify.org?format=json');
+    const veri = await yanit.json();
+    return veri.ip || '';
+  } catch (e) {
+    return '';
+  }
+}
+
 // yazVeSonucuGetir()'in "küçük senkron" anahtarlar (ör. isg_bildirimler)
 // için eşleniği — yazVeSonucuGetir bu tür anahtarlarda normal fire-and-forget
 // yaz()'a düşüp anında "başarılı" döner, gerçekten Firestore'a ulaşıp

@@ -128,6 +128,15 @@ function bakimTalepSayfasiniBaslat() {
     document.getElementById('btDunFiltreBtn').classList.toggle('filtre-aktif', _btDunFiltresiAktif);
     talepleriCiz();
   });
+  // Barkod okutunca açılan AYNI iş izni formu — kullanıcı isteği: "aynı
+  // barkodun yönlendirdiği form Bakım Onarım tarafında da olsun, barkodla
+  // gelen formla aynı form açılsın". Yeni sekmede açılır ki liste ekranı
+  // kaybolmasın.
+  document.getElementById('btIsIzniDuzenleBtn').addEventListener('click', () => {
+    const firma = aktifFirmaGetir();
+    if (!firma) return;
+    window.open('../../is-izni-bildir.html?firma=' + encodeURIComponent(firma.slug), '_blank');
+  });
 
   document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
   document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);

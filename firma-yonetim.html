@@ -237,9 +237,7 @@
         satir.className = 'firma-satir';
         satir.innerHTML = `
           <div class="sol">
-            ${firmaLogoGetir(firma.id)
-              ? `<img src="${_fyKacir(firmaLogoGetir(firma.id))}" style="width:34px; height:34px; border-radius:8px; object-fit:contain; background:#fff; border:1px solid var(--kenarlik);">`
-              : `<div class="rozet" style="background:${firma.renk}">${_fyKacir(kisaAd)}</div>`}
+            <span data-logo-alani="${firma.id}"><div class="rozet" style="background:${firma.renk}">${_fyKacir(kisaAd)}</div></span>
             <span>${_fyKacir(firma.ad)}</span>
             <select class="tehlike-sinifi-sec" data-tehlike="${firma.id}" style="width:auto; margin:0; font-size:12px; padding:6px 8px;">
               ${TEHLIKE_SINIFLARI.map(s => `<option value="${s}" ${s === firma.tehlikeSinifi ? 'selected' : ''}>${s}</option>`).join('')}
@@ -259,6 +257,22 @@
           </div>
         `;
         liste.appendChild(satir);
+      });
+
+      // Logo, "büyük veri" (Firestore buyuk_veri) altında saklanır ve bu
+      // sayfanın hiçbir tek firma için canlı dinleyicisi (bulutFirmaHazirOlduğunda)
+      // yok — birden fazla firma birden yönetiliyor. Önceden burada senkron
+      // oku() kullanılıyordu; bu sadece AYNI oturumda az önce yüklenen logoyu
+      // (bellekteki _bulutOnbellek'e düşen) gösterebiliyordu, sayfa yeniden
+      // açıldığında HİÇBİR ZAMAN gerçek veriyi bulamıyordu (kullanıcı: "logoyu
+      // ekliyorum, bir sonraki açtığımda görünmüyor"). buyukVeriFirmadanOku
+      // ile firma-bağımsız, tek seferlik gerçek okuma yapılır.
+      firmalar.forEach(firma => {
+        buyukVeriFirmadanOku(_firmaLogoAnahtari(firma.id), '').then(logoUrl => {
+          if (!logoUrl) return;
+          const alan = liste.querySelector(`[data-logo-alani="${firma.id}"]`);
+          if (alan) alan.innerHTML = `<img src="${_fyKacir(logoUrl)}" style="width:34px; height:34px; border-radius:8px; object-fit:contain; background:#fff; border:1px solid var(--kenarlik);">`;
+        }).catch(() => {});
       });
 
       liste.querySelectorAll('[data-tehlike]').forEach(sec => {

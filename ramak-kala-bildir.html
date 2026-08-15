@@ -262,6 +262,11 @@
             olayYeriFotograflari: _rkFotoUrl ? [{ url: _rkFotoUrl }] : [],
             kayitNo: sonrakiKayitNoUret(mevcutListe)
           });
+          // Kullanıcı isteği: "yapılan cihazın IP'si ve benzersiz tanımı
+          // mutlaka yazılsın forma" — olayKaydiOlustur bu alanları bilmediği
+          // için (sabit şekilli nesne döndürür) kayıt oluştuktan SONRA eklenir.
+          yeniKayit.cihazId = cihazBenzersizIdGetir();
+          yeniKayit.ipAdresi = await genelIpAdresiGetir();
           mevcutListe.push(yeniKayit);
           const sonuc = await yazVeSonucuGetir(anahtar, mevcutListe);
           if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));

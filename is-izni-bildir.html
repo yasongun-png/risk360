@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>İş İzni Oluştur</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* Bu sayfa giriş yapmadan (barkod/QR ile, ya da Bakım Onarım içindeki
+     "İş İzni Düzenle" butonuyla) açılır — ramak-kala-bildir.html ile aynı
+     kart/tek-ekran deseni (kullanıcı isteği: "aynı ramak kala'da yaptığımız
+     gibi iş izni barkodu olsun", "barkodla gelen formla aynı form açılsın"). */
+  body { background: var(--arka-plan, #f3f4f6); }
+  .ii-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
+  .ii-kart { width: 100%; max-width: 520px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
+  .ii-baslik { text-align: center; margin-bottom: 4px; font-size: 19px; font-weight: 800; }
+  .ii-firma { text-align: center; color: var(--celik-mavi-koyu, #1d4ed8); font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+  .ii-not { font-size: 12px; color: var(--metin-soluk, #6b7280); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+  .ii-alan { margin-bottom: 14px; }
+  .ii-alan label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--metin-soluk, #6b7280); }
+  .ii-satir-ikili { display: flex; gap: 10px; }
+  .ii-satir-ikili > div { flex: 1; }
+  .ii-kkd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .ii-kkd-grid label { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 12px; color: var(--metin); margin: 0; }
+  .ii-gonder-btn { width: 100%; padding: 15px; font-size: 15px; margin-top: 6px; }
+  .ii-durum { text-align: center; padding: 30px 6px; }
+  .ii-durum .ikon { font-size: 46px; margin-bottom: 10px; }
+  .ii-durum h2 { margin: 0 0 8px; font-size: 18px; }
+  .ii-durum p { color: var(--metin-soluk, #6b7280); font-size: 13px; margin: 0 0 20px; }
+  .gizli { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="ii-sahne">
+    <div class="ii-kart">
+
+      <div id="iiYukleniyor">
+        <div class="ii-baslik">🛡️ Yükleniyor…</div>
+      </div>
+
+      <div id="iiHataDurumu" class="ii-durum gizli">
+        <div class="ikon">⚠️</div>
+        <h2>Bağlantı Geçersiz</h2>
+        <p>Bu barkod/link geçerli bir işyerine ait değil. Lütfen İSG ekibinizle iletişime geçin.</p>
+      </div>
+
+      <div id="iiFormAlani" class="gizli">
+        <div class="ii-baslik">🧾 İş İzni Oluştur</div>
+        <div class="ii-firma" id="iiFirmaAdi"></div>
+        <div class="ii-not">
+          Bu form, talep eden birim adına doldurulur. Bakım/İSG ekibi izni gözden geçirip onaylayacaktır.
+        </div>
+
+        <form id="iiForm">
+          <div class="ii-alan">
+            <label for="iiBakimTalebi">İlgili Bakım İşi (varsa)</label>
+            <select id="iiBakimTalebi">
+              <option value="">— Bağlantısız / Genel İş İzni —</option>
+            </select>
+          </div>
+
+          <div class="ii-alan">
+            <label for="iiIzinTuru">İş İzni Türü *</label>
+            <select id="iiIzinTuru"></select>
+          </div>
+
+          <div class="ii-alan">
+            <label for="iiIsTanimi">İş Tanımı *</label>
+            <textarea id="iiIsTanimi" rows="3" placeholder="Ne yapılacak, kısaca anlatın..." required></textarea>
+          </div>
+
+          <div class="ii-satir-ikili">
+            <div class="ii-alan">
+              <label for="iiBolum">Bölüm *</label>
+              <input type="text" id="iiBolum" required>
+            </div>
+            <div class="ii-alan">
+              <label for="iiLokasyon">Lokasyon / Ekipman *</label>
+              <input type="text" id="iiLokasyon" required>
+            </div>
+          </div>
+
+          <div class="ii-satir-ikili">
+            <div class="ii-alan">
+              <label for="iiTalepEden">Talep Eden (Adınız) *</label>
+              <input type="text" id="iiTalepEden" required>
+            </div>
+            <div class="ii-alan">
+              <label for="iiSahaSorumlusu">Saha Sorumlusu *</label>
+              <input type="text" id="iiSahaSorumlusu" required>
+            </div>
+          </div>
+
+          <div class="ii-satir-ikili">
+            <div class="ii-alan">
+              <label for="iiBaslangic">Başlangıç *</label>
+              <input type="datetime-local" id="iiBaslangic" required>
+            </div>
+            <div class="ii-alan">
+              <label for="iiBitis">Bitiş *</label>
+              <input type="datetime-local" id="iiBitis" required>
+            </div>
+          </div>
+
+          <div class="ii-alan" id="iiGazOlcumuAlani" style="display:none;">
+            <label>Gaz Ölçümü (Kapalı Alan)</label>
+            <div class="ii-satir-ikili">
+              <div><input type="text" id="iiGazOksijen" placeholder="Oksijen % (ör. 20,9)"></div>
+              <div><input type="text" id="iiGazLel" placeholder="LEL %"></div>
+            </div>
+            <input type="text" id="iiGazToksik" placeholder="Toksik gaz (varsa, ör. H2S: 0 ppm)">
+            <div style="font-size:11px; color:var(--metin-soluk); margin-top:-8px;">Ölçüm İSG/Bakım tarafından da tamamlanabilir — boş bırakabilirsiniz.</div>
+          </div>
+
+          <div class="ii-alan" id="iiLotoAlani" style="display:none;">
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+              <input type="checkbox" id="iiLotoUygulandi" style="width:auto;"> LOTO / enerji izolasyonu uygulandı
+            </label>
+          </div>
+
+          <div class="ii-alan">
+            <label>Gerekli KKD</label>
+            <div class="ii-kkd-grid" id="iiKkdGrid"></div>
+          </div>
+
+          <div class="ii-alan">
+            <label for="iiFotoDosya">Fotoğraf (isteğe bağlı)</label>
+            <button type="button" class="ikincil" id="iiFotoSecBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Ekle</button>
+            <input type="file" id="iiFotoDosya" accept="image/*" style="display:none;">
+            <div id="iiFotoOnizleme" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="hata-mesaji" id="iiHataMesaji"></div>
+
+          <button type="submit" class="birincil ii-gonder-btn" id="iiGonderBtn">İş İznini Oluştur</button>
+        </form>
+      </div>
+
+      <div id="iiBasariDurumu" class="ii-durum gizli">
+        <div class="ikon">✅</div>
+        <h2>İş İzni Oluşturuldu</h2>
+        <p id="iiBasariMetin">Teşekkürler — iş izni Bakım/İSG ekibine iletildi.</p>
+        <button type="button" class="ikincil" id="iiYeniIzinBtn" style="width:auto; padding:10px 22px;">Yeni İş İzni Oluştur</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="modules/is-izni/model.js"></script>
+  <script>
+    function _iiKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    const IS_IZNI_KKD_LISTESI = [
+      'Baret', 'Koruyucu Gözlük', 'Yüz Siperi', 'Eldiven', 'Kulak Koruyucu',
+      'Solunum Koruyucu', 'Kimyasal Tulum', 'İş Ayakkabısı',
+      'Paraşüt Tipi Emniyet Kemeri', 'Reflektif Yelek'
+    ];
+
+    const _iiParams = new URLSearchParams(window.location.search);
+    const _iiSlug = (_iiParams.get('firma') || '').trim();
+    const _iiBakimTalepIdOnSecim = (_iiParams.get('talepId') || '').trim();
+    let _iiFirma = null;
+    let _iiFotoUrl = '';
+
+    function _iiIzinAnahtari() {
+      return 'isg_' + _iiFirma.slug + '_is_izinleri';
+    }
+
+    function _iiBakimAnahtari() {
+      return 'isg_' + _iiFirma.slug + '_bakim_talepleri';
+    }
+
+    function _iiFotoOnizlemeCiz() {
+      const kutu = document.getElementById('iiFotoOnizleme');
+      kutu.innerHTML = _iiFotoUrl
+        ? `<div style="display:flex; align-items:center; gap:10px;">
+             <img data-foto-ref="${_iiKacir(_iiFotoUrl)}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik,#e5e7eb);">
+             <button type="button" id="iiFotoKaldirBtn" style="border:none; background:none; color:var(--hata,#dc2626); font-size:12px; font-weight:600; cursor:pointer;">Kaldır</button>
+           </div>`
+        : '';
+      if (_iiFotoUrl) {
+        document.getElementById('iiFotoKaldirBtn').addEventListener('click', () => { _iiFotoUrl = ''; _iiFotoOnizlemeCiz(); });
+        fotoReferanslariCoz(kutu);
+      }
+    }
+
+    // İş izni oluşturulduğunda, seçilen Bakım Onarım talebine bu iznin
+    // referansı işlenir (kullanıcı isteği: "aynı talebin iş izni kısmına
+    // yazılsın") — bakım-talep modülünün kendi service.js'i bu sayfada
+    // yüklü değil (izole tutulmak için), bu yüzden ilgili kayıt doğrudan
+    // oku/yaz ile güncellenir.
+    async function _iiBakimTalebineIsle(bakimTalepId, izin) {
+      if (!bakimTalepId) return;
+      const anahtar = _iiBakimAnahtari();
+      const liste = oku(anahtar, []);
+      const index = liste.findIndex(t => t.id === bakimTalepId);
+      if (index === -1) return;
+      const mevcutIzinler = Array.isArray(liste[index].isIzinleri) ? liste[index].isIzinleri : [];
+      liste[index] = Object.assign({}, liste[index], {
+        isIzinleri: mevcutIzinler.concat([{ id: izin.id, izinNo: izin.izinNo, olusturmaTarihi: izin.olusturmaTarihi }])
+      });
+      await yazVeSonucuGetir(anahtar, liste);
+    }
+
+    function _iiBakimTalepleriniDoldur() {
+      const secim = document.getElementById('iiBakimTalebi');
+      const kapali = ['Kapatıldı', 'Reddedildi'];
+      const liste = oku(_iiBakimAnahtari(), []).filter(t => !kapali.includes(t.durum));
+      secim.innerHTML = '<option value="">— Bağlantısız / Genel İş İzni —</option>' +
+        liste.map(t => `<option value="${t.id}">${_iiKacir(t.talepNo)} — ${_iiKacir(t.talep.isTanimi)}</option>`).join('');
+      if (_iiBakimTalepIdOnSecim && liste.some(t => t.id === _iiBakimTalepIdOnSecim)) {
+        secim.value = _iiBakimTalepIdOnSecim;
+      }
+    }
+
+    function _iiTuruDegistiTetikle() {
+      const tur = document.getElementById('iiIzinTuru').value;
+      document.getElementById('iiGazOlcumuAlani').style.display = tur === 'Kapalı Alan' ? '' : 'none';
+      document.getElementById('iiLotoAlani').style.display = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(tur) ? '' : 'none';
+    }
+
+    function _iiFormuBaslat() {
+      document.getElementById('iiYukleniyor').classList.add('gizli');
+      document.getElementById('iiFormAlani').classList.remove('gizli');
+      document.getElementById('iiFirmaAdi').textContent = _iiFirma.ad;
+
+      document.getElementById('iiIzinTuru').innerHTML = IS_IZNI_TURLERI.map(t => `<option>${_iiKacir(t)}</option>`).join('');
+      document.getElementById('iiIzinTuru').addEventListener('change', _iiTuruDegistiTetikle);
+      _iiTuruDegistiTetikle();
+
+      document.getElementById('iiKkdGrid').innerHTML = IS_IZNI_KKD_LISTESI.map(k => `
+        <label><input type="checkbox" value="${_iiKacir(k)}"> ${_iiKacir(k)}</label>
+      `).join('');
+
+      _iiBakimTalepleriniDoldur();
+
+      document.getElementById('iiFotoSecBtn').addEventListener('click', () => document.getElementById('iiFotoDosya').click());
+      document.getElementById('iiFotoDosya').addEventListener('change', async e => {
+        const dosya = e.target.files[0];
+        e.target.value = '';
+        if (!dosya) return;
+        try {
+          const sonuc = await fotoYukle(dosya, 'is-izni/' + _iiFirma.slug + '-barkod');
+          _iiFotoUrl = sonuc.url;
+          _iiFotoOnizlemeCiz();
+        } catch (hata) {
+          alert(hata.message || 'Fotoğraf yüklenemedi.');
+        }
+      });
+
+      document.getElementById('iiForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const hataMesaji = document.getElementById('iiHataMesaji');
+        hataMesaji.classList.remove('gorunur');
+
+        const isTanimi = document.getElementById('iiIsTanimi').value.trim();
+        const bolum = document.getElementById('iiBolum').value.trim();
+        const lokasyon = document.getElementById('iiLokasyon').value.trim();
+        const talepEden = document.getElementById('iiTalepEden').value.trim();
+        const sahaSorumlusu = document.getElementById('iiSahaSorumlusu').value.trim();
+        const baslangic = document.getElementById('iiBaslangic').value;
+        const bitis = document.getElementById('iiBitis').value;
+
+        if (!isTanimi || !bolum || !lokasyon || !talepEden || !sahaSorumlusu || !baslangic || !bitis) {
+          hataMesaji.textContent = 'Lütfen * ile işaretli tüm alanları doldurun.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+
+        const gonderBtn = document.getElementById('iiGonderBtn');
+        gonderBtn.disabled = true;
+        gonderBtn.textContent = 'Gönderiliyor…';
+
+        try {
+          const anahtar = _iiIzinAnahtari();
+          const mevcutListe = oku(anahtar, []);
+          const tur = document.getElementById('iiIzinTuru').value;
+          const secilenKkd = Array.from(document.querySelectorAll('#iiKkdGrid input:checked')).map(cb => cb.value);
+          const bakimTalepId = document.getElementById('iiBakimTalebi').value;
+
+          const yeniIzin = izinOlustur({
+            izinTuru: tur,
+            isTanimi: '(Barkod ile oluşturuldu) ' + isTanimi,
+            bolum, lokasyon, talepEden, sahaSorumlusu,
+            baslangic: new Date(baslangic).toISOString(),
+            bitis: new Date(bitis).toISOString(),
+            gerekliKkd: secilenKkd,
+            gazOlcumu: {
+              oksijen: document.getElementById('iiGazOksijen').value.trim(),
+              lel: document.getElementById('iiGazLel').value.trim(),
+              toksik: document.getElementById('iiGazToksik').value.trim(),
+              olcumZamani: document.getElementById('iiGazOksijen').value.trim() ? new Date().toISOString() : '',
+              olcenKisi: talepEden
+            },
+            izolasyon: {
+              lotoGerekli: IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(tur),
+              lotoUygulandi: document.getElementById('iiLotoUygulandi').checked
+            },
+            izinNo: izinSonrakiNoUret(mevcutListe)
+          });
+          yeniIzin.fotograflar = _iiFotoUrl ? [{ url: _iiFotoUrl }] : [];
+          yeniIzin.cihazId = cihazBenzersizIdGetir();
+          yeniIzin.ipAdresi = await genelIpAdresiGetir();
+
+          mevcutListe.push(yeniIzin);
+          const sonuc = await yazVeSonucuGetir(anahtar, mevcutListe);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
+
+          await _iiBakimTalebineIsle(bakimTalepId, yeniIzin);
+
+          // Admin'in 🔔 ziline hedefli bildirim — bkz. modules/bakim-talep/
+          // service.js _btBildirimEkle ile aynı desen, 'isg_bildirimler'
+          // anahtarı yeniden kullanılır.
+          const bildirimler = oku('isg_bildirimler', []);
+          bildirimler.push({
+            id: rastgeleId(),
+            kullaniciAdi: 'Barkod',
+            adSoyad: talepEden,
+            anahtar: anahtar,
+            kayitEtiketleri: [yeniIzin.izinNo + ': ' + tur + ' — ' + isTanimi.slice(0, 60)],
+            hedefRol: 'bakim',
+            tarih: new Date().toISOString(),
+            okuyanKullaniciIdleri: []
+          });
+          await kucukVeriYazVeSonucuGetir('isg_bildirimler', bildirimler.slice(-300));
+
+          document.getElementById('iiBasariMetin').textContent = yeniIzin.izinNo + ' numaralı iş izni oluşturuldu — Bakım/İSG ekibine iletildi.';
+          _iiFotoUrl = '';
+          document.getElementById('iiFormAlani').classList.add('gizli');
+          document.getElementById('iiBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('İş izni oluşturulamadı:', hata);
+          hataMesaji.textContent = 'Bir hata oluştu, iş izni oluşturulamadı. Lütfen tekrar deneyin.';
+          hataMesaji.classList.add('gorunur');
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'İş İznini Oluştur';
+        }
+      });
+    }
+
+    document.getElementById('iiYeniIzinBtn').addEventListener('click', () => {
+      document.getElementById('iiForm').reset();
+      _iiTuruDegistiTetikle();
+      _iiFotoUrl = '';
+      _iiFotoOnizlemeCiz();
+      _iiBakimTalepleriniDoldur();
+      const gonderBtn = document.getElementById('iiGonderBtn');
+      gonderBtn.disabled = false;
+      gonderBtn.textContent = 'İş İznini Oluştur';
+      document.getElementById('iiBasariDurumu').classList.add('gizli');
+      document.getElementById('iiFormAlani').classList.remove('gizli');
+    });
+
+    if (!_iiSlug) {
+      document.getElementById('iiYukleniyor').classList.add('gizli');
+      document.getElementById('iiHataDurumu').classList.remove('gizli');
+    } else {
+      bulutHazirOlduğunda(() => {
+        const firmalar = oku('isg_firmalar', []);
+        _iiFirma = firmalar.find(f => f.slug === _iiSlug) || null;
+        if (!_iiFirma) {
+          document.getElementById('iiYukleniyor').classList.add('gizli');
+          document.getElementById('iiHataDurumu').classList.remove('gizli');
+          return;
+        }
+        bulutFirmaHazirOlduğunda(_iiFirma.slug, _iiFormuBaslat);
+      });
+    }
+  </script>
+</body>
+</html>
