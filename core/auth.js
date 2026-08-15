@@ -208,6 +208,50 @@ function girisGerekliAdmin() {
   return kullanici;
 }
 
+// Mevcut bir admin, TAM yetkili (rol alanı olmayan) yeni bir admin hesabı
+// oluşturabilir (kullanıcı isteği: "isterse admin başka admin ekleyebilsin
+// tam yetkili"). Yeni admin'in kendi sahipId'siyle eşleşen bir firması
+// olmayacağından, oluşturan admin'in O AN yönettiği tüm firmalara ortak
+// yönetici olarak eklenir — aksi halde giriş yapar yapmaz "hiç firma yok"
+// görürdü (bkz. core/tenant.js _firmaAdminErisimVarMi, ksahbaz için daha
+// önce elle yapılan aynı işlemin kalıcı/tekrarlanabilir hâli).
+async function adminEkle(kullaniciAdi, sifre, adSoyad) {
+  const olusturanAdmin = oturumdakiKullanici();
+  if (!olusturanAdmin || !kullaniciAdminMi(olusturanAdmin)) return { basarili: false, hata: 'Bu işlem için yetkiniz yok.' };
+
+  const temizKullaniciAdi = (kullaniciAdi || '').trim();
+  const temizAdSoyad = (adSoyad || '').trim();
+  if (!temizKullaniciAdi) return { basarili: false, hata: 'Kullanıcı adı boş olamaz.' };
+  if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
+  if (!sifre || sifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
+  if (!kullaniciAdiMusaitMi(temizKullaniciAdi)) return { basarili: false, hata: 'Bu kullanıcı adı zaten kullanılıyor.' };
+
+  const yeniAdmin = {
+    id: rastgeleId(),
+    kullaniciAdi: temizKullaniciAdi,
+    sifre: await _sifreOzetiCikar(sifre),
+    adSoyad: temizAdSoyad
+  };
+  const kullanicilar = oku('isg_kullanicilar', []);
+  kullanicilar.push(yeniAdmin);
+  yaz('isg_kullanicilar', kullanicilar);
+
+  const firmalar = oku('isg_firmalar', []);
+  const yonetilenFirmaIdleri = new Set(getFirmalar().map(f => f.id));
+  let firmaDegisti = false;
+  firmalar.forEach(f => {
+    if (!yonetilenFirmaIdleri.has(f.id)) return;
+    const mevcut = Array.isArray(f.ortakAdminIdleri) ? f.ortakAdminIdleri : [];
+    if (!mevcut.includes(yeniAdmin.id)) {
+      f.ortakAdminIdleri = mevcut.concat([yeniAdmin.id]);
+      firmaDegisti = true;
+    }
+  });
+  if (firmaDegisti) yaz('isg_firmalar', firmalar);
+
+  return { basarili: true, kullanici: yeniAdmin };
+}
+
 // ---- Kısıtlı kullanıcı yönetimi (admin tarafından) ----
 //
 // Her kısıtlı kullanıcı (İK, düzenleyici, bakım, birim) bir admin tarafından

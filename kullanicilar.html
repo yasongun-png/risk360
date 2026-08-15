@@ -69,6 +69,11 @@
     <div class="hata-mesaji" id="hataMesaji"></div>
 
     <h3 style="margin-bottom:6px;">Tam Yetkili (Admin) Hesaplar</h3>
+    <p style="color:#6b7280; font-size:13px; margin-top:-4px;">
+      İsterseniz sizinle aynı yetkilere sahip başka bir admin hesabı ekleyebilirsiniz —
+      yönettiğiniz tüm firmalara otomatik olarak ortak yönetici olarak eklenir.
+    </p>
+    <button type="button" class="ikincil" id="yeniAdminBtn" style="width:auto; padding:9px 16px; margin:10px 0 16px;">+ Yeni Admin</button>
     <div id="adminListesi" style="margin-bottom:24px;"></div>
 
     <h3 style="margin-bottom:6px;">Kısıtlı Hesaplar</h3>
@@ -117,6 +122,30 @@
     </div>
   </div>
 
+  <div class="modal-katman" id="adminModalKatman">
+    <div class="modal-kutu">
+      <h3>Yeni Admin</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Tam yetkili — tüm modüllere ve yönettiğiniz tüm firmalara erişir, kayıt silebilir.</p>
+
+      <label for="admAdSoyad">Ad Soyad</label>
+      <input type="text" id="admAdSoyad" required>
+
+      <label for="admKullaniciAdi">Kullanıcı Adı</label>
+      <input type="text" id="admKullaniciAdi" autocomplete="off" required>
+
+      <label for="admSifre">Şifre</label>
+      <input type="password" id="admSifre" autocomplete="new-password">
+      <p style="font-size:11px; color:var(--metin-soluk); margin-top:-6px;">En az 4 karakter.</p>
+
+      <div class="alan-hatasi" id="admModalHata"></div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="admModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="admModalKaydetBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="core/data.js"></script>
@@ -141,6 +170,9 @@
       document.getElementById('yeniKullaniciBtn').addEventListener('click', () => kkModalAc(null));
       document.getElementById('kkModalIptalBtn').addEventListener('click', kkModalKapat);
       document.getElementById('kkModalKaydetBtn').addEventListener('click', kkKaydet);
+      document.getElementById('yeniAdminBtn').addEventListener('click', admModalAc);
+      document.getElementById('admModalIptalBtn').addEventListener('click', admModalKapat);
+      document.getElementById('admModalKaydetBtn').addEventListener('click', admKaydet);
       document.getElementById('kkRol').addEventListener('change', () => {
         _kkBirimAlaniniGuncelle();
         _kkBirimSecimDoldur();
@@ -172,6 +204,35 @@
           </div>
         </div>
       `).join('') || '<div style="font-size:12px; color:var(--metin-soluk);">Bulunamadı.</div>';
+    }
+
+    // Kullanıcı isteği: "isterse admin başka admin ekleyebilsin tam yetkili".
+    function admModalAc() {
+      document.getElementById('admAdSoyad').value = '';
+      document.getElementById('admKullaniciAdi').value = '';
+      document.getElementById('admSifre').value = '';
+      document.getElementById('admModalHata').textContent = '';
+      document.getElementById('adminModalKatman').classList.add('acik');
+    }
+
+    function admModalKapat() {
+      document.getElementById('adminModalKatman').classList.remove('acik');
+    }
+
+    async function admKaydet() {
+      const adSoyad = document.getElementById('admAdSoyad').value;
+      const kullaniciAdi = document.getElementById('admKullaniciAdi').value;
+      const sifre = document.getElementById('admSifre').value;
+      const hataEl = document.getElementById('admModalHata');
+
+      const sonuc = await adminEkle(kullaniciAdi, sifre, adSoyad);
+      if (!sonuc.basarili) {
+        hataEl.textContent = sonuc.hata;
+        return;
+      }
+
+      admModalKapat();
+      renderAdminListe();
     }
 
     function _firmaAdlariGetir(erisimFirmaIdleri) {
