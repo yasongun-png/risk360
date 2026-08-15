@@ -2,6 +2,29 @@
 
 let _btGorunum = 'talepler';
 let _btAcikKayitId = null;
+let _btDunFiltresiAktif = false;
+
+// İki tarih AYNI takvim günü mü (saat farkı önemsiz).
+function _btAyniGunMu(isoA, isoB) {
+  if (!isoA || !isoB) return false;
+  return new Date(isoA).toDateString() === new Date(isoB).toDateString();
+}
+
+function _btDunTarihiMi(iso) {
+  const dun = new Date();
+  dun.setDate(dun.getDate() - 1);
+  return _btAyniGunMu(iso, dun.toISOString());
+}
+
+// Kaydın son hareket (geçmiş) tarihi BUGÜN DEĞİLSE — yani en az bir gündür
+// dönüş yapılmadıysa — sırası kendisinde olan role (bkz.
+// _btKayitAksiyonBekliyorMu) yanıp sönen bir uyarı gösterilir (kullanıcı
+// isteği: "dönüş yapılmayanlar için ilgili kişiye renkli uyarı yanıp sönsün").
+function _btDonusGecikmisMi(k) {
+  const gecmis = Array.isArray(k.gecmis) ? k.gecmis : [];
+  const sonTarih = gecmis.length ? gecmis[gecmis.length - 1].tarih : k.olusturmaTarihi;
+  return !_btAyniGunMu(sonTarih, new Date().toISOString());
+}
 
 function _btKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -80,6 +103,11 @@ function bakimTalepSayfasiniBaslat() {
     try { await bakimTalepWordOlustur(_btAcikKayitId); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
   });
   document.getElementById('btFormAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('bakim-talep', 'Bakım Onarım'));
+  document.getElementById('btDunFiltreBtn').addEventListener('click', () => {
+    _btDunFiltresiAktif = !_btDunFiltresiAktif;
+    document.getElementById('btDunFiltreBtn').classList.toggle('filtre-aktif', _btDunFiltresiAktif);
+    talepleriCiz();
+  });
 
   document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
   document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);
@@ -108,11 +136,13 @@ function talepleriCiz() {
     durum: document.getElementById('btDurumFiltre').value,
     birim: document.getElementById('btBirimFiltre').value
   };
-  const liste = bakimTalepleriGetir(document.getElementById('btAramaKutusu').value, filtreler);
+  let liste = bakimTalepleriGetir(document.getElementById('btAramaKutusu').value, filtreler);
+  if (_btDunFiltresiAktif) liste = liste.filter(t => _btDunTarihiMi(t.olusturmaTarihi));
 
   govde.innerHTML = '';
   if (!liste.length) {
     bosDurum.classList.add('gorunur');
+    bosDurum.textContent = _btDunFiltresiAktif ? 'Dün açılan talep bulunamadı.' : 'Eşleşen talep bulunamadı.';
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -120,13 +150,17 @@ function talepleriCiz() {
   const kullanici = oturumdakiKullanici();
   liste.forEach(t => {
     const aksiyonBekliyor = _btKayitAksiyonBekliyorMu(t, kullanici);
+    const uyariGoster = aksiyonBekliyor && _btDonusGecikmisMi(t);
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><button type="button" class="tablo-buton" data-detay="${t.id}">${_btKacir(t.talepNo)}</button></td>
       <td>${_btKacir(t.talep.birim)}</td>
       <td>${_btKacir(t.talep.isTanimi)}</td>
       <td>${_btKacir(t.talep.oncelik)}</td>
-      <td><span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span></td>
+      <td>
+        <span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span>
+        ${uyariGoster ? '<span class="yanip-sonen-uyari">⚠️ Yanıt Bekliyor</span>' : ''}
+      </td>
       <td>${_btTarihSaat(t.olusturmaTarihi)}</td>
       <td><button type="button" class="${aksiyonBekliyor ? 'birincil' : 'ikincil'}" style="width:auto; padding:6px 12px; font-size:12px;" data-detay="${t.id}">${aksiyonBekliyor ? 'Düzenle' : 'Görüntüle'}</button></td>
     `;

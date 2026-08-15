@@ -112,6 +112,17 @@ button.ikincil.sil:hover { background: #fef2f2; }
 /* Aç/kapa hızlı filtre butonları (ör. Olay/Kaza modülündeki Ramak Kala /
    Tehlike Bildirimi kısayolları) — seçiliyken vurgulanır. */
 button.ikincil.filtre-aktif { border-color: var(--celik-mavi, #1d4ed8); background: #eef2ff; color: var(--celik-mavi, #1d4ed8); }
+
+/* Bakım Onarım: "dönüş bekleyen" kayıtlarda, sırası kendisinde olan role
+   (Bakım/İSG/Talep Eden) yanıp sönen renkli bir uyarı gösterir — kullanıcı
+   isteği: "dönüş yapılmayanlar için ilgili kişiye renkli uyarı yanıp sönsün". */
+@keyframes yanip-sonme { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.yanip-sonen-uyari {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  animation: yanip-sonme 1.2s ease-in-out infinite;
+}
 button.ikincil.filtre-aktif:hover { background: #e0e7ff; }
 
 .hata-mesaji {
