@@ -17,6 +17,31 @@ const IS_IZNI_TURLERI = [
   'Basınçlı Hat Çalışması', 'Bakım / Mekanik', 'Genel İş İzni'
 ];
 
+// Gerekli KKD seçimi için ikonlu seçenek kütüphanesi — kullanıcı isteği
+// üzerine (checkbox listesi düzensiz duruyordu, tür sayısı arttırıldı).
+// Barkod formunda ("Formu Tamamla" adımı) ve gerekirse modül içi formda
+// checkbox+ikon grid olarak kullanılır.
+const IS_IZNI_KKD_SECENEKLERI = [
+  { ad: 'Baret', ikon: '⛑️' },
+  { ad: 'Koruyucu Gözlük', ikon: '🥽' },
+  { ad: 'Yüz Siperi', ikon: '😷' },
+  { ad: 'İş Eldiveni', ikon: '🧤' },
+  { ad: 'Kimyasal Dayanımlı Eldiven', ikon: '🧪' },
+  { ad: 'Elektrik Yalıtkan Eldiven', ikon: '⚡' },
+  { ad: 'Kulak Koruyucu', ikon: '🎧' },
+  { ad: 'Toz Maskesi', ikon: '😮‍💨' },
+  { ad: 'Gaz Maskesi / Solunum Cihazı', ikon: '🫁' },
+  { ad: 'Kimyasal Koruyucu Tulum', ikon: '🥼' },
+  { ad: 'Yangına Dayanıklı Kıyafet', ikon: '🧯' },
+  { ad: 'Kaynak Maskesi / Siperi', ikon: '🔥' },
+  { ad: 'Çelik Burunlu İş Ayakkabısı', ikon: '🥾' },
+  { ad: 'Kaymaz Taban Bot', ikon: '🧦' },
+  { ad: 'Paraşüt Tipi Emniyet Kemeri', ikon: '🪢' },
+  { ad: 'Reflektif Yelek', ikon: '🦺' },
+  { ad: 'Diz Koruyucu', ikon: '🩹' },
+  { ad: 'Kol Koruyucu / Kolluk', ikon: '💪' }
+];
+
 // Eski uygulamadaki CONTROL_LIBRARY ile birebir aynı (verbatim).
 const IS_IZNI_KONTROL_KUTUPHANESI = {
   'Sıcak Çalışma': [
@@ -139,6 +164,14 @@ function izinDurumuHesapla(izin, bugunTarihSaat) {
   return izin.durum;
 }
 
+// 3 taraf dijital imza: talepEden (formu tamamlayan birim), bakim (bakım
+// personeli), isg (İSG). Her biri null (henüz atılmadı) veya
+// { ad, imzaUrl, tarih } olur — bkz. is-izni-bildir.html "Formu Tamamla" /
+// "İmza At" adımları.
+function izinImzaVeriUret(ad, imzaUrl) {
+  return { ad: (ad || '').trim(), imzaUrl: imzaUrl || '', tarih: new Date().toISOString() };
+}
+
 function onayciOlustur(veriler) {
   return {
     id: rastgeleId(),
@@ -192,6 +225,10 @@ function izinOlustur(veriler) {
     // izinDurdur/izinKapat üzerinden değişir.
     onaycilar: Array.isArray(veriler.onaycilar) ? veriler.onaycilar : [],
     onayDurumu: veriler.riskSeviyesi === 'Kritik' ? 'Bekliyor' : 'Gerekmiyor',
+
+    imzalar: veriler.imzalar && typeof veriler.imzalar === 'object'
+      ? veriler.imzalar
+      : { talepEden: null, bakim: null, isg: null },
 
     durum: 'Taslak',
     kapanisNotu: (veriler.kapanisNotu || '').trim(),

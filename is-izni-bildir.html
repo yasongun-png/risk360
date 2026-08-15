@@ -10,10 +10,9 @@
 <style>
   /* Kullanıcı isteği: "iş izni formu diğer formlar gibi sade tasarla" —
      ramak-kala-bildir.html / ekipman-bakim-bildir.html ile birebir aynı
-     tek-ekran kart deseni ve alan sayısı. Ayrıntılı iş izni alanları
-     (gaz ölçümü, LOTO, KKD, başlangıç/bitiş, saha sorumlusu) burada
-     TOPLANMAZ — kayıt 'Taslak' olarak oluşur, Bakım/İSG gerçek İş İzni
-     modülünde tamamlar. */
+     tek-ekran kart deseni korunuyor. 3 mod var: Yeni Talep (bakımcı açar),
+     Formu Tamamla (talep eden bölüm iş izni modülündeki kalan soruları
+     doldurup imzalar), İmza At (bakım personeli / İSG dijital imza atar). */
   body { background: var(--arka-plan, #f3f4f6); }
   .ii-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
   .ii-kart { width: 100%; max-width: 480px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
@@ -28,6 +27,32 @@
   .ii-durum h2 { margin: 0 0 8px; font-size: 18px; }
   .ii-durum p { color: var(--metin-soluk, #6b7280); font-size: 13px; margin: 0 0 20px; }
   .gizli { display: none !important; }
+
+  .ii-mod-secici { display: flex; gap: 6px; margin-bottom: 18px; background: var(--arka-plan, #f3f4f6); border-radius: 10px; padding: 4px; }
+  .ii-mod-btn { flex: 1; border: none; background: transparent; padding: 9px 4px; font-size: 11.5px; font-weight: 700; border-radius: 8px; cursor: pointer; color: var(--metin-soluk, #6b7280); line-height: 1.3; }
+  .ii-mod-btn.aktif { background: var(--celik-mavi-koyu, #1d4ed8); color: #fff; }
+
+  .ii-alt-baslik { font-size: 13px; font-weight: 800; margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--kenarlik, #e5e7eb); color: var(--metin-ana, #111827); }
+  .ii-alt-not { font-size: 11px; color: var(--metin-soluk, #6b7280); font-weight: 400; margin-top: -6px; }
+
+  .ii-kkd-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ii-kkd-chip { display: flex; align-items: center; gap: 6px; border: 1.5px solid var(--kenarlik, #e5e7eb); border-radius: 20px; padding: 7px 12px 7px 8px; font-size: 12px; font-weight: 600; cursor: pointer; user-select: none; color: var(--metin-ana, #111827); }
+  .ii-kkd-chip input { display: none; }
+  .ii-kkd-chip .ikon { font-size: 16px; }
+  .ii-kkd-chip.secili { border-color: var(--celik-mavi-koyu, #1d4ed8); background: #eef2ff; color: var(--celik-mavi-koyu, #1d4ed8); }
+
+  .ii-kontrol-satir { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px dashed var(--kenarlik, #e5e7eb); }
+  .ii-kontrol-satir input { margin-top: 2px; width: auto; }
+
+  .ii-imza-canvas { width: 100%; height: 140px; border: 1.5px dashed var(--kenarlik, #9ca3af); border-radius: 10px; touch-action: none; background: #fff; display: block; }
+  .ii-imza-arac { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .ii-imza-temizle { border: none; background: none; color: var(--hata, #dc2626); font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px; }
+  .ii-imza-ipucu { font-size: 11px; color: var(--metin-soluk, #6b7280); }
+
+  .ii-rol-secici { display: flex; gap: 8px; margin-bottom: 14px; }
+  .ii-rol-btn { flex: 1; border: 1.5px solid var(--kenarlik, #e5e7eb); background: #fff; border-radius: 10px; padding: 12px 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--metin-ana, #111827); }
+  .ii-rol-btn.aktif { border-color: var(--celik-mavi-koyu, #1d4ed8); background: #eef2ff; color: var(--celik-mavi-koyu, #1d4ed8); }
+  .ii-rol-btn .imzali { display: block; font-size: 10.5px; color: var(--basari, #16a34a); font-weight: 600; margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -44,59 +69,183 @@
         <p>Bu barkod/link geçerli bir işyerine ait değil. Lütfen İSG ekibinizle iletişime geçin.</p>
       </div>
 
-      <div id="iiFormAlani" class="gizli">
-        <div class="ii-baslik">🧾 İş İzni Oluştur</div>
+      <div id="iiIcerikAlani" class="gizli">
+        <div class="ii-baslik">🧾 İş İzni</div>
         <div class="ii-firma" id="iiFirmaAdi"></div>
-        <div class="ii-not">
-          İşe başlamadan önce bu formu doldurun. Bakım/İSG ekibi izni gözden geçirip tamamlayacaktır.
+
+        <div class="ii-mod-secici">
+          <button type="button" class="ii-mod-btn aktif" id="iiModYeniBtn">🆕 Yeni Talep</button>
+          <button type="button" class="ii-mod-btn" id="iiModTamamlaBtn">📋 Formu Tamamla</button>
+          <button type="button" class="ii-mod-btn" id="iiModImzaBtn">✍️ İmza At</button>
         </div>
 
-        <form id="iiForm">
-          <div class="ii-alan">
-            <label for="iiIzinTuru">İş İzni Türü *</label>
-            <select id="iiIzinTuru"></select>
+        <!-- MOD 1: YENİ TALEP (bakımcı / talep eden açar) -->
+        <div id="iiModYeni">
+          <div class="ii-not">
+            İşe başlamadan önce bu formu doldurun. Talep eden bölüm "Formu Tamamla" ile kalan bilgileri girip imzalayacaktır.
+          </div>
+
+          <form id="iiForm">
+            <div class="ii-alan">
+              <label for="iiIzinTuru">İş İzni Türü *</label>
+              <select id="iiIzinTuru"></select>
+            </div>
+
+            <div class="ii-alan">
+              <label for="iiIsTanimi">İş Tanımı *</label>
+              <textarea id="iiIsTanimi" rows="4" placeholder="Ne yapılacak, kısaca anlatın..." required></textarea>
+            </div>
+
+            <div class="ii-alan">
+              <label for="iiBolum">Bölüm / Lokasyon *</label>
+              <input type="text" id="iiBolum" placeholder="Örn. Üretim Sahası, Depo..." required>
+            </div>
+
+            <div class="ii-alan">
+              <label for="iiBakimTalebi">İlgili Bakım İşi (varsa)</label>
+              <select id="iiBakimTalebi">
+                <option value="">— Bağlantısız / Genel İş İzni —</option>
+              </select>
+            </div>
+
+            <div class="ii-alan">
+              <label for="iiTalepEden">Adınız (Talebi Açan) *</label>
+              <input type="text" id="iiTalepEden" required>
+            </div>
+
+            <div class="ii-alan">
+              <label for="iiFotoDosya">Fotoğraf (isteğe bağlı)</label>
+              <button type="button" class="ikincil" id="iiFotoSecBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Ekle</button>
+              <input type="file" id="iiFotoDosya" accept="image/*" style="display:none;">
+              <div id="iiFotoOnizleme" style="margin-top:8px;"></div>
+            </div>
+
+            <div class="hata-mesaji" id="iiHataMesaji"></div>
+
+            <button type="submit" class="birincil ii-gonder-btn" id="iiGonderBtn">İş İznini Oluştur</button>
+          </form>
+        </div>
+
+        <!-- MOD 2: FORMU TAMAMLA (talep eden bölüm) -->
+        <div id="iiModTamamla" class="gizli">
+          <div class="ii-not">
+            Açık bir iş izni seçin; iş izni modülündeki kalan bilgileri doldurup imzalayın.
           </div>
 
           <div class="ii-alan">
-            <label for="iiIsTanimi">İş Tanımı *</label>
-            <textarea id="iiIsTanimi" rows="4" placeholder="Ne yapılacak, kısaca anlatın..." required></textarea>
+            <label for="ftIzinSecim">İş İzni Seçin *</label>
+            <select id="ftIzinSecim"><option value="">— Seçin —</option></select>
+          </div>
+
+          <form id="ftForm" class="gizli">
+            <div class="ii-alan">
+              <label for="ftSahaSorumlusu">Saha Sorumlusu *</label>
+              <input type="text" id="ftSahaSorumlusu" required>
+            </div>
+
+            <div class="ii-alan">
+              <label for="ftCalisanlar">Çalışanlar <span style="font-weight:400;">(; ile ayırın)</span></label>
+              <input type="text" id="ftCalisanlar">
+            </div>
+
+            <div class="ii-alan">
+              <label>Gerekli KKD *</label>
+              <div class="ii-kkd-grid" id="ftKkdGrid"></div>
+            </div>
+
+            <div class="ii-alan">
+              <label for="ftRiskSeviyesi">Risk Seviyesi</label>
+              <select id="ftRiskSeviyesi"></select>
+            </div>
+
+            <div class="ii-alan">
+              <label for="ftBaslangic">Başlangıç *</label>
+              <input type="datetime-local" id="ftBaslangic" required>
+            </div>
+            <div class="ii-alan">
+              <label for="ftBitis">Bitiş *</label>
+              <input type="datetime-local" id="ftBitis" required>
+            </div>
+
+            <div class="ii-alt-baslik">Kontrol Maddeleri</div>
+            <div id="ftKontrolListesi"></div>
+
+            <div id="ftGazBolumu" class="gizli">
+              <div class="ii-alt-baslik">Gaz Ölçümü</div>
+              <div class="ii-alan"><label for="ftOksijen">Oksijen (%)</label><input type="text" id="ftOksijen" placeholder="ör. 20,9"></div>
+              <div class="ii-alan"><label for="ftLel">LEL (%)</label><input type="text" id="ftLel"></div>
+              <div class="ii-alan"><label for="ftToksik">Toksik Gaz</label><input type="text" id="ftToksik"></div>
+              <div class="ii-alan"><label for="ftOlcenKisi">Ölçümü Yapan</label><input type="text" id="ftOlcenKisi"></div>
+            </div>
+
+            <div id="ftIzolasyonBolumu" class="gizli">
+              <div class="ii-alt-baslik">İzolasyon / LOTO</div>
+              <label style="display:flex; align-items:center; gap:8px; font-weight:400; font-size:13px; margin-bottom:12px;">
+                <input type="checkbox" id="ftLotoUygulandi" style="width:auto; margin:0;"> LOTO / enerji izolasyonu uygulandı
+              </label>
+              <div class="ii-alan"><label for="ftEnerjiIzolasyonu">Enerji İzolasyonu Açıklaması</label><input type="text" id="ftEnerjiIzolasyonu"></div>
+              <div class="ii-alan"><label for="ftKorlemeListesi">Körleme Listesi</label><textarea id="ftKorlemeListesi" rows="2"></textarea></div>
+            </div>
+
+            <div class="ii-alt-baslik">İmza</div>
+            <div class="ii-alan">
+              <label for="ftAdSoyad">Formu Dolduran (Talep Eden Bölüm) — Adınız *</label>
+              <input type="text" id="ftAdSoyad" required>
+            </div>
+            <div class="ii-alan">
+              <canvas id="ftImzaCanvas" class="ii-imza-canvas"></canvas>
+              <div class="ii-imza-arac">
+                <span class="ii-imza-ipucu">Parmağınızla / kalemle imzalayın</span>
+                <button type="button" class="ii-imza-temizle" id="ftImzaTemizleBtn">Temizle</button>
+              </div>
+            </div>
+
+            <div class="hata-mesaji" id="ftHataMesaji"></div>
+            <button type="submit" class="birincil ii-gonder-btn" id="ftGonderBtn">Formu Tamamla ve İmzala</button>
+          </form>
+        </div>
+
+        <!-- MOD 3: İMZA AT (bakım personeli / İSG) -->
+        <div id="iiModImza" class="gizli">
+          <div class="ii-not">
+            İş iznini seçip rolünüzü belirtin ve dijital olarak imzalayın.
           </div>
 
           <div class="ii-alan">
-            <label for="iiBolum">Bölüm / Lokasyon *</label>
-            <input type="text" id="iiBolum" placeholder="Örn. Üretim Sahası, Depo..." required>
+            <label for="siIzinSecim">İş İzni Seçin *</label>
+            <select id="siIzinSecim"><option value="">— Seçin —</option></select>
           </div>
 
-          <div class="ii-alan">
-            <label for="iiBakimTalebi">İlgili Bakım İşi (varsa)</label>
-            <select id="iiBakimTalebi">
-              <option value="">— Bağlantısız / Genel İş İzni —</option>
-            </select>
-          </div>
+          <form id="siForm" class="gizli">
+            <div class="ii-rol-secici">
+              <button type="button" class="ii-rol-btn aktif" id="siRolBakimBtn" data-rol="bakim">🔧 Bakım Personeli<span class="imzali" id="siBakimImzaliEtiket"></span></button>
+              <button type="button" class="ii-rol-btn" id="siRolIsgBtn" data-rol="isg">🛡️ İSG<span class="imzali" id="siIsgImzaliEtiket"></span></button>
+            </div>
 
-          <div class="ii-alan">
-            <label for="iiTalepEden">Adınız *</label>
-            <input type="text" id="iiTalepEden" required>
-          </div>
+            <div class="ii-alan">
+              <label for="siAdSoyad">Adınız *</label>
+              <input type="text" id="siAdSoyad" required>
+            </div>
+            <div class="ii-alan">
+              <canvas id="siImzaCanvas" class="ii-imza-canvas"></canvas>
+              <div class="ii-imza-arac">
+                <span class="ii-imza-ipucu">Parmağınızla / kalemle imzalayın</span>
+                <button type="button" class="ii-imza-temizle" id="siImzaTemizleBtn">Temizle</button>
+              </div>
+            </div>
 
-          <div class="ii-alan">
-            <label for="iiFotoDosya">Fotoğraf (isteğe bağlı)</label>
-            <button type="button" class="ikincil" id="iiFotoSecBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Ekle</button>
-            <input type="file" id="iiFotoDosya" accept="image/*" style="display:none;">
-            <div id="iiFotoOnizleme" style="margin-top:8px;"></div>
-          </div>
+            <div class="hata-mesaji" id="siHataMesaji"></div>
+            <button type="submit" class="birincil ii-gonder-btn" id="siGonderBtn">İmzayı Kaydet</button>
+          </form>
+        </div>
 
-          <div class="hata-mesaji" id="iiHataMesaji"></div>
-
-          <button type="submit" class="birincil ii-gonder-btn" id="iiGonderBtn">İş İznini Oluştur</button>
-        </form>
       </div>
 
       <div id="iiBasariDurumu" class="ii-durum gizli">
         <div class="ikon">✅</div>
-        <h2>İş İzni Oluşturuldu</h2>
+        <h2 id="iiBasariBaslik">İş İzni Oluşturuldu</h2>
         <p id="iiBasariMetin">Teşekkürler — iş izni Bakım/İSG ekibine iletildi.</p>
-        <button type="button" class="ikincil" id="iiYeniIzinBtn" style="width:auto; padding:10px 22px;">Yeni İş İzni Oluştur</button>
+        <button type="button" class="ikincil" id="iiYenidenBaslaBtn" style="width:auto; padding:10px 22px;">Başa Dön</button>
       </div>
 
     </div>
@@ -117,6 +266,7 @@
     const _iiBakimTalepIdOnSecim = (_iiParams.get('talepId') || '').trim();
     let _iiFirma = null;
     let _iiFotoUrl = '';
+    let _iiAktifMod = 'yeni';
 
     function _iiIzinAnahtari() {
       return 'isg_' + _iiFirma.slug + '_is_izinleri';
@@ -126,6 +276,86 @@
       return 'isg_' + _iiFirma.slug + '_bakim_talepleri';
     }
 
+    // ---- İmza pad (vanilla canvas, kütüphane yok) ----
+    function _iiImzaPaduBagla(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+
+      function boyutlandir() {
+        const oran = window.devicePixelRatio || 1;
+        const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 140;
+        canvas.width = genislik * oran;
+        canvas.height = yukseklik * oran;
+        ctx.scale(oran, oran);
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#111827';
+      }
+      boyutlandir();
+
+      function konum(e) {
+        const r = canvas.getBoundingClientRect();
+        const x = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+        const y = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+        return { x: x - r.left, y: y - r.top };
+      }
+      function basla(e) { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; }
+      function ciz(e) {
+        if (!ciziliyor) return;
+        e.preventDefault();
+        const p = konum(e);
+        ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+        sonX = p.x; sonY = p.y;
+      }
+      function bitir() { ciziliyor = false; }
+
+      canvas.addEventListener('pointerdown', basla);
+      canvas.addEventListener('pointermove', ciz);
+      window.addEventListener('pointerup', bitir);
+
+      return {
+        temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+        doluMu: () => dolu,
+        canvasElemani: canvas
+      };
+    }
+
+    async function _iiImzaYukle(canvas, etiket) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(async blob => {
+          if (!blob) { reject(new Error('İmza alınamadı.')); return; }
+          try {
+            const dosya = new File([blob], 'imza-' + etiket + '-' + Date.now() + '.png', { type: 'image/png' });
+            const sonuc = await fotoYukle(dosya, 'is-izni/' + _iiFirma.slug + '-imza');
+            resolve(sonuc.url);
+          } catch (hata) { reject(hata); }
+        }, 'image/png');
+      });
+    }
+
+    let _ftImzaPad = null, _siImzaPad = null;
+
+    // ---- Mod geçişi ----
+    function _iiModDegistir(mod) {
+      _iiAktifMod = mod;
+      document.getElementById('iiModYeniBtn').classList.toggle('aktif', mod === 'yeni');
+      document.getElementById('iiModTamamlaBtn').classList.toggle('aktif', mod === 'tamamla');
+      document.getElementById('iiModImzaBtn').classList.toggle('aktif', mod === 'imza');
+      document.getElementById('iiModYeni').classList.toggle('gizli', mod !== 'yeni');
+      document.getElementById('iiModTamamla').classList.toggle('gizli', mod !== 'tamamla');
+      document.getElementById('iiModImza').classList.toggle('gizli', mod !== 'imza');
+
+      if (mod === 'tamamla') {
+        _ftIzinleriDoldur();
+        requestAnimationFrame(() => { if (!_ftImzaPad) _ftImzaPad = _iiImzaPaduBagla('ftImzaCanvas'); });
+      } else if (mod === 'imza') {
+        _siIzinleriDoldur();
+        requestAnimationFrame(() => { if (!_siImzaPad) _siImzaPad = _iiImzaPaduBagla('siImzaCanvas'); });
+      }
+    }
+
+    // ---- Fotoğraf önizleme (Mod 1) ----
     function _iiFotoOnizlemeCiz() {
       const kutu = document.getElementById('iiFotoOnizleme');
       kutu.innerHTML = _iiFotoUrl
@@ -169,11 +399,23 @@
       }
     }
 
-    function _iiFormuBaslat() {
-      document.getElementById('iiYukleniyor').classList.add('gizli');
-      document.getElementById('iiFormAlani').classList.remove('gizli');
-      document.getElementById('iiFirmaAdi').textContent = _iiFirma.ad;
+    async function _iiBildirimEkle(izin, hedefRol, adSoyad, ekEtiket) {
+      const bildirimler = oku('isg_bildirimler', []);
+      bildirimler.push({
+        id: rastgeleId(),
+        kullaniciAdi: 'Barkod',
+        adSoyad: adSoyad || 'İsimsiz (Barkod)',
+        anahtar: _iiIzinAnahtari(),
+        kayitEtiketleri: [izin.izinNo + ': ' + izin.izinTuru + (ekEtiket ? ' — ' + ekEtiket : '')],
+        hedefRol: hedefRol || null,
+        tarih: new Date().toISOString(),
+        okuyanKullaniciIdleri: []
+      });
+      await kucukVeriYazVeSonucuGetir('isg_bildirimler', bildirimler.slice(-300));
+    }
 
+    // ===================== MOD 1: YENİ TALEP =====================
+    function _iiModYeniBaslat() {
       document.getElementById('iiIzinTuru').innerHTML = IS_IZNI_TURLERI.map(t => `<option>${_iiKacir(t)}</option>`).join('');
       _iiBakimTalepleriniDoldur();
 
@@ -232,26 +474,12 @@
           if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
 
           await _iiBakimTalebineIsle(bakimTalepId, yeniIzin);
+          await _iiBildirimEkle(yeniIzin, 'bakim', talepEden, isTanimi.slice(0, 60));
 
-          // Admin'in 🔔 ziline hedefli bildirim — bkz. modules/bakim-talep/
-          // service.js _btBildirimEkle ile aynı desen, 'isg_bildirimler'
-          // anahtarı yeniden kullanılır.
-          const bildirimler = oku('isg_bildirimler', []);
-          bildirimler.push({
-            id: rastgeleId(),
-            kullaniciAdi: 'Barkod',
-            adSoyad: talepEden || 'İsimsiz (Barkod)',
-            anahtar: anahtar,
-            kayitEtiketleri: [yeniIzin.izinNo + ': ' + tur + ' — ' + isTanimi.slice(0, 60)],
-            hedefRol: 'bakim',
-            tarih: new Date().toISOString(),
-            okuyanKullaniciIdleri: []
-          });
-          await kucukVeriYazVeSonucuGetir('isg_bildirimler', bildirimler.slice(-300));
-
-          document.getElementById('iiBasariMetin').textContent = yeniIzin.izinNo + ' numaralı iş izni oluşturuldu — Bakım/İSG ekibine iletildi.';
+          document.getElementById('iiBasariBaslik').textContent = 'İş İzni Oluşturuldu';
+          document.getElementById('iiBasariMetin').textContent = yeniIzin.izinNo + ' numaralı iş izni oluşturuldu — talep eden bölüm "Formu Tamamla" ile kalan bilgileri girip imzalayabilir.';
           _iiFotoUrl = '';
-          document.getElementById('iiFormAlani').classList.add('gizli');
+          document.getElementById('iiIcerikAlani').classList.add('gizli');
           document.getElementById('iiBasariDurumu').classList.remove('gizli');
         } catch (hata) {
           console.error('İş izni oluşturulamadı:', hata);
@@ -263,16 +491,297 @@
       });
     }
 
-    document.getElementById('iiYeniIzinBtn').addEventListener('click', () => {
+    // ===================== MOD 2: FORMU TAMAMLA =====================
+    let _ftIzin = null;
+
+    function _ftIzinleriDoldur() {
+      const secim = document.getElementById('ftIzinSecim');
+      const liste = oku(_iiIzinAnahtari(), []).filter(k => k.durum === 'Taslak');
+      secim.innerHTML = '<option value="">— Seçin —</option>' +
+        liste.map(k => `<option value="${k.id}">${_iiKacir(k.izinNo)} — ${_iiKacir(k.izinTuru)} — ${_iiKacir((k.isTanimi || '').slice(0, 40))}</option>`).join('');
+      document.getElementById('ftForm').classList.add('gizli');
+      _ftIzin = null;
+    }
+
+    function _ftKkdGridiCiz() {
+      const kutu = document.getElementById('ftKkdGrid');
+      kutu.innerHTML = IS_IZNI_KKD_SECENEKLERI.map((k, i) => `
+        <label class="ii-kkd-chip" data-idx="${i}">
+          <input type="checkbox" value="${_iiKacir(k.ad)}">
+          <span class="ikon">${k.ikon}</span><span>${_iiKacir(k.ad)}</span>
+        </label>`).join('');
+      kutu.querySelectorAll('.ii-kkd-chip').forEach(etiket => {
+        const kutucuk = etiket.querySelector('input');
+        etiket.addEventListener('click', e => {
+          if (e.target !== kutucuk) kutucuk.checked = !kutucuk.checked;
+          etiket.classList.toggle('secili', kutucuk.checked);
+        });
+      });
+    }
+
+    function _ftIzinSecildi(izinId) {
+      const liste = oku(_iiIzinAnahtari(), []);
+      _ftIzin = liste.find(k => k.id === izinId) || null;
+      const form = document.getElementById('ftForm');
+      if (!_ftIzin) { form.classList.add('gizli'); return; }
+      form.classList.remove('gizli');
+
+      document.getElementById('ftSahaSorumlusu').value = _ftIzin.sahaSorumlusu || '';
+      document.getElementById('ftCalisanlar').value = (_ftIzin.calisanlar || []).join('; ');
+      document.getElementById('ftRiskSeviyesi').innerHTML = IS_IZNI_RISK_SEVIYELERI.map(r => `<option ${r === _ftIzin.riskSeviyesi ? 'selected' : ''}>${r}</option>`).join('');
+      document.getElementById('ftBaslangic').value = _ftIzin.baslangic || '';
+      document.getElementById('ftBitis').value = _ftIzin.bitis || '';
+
+      const seciliKkd = new Set(_ftIzin.gerekliKkd || []);
+      document.querySelectorAll('#ftKkdGrid .ii-kkd-chip').forEach(etiket => {
+        const kutucuk = etiket.querySelector('input');
+        kutucuk.checked = seciliKkd.has(kutucuk.value);
+        etiket.classList.toggle('secili', kutucuk.checked);
+      });
+
+      const kontrolKutu = document.getElementById('ftKontrolListesi');
+      kontrolKutu.innerHTML = (_ftIzin.kontrolMaddeleri || []).map((m, i) => `
+        <label class="ii-kontrol-satir">
+          <input type="checkbox" data-idx="${i}" ${m.isaretli ? 'checked' : ''}>
+          <span>${_iiKacir(m.metin)}</span>
+        </label>`).join('');
+
+      const gazGerekli = ['Sıcak Çalışma', 'Kapalı Alan', 'Kimyasal Çalışma', 'Basınçlı Hat Çalışması'].includes(_ftIzin.izinTuru);
+      document.getElementById('ftGazBolumu').classList.toggle('gizli', !gazGerekli);
+      document.getElementById('ftOksijen').value = (_ftIzin.gazOlcumu && _ftIzin.gazOlcumu.oksijen) || '';
+      document.getElementById('ftLel').value = (_ftIzin.gazOlcumu && _ftIzin.gazOlcumu.lel) || '';
+      document.getElementById('ftToksik').value = (_ftIzin.gazOlcumu && _ftIzin.gazOlcumu.toksik) || '';
+      document.getElementById('ftOlcenKisi').value = (_ftIzin.gazOlcumu && _ftIzin.gazOlcumu.olcenKisi) || '';
+
+      const izolasyonGerekli = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(_ftIzin.izinTuru);
+      document.getElementById('ftIzolasyonBolumu').classList.toggle('gizli', !izolasyonGerekli);
+      document.getElementById('ftLotoUygulandi').checked = !!(_ftIzin.izolasyon && _ftIzin.izolasyon.lotoUygulandi);
+      document.getElementById('ftEnerjiIzolasyonu').value = (_ftIzin.izolasyon && _ftIzin.izolasyon.enerjiIzolasyonu) || '';
+      document.getElementById('ftKorlemeListesi').value = (_ftIzin.izolasyon && _ftIzin.izolasyon.korlemeListesi) || '';
+
+      if (_ftImzaPad) _ftImzaPad.temizle();
+    }
+
+    function _iiModTamamlaBaslat() {
+      _ftKkdGridiCiz();
+      document.getElementById('ftIzinSecim').addEventListener('change', e => _ftIzinSecildi(e.target.value));
+      document.getElementById('ftImzaTemizleBtn').addEventListener('click', () => { if (_ftImzaPad) _ftImzaPad.temizle(); });
+
+      document.getElementById('ftForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const hataMesaji = document.getElementById('ftHataMesaji');
+        hataMesaji.classList.remove('gorunur');
+
+        const sahaSorumlusu = document.getElementById('ftSahaSorumlusu').value.trim();
+        const adSoyad = document.getElementById('ftAdSoyad').value.trim();
+        const seciliKkd = Array.from(document.querySelectorAll('#ftKkdGrid input:checked')).map(i => i.value);
+        if (!_ftIzin || !sahaSorumlusu || !adSoyad || !seciliKkd.length || !document.getElementById('ftBaslangic').value || !document.getElementById('ftBitis').value) {
+          hataMesaji.textContent = 'Lütfen saha sorumlusu, en az bir KKD, başlangıç/bitiş ve adınızı girin.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+        if (!_ftImzaPad || !_ftImzaPad.doluMu()) {
+          hataMesaji.textContent = 'Lütfen imza alanına imzanızı atın.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+
+        const gonderBtn = document.getElementById('ftGonderBtn');
+        gonderBtn.disabled = true;
+        gonderBtn.textContent = 'Kaydediliyor…';
+
+        try {
+          const imzaUrl = await _iiImzaYukle(_ftImzaPad.canvasElemani, 'talepEden');
+
+          const anahtar = _iiIzinAnahtari();
+          const liste = oku(anahtar, []);
+          const index = liste.findIndex(k => k.id === _ftIzin.id);
+          if (index === -1) throw new Error('İş izni artık bulunamadı, sayfayı yenileyip tekrar deneyin.');
+
+          const kontrolMaddeleri = (liste[index].kontrolMaddeleri || []).map((m, i) => {
+            const kutucuk = document.querySelector('#ftKontrolListesi input[data-idx="' + i + '"]');
+            return Object.assign({}, m, { isaretli: kutucuk ? kutucuk.checked : m.isaretli });
+          });
+
+          const gazGerekli = !document.getElementById('ftGazBolumu').classList.contains('gizli');
+          const izolasyonGerekli = !document.getElementById('ftIzolasyonBolumu').classList.contains('gizli');
+
+          liste[index] = Object.assign({}, liste[index], {
+            sahaSorumlusu,
+            calisanlar: document.getElementById('ftCalisanlar').value.split(/[;,\n|]+/).map(s => s.trim()).filter(Boolean),
+            gerekliKkd: seciliKkd,
+            riskSeviyesi: document.getElementById('ftRiskSeviyesi').value,
+            baslangic: document.getElementById('ftBaslangic').value,
+            bitis: document.getElementById('ftBitis').value,
+            kontrolMaddeleri,
+            durum: 'Onay Bekliyor',
+            gazOlcumu: gazGerekli ? {
+              oksijen: document.getElementById('ftOksijen').value.trim(),
+              lel: document.getElementById('ftLel').value.trim(),
+              toksik: document.getElementById('ftToksik').value.trim(),
+              olcumZamani: new Date().toISOString(),
+              olcenKisi: document.getElementById('ftOlcenKisi').value.trim()
+            } : liste[index].gazOlcumu,
+            izolasyon: izolasyonGerekli ? Object.assign({}, liste[index].izolasyon, {
+              lotoUygulandi: document.getElementById('ftLotoUygulandi').checked,
+              enerjiIzolasyonu: document.getElementById('ftEnerjiIzolasyonu').value.trim(),
+              korlemeListesi: document.getElementById('ftKorlemeListesi').value.trim()
+            }) : liste[index].izolasyon,
+            imzalar: Object.assign({}, liste[index].imzalar, { talepEden: izinImzaVeriUret(adSoyad, imzaUrl) })
+          });
+
+          const sonuc = await yazVeSonucuGetir(anahtar, liste);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
+
+          await _iiBildirimEkle(liste[index], 'isg', adSoyad, 'form tamamlandı, İSG onayı bekliyor');
+
+          document.getElementById('iiBasariBaslik').textContent = 'Form Tamamlandı';
+          document.getElementById('iiBasariMetin').textContent = liste[index].izinNo + ' numaralı iş izni tamamlandı ve imzalandı — İSG onayı bekliyor.';
+          document.getElementById('iiIcerikAlani').classList.add('gizli');
+          document.getElementById('iiBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('İş izni tamamlanamadı:', hata);
+          hataMesaji.textContent = 'Bir hata oluştu, kaydedilemedi. Lütfen tekrar deneyin.';
+          hataMesaji.classList.add('gorunur');
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'Formu Tamamla ve İmzala';
+        }
+      });
+    }
+
+    // ===================== MOD 3: İMZA AT =====================
+    let _siIzin = null;
+    let _siAktifRol = 'bakim';
+
+    function _siIzinleriDoldur() {
+      const secim = document.getElementById('siIzinSecim');
+      const kapali = ['Kapalı', 'Reddedildi', 'İptal'];
+      const liste = oku(_iiIzinAnahtari(), []).filter(k => !kapali.includes(k.durum));
+      secim.innerHTML = '<option value="">— Seçin —</option>' +
+        liste.map(k => `<option value="${k.id}">${_iiKacir(k.izinNo)} — ${_iiKacir(k.izinTuru)} — ${_iiKacir(k.durum)}</option>`).join('');
+      document.getElementById('siForm').classList.add('gizli');
+      _siIzin = null;
+    }
+
+    function _siImzaliEtiketleriGuncelle() {
+      const b = document.getElementById('siBakimImzaliEtiket');
+      const i = document.getElementById('siIsgImzaliEtiket');
+      b.textContent = (_siIzin && _siIzin.imzalar && _siIzin.imzalar.bakim) ? '✓ imzalandı' : '';
+      i.textContent = (_siIzin && _siIzin.imzalar && _siIzin.imzalar.isg) ? '✓ imzalandı' : '';
+    }
+
+    function _siIzinSecildi(izinId) {
+      const liste = oku(_iiIzinAnahtari(), []);
+      _siIzin = liste.find(k => k.id === izinId) || null;
+      const form = document.getElementById('siForm');
+      if (!_siIzin) { form.classList.add('gizli'); return; }
+      form.classList.remove('gizli');
+      _siImzaliEtiketleriGuncelle();
+      if (_siImzaPad) _siImzaPad.temizle();
+    }
+
+    function _iiModImzaBaslat() {
+      document.getElementById('siIzinSecim').addEventListener('change', e => _siIzinSecildi(e.target.value));
+      document.getElementById('siImzaTemizleBtn').addEventListener('click', () => { if (_siImzaPad) _siImzaPad.temizle(); });
+
+      document.querySelectorAll('.ii-rol-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          _siAktifRol = btn.dataset.rol;
+          document.querySelectorAll('.ii-rol-btn').forEach(b => b.classList.toggle('aktif', b === btn));
+        });
+      });
+
+      document.getElementById('siForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const hataMesaji = document.getElementById('siHataMesaji');
+        hataMesaji.classList.remove('gorunur');
+
+        const adSoyad = document.getElementById('siAdSoyad').value.trim();
+        if (!_siIzin || !adSoyad) {
+          hataMesaji.textContent = 'Lütfen adınızı girin.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+        if (!_siImzaPad || !_siImzaPad.doluMu()) {
+          hataMesaji.textContent = 'Lütfen imza alanına imzanızı atın.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+
+        const gonderBtn = document.getElementById('siGonderBtn');
+        gonderBtn.disabled = true;
+        gonderBtn.textContent = 'Kaydediliyor…';
+
+        try {
+          const imzaUrl = await _iiImzaYukle(_siImzaPad.canvasElemani, _siAktifRol);
+
+          const anahtar = _iiIzinAnahtari();
+          const liste = oku(anahtar, []);
+          const index = liste.findIndex(k => k.id === _siIzin.id);
+          if (index === -1) throw new Error('İş izni artık bulunamadı, sayfayı yenileyip tekrar deneyin.');
+
+          const yeniImzalar = Object.assign({}, liste[index].imzalar, { [_siAktifRol]: izinImzaVeriUret(adSoyad, imzaUrl) });
+          const guncellenen = Object.assign({}, liste[index], { imzalar: yeniImzalar });
+
+          // İSG imzası = İSG onayı; onay bekleyen izni ilerletir.
+          if (_siAktifRol === 'isg') {
+            if (guncellenen.onayDurumu === 'Bekliyor') guncellenen.onayDurumu = 'Onaylandı';
+            if (guncellenen.durum === 'Onay Bekliyor') guncellenen.durum = 'Onaylandı';
+          }
+
+          liste[index] = guncellenen;
+          const sonuc = await yazVeSonucuGetir(anahtar, liste);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
+
+          await _iiBildirimEkle(guncellenen, null, adSoyad, (_siAktifRol === 'isg' ? 'İSG' : 'Bakım Personeli') + ' imzaladı');
+
+          document.getElementById('iiBasariBaslik').textContent = 'İmza Kaydedildi';
+          document.getElementById('iiBasariMetin').textContent = guncellenen.izinNo + ' numaralı iş izni ' + (_siAktifRol === 'isg' ? 'İSG' : 'bakım personeli') + ' tarafından imzalandı.';
+          document.getElementById('iiIcerikAlani').classList.add('gizli');
+          document.getElementById('iiBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('İmza kaydedilemedi:', hata);
+          hataMesaji.textContent = 'Bir hata oluştu, imza kaydedilemedi. Lütfen tekrar deneyin.';
+          hataMesaji.classList.add('gorunur');
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'İmzayı Kaydet';
+        }
+      });
+    }
+
+    function _iiFormuBaslat() {
+      document.getElementById('iiYukleniyor').classList.add('gizli');
+      document.getElementById('iiIcerikAlani').classList.remove('gizli');
+      document.getElementById('iiFirmaAdi').textContent = _iiFirma.ad;
+
+      document.getElementById('iiModYeniBtn').addEventListener('click', () => _iiModDegistir('yeni'));
+      document.getElementById('iiModTamamlaBtn').addEventListener('click', () => _iiModDegistir('tamamla'));
+      document.getElementById('iiModImzaBtn').addEventListener('click', () => _iiModDegistir('imza'));
+
+      _iiModYeniBaslat();
+      _iiModTamamlaBaslat();
+      _iiModImzaBaslat();
+    }
+
+    document.getElementById('iiYenidenBaslaBtn').addEventListener('click', () => {
       document.getElementById('iiForm').reset();
       _iiFotoUrl = '';
       _iiFotoOnizlemeCiz();
       _iiBakimTalepleriniDoldur();
-      const gonderBtn = document.getElementById('iiGonderBtn');
-      gonderBtn.disabled = false;
-      gonderBtn.textContent = 'İş İznini Oluştur';
+      document.getElementById('iiGonderBtn').disabled = false;
+      document.getElementById('iiGonderBtn').textContent = 'İş İznini Oluştur';
+
+      document.getElementById('ftForm').reset();
+      document.getElementById('ftGonderBtn').disabled = false;
+      document.getElementById('ftGonderBtn').textContent = 'Formu Tamamla ve İmzala';
+
+      document.getElementById('siForm').reset();
+      document.getElementById('siGonderBtn').disabled = false;
+      document.getElementById('siGonderBtn').textContent = 'İmzayı Kaydet';
+
       document.getElementById('iiBasariDurumu').classList.add('gizli');
-      document.getElementById('iiFormAlani').classList.remove('gizli');
+      document.getElementById('iiIcerikAlani').classList.remove('gizli');
+      _iiModDegistir('yeni');
     });
 
     if (!_iiSlug) {

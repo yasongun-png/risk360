@@ -182,3 +182,158 @@ async function bakimTalepWordOlustur(id) {
   const blob = await Packer.toBlob(belge);
   saveAs(blob, (t.talepNo || 'bakim-talep') + '.docx');
 }
+
+// Ekipman Bakım Kartı — tek bir ekipmanın tüm bakım geçmişini ayrı bir Word
+// belgesi olarak indirir. Kullanıcı isteği: "bakım kartının her ekipman için
+// ayrı ayrı çıktı alabilmeliyim". Aynı kalite doküman başlık deseni
+// (bakimTalepWordOlustur ile birebir) kullanılır.
+async function ekipmanBakimKartiWordOlustur(ekipmanId) {
+  const e = ekipmanEnvanterKaydiIdIleGetirRepo(ekipmanId);
+  if (!e) return;
+  if (!window.docx) { alert('docx.js yüklenemedi.'); return; }
+
+  const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, VerticalAlign, BorderStyle, Footer, PageNumber } = docx;
+  const font = 'Arial', bodySize = 20, baslikSize = 24;
+  const kenarlik = {
+    top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+    left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+    right: { style: BorderStyle.SINGLE, size: 4, color: '000000' }
+  };
+
+  const etiketHucre = (metin) => new TableCell({
+    width: { size: 30, type: WidthType.PERCENTAGE },
+    verticalAlign: VerticalAlign.CENTER,
+    shading: { fill: 'F2F2F2' },
+    margins: { top: 60, bottom: 60, left: 90, right: 90 },
+    borders: kenarlik,
+    children: [new Paragraph({ children: [new TextRun({ text: metin, bold: true, font, size: bodySize })] })]
+  });
+  const degerHucre = (metin) => new TableCell({
+    width: { size: 70, type: WidthType.PERCENTAGE },
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 60, bottom: 60, left: 90, right: 90 },
+    borders: kenarlik,
+    children: [new Paragraph({ children: [new TextRun({ text: String(metin ?? '') || '—', font, size: bodySize })] })]
+  });
+  const satir = (etiket, deger) => new TableRow({ children: [etiketHucre(etiket), degerHucre(deger)] });
+
+  const baslik = (metin) => new Paragraph({
+    spacing: { before: 300, after: 150 },
+    children: [new TextRun({ text: metin, bold: true, font, size: bodySize + 2 })]
+  });
+
+  const tablo = (satirlar) => new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: satirlar });
+
+  const firma = aktifFirmaGetir();
+  const _bkFormAyarlari = formAyarlariGetir('bakim-talep');
+  const logoBaytlari = await _bkLogoBaytlariGetir(firma);
+
+  const baslikTablosu = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.SINGLE, size: 4, color: '000000' }
+    },
+    rows: [new TableRow({
+      children: [
+        new TableCell({
+          width: { size: 20, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 60, bottom: 60, left: 90, right: 90 },
+          children: [logoBaytlari
+            ? new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ data: logoBaytlari, transformation: { width: 70, height: 70 } })] })
+            : new Paragraph({ children: [new TextRun({ text: firma ? firma.ad : '', bold: true, font, size: bodySize - 2 })] })]
+        }),
+        new TableCell({
+          width: { size: 55, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 60, bottom: 60, left: 90, right: 90 },
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'EKİPMAN BAKIM KARTI', bold: true, font, size: baslikSize })] })]
+        }),
+        new TableCell({
+          width: { size: 25, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 60, bottom: 60, left: 90, right: 90 },
+          children: [
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Doküman No: ' + (_bkFormAyarlari.dokumanNo || '-'), font, size: bodySize - 6 })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Sürüm No: ' + (_bkFormAyarlari.surumNo || '-'), font, size: bodySize - 6 })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Sürüm Tarihi: ' + (_bkFormAyarlari.surumTarihi || '-'), font, size: bodySize - 6 })] })
+          ]
+        })
+      ]
+    })]
+  });
+
+  const gecmis = Array.isArray(e.bakimGecmisi) ? e.bakimGecmisi.slice().reverse() : [];
+  const gecmisSatirlari = gecmis.length
+    ? gecmis.map(g => new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 22, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik,
+            children: [new Paragraph({ children: [new TextRun({ text: _bkTarihSaat(g.tarih), font, size: bodySize - 2 })] })]
+          }),
+          new TableCell({
+            width: { size: 18, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik,
+            children: [new Paragraph({ children: [new TextRun({ text: g.talepNo || '—', font, size: bodySize - 2 })] })]
+          }),
+          new TableCell({
+            width: { size: 60, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik,
+            children: [new Paragraph({ children: [new TextRun({ text: g.not || '—', font, size: bodySize - 2 })] })]
+          })
+        ]
+      }))
+    : [new TableRow({
+        children: [new TableCell({
+          width: { size: 100, type: WidthType.PERCENTAGE }, columnSpan: 3,
+          margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik,
+          children: [new Paragraph({ children: [new TextRun({ text: 'Henüz bakım kartı girdisi yok.', font, size: bodySize - 2 })] })]
+        })]
+      })];
+
+  const gecmisBaslikSatiri = new TableRow({
+    children: [
+      new TableCell({ width: { size: 22, type: WidthType.PERCENTAGE }, shading: { fill: 'F2F2F2' }, margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik, children: [new Paragraph({ children: [new TextRun({ text: 'Tarih', bold: true, font, size: bodySize - 2 })] })] }),
+      new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, shading: { fill: 'F2F2F2' }, margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik, children: [new Paragraph({ children: [new TextRun({ text: 'Talep No', bold: true, font, size: bodySize - 2 })] })] }),
+      new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, shading: { fill: 'F2F2F2' }, margins: { top: 60, bottom: 60, left: 90, right: 90 }, borders: kenarlik, children: [new Paragraph({ children: [new TextRun({ text: 'Yapılan İşlem / Not', bold: true, font, size: bodySize - 2 })] })] })
+    ]
+  });
+
+  const belge = new Document({
+    styles: { default: { document: { run: { font, size: bodySize } } } },
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, right: 850, bottom: 850, left: 850 } } },
+      footers: {
+        default: new Footer({
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ children: ['Sayfa ', PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES], font, size: bodySize - 6 })]
+          })]
+        })
+      },
+      children: [
+        baslikTablosu,
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 300 }, children: [new TextRun({ text: (firma ? firma.ad : '') + ' — ' + (e.kod || ''), font, size: bodySize })] }),
+
+        baslik('1. Ekipman Bilgileri'),
+        tablo([
+          satir('Ekipman Kodu', e.kod),
+          satir('Ekipman Adı', e.ad),
+          satir('Ekipman Tipi', e.tip),
+          satir('Konum', e.konum),
+          satir('İlk Görülme Tarihi', _bkTarihSaat(e.ilkGorulmeTarihi)),
+          satir('Toplam Talep Sayısı', e.talepSayisi)
+        ]),
+
+        baslik('2. Bakım Geçmişi'),
+        tablo([gecmisBaslikSatiri, ...gecmisSatirlari])
+      ]
+    }]
+  });
+
+  const blob = await Packer.toBlob(belge);
+  saveAs(blob, 'bakim-karti-' + (e.kod || ekipmanId) + '.docx');
+}

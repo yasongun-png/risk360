@@ -145,6 +145,9 @@ function bakimTalepSayfasiniBaslat() {
 
   document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
   document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);
+  document.getElementById('btEkBakimKartiWordBtn').addEventListener('click', async () => {
+    try { await ekipmanBakimKartiWordOlustur(_btEkDuzenlenenId); } catch (hata) { console.error(hata); alert('Bakım kartı üretilemedi: ' + (hata.message || hata)); }
+  });
   document.getElementById('btEkFotoDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
     e.target.value = '';
