@@ -68,6 +68,10 @@
 
     <div class="hata-mesaji" id="hataMesaji"></div>
 
+    <h3 style="margin-bottom:6px;">Tam Yetkili (Admin) Hesaplar</h3>
+    <div id="adminListesi" style="margin-bottom:24px;"></div>
+
+    <h3 style="margin-bottom:6px;">Kısıtlı Hesaplar</h3>
     <button type="button" class="birincil" id="yeniKullaniciBtn" style="width:auto; padding:11px 20px; margin:16px 0;">+ Yeni Kısıtlı Kullanıcı</button>
 
     <div id="kullaniciListesi"></div>
@@ -143,7 +147,25 @@
       });
       document.getElementById('kkFirmaListesi').addEventListener('change', _kkBirimSecimDoldur);
 
+      renderAdminListe();
       renderListe();
+    }
+
+    // Kullanıcı isteği: "benim kullanıcılarımın listesini görmem lazım" —
+    // aşağıdaki kısıtlı hesapların yanına, tam yetkili (admin) hesapları da
+    // (kendisi dahil) salt-okunur olarak listeler; bunlar burada
+    // düzenlenmez/silinmez (ayrı, çok daha az sık yapılan bir işlem).
+    function renderAdminListe() {
+      const kutu = document.getElementById('adminListesi');
+      const adminler = oku('isg_kullanicilar', []).filter(kullaniciAdminMi);
+      kutu.innerHTML = adminler.map(a => `
+        <div class="kk-satir">
+          <div class="sol">
+            <span class="ad">${_kkKacir(a.adSoyad)} ${a.id === session.id ? '<span style="font-weight:400; font-size:11px; color:var(--metin-soluk);">(siz)</span>' : ''}</span>
+            <span class="kullanici-adi">@${_kkKacir(a.kullaniciAdi)}</span>
+          </div>
+        </div>
+      `).join('') || '<div style="font-size:12px; color:var(--metin-soluk);">Bulunamadı.</div>';
     }
 
     function _firmaAdlariGetir(erisimFirmaIdleri) {
