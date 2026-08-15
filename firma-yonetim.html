@@ -185,14 +185,15 @@
       document.getElementById('barkodYazdirBtn').addEventListener('click', () => {
         const firma = _barkodAktifFirma;
         if (!firma) return;
-        const url = _barkodUrlUret(firma.slug);
+        const tip = BARKOD_TIPLERI[_barkodAktifTip];
+        const url = _barkodUrlUret(firma.slug, _barkodAktifTip);
         const mount = document.getElementById('yazdirmaAlani');
         mount.innerHTML = `
           <div style="text-align:center;">
-            <div class="doc-title">RAMAK KALA / TEHLİKE BİLDİRİMİ</div>
-            <p style="font-size:13px; margin:14px 0;">Tehlike gördüğünüzde veya bir ramak kala olay yaşadığınızda barkodu telefonunuzla okutarak bildirim yapabilirsiniz.</p>
+            <div class="doc-title">${tip.posterBaslik}</div>
+            <p style="font-size:13px; margin:14px 0;">${tip.posterMetin}</p>
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}" style="width:300px; height:300px;" alt="QR Kod">
-            <p style="font-size:11px; color:#555; margin-top:14px;">İsim zorunlu değildir.</p>
+            <p style="font-size:11px; color:#555; margin-top:14px;">${tip.posterAlt}</p>
           </div>
         `;
         mount.style.display = 'block';
@@ -217,13 +218,42 @@
     let _duzenlenenBolumlerFirmaId = null;
     let _duzenlenenIsverenlerFirmaId = null;
     let _barkodAktifFirma = null;
+    let _barkodAktifTip = 'ramak-kala';
 
     // ramak-kala-bildir.html bu sayfayla aynı dizinde (repo kökünde) —
     // bu sayfanın konumundan (GitHub Pages alt yolu/özel domain fark etmeksizin)
     // türetilir, sabit bir domain YAZILMAZ.
-    function _barkodUrlUret(slug) {
+    // Kullanıcı isteği: "barkodu yine ramak kala'nın barkodunun olduğu
+    // yerden verebilirsin" — aynı modal/poster iskeleti, üç farklı barkod
+    // formu için (ramak-kala-bildir.html, is-izni-bildir.html,
+    // ekipman-bakim-bildir.html) tek yerden yeniden kullanılır.
+    const BARKOD_TIPLERI = {
+      'ramak-kala': {
+        sayfa: 'ramak-kala-bildir.html',
+        baslik: 'Ramak Kala / Tehlike Bildirimi Barkodu',
+        posterBaslik: 'RAMAK KALA / TEHLİKE BİLDİRİMİ',
+        posterMetin: 'Tehlike gördüğünüzde veya bir ramak kala olay yaşadığınızda barkodu telefonunuzla okutarak bildirim yapabilirsiniz.',
+        posterAlt: 'İsim zorunlu değildir.'
+      },
+      'is-izni': {
+        sayfa: 'is-izni-bildir.html',
+        baslik: 'İş İzni Oluşturma Barkodu',
+        posterBaslik: 'İŞ İZNİ OLUŞTUR',
+        posterMetin: 'İşe başlamadan önce iş izni oluşturmak için barkodu telefonunuzla okutun.',
+        posterAlt: 'Doldurmadan önce iş tanımı, bölüm ve süre bilgilerini hazır bulundurun.'
+      },
+      'ekipman-bakim': {
+        sayfa: 'ekipman-bakim-bildir.html',
+        baslik: 'Ekipman Bakım Kartı Barkodu',
+        posterBaslik: 'EKİPMAN BAKIM KARTI',
+        posterMetin: 'Ekipmanda yapılan bakım/onarım işlemini kaydetmek için barkodu telefonunuzla okutup ekipman kodunu girin.',
+        posterAlt: 'Ekipman envanterde yoksa otomatik olarak yeni kayıt açılır.'
+      }
+    };
+
+    function _barkodUrlUret(slug, tip) {
       const taban = window.location.href.replace(/firma-yonetim\.html.*$/, '');
-      return taban + 'ramak-kala-bildir.html?firma=' + encodeURIComponent(slug);
+      return taban + BARKOD_TIPLERI[tip].sayfa + '?firma=' + encodeURIComponent(slug);
     }
 
     function renderListe() {
@@ -251,7 +281,9 @@
             <input type="file" accept="image/*" data-logo-dosya="${firma.id}" style="display:none;">
             <button class="mini-buton" data-bolumler="${firma.id}">Bölümler</button>
             <button class="mini-buton" data-isverenler="${firma.id}">İşverenler</button>
-            <button class="mini-buton" data-barkod="${firma.id}">📷 Ramak Kala Barkodu</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ramak-kala">📷 Ramak Kala Barkodu</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
             <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>
           </div>
@@ -321,9 +353,12 @@
       liste.querySelectorAll('[data-barkod]').forEach(btn => {
         btn.addEventListener('click', () => {
           const firma = getFirmaById(btn.getAttribute('data-barkod'));
+          const tipAdi = btn.getAttribute('data-barkod-tip') || 'ramak-kala';
           _barkodAktifFirma = firma;
-          document.getElementById('barkodModalBaslik').textContent = firma.ad + ' — Ramak Kala / Tehlike Bildirimi Barkodu';
-          const url = _barkodUrlUret(firma.slug);
+          _barkodAktifTip = tipAdi;
+          const tip = BARKOD_TIPLERI[tipAdi];
+          document.getElementById('barkodModalBaslik').textContent = firma.ad + ' — ' + tip.baslik;
+          const url = _barkodUrlUret(firma.slug, tipAdi);
           document.getElementById('barkodLinkKutusu').value = url;
           document.getElementById('barkodQrGorsel').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
           document.getElementById('barkodModalKatman').classList.add('acik');

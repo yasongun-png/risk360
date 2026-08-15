@@ -63,7 +63,10 @@
 
     <!-- EKİPMAN ENVANTERİ -->
     <div id="bolum-envanter" style="display:none;">
-      <p style="font-size:13px; color:var(--metin-soluk);">Talep formlarına girilen ekipman kodlarından kendiliğinden oluşur. Ad/Tip/Konum/Fotoğraf sonradan Düzenle ile eklenebilir.</p>
+      <div class="arac-cubugu">
+        <p style="font-size:13px; color:var(--metin-soluk); margin:0;">Talep formlarına girilen ekipman kodlarından kendiliğinden oluşur. Ad/Tip/Konum/Fotoğraf sonradan Düzenle ile eklenebilir.</p>
+        <button type="button" class="ikincil" id="btEkipmanBakimBarkoduBtn" style="white-space:nowrap;">🔧 Bakım Kartı Girdisi Ekle</button>
+      </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead><tr><th>Fotoğraf</th><th>Kod</th><th>Ad</th><th>Tip</th><th>Konum</th><th>Toplam Talep</th><th>Son Kullanım</th><th>İşlem</th></tr></thead>
@@ -159,6 +162,10 @@
         <button type="button" class="ikincil" id="btEkipmanDuzenleIptalBtn">İptal</button>
         <button type="button" class="birincil" id="btEkipmanDuzenleKaydetBtn">Kaydet</button>
       </div>
+
+      <h3 style="margin-top:22px; padding-top:16px; border-top:1px solid var(--kenarlik);">Bakım Kartı</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Bu ekipmanda tarih tarih yapılan işlemlerin geçmişi.</p>
+      <div id="btEkBakimKarti" style="font-size:12px; display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
     </div>
   </div>
 

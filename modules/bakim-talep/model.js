@@ -106,6 +106,12 @@ function ekipmanEnvanterKaydiOlustur(kod, ad, konum) {
     // haritadan seçilebilsin, nokta olarak işaretlenebilsin" (bkz.
     // modules/harita/ui.js HARITA_DIS_KAYNAKLAR.bakimEkipman).
     haritaTesisId: '', haritaX: 0, haritaY: 0,
+    // Ekipman Bakım Kartı — kullanıcı isteği: "yapılan işlemler buraya
+    // girilsin ... tarih tarih ekipmana neler yapıldığı listelerle
+    // ulaşılabilsin". Her girdi { tarih, talepNo, not }. Talep kapatıldığında
+    // otomatik eklenir (bkz. service.js talepEdenKapat) VEYA doğrudan
+    // barkod ile (bkz. ekipman-bakim-bildir.html, ekipmanBakimKartiGirdiEkle).
+    bakimGecmisi: [],
     ilkGorulmeTarihi: new Date().toISOString(),
     sonKullanimTarihi: new Date().toISOString(),
     talepSayisi: 1

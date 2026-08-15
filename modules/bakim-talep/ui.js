@@ -137,6 +137,11 @@ function bakimTalepSayfasiniBaslat() {
     if (!firma) return;
     window.open('../../is-izni-bildir.html?firma=' + encodeURIComponent(firma.slug), '_blank');
   });
+  document.getElementById('btEkipmanBakimBarkoduBtn').addEventListener('click', () => {
+    const firma = aktifFirmaGetir();
+    if (!firma) return;
+    window.open('../../ekipman-bakim-bildir.html?firma=' + encodeURIComponent(firma.slug), '_blank');
+  });
 
   document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
   document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);
@@ -361,6 +366,14 @@ function _btDetayIcerikOlustur(k, kullanici) {
         <button type="button" class="ikincil" id="btBkReddetBtn" style="color:var(--hata);">Reddet</button>
       </div>
       <div class="alan-hatasi" id="btBkHata"></div>
+      <div style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--kenarlik);">
+        <label for="btBkYonlendirTur">Farklı bir bakım türüne yönlendir</label>
+        <select id="btBkYonlendirTur">
+          <option value="">— Seçin —</option>
+          ${BAKIM_TALEP_BAKIM_TURLERI.filter(t => t !== k.talep.bakimTuru).map(t => `<option value="${_btKacir(t)}">${_btKacir(t)}</option>`).join('')}
+        </select>
+        <button type="button" class="ikincil" id="btBkYonlendirBtn" style="width:auto; padding:8px 14px; margin-top:6px;">Yönlendir</button>
+      </div>
     `;
   } else {
     html += _btAlan('Bakım Görüşü', k.bakim.gorus) + _btAlan('Planlanma', _btTarihSaat(k.bakim.planlanmaTarihi)) +
@@ -451,6 +464,17 @@ function _btDetayIcerikOlustur(k, kullanici) {
 function _btDetayOlaylariBagla(k, kullanici) {
   const btBkKaydet = document.getElementById('btBkKaydetBtn');
   if (btBkKaydet) btBkKaydet.addEventListener('click', () => _btBakimKaydet(k.id, false));
+
+  const btBkYonlendir = document.getElementById('btBkYonlendirBtn');
+  if (btBkYonlendir) btBkYonlendir.addEventListener('click', () => {
+    const yeniTur = document.getElementById('btBkYonlendirTur').value;
+    if (!yeniTur) { alert('Lütfen yönlendirilecek bakım türünü seçin.'); return; }
+    const not = prompt('Yönlendirme notu (opsiyonel):', '');
+    if (not === null) return;
+    const sonuc = bakimTuruYonlendir(k.id, yeniTur, not);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    _btDetayModalKapat();
+  });
 
   const btBkGonder = document.getElementById('btBkGonderBtn');
   if (btBkGonder) btBkGonder.addEventListener('click', () => _btBakimKaydet(k.id, true));
@@ -639,6 +663,19 @@ function _btEkipmanDuzenleModalAc(id) {
     ? `../harita/index.html?odaklanKaynak=bakimEkipman&odaklanId=${id}`
     : `../harita/index.html?konumKaynak=bakimEkipman&konumId=${id}&donus=${donusUrl}`;
   haritaLink.textContent = kayit.haritaTesisId ? '🗺️ Haritada Gör' : '🗺️ Haritada Konum Ekle';
+
+  // Bakım Kartı — kullanıcı isteği: "ekipmanın bakım kartında yapılan
+  // işlemler çıksın... tarih tarih listelerle ulaşılabilsin" (en yeni üstte).
+  const kartKutu = document.getElementById('btEkBakimKarti');
+  const gecmis = Array.isArray(kayit.bakimGecmisi) ? kayit.bakimGecmisi.slice().reverse() : [];
+  kartKutu.innerHTML = gecmis.length
+    ? gecmis.map(g => `
+        <div style="border-left:3px solid var(--celik-mavi,#1d4ed8); padding:4px 10px;">
+          <div style="color:var(--metin-soluk);">${_btTarihSaat(g.tarih)}${g.talepNo ? ' — ' + _btKacir(g.talepNo) : ''}</div>
+          <div>${_btKacir(g.not)}</div>
+        </div>
+      `).join('')
+    : '<div style="color:var(--metin-soluk);">Henüz bakım kartı girdisi yok.</div>';
 
   _btEkFotoOnizlemeCiz();
   document.getElementById('btEkipmanDuzenleKatman').classList.add('acik');

@@ -49,6 +49,7 @@ function _btBildirimEkle(hedef, mesaj, kayit) {
     kayitEtiketleri: [kayit.talepNo + ' — ' + mesaj],
     hedefRol: (hedef && hedef.hedefRol) || null,
     hedefBirim: (hedef && hedef.hedefBirim) || null,
+    hedefBakimTuru: (hedef && hedef.hedefBakimTuru) || null,
     baglanti: 'modules/bakim-talep/index.html?id=' + kayit.id,
     tarih: new Date().toISOString(),
     okuyanKullaniciIdleri: []
@@ -76,6 +77,43 @@ function _ekipmanEnvanteriGuncelle(kod, konum) {
   } else {
     ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, temizKod, konum));
   }
+}
+
+// Ekipman Bakım Kartına bir girdi ekler — kayıt kodla eşleştirilir (talep
+// kapanışında otomatik çağrılır) VEYA doğrudan ekipman id'siyle (barkod
+// formundan, bkz. ekipman-bakim-bildir.html). Kasıtlı olarak oturum/rol
+// kontrolü YAPMAZ — ramak-kala-bildir.html ile aynı gerekçe: barkodu okutan
+// anonim/giriş yapmamış olabilir, esas güvenlik sınırı Firestore kurallarıdır.
+function _ekipmanBakimKartinaYaz(ekipmanId, girdi) {
+  if (!ekipmanId) return;
+  const mevcut = ekipmanEnvanterKaydiIdIleGetirRepo(ekipmanId);
+  if (!mevcut) return;
+  const gecmis = Array.isArray(mevcut.bakimGecmisi) ? mevcut.bakimGecmisi : [];
+  ekipmanEnvanterKaydiGuncelleRepo(ekipmanId, { bakimGecmisi: gecmis.concat([girdi]) });
+}
+
+function _ekipmanKoduIleIdBul(ekipmanKodu) {
+  const temizKod = (ekipmanKodu || '').trim().toLowerCase();
+  if (!temizKod) return null;
+  const mevcut = ekipmanEnvanteriTumunuGetirRepo().find(e => e.kod.toLowerCase() === temizKod);
+  return mevcut ? mevcut.id : null;
+}
+
+// Sahada barkod ile: kod taratılır, envanterde bulunursa kartına yazılır;
+// bulunamazsa kullanıcı isteği gereği YENİ bir envanter kaydı açılıp aynı
+// anda o kayda yazılır (bkz. ekipman-bakim-bildir.html).
+function ekipmanBakimKartiGirdiEkle(ekipmanKodu, konum, girdi) {
+  const temizKod = (ekipmanKodu || '').trim();
+  if (!temizKod) return { basarili: false, hata: 'Ekipman kodu zorunludur.' };
+  let ekipmanId = _ekipmanKoduIleIdBul(temizKod);
+  if (!ekipmanId) {
+    const yeni = ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, temizKod, konum));
+    ekipmanId = yeni.id;
+  } else {
+    ekipmanEnvanterKaydiGuncelleRepo(ekipmanId, { sonKullanimTarihi: new Date().toISOString() });
+  }
+  _ekipmanBakimKartinaYaz(ekipmanId, girdi);
+  return { basarili: true, ekipmanId };
 }
 
 // Envanter kaydı talep formundan otomatik oluştuktan SONRA elle
@@ -174,7 +212,31 @@ function bakimTalepAc(veriler) {
   _btGecmisEkle(kayit, 'Talep oluşturuldu.');
   bakimTalepEkleRepo(kayit);
   _ekipmanEnvanteriGuncelle(kayit.talep.ekipmanKodu, kayit.talep.konum);
-  _btBildirimEkle({ hedefRol: 'bakim' }, `Yeni bakım talebi (${kayit.talep.birim})`, kayit);
+  _btBildirimEkle({ hedefRol: 'bakim', hedefBakimTuru: kayit.talep.bakimTuru }, `Yeni bakım talebi (${kayit.talep.birim})`, kayit);
+  return { basarili: true, kayit };
+}
+
+// Kullanıcı isteği: "bakıma gelen bir talebin yapılabilmesi için elektrik
+// veya otomasyon işi yapılması gerekiyorsa, veya elektrik/otomasyona geldi
+// ama bakım işi de varsa, bakım/elektrik/otomasyon birbirlerine yönlendirme
+// yapabilmeli" — durum/aşama değişmez, sadece bakimTuru değişir ve ilgili
+// yeni türün ekibine bildirim gider.
+function bakimTuruYonlendir(id, yeniTur, not) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici || !_btBakimRoluMu(kullanici)) return { basarili: false, hata: 'Bu işlem için yetkiniz yok.' };
+  if (!BAKIM_TALEP_BAKIM_TURLERI.includes(yeniTur)) return { basarili: false, hata: 'Geçersiz bakım türü.' };
+  const kayit = bakimTalepIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Talep bulunamadı.' };
+  if (BAKIM_TALEP_KAPALI_DURUMLAR.includes(kayit.durum) || kayit.durum === 'Onaylandı / Planlandı' || kayit.durum === 'Bakım Tamamladı' || kayit.durum === 'İSG Onayında') {
+    return { basarili: false, hata: 'Bu aşamadaki bir talep başka bir bakım türüne yönlendirilemez.' };
+  }
+  if (kayit.talep.bakimTuru === yeniTur) return { basarili: false, hata: 'Talep zaten bu bakım türünde.' };
+
+  const eskiTur = kayit.talep.bakimTuru;
+  kayit.talep = Object.assign({}, kayit.talep, { bakimTuru: yeniTur });
+  _btGecmisEkle(kayit, `${eskiTur} ekibinden ${yeniTur} ekibine yönlendirildi.` + (not ? ' Not: ' + not : ''));
+  bakimTalepGuncelleRepo(id, kayit);
+  _btBildirimEkle({ hedefRol: 'bakim', hedefBakimTuru: yeniTur }, `${eskiTur}'dan yönlendirildi`, kayit);
   return { basarili: true, kayit };
 }
 
@@ -381,6 +443,18 @@ function talepEdenKapat(id, not) {
   kayit.durum = 'Kapatıldı';
   _btGecmisEkle(kayit, 'Talep eden birim onayladı, kayıt kapatıldı.');
   bakimTalepGuncelleRepo(id, kayit);
+  // Kullanıcı isteği: "ekipmanın bakım kartında yapılan işlemler çıksın...
+  // en altına formun tarih tarih ekipmana neler yapıldığı listelerle
+  // ulaşılabilsin" — talep tamamen kapandığında, Bakım'ın girdiği tamamlama
+  // notu o ekipmanın kartına otomatik işlenir.
+  const ekipmanId = _ekipmanKoduIleIdBul(kayit.talep.ekipmanKodu);
+  if (ekipmanId) {
+    _ekipmanBakimKartinaYaz(ekipmanId, {
+      tarih: kayit.kapanis.kapanisTarihi,
+      talepNo: kayit.talepNo,
+      not: kayit.kapanis.bakimNotu || '(Tamamlama notu girilmedi)'
+    });
+  }
   _btBildirimEkle({ hedefRol: 'bakim' }, 'Talep kapatıldı', kayit);
   _btBildirimEkle({ hedefRol: 'isg' }, 'Talep kapatıldı', kayit);
   return { basarili: true, kayit };
