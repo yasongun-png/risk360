@@ -38,3 +38,15 @@ function izinDogrula(veriler) {
 
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
+
+// "Yeni Talep" aşaması (bkz. is-izni-bildir.html Mod 1 ile birebir aynı
+// kapsam) — PC'den de barkod formuyla tutarlı, sadece talebi açmak için
+// gereken asgari alanları ister; saha sorumlusu/KKD/başlangıç-bitiş gibi
+// "Formu Tamamla" aşamasına ait alanlar burada zorunlu DEĞİLDİR.
+function izinTalepDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.isTanimi || !veriler.isTanimi.trim()) hatalar.isTanimi = 'İş tanımı zorunludur.';
+  if (!veriler.bolum || !veriler.bolum.trim()) hatalar.bolum = 'Bölüm zorunludur.';
+  if (!veriler.talepEden || !veriler.talepEden.trim()) hatalar.talepEden = 'Talep eden zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}

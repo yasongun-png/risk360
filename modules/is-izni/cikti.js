@@ -13,6 +13,19 @@ function _izLogoHtml() {
   return logo ? `<img src="${logo}">` : 'LOGO YOK';
 }
 
+// Diğer modüllerdeki (uygunsuzluk vb.) küçük renkli rozetlerle aynı palet —
+// sade siyah-beyaz forma sadece durum/risk için amaçlı bir renk vurgusu.
+const _IZ_RISK_RENK = { 'Düşük': ['#dcfce7', '#15803d'], 'Orta': ['#fef3c7', '#b45309'], 'Yüksek': ['#fee2e2', '#b91c1c'], 'Kritik': ['#fee2e2', '#7f1d1d'] };
+const _IZ_DURUM_RENK = {
+  'Taslak': ['#f1f5f9', '#475569'], 'Onay Bekliyor': ['#fef3c7', '#b45309'], 'Onaylandı': ['#dcfce7', '#15803d'],
+  'Aktif': ['#dbeafe', '#1d4ed8'], 'Durduruldu': ['#fef3c7', '#b45309'], 'Kapalı': ['#f1f5f9', '#475569'],
+  'Süresi Geçti': ['#fee2e2', '#b91c1c'], 'Reddedildi': ['#fee2e2', '#b91c1c'], 'İptal': ['#f1f5f9', '#475569']
+};
+function _izRozetHtml(deger, renkTablosu) {
+  const [bg, fg] = renkTablosu[deger] || ['#f1f5f9', '#475569'];
+  return `<span style="display:inline-block; padding:2px 9px; border-radius:8px; font-size:8.5pt; font-weight:700; background:${bg}; color:${fg};">${_izKacir(deger)}</span>`;
+}
+
 function _izTarihSaatUzunGoruntu(iso) {
   if (!iso) return '-';
   const [tarih, saat] = iso.split('T');
@@ -57,6 +70,17 @@ function _izImzaHucre(baslik, varsayilanAd, imzaVerisi, imzaDataUrl) {
         <div style="font-size:7.5pt; color:#64748b; margin-top:1mm;">${_izTarihSaatUzunGoruntu(imzaVerisi.tarih)}</div>
       </td>`;
   }
+  // PC'den (çizilmiş imza olmadan) onaylanmış olabilir — bkz. service.js
+  // izinOnayVer, artık onay verirken de imzalar[rol]'e ad/tarih yazıyor.
+  if (imzaVerisi && imzaVerisi.ad) {
+    return `
+      <td>
+        <div class="imza-baslik">${_izKacir(baslik)}</div>
+        <div>${_izKacir(imzaVerisi.ad)}</div>
+        <div style="margin-top:6mm; font-size:8.5pt; color:#15803d; font-weight:700;">✓ Onaylandı</div>
+        <div style="font-size:7.5pt; color:#64748b; margin-top:1mm;">${_izTarihSaatUzunGoruntu(imzaVerisi.tarih)}</div>
+      </td>`;
+  }
   return `
     <td>
       <div class="imza-baslik">${_izKacir(baslik)}</div>
@@ -72,10 +96,11 @@ async function izinFormunuPdfOlustur(izinId) {
   const gazVarMi = k.izinTuru === 'Kapalı Alan' || Object.values(k.gazOlcumu).some(Boolean);
   const izolasyonVarMi = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(k.izinTuru) || k.izolasyon.enerjiIzolasyonu || k.izolasyon.korlemeListesi;
 
-  const [talepEdenImzaUrl, bakimImzaUrl, isgImzaUrl] = await Promise.all([
+  const [talepEdenImzaUrl, bakimImzaUrl, isgImzaUrl, fotoDataUrlleri] = await Promise.all([
     _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.talepEden && k.imzalar.talepEden.imzaUrl),
     _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.bakim && k.imzalar.bakim.imzaUrl),
-    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.isg && k.imzalar.isg.imzaUrl)
+    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.isg && k.imzalar.isg.imzaUrl),
+    Promise.all((k.fotograflar || []).map(f => _izGorseliDataUrlaCevir(f.url)))
   ]);
 
   const kontrolSatirlari = k.kontrolMaddeleri.map(m => `
@@ -99,8 +124,8 @@ async function izinFormunuPdfOlustur(izinId) {
   const govde = `
     <div class="iz-ustbilgi">
       <div class="iz-logo">${_izLogoHtml()}</div>
-      <div class="iz-baslik">İŞ İZİN FORMU
-        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)}</small>
+      <div class="iz-baslik">İŞ İZNİ / ÇALIŞMA İZİN BELGESİ
+        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)} &nbsp; ${_izRozetHtml(k.riskSeviyesi, _IZ_RISK_RENK)} ${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</small>
       </div>
       <div class="iz-fa">${formAyarlariKutusuHtml('is-izni')}</div>
     </div>
@@ -110,13 +135,21 @@ async function izinFormunuPdfOlustur(izinId) {
       <table>
         <tr><td class="iz-etiket">İş Tanımı</td><td colspan="3">${_izKacir(k.isTanimi)}</td></tr>
         <tr><td class="iz-etiket">Bölüm</td><td>${_izKacir(k.bolum)}</td><td class="iz-etiket">Lokasyon / Ekipman</td><td>${_izKacir(k.lokasyon)}</td></tr>
-        <tr><td class="iz-etiket">Yüklenici / Firma</td><td>${_izKacir(k.yuklenici) || '-'}</td><td class="iz-etiket">Risk Seviyesi</td><td>${_izKacir(k.riskSeviyesi)}</td></tr>
+        <tr><td class="iz-etiket">Yüklenici / Firma</td><td>${_izKacir(k.yuklenici) || '-'}</td><td class="iz-etiket">Risk Seviyesi</td><td>${_izRozetHtml(k.riskSeviyesi, _IZ_RISK_RENK)}</td></tr>
         <tr><td class="iz-etiket">Talep Eden</td><td>${_izKacir(k.talepEden)}</td><td class="iz-etiket">Saha Sorumlusu</td><td>${_izKacir(k.sahaSorumlusu)}</td></tr>
         <tr><td class="iz-etiket">Başlangıç</td><td>${_izTarihSaatUzunGoruntu(k.baslangic)}</td><td class="iz-etiket">Bitiş</td><td>${_izTarihSaatUzunGoruntu(k.bitis)}</td></tr>
         <tr><td class="iz-etiket">Çalışanlar</td><td colspan="3">${_izKacir((k.calisanlar || []).join(', ')) || '-'}</td></tr>
         <tr><td class="iz-etiket">Gerekli KKD</td><td colspan="3">${_izKacir((k.gerekliKkd || []).join(', ')) || '-'}</td></tr>
       </table>
     </div>
+
+    ${fotoDataUrlleri.length ? `
+    <div class="iz-bolum">
+      <h2>Fotoğraflar</h2>
+      <div class="iz-foto-grid">
+        ${fotoDataUrlleri.map(u => `<div class="iz-foto-kutu">${u ? `<img src="${u}">` : ''}</div>`).join('')}
+      </div>
+    </div>` : ''}
 
     <div class="iz-bolum">
       <h2>2. Kontrol Maddeleri</h2>
@@ -153,9 +186,15 @@ async function izinFormunuPdfOlustur(izinId) {
         <tbody>${onaySatirlari}</tbody>
       </table>
       <table style="margin-top:2mm;">
-        <tr><td class="iz-etiket">Genel Onay Durumu</td><td>${_izKacir(k.onayDurumu)}</td><td class="iz-etiket">Durum</td><td>${_izKacir(k.durum)}</td></tr>
+        <tr><td class="iz-etiket">Genel Onay Durumu</td><td>${_izKacir(k.onayDurumu)}</td><td class="iz-etiket">Durum</td><td>${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</td></tr>
         ${k.kapanisTarihi ? `<tr><td class="iz-etiket">Kapanış Tarihi</td><td>${_izTarihSaatUzunGoruntu(k.kapanisTarihi)}</td><td class="iz-etiket">Kapanış Notu</td><td>${_izKacir(k.kapanisNotu) || '-'}</td></tr>` : ''}
       </table>
+    </div>
+
+    <div class="iz-beyan">
+      Bu iş izni belgesinde belirtilen tüm iş sağlığı ve güvenliği önlemlerinin alındığını, ilgili çalışanların
+      işin riskleri konusunda bilgilendirildiğini ve gerekli kişisel koruyucu donanımların temin edildiğini
+      aşağıdaki imza sahipleri beyan eder.
     </div>
 
     <table class="iz-imza">
@@ -200,7 +239,13 @@ async function izinFormunuPdfOlustur(izinId) {
         #izPdfKok table.iz-tablo td{ font-size:8.8pt; padding:3px 5px; border:1px solid #cbd5e1; }
         #izPdfKok table.iz-tablo tr{ page-break-inside:avoid; break-inside:avoid; }
 
-        #izPdfKok table.iz-imza{ width:100%; border-collapse:collapse; margin-top:6mm; page-break-inside:avoid; break-inside:avoid; }
+        #izPdfKok .iz-foto-grid{ display:flex; gap:3mm; flex-wrap:wrap; padding:3mm; }
+        #izPdfKok .iz-foto-kutu{ width:45mm; height:34mm; border:1px solid #cbd5e1; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f3f4f6; }
+        #izPdfKok .iz-foto-kutu img{ max-width:100%; max-height:100%; object-fit:contain; }
+
+        #izPdfKok .iz-beyan{ font-size:8.3pt; color:#374151; line-height:1.5; border-top:1px solid #cbd5e1; padding-top:3mm; margin-top:5mm; }
+
+        #izPdfKok table.iz-imza{ width:100%; border-collapse:collapse; margin-top:3mm; page-break-inside:avoid; break-inside:avoid; }
         #izPdfKok table.iz-imza tr{ page-break-inside:avoid; break-inside:avoid; }
         #izPdfKok table.iz-imza td{ border:1px solid #cbd5e1; padding:4mm; width:33.33%; height:24mm; vertical-align:top; font-size:9pt; text-align:center; }
         #izPdfKok .imza-baslik{ font-weight:700; color:#111827; margin-bottom:2mm; text-transform:uppercase; }

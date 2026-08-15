@@ -12,6 +12,21 @@
 <link rel="icon" href="../../assets/icons/favicon-32.png">
 <title>İSG Platform - İş İzinleri</title>
 <link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* Barkod formundaki (is-izni-bildir.html) ikonlu KKD grid'iyle aynı desen
+     — kullanıcı isteği: "barkotla yapılan girişlerle PC'den yapılan iş izni
+     tutarlı olmalı". */
+  .iz-kkd-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+  .iz-kkd-chip { display: flex; align-items: center; gap: 6px; border: 1.5px solid var(--kenarlik, #e5e7eb); border-radius: 20px; padding: 7px 12px 7px 8px; font-size: 12px; font-weight: 600; cursor: pointer; user-select: none; color: var(--metin-ana, #111827); }
+  .iz-kkd-chip input { display: none; }
+  .iz-kkd-chip .ikon { font-size: 16px; }
+  .iz-kkd-chip.secili { border-color: var(--celik-mavi-koyu, #1d4ed8); background: #eef2ff; color: var(--celik-mavi-koyu, #1d4ed8); }
+
+  .iz-imza-canvas { width: 100%; height: 120px; border: 1.5px dashed var(--kenarlik, #9ca3af); border-radius: 10px; touch-action: none; background: #fff; display: block; }
+  .iz-imza-arac { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .iz-imza-temizle { border: none; background: none; color: var(--hata, #dc2626); font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px; }
+  .iz-imza-ipucu { font-size: 11px; color: var(--metin-soluk, #6b7280); }
+</style>
 </head>
 <body>
   <div class="ust-cubuk">
@@ -111,8 +126,8 @@
         </div>
         <label for="izCalisanlar">Çalışanlar <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın)</span></label>
         <input type="text" id="izCalisanlar">
-        <label for="izGerekliKkd">Gerekli KKD <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın)</span></label>
-        <input type="text" id="izGerekliKkd">
+        <label>Gerekli KKD</label>
+        <div class="iz-kkd-grid" id="izKkdGrid"></div>
 
         <div class="form-satir-ikili">
           <div>
@@ -157,6 +172,20 @@
         <label for="izKorlemeListesi">Körleme Listesi</label>
         <textarea id="izKorlemeListesi"></textarea>
 
+        <!-- Formu Tamamla aşamasında (Taslak → Onay Bekliyor) barkod formundaki
+             gibi talep eden imzası isteniyor — kullanıcı isteği: barkod ve
+             PC girişleri tutarlı olmalı. Düzenle modunda gizli/opsiyonel. -->
+        <div id="izImzaBolumu" style="display:none;">
+          <div class="form-bolum-baslik">İmza (Talep Eden / Formu Dolduran)</div>
+          <label for="izImzaAdSoyad">Adınız</label>
+          <input type="text" id="izImzaAdSoyad">
+          <canvas id="izImzaCanvas" class="iz-imza-canvas"></canvas>
+          <div class="iz-imza-arac">
+            <span class="iz-imza-ipucu">Fare/parmakla imzalayın</span>
+            <button type="button" class="iz-imza-temizle" id="izImzaTemizleBtn">Temizle</button>
+          </div>
+        </div>
+
         <div class="form-bolum-baslik">Onay / Durum</div>
         <div class="form-satir-ikili">
           <div>
@@ -174,10 +203,43 @@
 
         <div class="modal-eylemler">
           <button type="button" class="ikincil" id="izinModalIptalBtn">İptal</button>
-          <button type="submit" class="birincil">Kaydet</button>
+          <button type="submit" class="birincil" id="izinKaydetBtn">Kaydet</button>
         </div>
       </form>
       <button type="button" class="tablo-buton" id="izinModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- YENİ TALEP MODAL — barkod formundaki Mod 1 ("Yeni Talep") ile aynı
+       kapsam: sadece talebi açmak için gereken asgari bilgiler. Kalan
+       bilgiler listedeki "Formu Tamamla" ile (yukarıdaki büyük modal)
+       doldurulur. Kullanıcı isteği: barkod ve PC girişleri tutarlı olmalı. -->
+  <div class="modal-katman" id="izinTalepModalKatman">
+    <div class="modal-kutu" style="max-width:480px;">
+      <h3>Yeni İş İzni Talebi</h3>
+      <p style="color:var(--metin-soluk); font-size:12.5px; margin-top:-8px;">İşe başlamadan önce bu formu doldurun. Kalan bilgiler "Formu Tamamla" ile doldurulup imzalanacak.</p>
+      <form id="izinTalepForm">
+        <label for="itTuru">İş İzni Türü *</label>
+        <select id="itTuru"></select>
+
+        <label for="itIsTanimi">İş Tanımı *</label>
+        <textarea id="itIsTanimi" rows="3"></textarea>
+        <div class="alan-hatasi" id="itIsTanimiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="itBolum">Bölüm / Lokasyon *</label>
+        <input type="text" id="itBolum">
+        <div class="alan-hatasi" id="itBolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="itTalepEden">Talep Eden *</label>
+        <input type="text" id="itTalepEden">
+        <div class="alan-hatasi" id="itTalepEdenHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="izinTalepModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Talebi Oluştur</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="izinTalepModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 

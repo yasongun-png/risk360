@@ -290,7 +290,7 @@
         ctx.scale(oran, oran);
         ctx.lineWidth = 2.4;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = '#111827';
+        ctx.strokeStyle = '#1e3a8a'; // mavi dolma kalem rengi
       }
       boyutlandir();
 
@@ -460,7 +460,7 @@
 
           const yeniIzin = izinOlustur({
             izinTuru: tur,
-            isTanimi: '(Barkod ile oluşturuldu — ' + talepEden + ') ' + isTanimi,
+            isTanimi: '📱 ' + isTanimi,
             bolum, lokasyon: bolum,
             talepEden,
             izinNo: izinSonrakiNoUret(mevcutListe)

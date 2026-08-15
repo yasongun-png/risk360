@@ -3,6 +3,8 @@
 let _izGorunum = 'izinler';
 let _duzenlenenIzinId = null;
 let _izKontrolMaddeleri = [];
+let _izModalTamamlaModu = false;
+let _izImzaPad = null;
 
 function izRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
@@ -10,6 +12,88 @@ function izRozetSinifAdi(durum) {
 
 function _izKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+// Barkod formundaki ("Formu Tamamla") ile aynı ikonlu KKD grid'i — kullanıcı
+// isteği: barkod ve PC girişleri tutarlı olmalı. Kutucuk display:none
+// olduğu için etikete tıklamak tarayıcı tarafından zaten native olarak
+// kutucuğa yönlendirilir; burada AYRICA manuel toggle YAPILMAZ (bkz.
+// is-izni-bildir.html'de daha önce düzeltilen çift-tetiklenme hatası) —
+// tek doğru kaynak kutucuğun kendi 'change' olayıdır.
+function _izKkdGridiCiz() {
+  const kutu = document.getElementById('izKkdGrid');
+  kutu.innerHTML = IS_IZNI_KKD_SECENEKLERI.map((k, i) => `
+    <label class="iz-kkd-chip" data-idx="${i}">
+      <input type="checkbox" value="${_izKacir(k.ad)}">
+      <span class="ikon">${k.ikon}</span><span>${_izKacir(k.ad)}</span>
+    </label>`).join('');
+  kutu.querySelectorAll('.iz-kkd-chip').forEach(etiket => {
+    const kutucuk = etiket.querySelector('input');
+    kutucuk.addEventListener('change', () => {
+      etiket.classList.toggle('secili', kutucuk.checked);
+    });
+  });
+}
+
+// Barkod formundaki imza pad'iyle (is-izni-bildir.html _iiImzaPaduBagla)
+// birebir aynı — PC'den "Formu Tamamla" yapan kişi de dijital imza
+// bıraksın, tutarlılık için.
+function _izImzaPaduBagla(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+
+  function boyutlandir() {
+    const oran = window.devicePixelRatio || 1;
+    const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 120;
+    canvas.width = genislik * oran;
+    canvas.height = yukseklik * oran;
+    ctx.scale(oran, oran);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a'; // mavi dolma kalem rengi
+  }
+  boyutlandir();
+
+  function konum(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const y = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+    return { x: x - r.left, y: y - r.top };
+  }
+  function basla(e) { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; }
+  function ciz(e) {
+    if (!ciziliyor) return;
+    e.preventDefault();
+    const p = konum(e);
+    ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    sonX = p.x; sonY = p.y;
+  }
+  function bitir() { ciziliyor = false; }
+
+  canvas.addEventListener('pointerdown', basla);
+  canvas.addEventListener('pointermove', ciz);
+  window.addEventListener('pointerup', bitir);
+
+  return {
+    temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+    doluMu: () => dolu,
+    canvasElemani: canvas
+  };
+}
+
+async function _izImzaYukle(canvas) {
+  return new Promise((coz, red) => {
+    canvas.toBlob(async blob => {
+      if (!blob) { red(new Error('İmza alınamadı.')); return; }
+      try {
+        const dosya = new File([blob], 'imza-talepEden-' + Date.now() + '.png', { type: 'image/png' });
+        const firma = aktifFirmaGetir();
+        const sonuc = await fotoYukle(dosya, 'is-izni/' + (firma ? firma.slug : 'firma') + '-imza');
+        coz(sonuc.url);
+      } catch (hata) { red(hata); }
+    }, 'image/png');
+  });
 }
 
 function izinSayfasiniBaslat() {
@@ -20,13 +104,21 @@ function izinSayfasiniBaslat() {
   document.getElementById('turFiltre').innerHTML += IS_IZNI_TURLERI.map(t => `<option>${t}</option>`).join('');
   document.getElementById('durumFiltre').innerHTML += IS_IZNI_DURUMLARI.map(d => `<option>${d}</option>`).join('');
 
-  document.getElementById('yeniIzinBtn').addEventListener('click', () => izinModalAc());
+  document.getElementById('yeniIzinBtn').addEventListener('click', () => izinTalepModalAc());
   document.getElementById('izinModalKapatBtn').addEventListener('click', izinModalKapat);
   document.getElementById('izinModalIptalBtn').addEventListener('click', izinModalKapat);
   document.getElementById('izinForm').addEventListener('submit', izinFormGonderildi);
   document.getElementById('izinAramaKutusu').addEventListener('input', e => izinleriCiz(e.target.value));
   document.getElementById('turFiltre').addEventListener('change', () => izinleriCiz(document.getElementById('izinAramaKutusu').value));
   document.getElementById('durumFiltre').addEventListener('change', () => izinleriCiz(document.getElementById('izinAramaKutusu').value));
+
+  document.getElementById('itTuru').innerHTML = IS_IZNI_TURLERI.map(t => `<option>${t}</option>`).join('');
+  document.getElementById('izinTalepModalKapatBtn').addEventListener('click', izinTalepModalKapat);
+  document.getElementById('izinTalepModalIptalBtn').addEventListener('click', izinTalepModalKapat);
+  document.getElementById('izinTalepForm').addEventListener('submit', izinTalepFormGonderildi);
+
+  _izKkdGridiCiz();
+  document.getElementById('izImzaTemizleBtn').addEventListener('click', () => { if (_izImzaPad) _izImzaPad.temizle(); });
 
   document.getElementById('izTuru').addEventListener('change', () => {
     const isaretliVarMi = _izKontrolMaddeleri.some(m => m.isaretli || m.not);
@@ -111,9 +203,18 @@ function izinleriCiz(aramaMetni) {
 
   liste.forEach(k => {
     const satir = document.createElement('tr');
-    const islemler = [`<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`, `<button class="tablo-buton" data-form="${k.id}">Form</button>`];
+    // Taslak durumundaki kayıt henüz barkod/PC "Yeni Talep" ile açılmış,
+    // kalan bilgiler doldurulmamış — "Düzenle" yerine "Formu Tamamla"
+    // gösterilir (bkz. izinModalAc'in ikinci parametresi).
+    const islemler = k.durumGoruntu === 'Taslak'
+      ? [`<button class="tablo-buton" data-tamamla="${k.id}">Formu Tamamla</button>`]
+      : [`<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`];
+    islemler.push(`<button class="tablo-buton" data-form="${k.id}">Form</button>`);
     if (k.durumGoruntu === 'Onay Bekliyor') {
-      islemler.push(`<button class="tablo-buton" data-onay="${k.id}">Onay Ver</button>`);
+      // Barkoddaki dijital imza rolleriyle (Bakım Personeli/İSG) aynı —
+      // kullanıcı isteği: barkod ve PC girişleri tutarlı olmalı.
+      islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="bakim">🔧 Bakım Onayı</button>`);
+      islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="isg">🛡️ İSG Onayı</button>`);
       islemler.push(`<button class="tablo-buton sil" data-red="${k.id}">Reddet</button>`);
     } else if (['Onaylandı', 'Gerekmiyor'].includes(k.onayDurumu) && k.durum !== 'Aktif' && !IS_IZNI_TERMINAL_DURUMLAR.includes(k.durum)) {
       islemler.push(`<button class="tablo-buton" data-aktif="${k.id}">Aktifleştir</button>`);
@@ -139,12 +240,12 @@ function izinleriCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => izinModalAc(izinIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-tamamla]').forEach(btn => btn.addEventListener('click', () => izinModalAc(izinIdIleGetirRepo(btn.getAttribute('data-tamamla')), true)));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {
     try { await izinFormunuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-onay]').forEach(btn => btn.addEventListener('click', () => {
-    const rol = prompt('Onaylayanın rolü:', '') || '';
-    const sonuc = izinOnayVer(btn.getAttribute('data-onay'), rol);
+    const sonuc = izinOnayVer(btn.getAttribute('data-onay'), btn.getAttribute('data-rol'));
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     izinleriCiz(document.getElementById('izinAramaKutusu').value);
     izOzetiCiz();
@@ -173,9 +274,13 @@ function izinleriCiz(aramaMetni) {
   }));
 }
 
-function izinModalAc(kayit) {
+function izinModalAc(kayit, tamamlaModu) {
   _duzenlenenIzinId = kayit ? kayit.id : null;
-  document.getElementById('izinModalBaslik').textContent = kayit ? (kayit.izinNo + ' İznini Düzenle') : 'Yeni İş İzni';
+  _izModalTamamlaModu = !!tamamlaModu;
+  document.getElementById('izinModalBaslik').textContent = tamamlaModu
+    ? (kayit.izinNo + ' — Formu Tamamla')
+    : (kayit ? (kayit.izinNo + ' İznini Düzenle') : 'Yeni İş İzni');
+  document.getElementById('izinKaydetBtn').textContent = tamamlaModu ? 'Formu Tamamla ve Kaydet' : 'Kaydet';
 
   document.getElementById('izTuru').innerHTML = IS_IZNI_TURLERI.map(t => `<option ${kayit && kayit.izinTuru === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('izRiskSeviyesi').innerHTML = IS_IZNI_RISK_SEVIYELERI.map(r => `<option ${kayit && kayit.riskSeviyesi === r ? 'selected' : ''}>${r}</option>`).join('');
@@ -187,9 +292,26 @@ function izinModalAc(kayit) {
   document.getElementById('izTalepEden').value = kayit ? kayit.talepEden : '';
   document.getElementById('izSahaSorumlusu').value = kayit ? kayit.sahaSorumlusu : '';
   document.getElementById('izCalisanlar').value = kayit ? (kayit.calisanlar || []).join('; ') : '';
-  document.getElementById('izGerekliKkd').value = kayit ? (kayit.gerekliKkd || []).join('; ') : '';
   document.getElementById('izBaslangic').value = kayit ? kayit.baslangic : _izVarsayilanBaslangic();
   document.getElementById('izBitis').value = kayit ? kayit.bitis : _izVarsayilanBitis();
+
+  const seciliKkd = new Set(kayit ? (kayit.gerekliKkd || []) : []);
+  document.querySelectorAll('#izKkdGrid .iz-kkd-chip').forEach(etiket => {
+    const kutucuk = etiket.querySelector('input');
+    kutucuk.checked = seciliKkd.has(kutucuk.value);
+    etiket.classList.toggle('secili', kutucuk.checked);
+  });
+
+  // Barkoddaki "Formu Tamamla" ile tutarlılık: talep eden imzası sadece bu
+  // aşamada isteniyor, düzenlemede opsiyonel/gizli. Farklı bir izin
+  // açıldığında imza her zaman temizlenir (barkoddaki _ftIzinSecildi ile
+  // aynı davranış).
+  document.getElementById('izImzaBolumu').style.display = tamamlaModu ? '' : 'none';
+  document.getElementById('izImzaAdSoyad').value = kayit ? (kayit.talepEden || '') : '';
+  requestAnimationFrame(() => {
+    if (!_izImzaPad) _izImzaPad = _izImzaPaduBagla('izImzaCanvas');
+    if (_izImzaPad) _izImzaPad.temizle();
+  });
 
   _izKontrolMaddeleri = kayit ? JSON.parse(JSON.stringify(kayit.kontrolMaddeleri)) : izinKontrolListesiUret(document.getElementById('izTuru').value);
   kontrolListesiniCiz();
@@ -235,11 +357,59 @@ function _izVarsayilanBitis() {
 function izinModalKapat() {
   document.getElementById('izinModalKatman').classList.remove('acik');
   _duzenlenenIzinId = null;
+  _izModalTamamlaModu = false;
 }
 
-function izinFormGonderildi(e) {
+// ===================== YENİ TALEP MODALI =====================
+// Barkod formundaki Mod 1 ("Yeni Talep") ile aynı — sadece asgari alanlar.
+
+function izinTalepModalAc() {
+  document.getElementById('itIsTanimi').value = '';
+  document.getElementById('itBolum').value = '';
+  document.getElementById('itTalepEden').value = '';
+  document.querySelectorAll('#izinTalepForm .alan-hatasi').forEach(el => el.textContent = '');
+  document.getElementById('izinTalepModalKatman').classList.add('acik');
+}
+
+function izinTalepModalKapat() {
+  document.getElementById('izinTalepModalKatman').classList.remove('acik');
+}
+
+function izinTalepFormGonderildi(e) {
+  e.preventDefault();
+  document.querySelectorAll('#izinTalepForm .alan-hatasi').forEach(el => el.textContent = '');
+
+  const veriler = {
+    izinTuru: document.getElementById('itTuru').value,
+    isTanimi: document.getElementById('itIsTanimi').value,
+    bolum: document.getElementById('itBolum').value,
+    talepEden: document.getElementById('itTalepEden').value
+  };
+
+  const sonuc = izinEkle(veriler);
+  if (!sonuc.basarili) {
+    Object.keys(sonuc.hatalar || {}).forEach(alan => {
+      const hataEl = document.getElementById('it' + alan.charAt(0).toUpperCase() + alan.slice(1) + 'Hata');
+      if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
+    });
+    return;
+  }
+
+  izinTalepModalKapat();
+  izinleriCiz(document.getElementById('izinAramaKutusu').value);
+  izOzetiCiz();
+}
+
+async function izinFormGonderildi(e) {
   e.preventDefault();
   document.querySelectorAll('#izinForm .alan-hatasi').forEach(el => el.textContent = '');
+
+  // Barkoddaki Mod 2 ("Formu Tamamla") ile aynı kural: talep eden imzası
+  // bu aşamada zorunlu. Düzenle modunda opsiyonel (boş bırakılabilir).
+  if (_izModalTamamlaModu && (!_izImzaPad || !_izImzaPad.doluMu())) {
+    alert('Lütfen imza alanına imzanızı atın.');
+    return;
+  }
 
   const veriler = {
     izinTuru: document.getElementById('izTuru').value,
@@ -251,7 +421,7 @@ function izinFormGonderildi(e) {
     talepEden: document.getElementById('izTalepEden').value,
     sahaSorumlusu: document.getElementById('izSahaSorumlusu').value,
     calisanlar: document.getElementById('izCalisanlar').value,
-    gerekliKkd: document.getElementById('izGerekliKkd').value,
+    gerekliKkd: Array.from(document.querySelectorAll('#izKkdGrid input:checked')).map(i => i.value),
     riskSeviyesi: document.getElementById('izRiskSeviyesi').value,
     baslangic: document.getElementById('izBaslangic').value,
     bitis: document.getElementById('izBitis').value,
@@ -272,7 +442,21 @@ function izinFormGonderildi(e) {
     notlar: document.getElementById('izNotlar').value
   };
 
-  const sonuc = _duzenlenenIzinId ? izinGuncelle(_duzenlenenIzinId, veriler) : izinEkle(veriler);
+  let talepEdenImza = null;
+  if (_izModalTamamlaModu && _izImzaPad && _izImzaPad.doluMu()) {
+    try {
+      const imzaUrl = await _izImzaYukle(_izImzaPad.canvasElemani);
+      talepEdenImza = izinImzaVeriUret(document.getElementById('izImzaAdSoyad').value.trim() || veriler.talepEden, imzaUrl);
+    } catch (hata) {
+      console.error('İmza yüklenemedi:', hata);
+      alert('İmza yüklenemedi, lütfen tekrar deneyin.');
+      return;
+    }
+  }
+
+  const sonuc = !_duzenlenenIzinId ? izinEkle(veriler)
+    : _izModalTamamlaModu ? izinFormunuTamamla(_duzenlenenIzinId, veriler, talepEdenImza)
+    : izinGuncelle(_duzenlenenIzinId, veriler);
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar || {}).forEach(alan => {
       const hataEl = document.getElementById('iz' + alan.charAt(0).toUpperCase() + alan.slice(1) + 'Hata');

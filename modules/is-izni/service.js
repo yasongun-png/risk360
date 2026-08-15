@@ -31,12 +31,20 @@ function izinleriGetir(aramaMetni, filtreler) {
   return liste.sort((a, b) => (b.baslangic || '').localeCompare(a.baslangic || ''));
 }
 
+// Kullanıcı isteği: "barkotla yapılan girişlerle PC'den yapılan iş izni
+// tutarlı olmalı" — PC'deki "+ Yeni İzin" artık barkod formundaki Mod 1
+// ("Yeni Talep") ile aynı, sadece asgari alanları isteyen bir ilk adım;
+// kalan alanlar izinFormunuTamamla ile ("Formu Tamamla") doldurulur.
 function izinEkle(veriler) {
-  const dogrulama = izinDogrula(veriler);
+  const dogrulama = izinTalepDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
   const izinNo = izinSonrakiNoUret(izinTumunuGetir());
-  const yeniKayit = izinOlustur(Object.assign({}, veriler, { izinNo }));
+  // Barkod formundaki Mod 1 ile aynı: bu aşamada ayrı bir "lokasyon" alanı
+  // sorulmaz, bölüm otomatik lokasyon olarak da kullanılır — aksi halde
+  // izinDogrula'nın (Formu Tamamla adımında) zorunlu tuttuğu lokasyon alanı
+  // hep boş kalır.
+  const yeniKayit = izinOlustur(Object.assign({}, veriler, { izinNo, lokasyon: veriler.lokasyon || veriler.bolum }));
   izinEkleRepo(yeniKayit);
   return { basarili: true, kayit: yeniKayit };
 }
@@ -72,6 +80,23 @@ function izinGuncelle(id, veriler) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// "Formu Tamamla" adımı: barkod formundaki Mod 2 ile birebir aynı mantık —
+// izinGuncelle'nin tüm alan kurallarını uygular, AYRICA kayıt hâlâ Taslak
+// ise (ilk kez tamamlanıyorsa) durumu Onay Bekliyor'a taşır ve varsa
+// çizilen "Talep Eden" imzasını (talepEdenImza — imzaUrl olabilir/olmayabilir)
+// imzalar.talepEden'e yazar.
+function izinFormunuTamamla(id, veriler, talepEdenImza) {
+  const sonuc = izinGuncelle(id, veriler);
+  if (!sonuc.basarili) return sonuc;
+
+  const guncellemeler = {};
+  if (sonuc.kayit.durum === 'Taslak') guncellemeler.durum = 'Onay Bekliyor';
+  if (talepEdenImza) guncellemeler.imzalar = Object.assign({}, sonuc.kayit.imzalar, { talepEden: talepEdenImza });
+  if (!Object.keys(guncellemeler).length) return sonuc;
+
+  return { basarili: true, kayit: izinGuncelleRepo(id, guncellemeler) };
+}
+
 function izinSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   izinSilRepo(id);
@@ -101,7 +126,15 @@ function izinOnayVer(id, rol) {
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);
   const onayDurumu = _izinOnayDurumunuYenidenHesapla(onaycilar);
   const durum = onayDurumu === 'Onaylandı' ? 'Onaylandı' : izin.durum;
-  return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu, durum }) };
+  // Barkod formundaki dijital imzayla ("İmza At") AYNI alanı kullan —
+  // kullanıcı isteği: "barkotla yapılan girişlerle PC'den yapılan iş izni
+  // tutarlı olmalı". PC'den onay verildiğinde de İş İzni Formu PDF'indeki
+  // ilgili imza kutusunda onaylayanın adı/tarihi görünsün (çizilmiş imza
+  // görseli olmadan — bkz. cikti.js _izImzaHucre "✓ Onaylandı" dalı).
+  const imzalar = ['bakim', 'isg'].includes(rol)
+    ? Object.assign({}, izin.imzalar, { [rol]: izinImzaVeriUret(kullanici.adSoyad, '') })
+    : izin.imzalar;
+  return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu, durum, imzalar }) };
 }
 
 function izinReddet(id, rol, sebep) {
