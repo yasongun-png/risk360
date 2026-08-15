@@ -75,8 +75,8 @@
           </div>
 
           <div class="ii-alan">
-            <label for="iiTalepEden">Adınız (isteğe bağlı)</label>
-            <input type="text" id="iiTalepEden" placeholder="İsteğe bağlı — boş bırakabilirsiniz">
+            <label for="iiTalepEden">Adınız *</label>
+            <input type="text" id="iiTalepEden" required>
           </div>
 
           <div class="ii-alan">
@@ -198,8 +198,9 @@
 
         const isTanimi = document.getElementById('iiIsTanimi').value.trim();
         const bolum = document.getElementById('iiBolum').value.trim();
-        if (!isTanimi || !bolum) {
-          hataMesaji.textContent = 'Lütfen iş tanımını ve bölüm/lokasyonu girin.';
+        const talepEdenKontrol = document.getElementById('iiTalepEden').value.trim();
+        if (!isTanimi || !bolum || !talepEdenKontrol) {
+          hataMesaji.textContent = 'Lütfen iş tanımını, bölüm/lokasyonu ve adınızı girin.';
           hataMesaji.classList.add('gorunur');
           return;
         }
@@ -217,9 +218,9 @@
 
           const yeniIzin = izinOlustur({
             izinTuru: tur,
-            isTanimi: '(Barkod ile oluşturuldu' + (talepEden ? ' — ' + talepEden : ' — isim belirtilmedi') + ') ' + isTanimi,
+            isTanimi: '(Barkod ile oluşturuldu — ' + talepEden + ') ' + isTanimi,
             bolum, lokasyon: bolum,
-            talepEden: talepEden || 'Barkod',
+            talepEden,
             izinNo: izinSonrakiNoUret(mevcutListe)
           });
           yeniIzin.fotograflar = _iiFotoUrl ? [{ url: _iiFotoUrl }] : [];

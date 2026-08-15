@@ -67,8 +67,8 @@
           </div>
 
           <div class="ek-alan">
-            <label for="ekYapanKisi">Adınız (isteğe bağlı)</label>
-            <input type="text" id="ekYapanKisi">
+            <label for="ekYapanKisi">Adınız *</label>
+            <input type="text" id="ekYapanKisi" required>
           </div>
 
           <div class="ek-alan">
@@ -159,8 +159,9 @@
 
         const kod = document.getElementById('ekKod').value.trim();
         const notMetni = document.getElementById('ekNot').value.trim();
-        if (!kod || !notMetni) {
-          hataMesaji.textContent = 'Lütfen ekipman kodunu ve yapılan işlemi girin.';
+        const yapanKisiKontrol = document.getElementById('ekYapanKisi').value.trim();
+        if (!kod || !notMetni || !yapanKisiKontrol) {
+          hataMesaji.textContent = 'Lütfen ekipman kodunu, yapılan işlemi ve adınızı girin.';
           hataMesaji.classList.add('gorunur');
           return;
         }
@@ -185,7 +186,7 @@
           }
 
           const gecmis = Array.isArray(liste[index].bakimGecmisi) ? liste[index].bakimGecmisi : [];
-          const girdiNotu = '(Barkod ile girildi' + (yapanKisi ? ' — ' + yapanKisi : ' — isim belirtilmedi') + ') ' + notMetni
+          const girdiNotu = '(Barkod ile girildi — ' + yapanKisi + ') ' + notMetni
             + (_ekFotoUrl ? ' [Fotoğraf eklendi]' : '');
           liste[index] = Object.assign({}, liste[index], {
             sonKullanimTarihi: new Date().toISOString(),
