@@ -22,6 +22,23 @@ function _btBirimleriGetir() {
   return firma && Array.isArray(firma.bolumler) ? firma.bolumler : [];
 }
 
+// Bu kaydın, ŞU AN görüntüleyen kullanıcı için "sırada bekleyen bir işi"
+// olup olmadığını söyler — hem talep listesindeki "Düzenle" butonunu hem de
+// detay modalındaki alan kilidini AYNI kuraldan besler (kullanıcı isteği:
+// "talep örneğin bakım birimine düştüyse yanında düzenle tıklanabilir
+// olsun").
+function _btKayitAksiyonBekliyorMu(k, kullanici) {
+  const bakimRoluVarMi = _btBakimRoluMu(kullanici);
+  const isgRoluVarMi = _btIsgOnaylayiciMi(kullanici);
+  const talepSahibiMi = kullanici.rol === 'birim' && kullanici.birimAdi === k.talep.birim;
+
+  if (bakimRoluVarMi && !BAKIM_TALEP_KAPALI_DURUMLAR.includes(k.durum) && k.durum !== 'Onaylandı / Planlandı' && k.durum !== 'Bakım Tamamladı' && k.durum !== 'İSG Onayında') return true;
+  if (isgRoluVarMi && k.durum === 'İSG Onayında') return true;
+  if (bakimRoluVarMi && k.durum === 'Onaylandı / Planlandı') return true;
+  if (talepSahibiMi && k.durum === 'Bakım Tamamladı') return true;
+  return false;
+}
+
 function _btGorunumDegistir(gorunum) {
   _btGorunum = gorunum;
   document.getElementById('bolum-talepler').style.display = gorunum === 'talepler' ? '' : 'none';
@@ -81,7 +98,9 @@ function talepleriCiz() {
   }
   bosDurum.classList.remove('gorunur');
 
+  const kullanici = oturumdakiKullanici();
   liste.forEach(t => {
+    const aksiyonBekliyor = _btKayitAksiyonBekliyorMu(t, kullanici);
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><button type="button" class="tablo-buton" data-detay="${t.id}">${_btKacir(t.talepNo)}</button></td>
@@ -90,6 +109,7 @@ function talepleriCiz() {
       <td>${_btKacir(t.talep.oncelik)}</td>
       <td><span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span></td>
       <td>${_btTarihSaat(t.olusturmaTarihi)}</td>
+      <td><button type="button" class="${aksiyonBekliyor ? 'birincil' : 'ikincil'}" style="width:auto; padding:6px 12px; font-size:12px;" data-detay="${t.id}">${aksiyonBekliyor ? 'Düzenle' : 'Görüntüle'}</button></td>
     `;
     govde.appendChild(satir);
   });
