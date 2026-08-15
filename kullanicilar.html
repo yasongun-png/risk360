@@ -147,8 +147,14 @@
       });
       document.getElementById('kkFirmaListesi').addEventListener('change', _kkBirimSecimDoldur);
 
-      renderAdminListe();
-      renderListe();
+      // Diğer admin sayfalarıyla aynı önlem (bkz. dashboard.html,
+      // giris-kayitlari.html): bulut senkronu doğrulanmadan isg_kullanicilar
+      // okunursa, bu cihazın henüz almadığı kullanıcılar (ör. az önce başka
+      // bir cihazda eklenmiş olanlar) listede eksik/boş görünebilir.
+      bulutHazirOlduğunda(() => {
+        renderAdminListe();
+        renderListe();
+      });
     }
 
     // Kullanıcı isteği: "benim kullanıcılarımın listesini görmem lazım" —
