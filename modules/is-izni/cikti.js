@@ -19,18 +19,41 @@ function _izTarihSaatUzunGoruntu(iso) {
   return gunAyYil(tarih) + (saat ? ' ' + saat : '');
 }
 
+// İmza görselleri Firebase Storage'a yüklenip gerçek http(s) URL'i olarak
+// dönüyor (bkz. core/data.js fotoYukle) — bunları doğrudan <img src> olarak
+// basmak html2canvas'ta CORS başlığı olmadığı için sessizce boş/şeffaf
+// çıkabiliyor (aynı sorun modules/uygunsuzluk/cikti.js'teki kroki görseli
+// için de vardı, aynı çözüm: önce tamamen indirip data: URL'e çevir).
+async function _izGorseliDataUrlaCevir(url) {
+  if (!url || url.startsWith('data:')) return url || '';
+  try {
+    const yanit = await fetch(url);
+    const blob = await yanit.blob();
+    return await new Promise((coz, red) => {
+      const okuyucu = new FileReader();
+      okuyucu.onload = () => coz(okuyucu.result);
+      okuyucu.onerror = red;
+      okuyucu.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.error('İmza görseli indirilemedi (CORS/ağ hatası olabilir):', e);
+    return '';
+  }
+}
+
 // Barkod formundan ("Formu Tamamla" / "İmza At") atılan dijital imzalar
 // (izin.imzalar.talepEden/bakim/isg) daha önce bu PDF'te hiç gösterilmiyordu
 // — imza kutuları hep boştu, sadece kağıda elle imza atmak içindi. Artık
 // varsa imza görseli + adı + tarihi burada basılıyor; yoksa eski boş
-// "İmza:" kutusu (elle imzalama için) korunuyor.
-function _izImzaHucre(baslik, varsayilanAd, imzaVerisi) {
-  if (imzaVerisi && imzaVerisi.imzaUrl) {
+// "İmza:" kutusu (elle imzalama için) korunuyor. `imzaDataUrl`, PDF
+// üretilmeden önce _izGorseliDataUrlaCevir ile önceden çözülmüş olmalı.
+function _izImzaHucre(baslik, varsayilanAd, imzaVerisi, imzaDataUrl) {
+  if (imzaVerisi && imzaDataUrl) {
     return `
       <td>
         <div class="imza-baslik">${_izKacir(baslik)}</div>
         <div>${_izKacir(imzaVerisi.ad)}</div>
-        <img src="${imzaVerisi.imzaUrl}" style="max-width:100%; max-height:14mm; margin-top:2mm;">
+        <img src="${imzaDataUrl}" style="max-width:100%; max-height:14mm; margin-top:2mm;">
         <div style="font-size:7.5pt; color:#64748b; margin-top:1mm;">${_izTarihSaatUzunGoruntu(imzaVerisi.tarih)}</div>
       </td>`;
   }
@@ -48,6 +71,12 @@ async function izinFormunuPdfOlustur(izinId) {
 
   const gazVarMi = k.izinTuru === 'Kapalı Alan' || Object.values(k.gazOlcumu).some(Boolean);
   const izolasyonVarMi = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(k.izinTuru) || k.izolasyon.enerjiIzolasyonu || k.izolasyon.korlemeListesi;
+
+  const [talepEdenImzaUrl, bakimImzaUrl, isgImzaUrl] = await Promise.all([
+    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.talepEden && k.imzalar.talepEden.imzaUrl),
+    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.bakim && k.imzalar.bakim.imzaUrl),
+    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.isg && k.imzalar.isg.imzaUrl)
+  ]);
 
   const kontrolSatirlari = k.kontrolMaddeleri.map(m => `
     <tr>
@@ -131,9 +160,9 @@ async function izinFormunuPdfOlustur(izinId) {
 
     <table class="iz-imza">
       <tr>
-        ${_izImzaHucre('Talep Eden', k.talepEden, k.imzalar && k.imzalar.talepEden)}
-        ${_izImzaHucre('Bakım Personeli', null, k.imzalar && k.imzalar.bakim)}
-        ${_izImzaHucre('İSG', null, k.imzalar && k.imzalar.isg)}
+        ${_izImzaHucre('Talep Eden', k.talepEden, k.imzalar && k.imzalar.talepEden, talepEdenImzaUrl)}
+        ${_izImzaHucre('Bakım Personeli', null, k.imzalar && k.imzalar.bakim, bakimImzaUrl)}
+        ${_izImzaHucre('İSG', null, k.imzalar && k.imzalar.isg, isgImzaUrl)}
       </tr>
     </table>
 
