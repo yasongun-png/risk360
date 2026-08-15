@@ -102,7 +102,10 @@ function bakimTalepSayfasiniBaslat() {
   document.getElementById('btDetayRaporWordBtn').addEventListener('click', async () => {
     try { await bakimTalepWordOlustur(_btAcikKayitId); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
   });
-  document.getElementById('btFormAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('bakim-talep', 'Bakım Onarım'));
+  // Kullanıcı isteği: "form ayarlarını sadece admin yapabilsin".
+  const btFormAyarlari = document.getElementById('btFormAyarlariBtn');
+  btFormAyarlari.style.display = kullaniciAdminMi(kullanici) ? '' : 'none';
+  btFormAyarlari.addEventListener('click', () => formAyarlariModalAc('bakim-talep', 'Bakım Onarım'));
   document.getElementById('btDunFiltreBtn').addEventListener('click', () => {
     _btDunFiltresiAktif = !_btDunFiltresiAktif;
     document.getElementById('btDunFiltreBtn').classList.toggle('filtre-aktif', _btDunFiltresiAktif);
@@ -587,6 +590,13 @@ function ozetiCiz() {
       <div class="istatistik-kutu"><span>Toplam Talep</span><b>${ozet.toplam}</b></div>
       <div class="istatistik-kutu"><span>Açık Talep</span><b>${ozet.acik}</b></div>
       <div class="istatistik-kutu"><span>İSG Onayı Bekleyen</span><b>${ozet.onayBekleyen}</b></div>
+      <div class="istatistik-kutu"><span>Tamamlanma Oranı</span><b>%${ozet.tamamlanmaOrani}</b></div>
+      <div class="istatistik-kutu"><span>Red Oranı</span><b>%${ozet.redOrani}</b></div>
+      <div class="istatistik-kutu"><span>Ort. Çözüm Süresi</span><b>${ozet.ortalamaCozumGunu ?? '—'}${ozet.ortalamaCozumGunu != null ? ' gün' : ''}</b></div>
+    </div>
+    <h4>Önceliğe Göre</h4>
+    <div class="istatistik-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:10px; margin-bottom:18px;">
+      ${BAKIM_TALEP_ONCELIKLERI.map(o => `<div class="istatistik-kutu"><span>${_btKacir(o)}</span><b>${ozet.oncelikDagilimi[o] || 0}</b></div>`).join('')}
     </div>
     <h4>Birime Göre</h4>
     <table class="veri-tablosu">

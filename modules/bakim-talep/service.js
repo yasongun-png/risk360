@@ -385,6 +385,10 @@ function bakimTalepOzetiHesapla() {
   const acikDurumlar = BAKIM_TALEP_DURUMLARI.filter(d => !BAKIM_TALEP_KAPALI_DURUMLAR.includes(d));
 
   const birimGrubu = {};
+  let toplamKapanisSuresiMsGenel = 0, kapanmisSayisiGenel = 0;
+  const oncelikDagilimi = {};
+  BAKIM_TALEP_ONCELIKLERI.forEach(o => { oncelikDagilimi[o] = 0; });
+
   liste.forEach(t => {
     const b = t.talep.birim || 'Belirtilmemiş';
     if (!birimGrubu[b]) birimGrubu[b] = { birim: b, acik: 0, kapali: 0, ilaveOnlemli: 0, toplamKapanisSuresiMs: 0, kapanmisSayisi: 0 };
@@ -392,17 +396,33 @@ function bakimTalepOzetiHesapla() {
     if (t.durum === 'Kapatıldı') {
       birimGrubu[b].kapali++;
       if (t.olusturmaTarihi && t.kapanis.kapanisTarihi) {
-        birimGrubu[b].toplamKapanisSuresiMs += (new Date(t.kapanis.kapanisTarihi) - new Date(t.olusturmaTarihi));
+        const sureMs = new Date(t.kapanis.kapanisTarihi) - new Date(t.olusturmaTarihi);
+        birimGrubu[b].toplamKapanisSuresiMs += sureMs;
         birimGrubu[b].kapanmisSayisi++;
+        toplamKapanisSuresiMsGenel += sureMs;
+        kapanmisSayisiGenel++;
       }
     }
     if (t.gecmis.some(g => g.durum === 'İSG İlave Önlem İstedi')) birimGrubu[b].ilaveOnlemli++;
+    if (oncelikDagilimi[t.talep.oncelik] != null) oncelikDagilimi[t.talep.oncelik]++;
   });
+
+  // Kullanıcı isteği: "bazı istatistikler olsun, yapılan bakım / talep
+  // oranı vb" — toplam talebe kıyasla tamamlanma/red oranı ve genel
+  // ortalama çözüm süresi.
+  const tamamlanan = liste.filter(t => t.durum === 'Kapatıldı').length;
+  const reddedilen = liste.filter(t => t.durum === 'Reddedildi').length;
 
   return {
     toplam: liste.length,
     acik: liste.filter(t => acikDurumlar.includes(t.durum)).length,
     onayBekleyen: liste.filter(t => t.durum === 'İSG Onayında').length,
+    tamamlanan,
+    reddedilen,
+    tamamlanmaOrani: liste.length ? Math.round((tamamlanan / liste.length) * 100) : 0,
+    redOrani: liste.length ? Math.round((reddedilen / liste.length) * 100) : 0,
+    ortalamaCozumGunu: kapanmisSayisiGenel ? Math.round(toplamKapanisSuresiMsGenel / kapanmisSayisiGenel / 86400000) : null,
+    oncelikDagilimi,
     birimlerGore: Object.values(birimGrubu).map(b => Object.assign({}, b, {
       ortalamaKapanisGunu: b.kapanmisSayisi ? Math.round(b.toplamKapanisSuresiMs / b.kapanmisSayisi / 86400000) : null
     }))
