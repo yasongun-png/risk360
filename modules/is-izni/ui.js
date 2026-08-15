@@ -85,18 +85,17 @@ function _izImzaPaduBagla(canvasId) {
   };
 }
 
+// Storage'a yüklemek (eski hâli: fotoYukle) imzanın PDF çıktısında hiç
+// görünmemesine yol açıyordu: Storage'tan dönen gerçek http(s) adresi PDF
+// üretiminde CORS engeline takılıp sessizce boş dönüyor, "✓ Onaylandı"
+// metnine düşülüyordu. Bunun yerine diğer modüllerin (ör. uygunsuzluk
+// fotoğrafları) kullandığı fotoBuyukKaydet ile Firestore'daki ayrı bir
+// "fotoğraflar" belgesine "fotoref:<id>" olarak yazılır — Storage ve
+// dolayısıyla CORS hiç devreye girmez (bkz. cikti.js _izGorselCoz).
 async function _izImzaYukle(canvas) {
-  return new Promise((coz, red) => {
-    canvas.toBlob(async blob => {
-      if (!blob) { red(new Error('İmza alınamadı.')); return; }
-      try {
-        const dosya = new File([blob], 'imza-talepEden-' + Date.now() + '.png', { type: 'image/png' });
-        const firma = aktifFirmaGetir();
-        const sonuc = await fotoYukle(dosya, 'is-izni/' + (firma ? firma.slug : 'firma') + '-imza');
-        coz(sonuc.url);
-      } catch (hata) { red(hata); }
-    }, 'image/png');
-  });
+  const firma = aktifFirmaGetir();
+  const dataUrl = canvas.toDataURL('image/png');
+  return fotoBuyukKaydet(dataUrl, firma ? firma.slug : '');
 }
 
 function izinSayfasiniBaslat() {

@@ -321,17 +321,16 @@
       };
     }
 
-    async function _iiImzaYukle(canvas, etiket) {
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(async blob => {
-          if (!blob) { reject(new Error('İmza alınamadı.')); return; }
-          try {
-            const dosya = new File([blob], 'imza-' + etiket + '-' + Date.now() + '.png', { type: 'image/png' });
-            const sonuc = await fotoYukle(dosya, 'is-izni/' + _iiFirma.slug + '-imza');
-            resolve(sonuc.url);
-          } catch (hata) { reject(hata); }
-        }, 'image/png');
-      });
+    // Firebase Storage'a yüklemek (eski hâli: fotoYukle) imzanın PDF çıktısında
+    // hiç görünmemesine yol açıyordu: Storage'tan dönen gerçek http(s) adresi
+    // PDF üretiminde fetch() ile CORS engeline takılıp sessizce boş dönüyor,
+    // "✓ Onaylandı" metnine düşülüyordu. Bunun yerine diğer modüllerin (ör.
+    // uygunsuzluk fotoğrafları) kullandığı fotoBuyukKaydet ile Firestore'daki
+    // ayrı bir "fotoğraflar" belgesine "fotoref:<id>" olarak yazılır — Storage
+    // ve dolayısıyla CORS hiç devreye girmez.
+    async function _iiImzaYukle(canvas) {
+      const dataUrl = canvas.toDataURL('image/png');
+      return fotoBuyukKaydet(dataUrl, _iiFirma.slug);
     }
 
     let _ftImzaPad = null, _siImzaPad = null;
@@ -425,8 +424,11 @@
         e.target.value = '';
         if (!dosya) return;
         try {
-          const sonuc = await fotoYukle(dosya, 'is-izni/' + _iiFirma.slug + '-barkod');
-          _iiFotoUrl = sonuc.url;
+          // İmza görselinde olduğu gibi (bkz. _iiImzaYukle) Storage yerine
+          // fotoBuyukKaydet — Storage'tan dönen adres PDF üretiminde CORS'a
+          // takılıp fotoğrafın çıktıda hiç görünmemesine yol açıyordu.
+          const sikistirilmis = await fotoSikistir(dosya, 900, 0.6);
+          _iiFotoUrl = await fotoBuyukKaydet(sikistirilmis, _iiFirma.slug);
           _iiFotoOnizlemeCiz();
         } catch (hata) {
           alert(hata.message || 'Fotoğraf yüklenemedi.');
@@ -597,7 +599,7 @@
         gonderBtn.textContent = 'Kaydediliyor…';
 
         try {
-          const imzaUrl = await _iiImzaYukle(_ftImzaPad.canvasElemani, 'talepEden');
+          const imzaUrl = await _iiImzaYukle(_ftImzaPad.canvasElemani);
 
           const anahtar = _iiIzinAnahtari();
           const liste = oku(anahtar, []);
@@ -719,7 +721,7 @@
         gonderBtn.textContent = 'Kaydediliyor…';
 
         try {
-          const imzaUrl = await _iiImzaYukle(_siImzaPad.canvasElemani, _siAktifRol);
+          const imzaUrl = await _iiImzaYukle(_siImzaPad.canvasElemani);
 
           const anahtar = _iiIzinAnahtari();
           const liste = oku(anahtar, []);

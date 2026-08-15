@@ -32,11 +32,12 @@ function _izTarihSaatUzunGoruntu(iso) {
   return gunAyYil(tarih) + (saat ? ' ' + saat : '');
 }
 
-// İmza görselleri Firebase Storage'a yüklenip gerçek http(s) URL'i olarak
-// dönüyor (bkz. core/data.js fotoYukle) — bunları doğrudan <img src> olarak
-// basmak html2canvas'ta CORS başlığı olmadığı için sessizce boş/şeffaf
-// çıkabiliyor (aynı sorun modules/uygunsuzluk/cikti.js'teki kroki görseli
-// için de vardı, aynı çözüm: önce tamamen indirip data: URL'e çevir).
+// Eski kayıtlardan kalma ham Firebase Storage URL'leri (artık imza/fotoğraf
+// yakalama Storage kullanmıyor, bkz. aşağıdaki not) için son çare — bunları
+// doğrudan <img src> olarak basmak html2canvas'ta CORS başlığı olmadığı için
+// sessizce boş/şeffaf çıkabiliyordu; bu yüzden önce tamamen indirip data:
+// URL'e çevrilir. fotoBuyukCoz zaten data: URL döndürdüyse burada hiçbir
+// şey yapmadan olduğu gibi geri döner.
 async function _izGorseliDataUrlaCevir(url) {
   if (!url || url.startsWith('data:')) return url || '';
   try {
@@ -49,9 +50,22 @@ async function _izGorseliDataUrlaCevir(url) {
       okuyucu.readAsDataURL(blob);
     });
   } catch (e) {
-    console.error('İmza görseli indirilemedi (CORS/ağ hatası olabilir):', e);
+    console.error('Görsel indirilemedi (CORS/ağ hatası olabilir):', e);
     return '';
   }
+}
+
+// İmza/fotoğraf artık Storage'a değil, diğer modüllerdeki (uygunsuzluk vb.)
+// gibi fotoBuyukKaydet ile Firestore'daki ayrı "fotoğraflar" belgesine
+// "fotoref:<id>" olarak yazılıyor (bkz. is-izni-bildir.html _iiImzaYukle) —
+// fotoBuyukCoz bunu doğrudan kullanılabilir bir data: URL'e çözer, Storage
+// ve dolayısıyla CORS hiç devreye girmez. Eski (Storage'a yüklenmiş) kayıtlar
+// için fotoBuyukCoz değeri olduğu gibi döner, o durumda son çare olarak
+// _izGorseliDataUrlaCevir ile indirilmeye çalışılır.
+async function _izGorselCoz(referansVeyaUrl) {
+  if (!referansVeyaUrl) return '';
+  const cozulen = await fotoBuyukCoz(referansVeyaUrl);
+  return _izGorseliDataUrlaCevir(cozulen);
 }
 
 // Barkod formundan ("Formu Tamamla" / "İmza At") atılan dijital imzalar
@@ -97,10 +111,10 @@ async function izinFormunuPdfOlustur(izinId) {
   const izolasyonVarMi = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(k.izinTuru) || k.izolasyon.enerjiIzolasyonu || k.izolasyon.korlemeListesi;
 
   const [talepEdenImzaUrl, bakimImzaUrl, isgImzaUrl, fotoDataUrlleri] = await Promise.all([
-    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.talepEden && k.imzalar.talepEden.imzaUrl),
-    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.bakim && k.imzalar.bakim.imzaUrl),
-    _izGorseliDataUrlaCevir(k.imzalar && k.imzalar.isg && k.imzalar.isg.imzaUrl),
-    Promise.all((k.fotograflar || []).map(f => _izGorseliDataUrlaCevir(f.url)))
+    _izGorselCoz(k.imzalar && k.imzalar.talepEden && k.imzalar.talepEden.imzaUrl),
+    _izGorselCoz(k.imzalar && k.imzalar.bakim && k.imzalar.bakim.imzaUrl),
+    _izGorselCoz(k.imzalar && k.imzalar.isg && k.imzalar.isg.imzaUrl),
+    Promise.all((k.fotograflar || []).map(f => _izGorselCoz(f.url)))
   ]);
 
   const kontrolSatirlari = k.kontrolMaddeleri.map(m => `
