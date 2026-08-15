@@ -84,12 +84,17 @@ function bakimTalepGecmisSatiri(durum, kullanici, not) {
 }
 
 // ---- Ekipman Envanteri (talep formlarından kendiliğinden oluşur) ----
+// ad/tip/fotograf talep formundan gelmez (talep formu sadece kod/konum
+// bilir) — kullanıcı isteği: "ekipman konumu/adı/kodu/tipi/fotoğrafı
+// sonradan [envanter ekranından] eklenebilsin", bkz. ekipmanKaydiDuzenle.
 function ekipmanEnvanterKaydiOlustur(kod, ad, konum) {
   return {
     id: rastgeleId(),
     kod: (kod || '').trim(),
     ad: (ad || '').trim(),
+    tip: '',
     konum: (konum || '').trim(),
+    fotograf: '',
     ilkGorulmeTarihi: new Date().toISOString(),
     sonKullanimTarihi: new Date().toISOString(),
     talepSayisi: 1

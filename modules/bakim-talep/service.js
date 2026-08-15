@@ -21,6 +21,15 @@ function _btTalepSahibiMi(kullanici, kayit) {
   return kullanici.rol === 'birim' && kullanici.birimAdi === kayit.talep.birim;
 }
 
+// Ekipman envanteri kaydını kim düzenleyebilir: Bakım/İSG'nin yanı sıra
+// Üretim/Talep Eden Birim tarafı da ekleyebilir (kullanıcı isteği: "bunu
+// ekleyebilecekler üretim ve bakım tarafı olacak") — 'birim' burada kendi
+// birimiyle sınırlı DEĞİLDİR, çünkü envanter firma genelinde ortak/paylaşılan
+// tek bir liste (talep formundaki gibi birim bazlı ayrım yok).
+function _btEkipmanDuzenleyebilirMi(kullanici) {
+  return _btBakimRoluMu(kullanici) || kullanici.rol === 'birim';
+}
+
 // Hedefli bildirim: hedefRol/hedefBirim boşsa herkese görünür (bkz.
 // dashboard.html _bildirimKullaniciyaGorunurMu), doluysa sadece ilgili
 // role/birime görünür. Aynı 'isg_bildirimler' anahtarını (mevcut zil
@@ -63,6 +72,26 @@ function _ekipmanEnvanteriGuncelle(kod, konum) {
   } else {
     ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, temizKod, konum));
   }
+}
+
+// Envanter kaydı talep formundan otomatik oluştuktan SONRA elle
+// zenginleştirilebilir (kullanıcı isteği: "ekipman adı/tipi/konumu/kodu/
+// fotoğrafı sonradan eklenebilsin", "bunu ekleyebilecekler üretim ve bakım
+// tarafı olacak").
+function ekipmanKaydiDuzenle(id, veriler) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici || !_btEkipmanDuzenleyebilirMi(kullanici)) return { basarili: false, hata: 'Bu işlem için yetkiniz yok.' };
+  const mevcut = ekipmanEnvanteriTumunuGetirRepo().find(e => e.id === id);
+  if (!mevcut) return { basarili: false, hata: 'Ekipman kaydı bulunamadı.' };
+
+  const guncellenen = ekipmanEnvanterKaydiGuncelleRepo(id, {
+    kod: (veriler.kod || '').trim() || mevcut.kod,
+    ad: (veriler.ad || '').trim(),
+    tip: (veriler.tip || '').trim(),
+    konum: (veriler.konum || '').trim(),
+    fotograf: veriler.fotograf || ''
+  });
+  return { basarili: true, kayit: guncellenen };
 }
 
 // ---- Listeleme (rol bazlı görünürlük) ----

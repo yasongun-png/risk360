@@ -12,7 +12,7 @@
 
 const MERKEZI_AKSIYON_KAYNAKLARI = [
   'Uygunsuzluk', 'İSG Kurulu', 'Risk Değerlendirmesi',
-  'Olay / Kaza', 'Acil Durum', 'KKD Zimmet', 'Bakım Talep'
+  'Olay / Kaza', 'Acil Durum', 'KKD Zimmet', 'Bakım Onarım'
 ];
 
 function _maBugun() { return new Date().toISOString().slice(0, 10); }
@@ -155,7 +155,7 @@ function _maBakimTaleptenTopla() {
   return oku(tenantAnahtar('bakim_talepleri'), [])
     .filter(t => !kapali.includes(t.durum))
     .map(t => _maSatirOlustur({
-      kaynakModul: 'Bakım Talep',
+      kaynakModul: 'Bakım Onarım',
       kaynakNo: t.talepNo,
       baslik: t.talep.isTanimi,
       sorumlu: t.bakim.degerlendirenKisi || t.talep.acanKisi,

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="İSG Platform">
 <link rel="icon" href="../../assets/icons/favicon-32.png">
-<title>İSG Platform - Bakım Talep ve Onay</title>
+<title>İSG Platform - Bakım Onarım</title>
 <link rel="stylesheet" href="../../assets/style.css">
 </head>
 <body>
@@ -24,8 +24,13 @@
 
   <div class="icerik">
     <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
-    <h2 style="margin-top:14px;">Bakım Talep ve Onay</h2>
+    <h2 style="margin-top:14px;">Bakım Onarım</h2>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div style="background:#eef2ff; color:#1d4ed8; border-radius:8px; padding:10px 14px; font-size:12px; font-weight:600; margin-bottom:16px; line-height:1.6;">
+      Onay Akışı: Talep Eden Birim → Bakım Değerlendirmesi → İSG Onayı → Onaylandı / Planlandı → Bakım Tamamladı → Talep Eden Onayı → Kapatıldı
+      <div style="font-weight:400; color:#4338ca; margin-top:2px;">İSG ilave önlem isterse → Bakım'a geri döner. Her aşamada Reddedilebilir.</div>
+    </div>
 
     <div class="sekme-cubugu">
       <button type="button" data-sekme="talepler">Talepler</button>
@@ -54,10 +59,10 @@
 
     <!-- EKİPMAN ENVANTERİ -->
     <div id="bolum-envanter" style="display:none;">
-      <p style="font-size:13px; color:var(--metin-soluk);">Talep formlarına girilen ekipman kodlarından kendiliğinden oluşur.</p>
+      <p style="font-size:13px; color:var(--metin-soluk);">Talep formlarına girilen ekipman kodlarından kendiliğinden oluşur. Ad/Tip/Konum/Fotoğraf sonradan Düzenle ile eklenebilir.</p>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Kod</th><th>Konum</th><th>Toplam Talep</th><th>Son Kullanım</th></tr></thead>
+          <thead><tr><th>Fotoğraf</th><th>Kod</th><th>Ad</th><th>Tip</th><th>Konum</th><th>Toplam Talep</th><th>Son Kullanım</th><th>İşlem</th></tr></thead>
           <tbody id="btEnvanterTabloGovde"></tbody>
         </table>
       </div>
@@ -113,6 +118,36 @@
       <div id="btDetayGovde"></div>
       <div class="modal-eylemler" style="margin-top:16px;">
         <button type="button" class="ikincil" id="btDetayKapatBtn">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EKİPMAN DÜZENLE MODALI -->
+  <div class="modal-katman" id="btEkipmanDuzenleKatman">
+    <div class="modal-kutu">
+      <h3>Ekipman Kaydını Düzenle</h3>
+
+      <label for="btEkKod">Ekipman Kodu</label>
+      <input type="text" id="btEkKod">
+
+      <label for="btEkAd">Ekipman Adı</label>
+      <input type="text" id="btEkAd">
+
+      <label for="btEkTip">Ekipman Tipi</label>
+      <input type="text" id="btEkTip" placeholder="örn. Kompresör, Forklift, Pano">
+
+      <label for="btEkKonum">Konum</label>
+      <input type="text" id="btEkKonum">
+
+      <label for="btEkFotoDosya">Fotoğraf</label>
+      <input type="file" id="btEkFotoDosya" accept="image/*">
+      <div id="btEkFotoOnizleme" style="margin:8px 0 4px;"></div>
+
+      <div class="alan-hatasi" id="btEkipmanDuzenleHata"></div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="btEkipmanDuzenleIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="btEkipmanDuzenleKaydetBtn">Kaydet</button>
       </div>
     </div>
   </div>

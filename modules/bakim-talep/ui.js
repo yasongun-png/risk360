@@ -77,6 +77,21 @@ function bakimTalepSayfasiniBaslat() {
   document.getElementById('btYeniTalepKaydetBtn').addEventListener('click', _btYeniTalepKaydet);
   document.getElementById('btDetayKapatBtn').addEventListener('click', _btDetayModalKapat);
 
+  document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
+  document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);
+  document.getElementById('btEkFotoDosya').addEventListener('change', async e => {
+    const dosya = e.target.files[0];
+    e.target.value = '';
+    if (!dosya) return;
+    try {
+      const sonuc = await fotoYukle(dosya, 'bakim-ekipman/' + (_btEkDuzenlenenId || 'gecici'));
+      _btEkFotoUrl = sonuc.url;
+      _btEkFotoOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Fotoğraf yüklenemedi.');
+    }
+  });
+
   _btGorunumDegistir('talepler');
 }
 
@@ -404,14 +419,79 @@ function _btBakimKaydet(id, gonder, sonrasi) {
 function envanteriCiz() {
   const govde = document.getElementById('btEnvanterTabloGovde');
   const liste = ekipmanEnvanteriTumunuGetirRepo().slice().sort((a, b) => b.talepSayisi - a.talepSayisi);
+  const kullanici = oturumdakiKullanici();
+  const duzenlenebilirMi = _btEkipmanDuzenleyebilirMi(kullanici);
   govde.innerHTML = liste.map(e => `
     <tr>
+      <td>${e.fotograf ? `<img data-foto-ref="${_btKacir(e.fotograf)}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);">` : '-'}</td>
       <td>${_btKacir(e.kod)}</td>
-      <td>${_btKacir(e.konum)}</td>
+      <td>${_btKacir(e.ad) || '-'}</td>
+      <td>${_btKacir(e.tip) || '-'}</td>
+      <td>${_btKacir(e.konum) || '-'}</td>
       <td>${e.talepSayisi}</td>
       <td>${_btTarihSaat(e.sonKullanimTarihi)}</td>
+      <td>${duzenlenebilirMi ? `<button type="button" class="tablo-buton" data-ekipman-duzenle="${e.id}">Düzenle</button>` : '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--metin-soluk);">Henüz ekipman kaydı yok.</td></tr>';
+  `).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--metin-soluk);">Henüz ekipman kaydı yok.</td></tr>';
+  fotoReferanslariCoz(govde);
+
+  govde.querySelectorAll('[data-ekipman-duzenle]').forEach(btn => {
+    btn.addEventListener('click', () => _btEkipmanDuzenleModalAc(btn.getAttribute('data-ekipman-duzenle')));
+  });
+}
+
+// ---- Ekipman Düzenle ----
+
+let _btEkFotoUrl = '';
+let _btEkDuzenlenenId = null;
+
+function _btEkFotoOnizlemeCiz() {
+  const kutu = document.getElementById('btEkFotoOnizleme');
+  kutu.innerHTML = _btEkFotoUrl
+    ? `<div style="display:flex; align-items:center; gap:10px;">
+         <img data-foto-ref="${_btKacir(_btEkFotoUrl)}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+         <button type="button" id="btEkFotoKaldirBtn" style="border:none; background:none; color:var(--hata); font-size:12px; font-weight:600; cursor:pointer;">Kaldır</button>
+       </div>`
+    : '<div style="font-size:12px; color:var(--metin-soluk);">Henüz fotoğraf eklenmedi.</div>';
+  if (_btEkFotoUrl) {
+    document.getElementById('btEkFotoKaldirBtn').addEventListener('click', () => { _btEkFotoUrl = ''; _btEkFotoOnizlemeCiz(); });
+    fotoReferanslariCoz(kutu);
+  }
+}
+
+function _btEkipmanDuzenleModalAc(id) {
+  const kayit = ekipmanEnvanteriTumunuGetirRepo().find(e => e.id === id);
+  if (!kayit) return;
+  _btEkDuzenlenenId = id;
+  _btEkFotoUrl = kayit.fotograf || '';
+  document.getElementById('btEkKod').value = kayit.kod || '';
+  document.getElementById('btEkAd').value = kayit.ad || '';
+  document.getElementById('btEkTip').value = kayit.tip || '';
+  document.getElementById('btEkKonum').value = kayit.konum || '';
+  document.getElementById('btEkipmanDuzenleHata').textContent = '';
+  _btEkFotoOnizlemeCiz();
+  document.getElementById('btEkipmanDuzenleKatman').classList.add('acik');
+}
+
+function _btEkipmanDuzenleModalKapat() {
+  document.getElementById('btEkipmanDuzenleKatman').classList.remove('acik');
+  _btEkDuzenlenenId = null;
+}
+
+function _btEkipmanDuzenleKaydet() {
+  const sonuc = ekipmanKaydiDuzenle(_btEkDuzenlenenId, {
+    kod: document.getElementById('btEkKod').value,
+    ad: document.getElementById('btEkAd').value,
+    tip: document.getElementById('btEkTip').value,
+    konum: document.getElementById('btEkKonum').value,
+    fotograf: _btEkFotoUrl
+  });
+  if (!sonuc.basarili) {
+    document.getElementById('btEkipmanDuzenleHata').textContent = sonuc.hata || Object.values(sonuc.hatalar || {}).join(' ');
+    return;
+  }
+  _btEkipmanDuzenleModalKapat();
+  envanteriCiz();
 }
 
 // ---- Özet (birim bazlı dashboard) ----
