@@ -18,6 +18,13 @@ const BAKIM_TALEP_KAPALI_DURUMLAR = ['Kapatıldı', 'Reddedildi'];
 
 const BAKIM_TALEP_ONCELIKLERI = ['Acil', 'Yüksek', 'Normal', 'Düşük'];
 
+// Kullanıcı isteği: "bakım tarafında elektrik ve otomasyon bakım da var,
+// elektrik ile mekanik ayrı olmalı" — Bakım artık TEK bir havuz değil, her
+// türün kendi 'bakim' rolündeki kullanıcıları SADECE kendi türündeki
+// talepleri görür (bkz. kullanicilar.html kkBakimTuru, core/auth.js
+// ikKullaniciEkle/Guncelle, service.js bakimTalepleriGetir).
+const BAKIM_TALEP_BAKIM_TURLERI = ['Mekanik', 'Elektrik', 'Otomasyon'];
+
 const BAKIM_TALEP_RISK_TURLERI = [
   'Elektrik', 'Yüksekte Çalışma', 'Kapalı Alan', 'Sıcak Çalışma',
   'Kimyasal', 'Mekanik', 'Diğer'
@@ -53,6 +60,7 @@ function bakimTalepOlustur(veriler, talepNo) {
       ekipmanKodu: (t.ekipmanKodu || '').trim(),
       isTanimi: (t.isTanimi || '').trim(),
       oncelik: BAKIM_TALEP_ONCELIKLERI.includes(t.oncelik) ? t.oncelik : 'Normal',
+      bakimTuru: BAKIM_TALEP_BAKIM_TURLERI.includes(t.bakimTuru) ? t.bakimTuru : 'Mekanik',
       fotograflar: Array.isArray(t.fotograflar) ? t.fotograflar : []
     },
     bakim: {

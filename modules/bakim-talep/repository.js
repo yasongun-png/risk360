@@ -72,6 +72,10 @@ function ekipmanEnvanterKaydiIdIleGetirRepo(id) {
   return ekipmanEnvanteriTumunuGetirRepo().find(e => e.id === id) || null;
 }
 
+function ekipmanEnvanterKaydiSilRepo(id) {
+  _ekipmanEnvanteriKaydetRepo(ekipmanEnvanteriTumunuGetirRepo().filter(e => e.id !== id));
+}
+
 // _genelGuncelle'nin aksine Firestore yazımının GERÇEKTEN bitmesini bekler
 // (bkz. modules/uygunsuzluk/repository.js uygunsuzlukGuncelleRepoVeBekle) —
 // Saha Dijital Haritası köprüsünde (modules/harita/ui.js) konum kaydedilip

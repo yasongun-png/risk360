@@ -91,10 +91,13 @@ function bakimTalepSayfasiniBaslat() {
   document.getElementById('btAramaKutusu').addEventListener('input', talepleriCiz);
   document.getElementById('btDurumFiltre').addEventListener('change', talepleriCiz);
   document.getElementById('btBirimFiltre').addEventListener('change', talepleriCiz);
+  document.getElementById('btBakimTuruFiltre').addEventListener('change', talepleriCiz);
   document.getElementById('btDurumFiltre').innerHTML = '<option value="">Tüm Durumlar</option>' +
     BAKIM_TALEP_DURUMLARI.map(d => `<option>${_btKacir(d)}</option>`).join('');
   document.getElementById('btBirimFiltre').innerHTML = '<option value="">Tüm Birimler</option>' +
     _btBirimleriGetir().map(b => `<option>${_btKacir(b)}</option>`).join('');
+  document.getElementById('btBakimTuruFiltre').innerHTML = '<option value="">Tüm Bakım Türleri</option>' +
+    BAKIM_TALEP_BAKIM_TURLERI.map(t => `<option>${_btKacir(t)}</option>`).join('');
 
   document.getElementById('btYeniTalepIptalBtn').addEventListener('click', _btYeniTalepModalKapat);
   document.getElementById('btYeniTalepKaydetBtn').addEventListener('click', _btYeniTalepKaydet);
@@ -151,7 +154,8 @@ function talepleriCiz() {
   const bosDurum = document.getElementById('btBosDurum');
   const filtreler = {
     durum: document.getElementById('btDurumFiltre').value,
-    birim: document.getElementById('btBirimFiltre').value
+    birim: document.getElementById('btBirimFiltre').value,
+    bakimTuru: document.getElementById('btBakimTuruFiltre').value
   };
   let liste = bakimTalepleriGetir(document.getElementById('btAramaKutusu').value, filtreler);
   if (_btDunFiltresiAktif) liste = liste.filter(t => _btDunTarihiMi(t.olusturmaTarihi));
@@ -174,6 +178,7 @@ function talepleriCiz() {
       <td>${_btKacir(t.talep.birim)}</td>
       <td>${_btKacir(t.talep.isTanimi)}</td>
       <td>${_btKacir(t.talep.oncelik)}</td>
+      <td>${_btKacir(t.talep.bakimTuru)}</td>
       <td>
         <span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span>
         ${uyariGoster ? '<span class="yanip-sonen-uyari">⚠️ Yanıt Bekliyor</span>' : ''}
@@ -235,6 +240,7 @@ function _btYeniTalepModalAc() {
   document.getElementById('btYtEkipmanKodu').value = '';
   document.getElementById('btYtIsTanimi').value = '';
   document.getElementById('btYtOncelik').value = 'Normal';
+  document.getElementById('btYtBakimTuru').innerHTML = BAKIM_TALEP_BAKIM_TURLERI.map(t => `<option>${_btKacir(t)}</option>`).join('');
   _btYtFotograflar = [];
   _btYtFotoOnizlemeCiz();
   document.getElementById('btYeniTalepHata').textContent = '';
@@ -254,6 +260,7 @@ function _btYeniTalepKaydet() {
       ekipmanKodu: document.getElementById('btYtEkipmanKodu').value,
       isTanimi: document.getElementById('btYtIsTanimi').value,
       oncelik: document.getElementById('btYtOncelik').value,
+      bakimTuru: document.getElementById('btYtBakimTuru').value,
       fotograflar: _btYtFotograflar.slice(0, 2)
     }
   };
@@ -309,6 +316,7 @@ function _btDetayIcerikOlustur(k, kullanici) {
     ${_btAlan('Ekipman Kodu', k.talep.ekipmanKodu)}
     ${_btAlan('İş Tanımı', k.talep.isTanimi)}
     ${_btAlan('Öncelik', k.talep.oncelik)}
+    ${_btAlan('Bakım Türü', k.talep.bakimTuru)}
     ${(k.talep.fotograflar || []).length ? `
       <div style="font-size:11px; color:var(--metin-soluk); font-weight:600; margin-bottom:4px;">Fotoğraflar</div>
       <div style="display:flex; gap:8px;">
@@ -563,13 +571,24 @@ function envanteriCiz() {
       <td>${_btKacir(e.konum) || '-'}</td>
       <td>${e.talepSayisi}</td>
       <td>${_btTarihSaat(e.sonKullanimTarihi)}</td>
-      <td>${duzenlenebilirMi ? `<button type="button" class="tablo-buton" data-ekipman-duzenle="${e.id}">Düzenle</button>` : '-'}</td>
+      <td>
+        ${duzenlenebilirMi ? `<button type="button" class="tablo-buton" data-ekipman-duzenle="${e.id}">Düzenle</button>` : '-'}
+        ${kullaniciAdminMi(kullanici) ? `<button type="button" class="tablo-buton sil" data-ekipman-sil="${e.id}">Sil</button>` : ''}
+      </td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--metin-soluk);">Henüz ekipman kaydı yok.</td></tr>';
   fotoReferanslariCoz(govde);
 
   govde.querySelectorAll('[data-ekipman-duzenle]').forEach(btn => {
     btn.addEventListener('click', () => _btEkipmanDuzenleModalAc(btn.getAttribute('data-ekipman-duzenle')));
+  });
+  govde.querySelectorAll('[data-ekipman-sil]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Bu ekipman envanter kaydını silmek istediğinize emin misiniz?')) return;
+      const sonuc = ekipmanKaydiSil(btn.getAttribute('data-ekipman-sil'));
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      envanteriCiz();
+    });
   });
 }
 

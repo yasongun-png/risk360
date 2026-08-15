@@ -98,6 +98,13 @@ function ekipmanKaydiDuzenle(id, veriler) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// Kullanıcı isteği: "envanterden ekipman silmeyi admin yapabilsin".
+function ekipmanKaydiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  ekipmanEnvanterKaydiSilRepo(id);
+  return { basarili: true };
+}
+
 // ---- Listeleme (rol bazlı görünürlük) ----
 
 function bakimTalepleriGetir(aramaMetni, filtreler) {
@@ -113,10 +120,18 @@ function bakimTalepleriGetir(aramaMetni, filtreler) {
   if (kullanici.rol === 'birim') {
     liste = liste.filter(t => t.talep.birim === kullanici.birimAdi);
   }
+  // 'bakim' rolü, hesabına bir bakimTuru atanmışsa (bkz. kullanicilar.html
+  // kkBakimTuru) SADECE o türdeki talepleri görür — kullanıcı isteği:
+  // "elektrik ile mekanik ayrı olmalı". Atanmamışsa (eski hesaplar / admin
+  // tarafından "Tümü" bırakılmış) geriye dönük uyumlu şekilde hepsini görür.
+  if (kullanici.rol === 'bakim' && kullanici.bakimTuru) {
+    liste = liste.filter(t => t.talep.bakimTuru === kullanici.bakimTuru);
+  }
 
   if (f.durum) liste = liste.filter(t => t.durum === f.durum);
   if (f.birim) liste = liste.filter(t => t.talep.birim === f.birim);
   if (f.oncelik) liste = liste.filter(t => t.talep.oncelik === f.oncelik);
+  if (f.bakimTuru) liste = liste.filter(t => t.talep.bakimTuru === f.bakimTuru);
 
   if (aramaMetni) {
     const kucuk = aramaMetni.trim().toLowerCase();

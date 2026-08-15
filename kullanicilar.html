@@ -110,6 +110,13 @@
         <select id="kkBirim"></select>
       </div>
 
+      <div id="kkBakimTuruAlani" style="display:none;">
+        <label for="kkBakimTuru">Bakım Türü</label>
+        <select id="kkBakimTuru">
+          <option value="">Tümü (tüm türleri görür)</option>
+        </select>
+      </div>
+
       <div id="kkIsgOnayiAlani" style="display:none;">
         <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
           <input type="checkbox" id="kkIsgOnayi" style="width:auto;"> Bakım Onarım'da İSG onayı verebilsin
@@ -157,6 +164,8 @@
   <script src="core/data.js"></script>
   <script src="core/auth.js"></script>
   <script src="core/tenant.js"></script>
+  <script src="modules/personel/org-repository.js"></script>
+  <script src="modules/bakim-talep/model.js"></script>
   <script>
     function _kkKacir(v) {
       return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -183,6 +192,7 @@
         _kkBirimAlaniniGuncelle();
         _kkBirimSecimDoldur();
         _kkIsgOnayiAlaniniGuncelle();
+        _kkBakimTuruAlaniniGuncelle();
       });
       document.getElementById('kkFirmaListesi').addEventListener('change', _kkBirimSecimDoldur);
 
@@ -266,18 +276,43 @@
       document.getElementById('kkIsgOnayiAlani').style.display = document.getElementById('kkRol').value === 'duzenleyici' ? '' : 'none';
     }
 
+    // Kullanıcı isteği: "bakım tarafında elektrik ve otomasyon bakım da
+    // var, elektrik ile mekanik ayrı olmalı" — 'bakim' rolündeki bir hesap
+    // isteğe bağlı olarak tek bir bakım türüne ("Tümü" bırakılırsa hepsine)
+    // sınırlanabilir (bkz. modules/bakim-talep/service.js bakimTalepleriGetir).
+    function _kkBakimTuruAlaniniGuncelle() {
+      const goster = document.getElementById('kkRol').value === 'bakim';
+      document.getElementById('kkBakimTuruAlani').style.display = goster ? '' : 'none';
+      if (goster) {
+        const secim = document.getElementById('kkBakimTuru');
+        secim.innerHTML = '<option value="">Tümü (tüm türleri görür)</option>' +
+          BAKIM_TALEP_BAKIM_TURLERI.map(t => `<option value="${_kkKacir(t)}">${_kkKacir(t)}</option>`).join('');
+      }
+    }
+
     // Birim seçim listesini, o an İŞARETLİ firma(lar)ın bölümler listesinden
-    // (bkz. core/tenant.js firma.bolumler, Firma Yönetimi'nde düzenlenir)
-    // doldurur — ayrı bir "birimler" tablosu kurmaya gerek yok, mevcut
-    // mekanizma yeniden kullanılır.
-    function _kkBirimSecimDoldur() {
+    // (bkz. core/tenant.js firma.bolumler, Firma Yönetimi'nde düzenlenir) VE
+    // Personel modülünün organizasyon şemasındaki müdürlüklerden (en üst
+    // seviye pozisyonlar, bkz. modules/personel/org-repository.js) doldurur
+    // — kullanıcı isteği: "personel modülünden müdürlükleri de al", "müdürlüklerin
+    // altında da kullanıcı tanımlayabileyim". Bu sayfada "aktif firma" kavramı
+    // yok (firma-yonetim.html'deki gibi), bu yüzden işaretli her firma için
+    // buyukVeriFirmadanOku ile tek seferlik, firma-bağımsız okuma yapılır.
+    async function _kkBirimSecimDoldur() {
       const secim = document.getElementById('kkBirim');
       const oncekiSecim = secim.value;
-      const secilenFirmaIdleri = new Set(Array.from(document.getElementById('kkFirmaListesi').querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value));
-      const bolumler = Array.from(new Set(
-        getFirmalar().filter(f => secilenFirmaIdleri.has(f.id)).flatMap(f => Array.isArray(f.bolumler) ? f.bolumler : [])
-      )).sort((a, b) => a.localeCompare(b, 'tr'));
+      const secilenFirmalar = getFirmalar().filter(f => document.querySelector(`#kkFirmaListesi input[value="${f.id}"]:checked`));
 
+      const bolumSeti = new Set(secilenFirmalar.flatMap(f => Array.isArray(f.bolumler) ? f.bolumler : []));
+
+      const mudurlukListeleri = await Promise.all(secilenFirmalar.map(f =>
+        buyukVeriFirmadanOku('isg_' + f.slug + '_organizasyon_pozisyonlari', []).catch(() => [])
+      ));
+      mudurlukListeleri.forEach(liste => {
+        (Array.isArray(liste) ? liste : []).filter(p => !p.ustId).forEach(p => bolumSeti.add(p.ad));
+      });
+
+      const bolumler = Array.from(bolumSeti).sort((a, b) => a.localeCompare(b, 'tr'));
       secim.innerHTML = bolumler.length
         ? bolumler.map(b => `<option value="${_kkKacir(b)}">${_kkKacir(b)}</option>`).join('')
         : '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
@@ -301,6 +336,7 @@
         const rolEtiket = KK_ROL_ETIKETLERI[k.rol] || '🗂️ İK';
         const birimSatiri = k.rol === 'birim' ? `<span class="firmalar">🏭 Birim: ${_kkKacir(k.birimAdi || '—')}</span>` : '';
         const isgOnaySatiri = k.rol === 'duzenleyici' && k.isgOnayiVerebilir ? '<span class="firmalar">✅ İSG onayı verebilir (Bakım Onarım)</span>' : '';
+        const bakimTuruSatiri = k.rol === 'bakim' ? `<span class="firmalar">🔧 Bakım Türü: ${_kkKacir(k.bakimTuru || 'Tümü')}</span>` : '';
         const satir = document.createElement('div');
         satir.className = 'kk-satir';
         satir.innerHTML = `
@@ -309,6 +345,7 @@
             <span class="kullanici-adi">@${_kkKacir(k.kullaniciAdi)}</span>
             <span class="firmalar">${firmaAdlari.length ? '🏢 ' + _kkKacir(firmaAdlari.join(', ')) : '⚠️ Hiç firma atanmadı'}</span>
             ${birimSatiri}
+            ${bakimTuruSatiri}
             ${isgOnaySatiri}
           </div>
           <div class="islemler">
@@ -364,6 +401,8 @@
       _kkBirimAlaniniGuncelle();
       _kkIsgOnayiAlaniniGuncelle();
       document.getElementById('kkIsgOnayi').checked = !!(kayit && kayit.isgOnayiVerebilir);
+      _kkBakimTuruAlaniniGuncelle();
+      document.getElementById('kkBakimTuru').value = (kayit && kayit.bakimTuru) || '';
 
       // Düzenlemede kullanıcı adı, rol ve şifre burada değiştirilmez (kullanıcı
       // adı ve rol sabit kalır, şifre için ayrı "Şifre Değiştir" butonu
@@ -404,9 +443,10 @@
       const rol = document.getElementById('kkRol').value;
       const birimAdi = document.getElementById('kkBirim').value;
       const isgOnayiVerebilir = document.getElementById('kkIsgOnayi').checked;
+      const bakimTuru = document.getElementById('kkBakimTuru').value;
       const sonuc = _duzenlenenId
-        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, birimAdi, isgOnayiVerebilir)
-        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir);
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, birimAdi, isgOnayiVerebilir, bakimTuru)
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru);
 
       if (!sonuc.basarili) {
         hataEl.textContent = sonuc.hata;

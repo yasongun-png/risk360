@@ -276,7 +276,7 @@ function ikKullanicilariGetir() {
   return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
-async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir) {
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -310,12 +310,16 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, b
   // modules/bakim-talep/service.js _btIsgOnaylayiciMi); bu bayrak SADECE
   // Düzenleyici rolüne, Bakım Onarım modülüne özel olarak bu yetkiyi ekler.
   if (temizRol === 'duzenleyici') yeniKullanici.isgOnayiVerebilir = !!isgOnayiVerebilir;
+  // Kullanıcı isteği: "elektrik ile mekanik ayrı olmalı" — 'bakim' rolü
+  // isteğe bağlı olarak tek bir bakım türüne sınırlanabilir (boşsa hepsini
+  // görür, geriye dönük uyumlu).
+  if (temizRol === 'bakim') yeniKullanici.bakimTuru = (bakimTuru || '').trim();
   kullanicilar.push(yeniKullanici);
   yaz('isg_kullanicilar', kullanicilar);
   return { basarili: true, kullanici: yeniKullanici };
 }
 
-function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi, isgOnayiVerebilir) {
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi, isgOnayiVerebilir, bakimTuru) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -330,6 +334,7 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi, isgOnayiVerebil
     kayit.birimAdi = birimAdi.trim();
   }
   if (kayit.rol === 'duzenleyici') kayit.isgOnayiVerebilir = !!isgOnayiVerebilir;
+  if (kayit.rol === 'bakim') kayit.bakimTuru = (bakimTuru || '').trim();
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
   kayit.adSoyad = temizAdSoyad;
