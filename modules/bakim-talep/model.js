@@ -53,8 +53,7 @@ function bakimTalepOlustur(veriler, talepNo) {
       ekipmanKodu: (t.ekipmanKodu || '').trim(),
       isTanimi: (t.isTanimi || '').trim(),
       oncelik: BAKIM_TALEP_ONCELIKLERI.includes(t.oncelik) ? t.oncelik : 'Normal',
-      fotograflar: Array.isArray(t.fotograflar) ? t.fotograflar : [],
-      ekipmanDurdu: !!t.ekipmanDurdu
+      fotograflar: Array.isArray(t.fotograflar) ? t.fotograflar : []
     },
     bakim: {
       gorus: '', planlanmaTarihi: '', gerekliSartlar: [], riskler: [],

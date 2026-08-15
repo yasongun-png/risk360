@@ -162,7 +162,6 @@ function _btYeniTalepModalAc() {
   document.getElementById('btYtEkipmanKodu').value = '';
   document.getElementById('btYtIsTanimi').value = '';
   document.getElementById('btYtOncelik').value = 'Normal';
-  document.getElementById('btYtEkipmanDurdu').checked = false;
   document.getElementById('btYeniTalepHata').textContent = '';
   document.getElementById('btYeniTalepKatman').classList.add('acik');
 }
@@ -179,8 +178,7 @@ function _btYeniTalepKaydet() {
       konum: document.getElementById('btYtKonum').value,
       ekipmanKodu: document.getElementById('btYtEkipmanKodu').value,
       isTanimi: document.getElementById('btYtIsTanimi').value,
-      oncelik: document.getElementById('btYtOncelik').value,
-      ekipmanDurdu: document.getElementById('btYtEkipmanDurdu').checked
+      oncelik: document.getElementById('btYtOncelik').value
     }
   };
   const sonuc = bakimTalepAc(veriler);
@@ -233,7 +231,6 @@ function _btDetayIcerikOlustur(k, kullanici) {
     ${_btAlan('Ekipman Kodu', k.talep.ekipmanKodu)}
     ${_btAlan('İş Tanımı', k.talep.isTanimi)}
     ${_btAlan('Öncelik', k.talep.oncelik)}
-    ${_btAlan('Ekipman/Hat Durdu mu?', k.talep.ekipmanDurdu ? 'Evet' : 'Hayır')}
   </div>`;
 
   // ---- Bakım Değerlendirme ----
