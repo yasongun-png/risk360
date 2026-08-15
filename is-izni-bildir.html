@@ -8,22 +8,20 @@
 <title>İş İzni Oluştur</title>
 <link rel="stylesheet" href="assets/style.css">
 <style>
-  /* Bu sayfa giriş yapmadan (barkod/QR ile, ya da Bakım Onarım içindeki
-     "İş İzni Düzenle" butonuyla) açılır — ramak-kala-bildir.html ile aynı
-     kart/tek-ekran deseni (kullanıcı isteği: "aynı ramak kala'da yaptığımız
-     gibi iş izni barkodu olsun", "barkodla gelen formla aynı form açılsın"). */
+  /* Kullanıcı isteği: "iş izni formu diğer formlar gibi sade tasarla" —
+     ramak-kala-bildir.html / ekipman-bakim-bildir.html ile birebir aynı
+     tek-ekran kart deseni ve alan sayısı. Ayrıntılı iş izni alanları
+     (gaz ölçümü, LOTO, KKD, başlangıç/bitiş, saha sorumlusu) burada
+     TOPLANMAZ — kayıt 'Taslak' olarak oluşur, Bakım/İSG gerçek İş İzni
+     modülünde tamamlar. */
   body { background: var(--arka-plan, #f3f4f6); }
   .ii-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
-  .ii-kart { width: 100%; max-width: 520px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
+  .ii-kart { width: 100%; max-width: 480px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
   .ii-baslik { text-align: center; margin-bottom: 4px; font-size: 19px; font-weight: 800; }
   .ii-firma { text-align: center; color: var(--celik-mavi-koyu, #1d4ed8); font-weight: 700; font-size: 15px; margin-bottom: 14px; }
   .ii-not { font-size: 12px; color: var(--metin-soluk, #6b7280); text-align: center; margin-bottom: 18px; line-height: 1.5; }
   .ii-alan { margin-bottom: 14px; }
   .ii-alan label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--metin-soluk, #6b7280); }
-  .ii-satir-ikili { display: flex; gap: 10px; }
-  .ii-satir-ikili > div { flex: 1; }
-  .ii-kkd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-  .ii-kkd-grid label { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 12px; color: var(--metin); margin: 0; }
   .ii-gonder-btn { width: 100%; padding: 15px; font-size: 15px; margin-top: 6px; }
   .ii-durum { text-align: center; padding: 30px 6px; }
   .ii-durum .ikon { font-size: 46px; margin-bottom: 10px; }
@@ -50,10 +48,25 @@
         <div class="ii-baslik">🧾 İş İzni Oluştur</div>
         <div class="ii-firma" id="iiFirmaAdi"></div>
         <div class="ii-not">
-          Bu form, talep eden birim adına doldurulur. Bakım/İSG ekibi izni gözden geçirip onaylayacaktır.
+          İşe başlamadan önce bu formu doldurun. Bakım/İSG ekibi izni gözden geçirip tamamlayacaktır.
         </div>
 
         <form id="iiForm">
+          <div class="ii-alan">
+            <label for="iiIzinTuru">İş İzni Türü *</label>
+            <select id="iiIzinTuru"></select>
+          </div>
+
+          <div class="ii-alan">
+            <label for="iiIsTanimi">İş Tanımı *</label>
+            <textarea id="iiIsTanimi" rows="4" placeholder="Ne yapılacak, kısaca anlatın..." required></textarea>
+          </div>
+
+          <div class="ii-alan">
+            <label for="iiBolum">Bölüm / Lokasyon *</label>
+            <input type="text" id="iiBolum" placeholder="Örn. Üretim Sahası, Depo..." required>
+          </div>
+
           <div class="ii-alan">
             <label for="iiBakimTalebi">İlgili Bakım İşi (varsa)</label>
             <select id="iiBakimTalebi">
@@ -62,67 +75,8 @@
           </div>
 
           <div class="ii-alan">
-            <label for="iiIzinTuru">İş İzni Türü *</label>
-            <select id="iiIzinTuru"></select>
-          </div>
-
-          <div class="ii-alan">
-            <label for="iiIsTanimi">İş Tanımı *</label>
-            <textarea id="iiIsTanimi" rows="3" placeholder="Ne yapılacak, kısaca anlatın..." required></textarea>
-          </div>
-
-          <div class="ii-satir-ikili">
-            <div class="ii-alan">
-              <label for="iiBolum">Bölüm *</label>
-              <input type="text" id="iiBolum" required>
-            </div>
-            <div class="ii-alan">
-              <label for="iiLokasyon">Lokasyon / Ekipman *</label>
-              <input type="text" id="iiLokasyon" required>
-            </div>
-          </div>
-
-          <div class="ii-satir-ikili">
-            <div class="ii-alan">
-              <label for="iiTalepEden">Talep Eden (Adınız) *</label>
-              <input type="text" id="iiTalepEden" required>
-            </div>
-            <div class="ii-alan">
-              <label for="iiSahaSorumlusu">Saha Sorumlusu *</label>
-              <input type="text" id="iiSahaSorumlusu" required>
-            </div>
-          </div>
-
-          <div class="ii-satir-ikili">
-            <div class="ii-alan">
-              <label for="iiBaslangic">Başlangıç *</label>
-              <input type="datetime-local" id="iiBaslangic" required>
-            </div>
-            <div class="ii-alan">
-              <label for="iiBitis">Bitiş *</label>
-              <input type="datetime-local" id="iiBitis" required>
-            </div>
-          </div>
-
-          <div class="ii-alan" id="iiGazOlcumuAlani" style="display:none;">
-            <label>Gaz Ölçümü (Kapalı Alan)</label>
-            <div class="ii-satir-ikili">
-              <div><input type="text" id="iiGazOksijen" placeholder="Oksijen % (ör. 20,9)"></div>
-              <div><input type="text" id="iiGazLel" placeholder="LEL %"></div>
-            </div>
-            <input type="text" id="iiGazToksik" placeholder="Toksik gaz (varsa, ör. H2S: 0 ppm)">
-            <div style="font-size:11px; color:var(--metin-soluk); margin-top:-8px;">Ölçüm İSG/Bakım tarafından da tamamlanabilir — boş bırakabilirsiniz.</div>
-          </div>
-
-          <div class="ii-alan" id="iiLotoAlani" style="display:none;">
-            <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
-              <input type="checkbox" id="iiLotoUygulandi" style="width:auto;"> LOTO / enerji izolasyonu uygulandı
-            </label>
-          </div>
-
-          <div class="ii-alan">
-            <label>Gerekli KKD</label>
-            <div class="ii-kkd-grid" id="iiKkdGrid"></div>
+            <label for="iiTalepEden">Adınız (isteğe bağlı)</label>
+            <input type="text" id="iiTalepEden" placeholder="İsteğe bağlı — boş bırakabilirsiniz">
           </div>
 
           <div class="ii-alan">
@@ -157,12 +111,6 @@
     function _iiKacir(v) {
       return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
-
-    const IS_IZNI_KKD_LISTESI = [
-      'Baret', 'Koruyucu Gözlük', 'Yüz Siperi', 'Eldiven', 'Kulak Koruyucu',
-      'Solunum Koruyucu', 'Kimyasal Tulum', 'İş Ayakkabısı',
-      'Paraşüt Tipi Emniyet Kemeri', 'Reflektif Yelek'
-    ];
 
     const _iiParams = new URLSearchParams(window.location.search);
     const _iiSlug = (_iiParams.get('firma') || '').trim();
@@ -221,25 +169,12 @@
       }
     }
 
-    function _iiTuruDegistiTetikle() {
-      const tur = document.getElementById('iiIzinTuru').value;
-      document.getElementById('iiGazOlcumuAlani').style.display = tur === 'Kapalı Alan' ? '' : 'none';
-      document.getElementById('iiLotoAlani').style.display = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(tur) ? '' : 'none';
-    }
-
     function _iiFormuBaslat() {
       document.getElementById('iiYukleniyor').classList.add('gizli');
       document.getElementById('iiFormAlani').classList.remove('gizli');
       document.getElementById('iiFirmaAdi').textContent = _iiFirma.ad;
 
       document.getElementById('iiIzinTuru').innerHTML = IS_IZNI_TURLERI.map(t => `<option>${_iiKacir(t)}</option>`).join('');
-      document.getElementById('iiIzinTuru').addEventListener('change', _iiTuruDegistiTetikle);
-      _iiTuruDegistiTetikle();
-
-      document.getElementById('iiKkdGrid').innerHTML = IS_IZNI_KKD_LISTESI.map(k => `
-        <label><input type="checkbox" value="${_iiKacir(k)}"> ${_iiKacir(k)}</label>
-      `).join('');
-
       _iiBakimTalepleriniDoldur();
 
       document.getElementById('iiFotoSecBtn').addEventListener('click', () => document.getElementById('iiFotoDosya').click());
@@ -263,14 +198,8 @@
 
         const isTanimi = document.getElementById('iiIsTanimi').value.trim();
         const bolum = document.getElementById('iiBolum').value.trim();
-        const lokasyon = document.getElementById('iiLokasyon').value.trim();
-        const talepEden = document.getElementById('iiTalepEden').value.trim();
-        const sahaSorumlusu = document.getElementById('iiSahaSorumlusu').value.trim();
-        const baslangic = document.getElementById('iiBaslangic').value;
-        const bitis = document.getElementById('iiBitis').value;
-
-        if (!isTanimi || !bolum || !lokasyon || !talepEden || !sahaSorumlusu || !baslangic || !bitis) {
-          hataMesaji.textContent = 'Lütfen * ile işaretli tüm alanları doldurun.';
+        if (!isTanimi || !bolum) {
+          hataMesaji.textContent = 'Lütfen iş tanımını ve bölüm/lokasyonu girin.';
           hataMesaji.classList.add('gorunur');
           return;
         }
@@ -283,27 +212,14 @@
           const anahtar = _iiIzinAnahtari();
           const mevcutListe = oku(anahtar, []);
           const tur = document.getElementById('iiIzinTuru').value;
-          const secilenKkd = Array.from(document.querySelectorAll('#iiKkdGrid input:checked')).map(cb => cb.value);
           const bakimTalepId = document.getElementById('iiBakimTalebi').value;
+          const talepEden = document.getElementById('iiTalepEden').value.trim();
 
           const yeniIzin = izinOlustur({
             izinTuru: tur,
-            isTanimi: '(Barkod ile oluşturuldu) ' + isTanimi,
-            bolum, lokasyon, talepEden, sahaSorumlusu,
-            baslangic: new Date(baslangic).toISOString(),
-            bitis: new Date(bitis).toISOString(),
-            gerekliKkd: secilenKkd,
-            gazOlcumu: {
-              oksijen: document.getElementById('iiGazOksijen').value.trim(),
-              lel: document.getElementById('iiGazLel').value.trim(),
-              toksik: document.getElementById('iiGazToksik').value.trim(),
-              olcumZamani: document.getElementById('iiGazOksijen').value.trim() ? new Date().toISOString() : '',
-              olcenKisi: talepEden
-            },
-            izolasyon: {
-              lotoGerekli: IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(tur),
-              lotoUygulandi: document.getElementById('iiLotoUygulandi').checked
-            },
+            isTanimi: '(Barkod ile oluşturuldu' + (talepEden ? ' — ' + talepEden : ' — isim belirtilmedi') + ') ' + isTanimi,
+            bolum, lokasyon: bolum,
+            talepEden: talepEden || 'Barkod',
             izinNo: izinSonrakiNoUret(mevcutListe)
           });
           yeniIzin.fotograflar = _iiFotoUrl ? [{ url: _iiFotoUrl }] : [];
@@ -323,7 +239,7 @@
           bildirimler.push({
             id: rastgeleId(),
             kullaniciAdi: 'Barkod',
-            adSoyad: talepEden,
+            adSoyad: talepEden || 'İsimsiz (Barkod)',
             anahtar: anahtar,
             kayitEtiketleri: [yeniIzin.izinNo + ': ' + tur + ' — ' + isTanimi.slice(0, 60)],
             hedefRol: 'bakim',
@@ -348,7 +264,6 @@
 
     document.getElementById('iiYeniIzinBtn').addEventListener('click', () => {
       document.getElementById('iiForm').reset();
-      _iiTuruDegistiTetikle();
       _iiFotoUrl = '';
       _iiFotoOnizlemeCiz();
       _iiBakimTalepleriniDoldur();
