@@ -789,7 +789,13 @@
 
       document.getElementById('iiBasariDurumu').classList.add('gizli');
       document.getElementById('iiIcerikAlani').classList.remove('gizli');
-      _iiModDegistir('yeni');
+      // "Başa Dön" eskiden her zaman "Yeni Talep" sekmesine dönüyordu —
+      // biri "İmza At"tan imza attıktan sonra ikinci bir kişi (ör. Bakım
+      // sonra İSG) imzalayacaksa her seferinde tekrar İmza At'a tıklayıp
+      // izni yeniden seçmesi gerekiyordu. Artık az önce kullanılan MOD'a
+      // (Yeni Talep / Formu Tamamla / İmza At) geri dönüyor — kullanıcı
+      // isteği: "imza at, geri git" akışı uğraştırıcı.
+      _iiModDegistir(_iiAktifMod);
     });
 
     if (!_iiSlug) {
