@@ -608,7 +608,10 @@ function envanteriCiz() {
       <td>${e.talepSayisi}</td>
       <td>${_btTarihSaat(e.sonKullanimTarihi)}</td>
       <td>
-        ${duzenlenebilirMi ? `<button type="button" class="tablo-buton" data-ekipman-duzenle="${e.id}">Düzenle</button>` : '-'}
+        ${duzenlenebilirMi
+          ? `<button type="button" class="tablo-buton" data-ekipman-duzenle="${e.id}">Düzenle</button>`
+          : `<button type="button" class="tablo-buton" data-ekipman-goster="${e.id}">Kartı Göster</button>`}
+        <button type="button" class="tablo-buton" data-ekipman-indir="${e.id}">İndir</button>
         ${kullaniciAdminMi(kullanici) ? `<button type="button" class="tablo-buton sil" data-ekipman-sil="${e.id}">Sil</button>` : ''}
       </td>
     </tr>
@@ -617,6 +620,15 @@ function envanteriCiz() {
 
   govde.querySelectorAll('[data-ekipman-duzenle]').forEach(btn => {
     btn.addEventListener('click', () => _btEkipmanDuzenleModalAc(btn.getAttribute('data-ekipman-duzenle')));
+  });
+  govde.querySelectorAll('[data-ekipman-goster]').forEach(btn => {
+    btn.addEventListener('click', () => _btEkipmanDuzenleModalAc(btn.getAttribute('data-ekipman-goster')));
+  });
+  govde.querySelectorAll('[data-ekipman-indir]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try { await ekipmanBakimKartiWordOlustur(btn.getAttribute('data-ekipman-indir')); }
+      catch (hata) { console.error(hata); alert('Bakım kartı üretilemedi: ' + (hata.message || hata)); }
+    });
   });
   govde.querySelectorAll('[data-ekipman-sil]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -657,6 +669,15 @@ function _btEkipmanDuzenleModalAc(id) {
   document.getElementById('btEkTip').value = kayit.tip || '';
   document.getElementById('btEkKonum').value = kayit.konum || '';
   document.getElementById('btEkipmanDuzenleHata').textContent = '';
+
+  // Listede "Düzenle" yerine "Kartı Göster" ile açılmışsa (düzenleme yetkisi
+  // yoksa) alanlar/Kaydet gizlenir — ekipmanKaydiDuzenle servis katmanında
+  // zaten aynı yetkiyi ayrıca kontrol ediyor, burası sadece görünüm.
+  const duzenlenebilirMi = _btEkipmanDuzenleyebilirMi(oturumdakiKullanici());
+  document.getElementById('btEkipmanDuzenleModalBaslik').textContent = duzenlenebilirMi ? 'Ekipman Kaydını Düzenle' : 'Ekipman Kartı';
+  ['btEkKod', 'btEkAd', 'btEkTip', 'btEkKonum'].forEach(alanId => { document.getElementById(alanId).disabled = !duzenlenebilirMi; });
+  document.getElementById('btEkFotoDosya').style.display = duzenlenebilirMi ? '' : 'none';
+  document.getElementById('btEkipmanDuzenleKaydetBtn').style.display = duzenlenebilirMi ? '' : 'none';
 
   // Kullanıcı isteği: "ekipman konumu haritadan seçilebilsin, nokta olarak
   // işaretlenebilsin" — bkz. modules/harita/ui.js HARITA_DIS_KAYNAKLAR.bakimEkipman.
