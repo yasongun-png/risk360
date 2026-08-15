@@ -243,6 +243,28 @@
     </div>
   </div>
 
+  <!-- ONAY İMZA MODAL — Bakım/İSG onayı artık barkoddaki "İmza At" ile aynı:
+       tek tıkla değil, gerçek çizilmiş bir imzayla onaylanır. Kullanıcı
+       isteği: "imzanın kendisi görünmüyor, formda sadece onaylandı yazıyor". -->
+  <div class="modal-katman" id="onayImzaModalKatman">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3 id="onayImzaBaslik">Onay İmzası</h3>
+      <label for="onayImzaAdSoyad">Adınız *</label>
+      <input type="text" id="onayImzaAdSoyad">
+      <canvas id="onayImzaCanvas" class="iz-imza-canvas"></canvas>
+      <div class="iz-imza-arac">
+        <span class="iz-imza-ipucu">Fare/parmakla imzalayın</span>
+        <button type="button" class="iz-imza-temizle" id="onayImzaTemizleBtn">Temizle</button>
+      </div>
+      <div class="alan-hatasi" id="onayImzaHata" style="color:var(--hata); font-size:12px; margin-top:8px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="onayImzaIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="onayImzaOnaylaBtn">Onayla</button>
+      </div>
+      <button type="button" class="tablo-buton" id="onayImzaKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>

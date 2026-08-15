@@ -117,22 +117,23 @@ function _izinOnayDurumunuYenidenHesapla(onaycilar) {
 // Onaylayan kimliği artık serbest metinle (prompt) değil, oturum açmış
 // kullanıcıdan alınır — aksi halde herhangi biri devtools/konsoldan veya
 // prompt kutusuna istediği bir adı yazarak onayı sahteleyebilirdi.
-function izinOnayVer(id, rol) {
+// PC'den onay artık barkoddaki "İmza At" ile birebir aynı: gerçek çizilmiş
+// bir imza gerektiriyor (bkz. ui.js _onayImzaOnayla) — kullanıcı isteği:
+// "imzanın kendisi görünmüyor, formda sadece onaylandı yazıyor". imzaAdi/
+// imzaUrl verilmezse (ör. eski/başka bir çağrı yolu) eskisi gibi sadece
+// oturumdaki kullanıcının adıyla, görselsiz onaylanır.
+function izinOnayVer(id, rol, imzaAdi, imzaUrl) {
   const izin = izinIdIleGetirRepo(id);
   if (!izin) return { basarili: false, hata: 'Kayıt bulunamadı.' };
   const kullanici = oturumdakiKullanici();
   if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
-  const yeniOnayci = Object.assign(onayciOlustur({ ad: kullanici.adSoyad, rol, durum: 'Onaylandı' }), { onayTarihi: new Date().toISOString() });
+  const ad = (imzaAdi || '').trim() || kullanici.adSoyad;
+  const yeniOnayci = Object.assign(onayciOlustur({ ad, rol, durum: 'Onaylandı' }), { onayTarihi: new Date().toISOString() });
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);
   const onayDurumu = _izinOnayDurumunuYenidenHesapla(onaycilar);
   const durum = onayDurumu === 'Onaylandı' ? 'Onaylandı' : izin.durum;
-  // Barkod formundaki dijital imzayla ("İmza At") AYNI alanı kullan —
-  // kullanıcı isteği: "barkotla yapılan girişlerle PC'den yapılan iş izni
-  // tutarlı olmalı". PC'den onay verildiğinde de İş İzni Formu PDF'indeki
-  // ilgili imza kutusunda onaylayanın adı/tarihi görünsün (çizilmiş imza
-  // görseli olmadan — bkz. cikti.js _izImzaHucre "✓ Onaylandı" dalı).
   const imzalar = ['bakim', 'isg'].includes(rol)
-    ? Object.assign({}, izin.imzalar, { [rol]: izinImzaVeriUret(kullanici.adSoyad, '') })
+    ? Object.assign({}, izin.imzalar, { [rol]: izinImzaVeriUret(ad, imzaUrl || '') })
     : izin.imzalar;
   return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu, durum, imzalar }) };
 }

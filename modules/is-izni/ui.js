@@ -5,6 +5,9 @@ let _duzenlenenIzinId = null;
 let _izKontrolMaddeleri = [];
 let _izModalTamamlaModu = false;
 let _izImzaPad = null;
+let _izOnayBekleyenId = null;
+let _izOnayBekleyenRol = null;
+let _onayImzaPad = null;
 
 function izRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
@@ -116,6 +119,11 @@ function izinSayfasiniBaslat() {
   document.getElementById('izinTalepModalKapatBtn').addEventListener('click', izinTalepModalKapat);
   document.getElementById('izinTalepModalIptalBtn').addEventListener('click', izinTalepModalKapat);
   document.getElementById('izinTalepForm').addEventListener('submit', izinTalepFormGonderildi);
+
+  document.getElementById('onayImzaKapatBtn').addEventListener('click', _onayImzaModalKapat);
+  document.getElementById('onayImzaIptalBtn').addEventListener('click', _onayImzaModalKapat);
+  document.getElementById('onayImzaTemizleBtn').addEventListener('click', () => { if (_onayImzaPad) _onayImzaPad.temizle(); });
+  document.getElementById('onayImzaOnaylaBtn').addEventListener('click', _onayImzaOnayla);
 
   _izKkdGridiCiz();
   document.getElementById('izImzaTemizleBtn').addEventListener('click', () => { if (_izImzaPad) _izImzaPad.temizle(); });
@@ -245,10 +253,7 @@ function izinleriCiz(aramaMetni) {
     try { await izinFormunuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-onay]').forEach(btn => btn.addEventListener('click', () => {
-    const sonuc = izinOnayVer(btn.getAttribute('data-onay'), btn.getAttribute('data-rol'));
-    if (!sonuc.basarili) { alert(sonuc.hata); return; }
-    izinleriCiz(document.getElementById('izinAramaKutusu').value);
-    izOzetiCiz();
+    _onayImzaModalAc(btn.getAttribute('data-onay'), btn.getAttribute('data-rol'));
   }));
   govde.querySelectorAll('[data-red]').forEach(btn => btn.addEventListener('click', () => {
     const sebep = prompt('Red sebebi:', '') || '';
@@ -358,6 +363,54 @@ function izinModalKapat() {
   document.getElementById('izinModalKatman').classList.remove('acik');
   _duzenlenenIzinId = null;
   _izModalTamamlaModu = false;
+}
+
+// ===================== ONAY İMZA MODALI =====================
+// Barkoddaki "İmza At" ile aynı: Bakım/İSG onayı artık tek tıkla değil,
+// gerçek çizilmiş bir imzayla veriliyor (bkz. service.js izinOnayVer).
+
+function _onayImzaModalAc(id, rol) {
+  _izOnayBekleyenId = id;
+  _izOnayBekleyenRol = rol;
+  document.getElementById('onayImzaBaslik').textContent = (rol === 'isg' ? 'İSG Onayı' : 'Bakım Onayı') + ' — İmza';
+  document.getElementById('onayImzaAdSoyad').value = (oturumdakiKullanici() || {}).adSoyad || '';
+  document.getElementById('onayImzaHata').textContent = '';
+  document.getElementById('onayImzaModalKatman').classList.add('acik');
+  requestAnimationFrame(() => {
+    if (!_onayImzaPad) _onayImzaPad = _izImzaPaduBagla('onayImzaCanvas');
+    if (_onayImzaPad) _onayImzaPad.temizle();
+  });
+}
+
+function _onayImzaModalKapat() {
+  document.getElementById('onayImzaModalKatman').classList.remove('acik');
+  _izOnayBekleyenId = null;
+  _izOnayBekleyenRol = null;
+}
+
+async function _onayImzaOnayla() {
+  const hataEl = document.getElementById('onayImzaHata');
+  const ad = document.getElementById('onayImzaAdSoyad').value.trim();
+  if (!ad) { hataEl.textContent = 'Lütfen adınızı girin.'; return; }
+  if (!_onayImzaPad || !_onayImzaPad.doluMu()) { hataEl.textContent = 'Lütfen imza alanına imzanızı atın.'; return; }
+
+  const btn = document.getElementById('onayImzaOnaylaBtn');
+  btn.disabled = true;
+  btn.textContent = 'Kaydediliyor…';
+  try {
+    const imzaUrl = await _izImzaYukle(_onayImzaPad.canvasElemani);
+    const sonuc = izinOnayVer(_izOnayBekleyenId, _izOnayBekleyenRol, ad, imzaUrl);
+    if (!sonuc.basarili) { hataEl.textContent = sonuc.hata; return; }
+    _onayImzaModalKapat();
+    izinleriCiz(document.getElementById('izinAramaKutusu').value);
+    izOzetiCiz();
+  } catch (hata) {
+    console.error('İmza yüklenemedi:', hata);
+    hataEl.textContent = 'İmza yüklenemedi, lütfen tekrar deneyin.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Onayla';
+  }
 }
 
 // ===================== YENİ TALEP MODALI =====================
