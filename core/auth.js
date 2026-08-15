@@ -276,7 +276,7 @@ function ikKullanicilariGetir() {
   return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
-async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi) {
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -305,12 +305,17 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, b
     erisimFirmaIdleri: gecerliFirmaIdleri
   };
   if (temizRol === 'birim') yeniKullanici.birimAdi = (birimAdi || '').trim();
+  // Kullanıcı isteği: "İSG onayı verebilecekleri de admin belirleyebilsin" —
+  // varsayılan olarak sadece admin İSG onaylayıcısıdır (bkz.
+  // modules/bakim-talep/service.js _btIsgOnaylayiciMi); bu bayrak SADECE
+  // Düzenleyici rolüne, Bakım Onarım modülüne özel olarak bu yetkiyi ekler.
+  if (temizRol === 'duzenleyici') yeniKullanici.isgOnayiVerebilir = !!isgOnayiVerebilir;
   kullanicilar.push(yeniKullanici);
   yaz('isg_kullanicilar', kullanicilar);
   return { basarili: true, kullanici: yeniKullanici };
 }
 
-function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi) {
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi, isgOnayiVerebilir) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -324,6 +329,7 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi) {
     if (!(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
     kayit.birimAdi = birimAdi.trim();
   }
+  if (kayit.rol === 'duzenleyici') kayit.isgOnayiVerebilir = !!isgOnayiVerebilir;
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
   kayit.adSoyad = temizAdSoyad;

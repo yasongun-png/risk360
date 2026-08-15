@@ -8,8 +8,12 @@
 //   rol==='birim'       -> Talep Eden Birim, SADECE kendi birimAdi'sindeki
 //                          taleplerini görür/açar/kapatır.
 
+// Kullanıcı isteği: "kullanıcılar kısmında İSG onayı verebilecekleri de
+// admin belirleyebilsin" — artık TÜM düzenleyiciler değil, sadece admin'in
+// bu yetkiyi açıkça verdiği düzenleyiciler İSG onaylayıcısı sayılır (bkz.
+// kullanicilar.html kkIsgOnayi, core/auth.js ikKullaniciEkle/Guncelle).
 function _btIsgOnaylayiciMi(kullanici) {
-  return kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici';
+  return kullaniciAdminMi(kullanici) || (kullanici.rol === 'duzenleyici' && !!kullanici.isgOnayiVerebilir);
 }
 
 function _btBakimRoluMu(kullanici) {
@@ -255,11 +259,74 @@ function talepReddet(id, gerekce) {
   const dogrulama = bakimTalepRedDogrula(gerekce);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
+  // Reddin HANGİ aşamada yapıldığı kaydedilir — kimin düzeltip tekrar
+  // gönderebileceğini belirler (kullanıcı isteği: "reddedildiğinde talep
+  // eden düzenleyip tekrar geri gönderebilsin, İSG reddederse bakım
+  // düzenleyip tekrar onaya göndersin"). Reddet butonu SADECE 'İSG
+  // Onayında' aşamasında İSG'ye, diğer tüm açık aşamalarda Bakım'a
+  // gösterildiğinden (bkz. ui.js _btDetayIcerikOlustur), durum tek başına
+  // yeterli bir ayrım sağlar.
+  kayit.redEdenAsama = kayit.durum === 'İSG Onayında' ? 'isg' : 'bakim';
   kayit.durum = 'Reddedildi';
   kayit.redGerekcesi = gerekce;
   _btGecmisEkle(kayit, 'Reddedildi: ' + gerekce);
   bakimTalepGuncelleRepo(id, kayit);
-  _btBildirimEkle({ hedefBirim: kayit.talep.birim }, 'Talep reddedildi: ' + gerekce, kayit);
+  if (kayit.redEdenAsama === 'isg') {
+    _btBildirimEkle({ hedefRol: 'bakim' }, 'İSG reddetti, düzenleyip tekrar gönderebilirsiniz: ' + gerekce, kayit);
+  } else {
+    _btBildirimEkle({ hedefBirim: kayit.talep.birim }, 'Talep reddedildi: ' + gerekce, kayit);
+  }
+  return { basarili: true, kayit };
+}
+
+// Bakım'ın reddettiği talebi talep eden düzeltip tekrar gönderir.
+function talebiDuzenleyipTekrarGonder(id, veriler) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  const kayit = bakimTalepIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Talep bulunamadı.' };
+  if (kayit.durum !== 'Reddedildi' || kayit.redEdenAsama !== 'bakim') {
+    return { basarili: false, hata: 'Bu talep şu an düzenlenip tekrar gönderilebilecek durumda değil.' };
+  }
+  if (!((kullanici.rol === 'birim' && kullanici.birimAdi === kayit.talep.birim) || _btIsgOnaylayiciMi(kullanici))) {
+    return { basarili: false, hata: 'Bu işlem için yetkiniz yok.' };
+  }
+
+  const dogrulama = bakimTalepDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  kayit.talep = Object.assign({}, kayit.talep, {
+    konum: (veriler.konum || '').trim(),
+    ekipmanKodu: (veriler.ekipmanKodu || '').trim(),
+    isTanimi: (veriler.isTanimi || '').trim(),
+    oncelik: BAKIM_TALEP_ONCELIKLERI.includes(veriler.oncelik) ? veriler.oncelik : kayit.talep.oncelik,
+    fotograflar: Array.isArray(veriler.fotograflar) ? veriler.fotograflar.slice(0, 2) : kayit.talep.fotograflar
+  });
+  kayit.durum = 'Yeni';
+  kayit.redGerekcesi = '';
+  kayit.redEdenAsama = '';
+  _btGecmisEkle(kayit, 'Talep, talep eden tarafından düzeltilip tekrar gönderildi.');
+  bakimTalepGuncelleRepo(id, kayit);
+  _btBildirimEkle({ hedefRol: 'bakim' }, 'Reddedilen talep düzeltilip tekrar gönderildi', kayit);
+  return { basarili: true, kayit };
+}
+
+// İSG'nin reddettiği talebi Bakım yeniden değerlendirmeye açar — buradan
+// sonrası normal bakimDegerlendirmeKaydet/bakimIsgeGonder akışıyla devam eder.
+function bakimReddedileniYenidenAc(id) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici || !_btBakimRoluMu(kullanici)) return { basarili: false, hata: 'Bu işlem için yetkiniz yok.' };
+  const kayit = bakimTalepIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Talep bulunamadı.' };
+  if (kayit.durum !== 'Reddedildi' || kayit.redEdenAsama !== 'isg') {
+    return { basarili: false, hata: 'Bu talep şu an yeniden açılabilecek durumda değil.' };
+  }
+
+  kayit.durum = 'Bakım Değerlendirmede';
+  kayit.redGerekcesi = '';
+  kayit.redEdenAsama = '';
+  _btGecmisEkle(kayit, 'İSG tarafından reddedilen talep, Bakım tarafından yeniden değerlendirmeye açıldı.');
+  bakimTalepGuncelleRepo(id, kayit);
   return { basarili: true, kayit };
 }
 

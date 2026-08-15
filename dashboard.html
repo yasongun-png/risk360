@@ -174,7 +174,7 @@
       if (kullaniciAdminMi(kullanici)) return true;
       if (b.hedefBirim) return kullanici.rol === 'birim' && kullanici.birimAdi === b.hedefBirim;
       if (b.hedefRol === 'bakim') return kullanici.rol === 'bakim';
-      if (b.hedefRol === 'isg') return kullanici.rol === 'duzenleyici';
+      if (b.hedefRol === 'isg') return kullanici.rol === 'duzenleyici' && !!kullanici.isgOnayiVerebilir;
       return false;
     }
 

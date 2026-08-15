@@ -343,7 +343,33 @@ function _btDetayIcerikOlustur(k, kullanici) {
     html += _btAlan('Bakım Tamamlama', _btTarihSaat(k.kapanis.bakimTamamlamaTarihi)) + _btAlan('Bakım Notu', k.kapanis.bakimNotu) +
       _btAlan('Talep Eden Onayı', k.kapanis.talepEdenOnay ? 'Evet' : 'Hayır') + _btAlan('Kapanış Tarihi', _btTarihSaat(k.kapanis.kapanisTarihi));
   }
-  if (k.durum === 'Reddedildi') html += _btAlan('Red Gerekçesi', k.redGerekcesi);
+  if (k.durum === 'Reddedildi') {
+    html += _btAlan('Red Gerekçesi', k.redGerekcesi);
+    // Kullanıcı isteği: "reddedildiğinde talep eden düzenleyip tekrar geri
+    // gönderebilsin, İSG reddederse bakım düzenleyip tekrar onaya göndersin".
+    if (k.redEdenAsama === 'bakim' && talepSahibiMi) {
+      html += `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--kenarlik);">
+          <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 8px;">Bakım tarafından reddedildi — düzeltip tekrar gönderebilirsiniz.</p>
+          <label for="btRdKonum">Konum / Ekipman / Hat</label>
+          <input type="text" id="btRdKonum" value="${_btKacir(k.talep.konum)}">
+          <label for="btRdEkipmanKodu">Ekipman Kodu</label>
+          <input type="text" id="btRdEkipmanKodu" value="${_btKacir(k.talep.ekipmanKodu)}">
+          <label for="btRdIsTanimi">İş Tanımı / Arıza Açıklaması</label>
+          <textarea id="btRdIsTanimi" rows="3">${_btKacir(k.talep.isTanimi)}</textarea>
+          <button type="button" class="birincil" id="btRdTekrarGonderBtn">Düzenle ve Tekrar Gönder</button>
+          <div class="alan-hatasi" id="btRdHata"></div>
+        </div>
+      `;
+    } else if (k.redEdenAsama === 'isg' && bakimRoluVarMi) {
+      html += `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--kenarlik);">
+          <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 8px;">İSG tarafından reddedildi — düzenleyip tekrar onaya gönderebilirsiniz.</p>
+          <button type="button" class="birincil" id="btRdYenidenAcBtn">Yeniden Aç ve Düzenle</button>
+        </div>
+      `;
+    }
+  }
   html += '</div>';
 
   // ---- Geçmiş ----
@@ -418,6 +444,28 @@ function _btDetayOlaylariBagla(k, kullanici) {
     const sonuc = talepEdenKapat(k.id, not);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     _btDetayModalKapat();
+  });
+
+  const btRdTekrarGonder = document.getElementById('btRdTekrarGonderBtn');
+  if (btRdTekrarGonder) btRdTekrarGonder.addEventListener('click', () => {
+    const veriler = {
+      birim: k.talep.birim,
+      acanKisi: k.talep.acanKisi,
+      konum: document.getElementById('btRdKonum').value,
+      ekipmanKodu: document.getElementById('btRdEkipmanKodu').value,
+      isTanimi: document.getElementById('btRdIsTanimi').value,
+      oncelik: k.talep.oncelik
+    };
+    const sonuc = talebiDuzenleyipTekrarGonder(k.id, veriler);
+    if (!sonuc.basarili) { document.getElementById('btRdHata').textContent = sonuc.hata || Object.values(sonuc.hatalar || {}).join(' '); return; }
+    _btDetayModalKapat();
+  });
+
+  const btRdYenidenAc = document.getElementById('btRdYenidenAcBtn');
+  if (btRdYenidenAc) btRdYenidenAc.addEventListener('click', () => {
+    const sonuc = bakimReddedileniYenidenAc(k.id);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    _btDetayModalAc(k.id);
   });
 }
 

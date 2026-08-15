@@ -48,11 +48,6 @@ async function bakimTalepWordOlustur(id) {
 
   const firma = aktifFirmaGetir();
   const _bkFormAyarlari = formAyarlariGetir('bakim-talep');
-  const gecmisSatirlari = (t.gecmis || []).slice().reverse()
-    .map(g => `${_bkTarihSaat(g.tarih)} — ${g.kullanici || ''}: ${g.not || ''}`);
-  const gecmisParagraflari = gecmisSatirlari.length
-    ? gecmisSatirlari.map(satirMetni => new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: satirMetni, font, size: bodySize - 2 })] }))
-    : [new Paragraph({ children: [new TextRun({ text: '—', font, size: bodySize - 2 })] })];
 
   const belge = new Document({
     styles: { default: { document: { run: { font, size: bodySize } } } },
@@ -104,10 +99,7 @@ async function bakimTalepWordOlustur(id) {
           satir('Onaylayan', t.kapanis.onaylayanKisi),
           satir('Kapanış Tarihi', _bkTarihSaat(t.kapanis.kapanisTarihi)),
           ...(t.durum === 'Reddedildi' ? [satir('Red Gerekçesi', t.redGerekcesi)] : [])
-        ]),
-
-        baslik('Geçmiş'),
-        ...gecmisParagraflari
+        ])
       ]
     }]
   });

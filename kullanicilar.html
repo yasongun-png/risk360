@@ -110,6 +110,12 @@
         <select id="kkBirim"></select>
       </div>
 
+      <div id="kkIsgOnayiAlani" style="display:none;">
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+          <input type="checkbox" id="kkIsgOnayi" style="width:auto;"> Bakım Onarım'da İSG onayı verebilsin
+        </label>
+      </div>
+
       <label>Erişebileceği Firmalar</label>
       <div class="firma-secim-listesi" id="kkFirmaListesi"></div>
 
@@ -176,6 +182,7 @@
       document.getElementById('kkRol').addEventListener('change', () => {
         _kkBirimAlaniniGuncelle();
         _kkBirimSecimDoldur();
+        _kkIsgOnayiAlaniniGuncelle();
       });
       document.getElementById('kkFirmaListesi').addEventListener('change', _kkBirimSecimDoldur);
 
@@ -250,6 +257,15 @@
       document.getElementById('kkBirimAlani').style.display = document.getElementById('kkRol').value === 'birim' ? '' : 'none';
     }
 
+    // Kullanıcı isteği: "kullanıcılar kısmında İSG onayı verebilecekleri de
+    // admin belirleyebilsin" — varsayılan olarak SADECE admin İSG onaylayıcısı
+    // sayılırdı (bkz. modules/bakim-talep/service.js _btIsgOnaylayiciMi);
+    // artık admin, Düzenleyici rolündeki bir kullanıcıya bu yetkiyi de
+    // (Bakım Onarım modülüne özel) verebilir.
+    function _kkIsgOnayiAlaniniGuncelle() {
+      document.getElementById('kkIsgOnayiAlani').style.display = document.getElementById('kkRol').value === 'duzenleyici' ? '' : 'none';
+    }
+
     // Birim seçim listesini, o an İŞARETLİ firma(lar)ın bölümler listesinden
     // (bkz. core/tenant.js firma.bolumler, Firma Yönetimi'nde düzenlenir)
     // doldurur — ayrı bir "birimler" tablosu kurmaya gerek yok, mevcut
@@ -284,6 +300,7 @@
         const firmaAdlari = _firmaAdlariGetir(k.erisimFirmaIdleri);
         const rolEtiket = KK_ROL_ETIKETLERI[k.rol] || '🗂️ İK';
         const birimSatiri = k.rol === 'birim' ? `<span class="firmalar">🏭 Birim: ${_kkKacir(k.birimAdi || '—')}</span>` : '';
+        const isgOnaySatiri = k.rol === 'duzenleyici' && k.isgOnayiVerebilir ? '<span class="firmalar">✅ İSG onayı verebilir (Bakım Onarım)</span>' : '';
         const satir = document.createElement('div');
         satir.className = 'kk-satir';
         satir.innerHTML = `
@@ -292,6 +309,7 @@
             <span class="kullanici-adi">@${_kkKacir(k.kullaniciAdi)}</span>
             <span class="firmalar">${firmaAdlari.length ? '🏢 ' + _kkKacir(firmaAdlari.join(', ')) : '⚠️ Hiç firma atanmadı'}</span>
             ${birimSatiri}
+            ${isgOnaySatiri}
           </div>
           <div class="islemler">
             <button class="mini-buton" data-duzenle="${k.id}">Düzenle</button>
@@ -344,6 +362,8 @@
       document.getElementById('kkRol').value = kayit ? kayit.rol : 'ik';
       document.getElementById('kkRol').disabled = !!kayit;
       _kkBirimAlaniniGuncelle();
+      _kkIsgOnayiAlaniniGuncelle();
+      document.getElementById('kkIsgOnayi').checked = !!(kayit && kayit.isgOnayiVerebilir);
 
       // Düzenlemede kullanıcı adı, rol ve şifre burada değiştirilmez (kullanıcı
       // adı ve rol sabit kalır, şifre için ayrı "Şifre Değiştir" butonu
@@ -383,9 +403,10 @@
 
       const rol = document.getElementById('kkRol').value;
       const birimAdi = document.getElementById('kkBirim').value;
+      const isgOnayiVerebilir = document.getElementById('kkIsgOnayi').checked;
       const sonuc = _duzenlenenId
-        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, birimAdi)
-        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi);
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, birimAdi, isgOnayiVerebilir)
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir);
 
       if (!sonuc.basarili) {
         hataEl.textContent = sonuc.hata;
