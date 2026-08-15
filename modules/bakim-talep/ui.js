@@ -98,6 +98,20 @@ function bakimTalepSayfasiniBaslat() {
 
   document.getElementById('btYeniTalepIptalBtn').addEventListener('click', _btYeniTalepModalKapat);
   document.getElementById('btYeniTalepKaydetBtn').addEventListener('click', _btYeniTalepKaydet);
+  document.getElementById('btYtFotoSecBtn').addEventListener('click', () => document.getElementById('btYtFotoDosya').click());
+  document.getElementById('btYtFotoDosya').addEventListener('change', async e => {
+    const dosya = e.target.files[0];
+    e.target.value = '';
+    if (!dosya) return;
+    if (_btYtFotograflar.length >= 2) { alert('En fazla 2 fotoğraf eklenebilir.'); return; }
+    try {
+      const sonuc = await fotoYukle(dosya, 'bakim-talep/gecici');
+      _btYtFotograflar.push({ url: sonuc.url });
+      _btYtFotoOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Fotoğraf yüklenemedi.');
+    }
+  });
   document.getElementById('btDetayKapatBtn').addEventListener('click', _btDetayModalKapat);
   document.getElementById('btDetayRaporWordBtn').addEventListener('click', async () => {
     try { await bakimTalepWordOlustur(_btAcikKayitId); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
@@ -189,6 +203,28 @@ function _btAcanKisiSecimDoldur() {
     || '<option value="">Önce Personel modülünden kayıt ekleyin</option>';
 }
 
+// Kullanıcı isteği: "talep eden kişi 2 fotoğraf ekleyebilsin" — Olay/Kaza ve
+// Ramak Kala formlarındaki fotoğraf ekleme deseniyle aynı (fotoYukle +
+// fotoReferanslariCoz önizleme), en fazla 2 fotoğrafla sınırlı.
+let _btYtFotograflar = [];
+
+function _btYtFotoOnizlemeCiz() {
+  const kutu = document.getElementById('btYtFotoOnizleme');
+  kutu.innerHTML = _btYtFotograflar.map((f, i) => `
+    <div style="display:inline-flex; flex-direction:column; align-items:center; gap:4px;">
+      <img data-foto-ref="${_btKacir(f.url)}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+      <button type="button" data-yt-foto-kaldir="${i}" class="tablo-buton sil">Kaldır</button>
+    </div>
+  `).join('') + (_btYtFotograflar.length >= 2 ? '<div style="font-size:12px; color:var(--metin-soluk);">En fazla 2 fotoğraf eklenebilir.</div>' : '');
+  kutu.querySelectorAll('[data-yt-foto-kaldir]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _btYtFotograflar.splice(Number(btn.getAttribute('data-yt-foto-kaldir')), 1);
+      _btYtFotoOnizlemeCiz();
+    });
+  });
+  fotoReferanslariCoz(kutu);
+}
+
 function _btYeniTalepModalAc() {
   document.getElementById('btYtBirim').innerHTML = _btBirimleriGetir().map(b => `<option>${_btKacir(b)}</option>`).join('')
     || '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
@@ -199,6 +235,8 @@ function _btYeniTalepModalAc() {
   document.getElementById('btYtEkipmanKodu').value = '';
   document.getElementById('btYtIsTanimi').value = '';
   document.getElementById('btYtOncelik').value = 'Normal';
+  _btYtFotograflar = [];
+  _btYtFotoOnizlemeCiz();
   document.getElementById('btYeniTalepHata').textContent = '';
   document.getElementById('btYeniTalepKatman').classList.add('acik');
 }
@@ -215,7 +253,8 @@ function _btYeniTalepKaydet() {
       konum: document.getElementById('btYtKonum').value,
       ekipmanKodu: document.getElementById('btYtEkipmanKodu').value,
       isTanimi: document.getElementById('btYtIsTanimi').value,
-      oncelik: document.getElementById('btYtOncelik').value
+      oncelik: document.getElementById('btYtOncelik').value,
+      fotograflar: _btYtFotograflar.slice(0, 2)
     }
   };
   const sonuc = bakimTalepAc(veriler);
@@ -236,7 +275,9 @@ function _btDetayModalAc(id) {
   const kullanici = oturumdakiKullanici();
 
   document.getElementById('btDetayBaslik').textContent = kayit.talepNo + ' — ' + kayit.talep.birim;
-  document.getElementById('btDetayGovde').innerHTML = _btDetayIcerikOlustur(kayit, kullanici);
+  const govde = document.getElementById('btDetayGovde');
+  govde.innerHTML = _btDetayIcerikOlustur(kayit, kullanici);
+  fotoReferanslariCoz(govde);
   _btDetayOlaylariBagla(kayit, kullanici);
   document.getElementById('btDetayKatman').classList.add('acik');
 }
@@ -268,6 +309,12 @@ function _btDetayIcerikOlustur(k, kullanici) {
     ${_btAlan('Ekipman Kodu', k.talep.ekipmanKodu)}
     ${_btAlan('İş Tanımı', k.talep.isTanimi)}
     ${_btAlan('Öncelik', k.talep.oncelik)}
+    ${(k.talep.fotograflar || []).length ? `
+      <div style="font-size:11px; color:var(--metin-soluk); font-weight:600; margin-bottom:4px;">Fotoğraflar</div>
+      <div style="display:flex; gap:8px;">
+        ${k.talep.fotograflar.map(f => `<img data-foto-ref="${_btKacir(f.url)}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">`).join('')}
+      </div>
+    ` : ''}
   </div>`;
 
   // ---- Bakım Değerlendirme ----

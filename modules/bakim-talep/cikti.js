@@ -69,7 +69,8 @@ async function bakimTalepWordOlustur(id) {
           satir('Konum / Ekipman / Hat', t.talep.konum),
           satir('Ekipman Kodu', t.talep.ekipmanKodu),
           satir('İş Tanımı / Arıza Açıklaması', t.talep.isTanimi),
-          satir('Öncelik', t.talep.oncelik)
+          satir('Öncelik', t.talep.oncelik),
+          satir('Fotoğraf', (t.talep.fotograflar || []).length ? (t.talep.fotograflar.length + ' adet (uygulamadan görüntülenebilir)') : 'Yok')
         ]),
 
         baslik('2. Bakım Değerlendirme'),
