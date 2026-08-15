@@ -76,6 +76,10 @@ function bakimTalepSayfasiniBaslat() {
   document.getElementById('btYeniTalepIptalBtn').addEventListener('click', _btYeniTalepModalKapat);
   document.getElementById('btYeniTalepKaydetBtn').addEventListener('click', _btYeniTalepKaydet);
   document.getElementById('btDetayKapatBtn').addEventListener('click', _btDetayModalKapat);
+  document.getElementById('btDetayRaporWordBtn').addEventListener('click', async () => {
+    try { await bakimTalepWordOlustur(_btAcikKayitId); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
+  });
+  document.getElementById('btFormAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('bakim-talep', 'Bakım Onarım'));
 
   document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
   document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);
