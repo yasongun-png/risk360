@@ -150,31 +150,31 @@ async function izinFormunuPdfOlustur(izinId) {
         #izPdfKok .fa-kutu td{ padding:1.5px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         #izPdfKok .fa-kutu td:first-child{ font-weight:700; background:#f1f5f9; width:48%; }
 
-        #izPdfKok .iz-ustbilgi{ display:flex; align-items:stretch; box-shadow: inset 0 0 0 2px #0b2c52; margin-bottom:4mm; }
-        #izPdfKok .iz-ustbilgi > div{ padding:3mm; display:flex; align-items:center; justify-content:center; box-shadow: inset -2px 0 0 0 #0b2c52; }
-        #izPdfKok .iz-ustbilgi > div:last-child{ box-shadow:none; }
+        #izPdfKok .iz-ustbilgi{ display:flex; align-items:stretch; border:2px solid #111827; margin-bottom:4mm; }
+        #izPdfKok .iz-ustbilgi > div{ padding:3mm; display:flex; align-items:center; justify-content:center; border-right:2px solid #111827; }
+        #izPdfKok .iz-ustbilgi > div:last-child{ border-right:none; }
         #izPdfKok .iz-logo{ flex:0 0 28mm; width:28mm; text-align:center; color:#94a3b8; font-size:8pt; font-weight:700; }
         #izPdfKok .iz-logo img{ max-width:24mm; max-height:16mm; }
-        #izPdfKok .iz-baslik{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:12.5pt; font-weight:700; color:#0b2c52; line-height:1.3; }
+        #izPdfKok .iz-baslik{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:12.5pt; font-weight:700; color:#111827; line-height:1.3; }
         #izPdfKok .iz-baslik small{ display:block; font-size:8pt; font-weight:400; color:#374151; margin-top:1.5mm; }
         #izPdfKok .iz-fa{ flex:0 0 42mm; width:42mm; padding:2mm !important; align-items:stretch !important; }
 
-        #izPdfKok .iz-bolum{ margin-bottom:4mm; box-shadow: inset 0 0 0 1px #94a3b8; page-break-inside:avoid; break-inside:avoid; }
-        #izPdfKok .iz-bolum h2{ margin:0; background:#0b2c52; color:#fff; font-size:9.5pt; padding:2mm 3mm; text-transform:uppercase; }
+        #izPdfKok .iz-bolum{ margin-bottom:4mm; border:1px solid #111827; page-break-inside:avoid; break-inside:avoid; }
+        #izPdfKok .iz-bolum h2{ margin:0; background:#fff; color:#111827; font-size:9.5pt; padding:2mm 3mm; text-transform:uppercase; border-bottom:1px solid #111827; }
         #izPdfKok .iz-bolum > table{ width:100%; border-collapse:collapse; }
         #izPdfKok .iz-bolum > table tr{ page-break-inside:avoid; break-inside:avoid; }
         #izPdfKok .iz-bolum > table td{ border:1px solid #cbd5e1; padding:2.3mm 3mm; vertical-align:top; font-size:9pt; }
         #izPdfKok .iz-etiket{ font-weight:700; width:18%; background:#f8fafc; }
 
         #izPdfKok table.iz-tablo{ width:100%; border-collapse:collapse; }
-        #izPdfKok table.iz-tablo th{ background:#0b2c52; color:#fff; font-size:8pt; padding:3px 5px; border:1px solid #0b2c52; text-transform:uppercase; }
+        #izPdfKok table.iz-tablo th{ background:#e5e7eb; color:#111827; font-size:8pt; padding:3px 5px; border:1px solid #94a3b8; text-transform:uppercase; }
         #izPdfKok table.iz-tablo td{ font-size:8.8pt; padding:3px 5px; border:1px solid #cbd5e1; }
         #izPdfKok table.iz-tablo tr{ page-break-inside:avoid; break-inside:avoid; }
 
         #izPdfKok table.iz-imza{ width:100%; border-collapse:collapse; margin-top:6mm; page-break-inside:avoid; break-inside:avoid; }
         #izPdfKok table.iz-imza tr{ page-break-inside:avoid; break-inside:avoid; }
-        #izPdfKok table.iz-imza td{ box-shadow: inset 0 0 0 1px #cbd5e1; padding:4mm; width:33.33%; height:24mm; vertical-align:top; font-size:9pt; text-align:center; }
-        #izPdfKok .imza-baslik{ font-weight:700; color:#0b2c52; margin-bottom:2mm; text-transform:uppercase; }
+        #izPdfKok table.iz-imza td{ border:1px solid #cbd5e1; padding:4mm; width:33.33%; height:24mm; vertical-align:top; font-size:9pt; text-align:center; }
+        #izPdfKok .imza-baslik{ font-weight:700; color:#111827; margin-bottom:2mm; text-transform:uppercase; }
 
         #izPdfKok .iz-altbilgi{ text-align:center; font-size:7.5pt; color:#64748b; margin-top:5mm; }
       </style>
