@@ -94,6 +94,10 @@ function ekipmanEnvanterKaydiOlustur(kod, ad, konum) {
     tip: '',
     konum: (konum || '').trim(),
     fotograf: '',
+    // Saha Dijital Haritası köprüsü — kullanıcı isteği: "ekipman konumu
+    // haritadan seçilebilsin, nokta olarak işaretlenebilsin" (bkz.
+    // modules/harita/ui.js HARITA_DIS_KAYNAKLAR.bakimEkipman).
+    haritaTesisId: '', haritaX: 0, haritaY: 0,
     ilkGorulmeTarihi: new Date().toISOString(),
     sonKullanimTarihi: new Date().toISOString(),
     talepSayisi: 1

@@ -67,3 +67,19 @@ function ekipmanEnvanterKaydiGuncelleRepo(id, veriler) {
   _ekipmanEnvanteriKaydetRepo(liste);
   return liste[index];
 }
+
+function ekipmanEnvanterKaydiIdIleGetirRepo(id) {
+  return ekipmanEnvanteriTumunuGetirRepo().find(e => e.id === id) || null;
+}
+
+// _genelGuncelle'nin aksine Firestore yazımının GERÇEKTEN bitmesini bekler
+// (bkz. modules/uygunsuzluk/repository.js uygunsuzlukGuncelleRepoVeBekle) —
+// Saha Dijital Haritası köprüsünde (modules/harita/ui.js) konum kaydedilip
+// sayfa değişmeden önce yazımın bittiğinden emin olunması için kullanılır.
+function ekipmanEnvanterKaydiGuncelleRepoVeBekle(id, veriler) {
+  const liste = ekipmanEnvanteriTumunuGetirRepo();
+  const index = liste.findIndex(e => e.id === id);
+  if (index === -1) return Promise.resolve(null);
+  liste[index] = Object.assign({}, liste[index], veriler);
+  return yazVeSonucuGetir(_ekipmanEnvanterAnahtari(), liste).then(() => liste[index]);
+}

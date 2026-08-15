@@ -555,6 +555,16 @@ function _btEkipmanDuzenleModalAc(id) {
   document.getElementById('btEkTip').value = kayit.tip || '';
   document.getElementById('btEkKonum').value = kayit.konum || '';
   document.getElementById('btEkipmanDuzenleHata').textContent = '';
+
+  // Kullanıcı isteği: "ekipman konumu haritadan seçilebilsin, nokta olarak
+  // işaretlenebilsin" — bkz. modules/harita/ui.js HARITA_DIS_KAYNAKLAR.bakimEkipman.
+  const haritaLink = document.getElementById('btEkHaritaLink');
+  const donusUrl = encodeURIComponent(location.pathname + '?ac=' + id + '&hedef=ekipman');
+  haritaLink.href = kayit.haritaTesisId
+    ? `../harita/index.html?odaklanKaynak=bakimEkipman&odaklanId=${id}`
+    : `../harita/index.html?konumKaynak=bakimEkipman&konumId=${id}&donus=${donusUrl}`;
+  haritaLink.textContent = kayit.haritaTesisId ? '🗺️ Haritada Gör' : '🗺️ Haritada Konum Ekle';
+
   _btEkFotoOnizlemeCiz();
   document.getElementById('btEkipmanDuzenleKatman').classList.add('acik');
 }

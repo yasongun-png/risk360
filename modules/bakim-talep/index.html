@@ -137,6 +137,7 @@
 
       <label for="btEkKonum">Konum</label>
       <input type="text" id="btEkKonum">
+      <a id="btEkHaritaLink" href="#" style="display:inline-block; margin:-8px 0 14px; font-size:12px; text-decoration:none;">🗺️ Haritada Konum Ekle</a>
 
       <label for="btEkFotoDosya">Fotoğraf</label>
       <input type="file" id="btEkFotoDosya" accept="image/*">
@@ -188,6 +189,17 @@
           document.getElementById('btYtOncelik').innerHTML = BAKIM_TALEP_ONCELIKLERI.map(o => `<option>${o}</option>`).join('');
           document.getElementById('btEkipmanListesi').innerHTML = ekipmanEnvanteriTumunuGetirRepo().map(e => `<option value="${e.kod}">`).join('');
           bakimTalepSayfasiniBaslat();
+
+          // Saha Dijital Haritası'ndan "Haritada Gör/Konum Ekle" ile dönüşte
+          // (bkz. modules/harita/ui.js HARITA_DIS_KAYNAKLAR.bakimEkipman.acUrl)
+          // ilgili ekipman kaydı otomatik açılır.
+          const _btUrlParams = new URLSearchParams(window.location.search);
+          if (_btUrlParams.get('hedef') === 'ekipman' && _btUrlParams.get('ac')) {
+            _btGorunumDegistir('envanter');
+            _btEkipmanDuzenleModalAc(_btUrlParams.get('ac'));
+          } else if (_btUrlParams.get('hedef') === 'envanter') {
+            _btGorunumDegistir('envanter');
+          }
         });
       }
     }
