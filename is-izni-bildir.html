@@ -510,10 +510,16 @@
           <input type="checkbox" value="${_iiKacir(k.ad)}">
           <span class="ikon">${k.ikon}</span><span>${_iiKacir(k.ad)}</span>
         </label>`).join('');
+      // Kutucuk display:none olduğu için etiketin HERHANGİ bir yerine
+      // tıklamak tarayıcı tarafından zaten kutucuğa native olarak
+      // yönlendirilir (label/input eşleşmesi). Burada AYRICA manuel
+      // checked=!checked yapmak (eski kod) her tıklamada ÇİFT
+      // tetiklenip birbirini götürüyordu — kutucuk hep işaretsiz kalıyor,
+      // "secili" sınıfı hiç eklenmiyordu. Tek doğru kaynak kutucuğun
+      // kendi 'change' olayı.
       kutu.querySelectorAll('.ii-kkd-chip').forEach(etiket => {
         const kutucuk = etiket.querySelector('input');
-        etiket.addEventListener('click', e => {
-          if (e.target !== kutucuk) kutucuk.checked = !kutucuk.checked;
+        kutucuk.addEventListener('change', () => {
           etiket.classList.toggle('secili', kutucuk.checked);
         });
       });
