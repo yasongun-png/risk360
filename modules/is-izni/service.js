@@ -28,7 +28,12 @@ function izinleriGetir(aramaMetni, filtreler) {
     );
   }
 
-  return liste.sort((a, b) => (b.baslangic || '').localeCompare(a.baslangic || ''));
+  // Başlangıç tarihine göre sıralama, yeni açılan bir izni listenin dibine
+  // atıyordu: "Yeni Talep"te başlangıç henüz girilmediği için boş kalıyor,
+  // boş değer sıralamada en sona düşüyordu. Kullanıcı isteği: "en son
+  // açılan her zaman en üstte olsun" — artık oluşturma tarihine göre
+  // sıralanıyor, bu alan her kayıtta (Taslak dahil) hep doludur.
+  return liste.sort((a, b) => (b.olusturmaTarihi || '').localeCompare(a.olusturmaTarihi || ''));
 }
 
 // Kullanıcı isteği: "barkotla yapılan girişlerle PC'den yapılan iş izni
