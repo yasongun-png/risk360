@@ -224,18 +224,6 @@ function talepleriCiz() {
 
 // ---- Yeni Talep ----
 
-// Talebi Açan Kişi, giriş yapan hesabın adı değil — Personel listesinden
-// seçilir (kullanıcı isteği: "talebi açan kişi personel listesinden
-// seçilsin", "eskiden belirlediğim kullanıcılar yok" — yani her çalışan
-// için ayrı bir giriş hesabı yok, sadece hangi personelin talep ettiği
-// seçilir).
-function _btAcanKisiSecimDoldur() {
-  const secim = document.getElementById('btYtAcanKisi');
-  const personeller = personelleriGetir('', false).slice().sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
-  secim.innerHTML = personeller.map(p => `<option>${_btKacir(p.adSoyad)}</option>`).join('')
-    || '<option value="">Önce Personel modülünden kayıt ekleyin</option>';
-}
-
 // Kullanıcı isteği: "talep eden kişi 2 fotoğraf ekleyebilsin" — Olay/Kaza ve
 // Ramak Kala formlarındaki fotoğraf ekleme deseniyle aynı (fotoYukle +
 // fotoReferanslariCoz önizleme), en fazla 2 fotoğrafla sınırlı.
@@ -277,7 +265,9 @@ function _btYeniTalepModalAc() {
     || '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
   const kullanici = oturumdakiKullanici();
   if (kullanici.rol === 'birim' && kullanici.birimAdi) document.getElementById('btYtBirim').value = kullanici.birimAdi;
-  _btAcanKisiSecimDoldur();
+  // Kullanıcı isteği: "talebi açan kişi hesabın sahibi olsun" — artık
+  // Personel listesinden seçilmiyor, oturum açan hesabın adı kullanılıyor.
+  document.getElementById('btYtAcanKisi').value = kullanici.adSoyad || '';
   _btEkipmanKoduListesiniDoldur();
   document.getElementById('btYtKonum').value = '';
   document.getElementById('btYtEkipmanKodu').value = '';
