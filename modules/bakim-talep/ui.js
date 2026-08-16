@@ -247,12 +247,27 @@ function _btYtFotoOnizlemeCiz() {
   fotoReferanslariCoz(kutu);
 }
 
+// Ekipman Kodu alanları (Yeni Talep + reddedilen talebi düzenle) için ortak
+// öneri listesi — kullanıcı isteği: "mevcut ekipman kodları ve isimleri
+// seçerken gösterilsin, kullanıcı yeni kod yazarsa yeni eklensin". <input
+// list="btEkipmanListesi"> serbest metni koruyor (envanterde olmayan bir
+// kod girilirse repository katmanı zaten otomatik yeni ekipman açıyor,
+// bkz. _ekipmanEnvanteriGuncelle), sadece var olanları seçerken göstermek
+// ve aynı ekipmanın farklı yazımlarla (KMP-01 / kmp01 gibi) mükerrer
+// envanter kaydına dönüşmesini önlemek için. Değer hep kod kalır, ad
+// sadece açıklama satırı olarak görünür.
+function _btEkipmanKoduListesiniDoldur() {
+  document.getElementById('btEkipmanListesi').innerHTML = ekipmanEnvanteriTumunuGetirRepo()
+    .map(e => `<option value="${_btKacir(e.kod)}">${_btKacir(e.ad) || ''}</option>`).join('');
+}
+
 function _btYeniTalepModalAc() {
   document.getElementById('btYtBirim').innerHTML = _btBirimleriGetir().map(b => `<option>${_btKacir(b)}</option>`).join('')
     || '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
   const kullanici = oturumdakiKullanici();
   if (kullanici.rol === 'birim' && kullanici.birimAdi) document.getElementById('btYtBirim').value = kullanici.birimAdi;
   _btAcanKisiSecimDoldur();
+  _btEkipmanKoduListesiniDoldur();
   document.getElementById('btYtKonum').value = '';
   document.getElementById('btYtEkipmanKodu').value = '';
   document.getElementById('btYtIsTanimi').value = '';
@@ -298,6 +313,7 @@ function _btDetayModalAc(id) {
   _btAcikKayitId = id;
   const kullanici = oturumdakiKullanici();
 
+  _btEkipmanKoduListesiniDoldur();
   document.getElementById('btDetayBaslik').textContent = kayit.talepNo + ' — ' + kayit.talep.birim;
   const govde = document.getElementById('btDetayGovde');
   govde.innerHTML = _btDetayIcerikOlustur(kayit, kullanici);
@@ -437,7 +453,7 @@ function _btDetayIcerikOlustur(k, kullanici) {
           <label for="btRdKonum">Konum / Ekipman / Hat</label>
           <input type="text" id="btRdKonum" value="${_btKacir(k.talep.konum)}">
           <label for="btRdEkipmanKodu">Ekipman Kodu</label>
-          <input type="text" id="btRdEkipmanKodu" value="${_btKacir(k.talep.ekipmanKodu)}">
+          <input type="text" id="btRdEkipmanKodu" list="btEkipmanListesi" value="${_btKacir(k.talep.ekipmanKodu)}">
           <label for="btRdIsTanimi">İş Tanımı / Arıza Açıklaması</label>
           <textarea id="btRdIsTanimi" rows="3">${_btKacir(k.talep.isTanimi)}</textarea>
           <button type="button" class="birincil" id="btRdTekrarGonderBtn">Düzenle ve Tekrar Gönder</button>

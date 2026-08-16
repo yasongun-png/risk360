@@ -207,7 +207,7 @@
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' bakım talepleri';
           document.getElementById('btYtOncelik').innerHTML = BAKIM_TALEP_ONCELIKLERI.map(o => `<option>${o}</option>`).join('');
-          document.getElementById('btEkipmanListesi').innerHTML = ekipmanEnvanteriTumunuGetirRepo().map(e => `<option value="${e.kod}">`).join('');
+          _btEkipmanKoduListesiniDoldur();
           bakimTalepSayfasiniBaslat();
 
           // Saha Dijital Haritası'ndan "Haritada Gör/Konum Ekle" ile dönüşte
