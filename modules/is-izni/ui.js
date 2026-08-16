@@ -370,6 +370,11 @@ function izinModalKapat() {
 // ===================== ONAY İMZA MODALI =====================
 // Barkoddaki "İmza At" ile aynı: Bakım/İSG onayı artık tek tıkla değil,
 // gerçek çizilmiş bir imzayla veriliyor (bkz. service.js izinOnayVer).
+// Onaylayan adı SALT OKUNUR — oturumdaki kullanıcıdan otomatik gelir,
+// serbest metinle değiştirilemez (kullanıcı isteği: "onaylayan
+// kullanıcının adı soyadı yazsın formda"). Aksi halde herhangi biri bu
+// alanı değiştirip onayı başka bir kişi adına atmış gibi gösterebilirdi
+// — aynı kaygıyla izinOnayVer zaten serbest metin prompt'unu kaldırmıştı.
 
 function _onayImzaModalAc(id, rol) {
   _izOnayBekleyenId = id;
