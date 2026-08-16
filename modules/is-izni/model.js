@@ -170,8 +170,8 @@ function izinSonrakiNoUret(mevcutListe) {
 // ilgili olmadığı, hangisinin kontrol edilmediği anlaşılmıyor" — eski
 // isaretli (evet/hayır) alanı yerine üç durumlu bir alan: bir madde ya
 // gerçekten yapılıp onaylandı, ya bu iş için ilgili/geçerli değil, ya da
-// henüz hiç kontrol edilmedi (varsayılan). "yapilmadi" ile "ilgiliDegil"i
-// eskiden ikisi de sadece boş kutucuk olarak görünüyor, ayırt edilemiyordu.
+// henüz hiç kontrol edilmedi. "yapilmadi" ile "ilgiliDegil"i eskiden ikisi
+// de sadece boş kutucuk olarak görünüyor, ayırt edilemiyordu.
 const IS_IZNI_KONTROL_DURUMLARI = ['yapilmadi', 'yapildi', 'ilgiliDegil'];
 const IS_IZNI_KONTROL_DURUM_ETIKETLERI = { yapilmadi: 'Kontrol Edilmedi', yapildi: 'Yapıldı / Uygun', ilgiliDegil: 'İlgili Değil' };
 
@@ -181,9 +181,12 @@ function izinKontrolDurumuCoz(m) {
   return m.durum || (m.isaretli ? 'yapildi' : 'yapilmadi');
 }
 
+// Kullanıcı isteği: "kontrol maddeleri yapıldı/uygun seçili gelsin" — yeni
+// bir form açıldığında liste varsayılan olarak "Yapıldı / Uygun" ile gelir,
+// ilgili olmayan veya gerçekten kontrol edilmemiş maddeler elle değiştirilir.
 function izinKontrolListesiUret(tur) {
   const maddeler = IS_IZNI_KONTROL_KUTUPHANESI[tur] || IS_IZNI_KONTROL_KUTUPHANESI['Genel İş İzni'];
-  return maddeler.map(metin => ({ metin, durum: 'yapilmadi', not: '' }));
+  return maddeler.map(metin => ({ metin, durum: 'yapildi', not: '' }));
 }
 
 function izinSuresiSaatHesapla(baslangic, bitis) {
