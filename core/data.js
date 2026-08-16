@@ -154,7 +154,8 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
 const _MODUL_ANAHTARI_DEPOLAMA_SONEKLERI = {
   personel: ['personel'],
   egitim: ['egitim_kayitlari'],
-  'bakim-talep': ['bakim_talepleri', 'bakim_ekipman_envanteri']
+  'bakim-talep': ['bakim_talepleri', 'bakim_ekipman_envanteri'],
+  'is-izni': ['is_izinleri']
 };
 
 function _depolamaSonekindenModulAdiCikar(sonek) {

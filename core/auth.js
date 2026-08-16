@@ -172,13 +172,16 @@ function kullaniciModuleErisebilirMi(kullanici) {
 }
 
 // Admin ve düzenleyici her modülde ekleyebilir; İK SADECE IK_IZINLI_MODULLER'de
-// (Personel/Eğitim) ekleyebilir; bakim/birim rolleri SADECE bakim-talep
-// modülünde ekleyebilir; diğer modüllerde sadece görüntülerler.
+// (Personel/Eğitim) ekleyebilir; bakim/birim rolleri bakim-talep VE is-izni
+// modüllerinde ekleyebilir — kullanıcı isteği: "formu tamamlayıp izin
+// verecek sorumlu bölüm (birim rolü)" barkod üzerinden İş İzni formunu
+// tamamlayıp imzalayabilmeli, bakım rolü de kendi onay imzasını atabilmeli;
+// diğer modüllerde sadece görüntülerler.
 function kullaniciEklemeYapabilirMi(kullanici, modulAnahtari) {
   if (!kullanici) return false;
   if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
   if (kullanici.rol === 'ik') return IK_IZINLI_MODULLER.includes(modulAnahtari);
-  if (BAKIM_TALEP_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'bakim-talep';
+  if (BAKIM_TALEP_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'bakim-talep' || modulAnahtari === 'is-izni';
   return false;
 }
 
