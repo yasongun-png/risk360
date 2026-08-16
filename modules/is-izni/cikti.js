@@ -17,7 +17,7 @@ function _izUstbilgiHtml(k, logoDataUrl) {
     <div class="iz-ustbilgi">
       <div class="iz-logo">${logoDataUrl ? `<img src="${logoDataUrl}">` : 'LOGO YOK'}</div>
       <div class="iz-baslik">İŞ İZNİ FORMU
-        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)} &nbsp; ${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</small>
+        <small>İzin No: ${_izKacir(k.izinNo)}</small>
       </div>
       <div class="iz-fa">${formAyarlariKutusuHtml('is-izni')}</div>
     </div>
@@ -201,6 +201,7 @@ async function izinFormunuPdfOlustur(izinId) {
       <h2>1. İş Bilgileri</h2>
       <table>
         <tr><td class="iz-etiket">İş Tanımı</td><td colspan="3">${_izKacir(k.isTanimi)}</td></tr>
+        <tr><td class="iz-etiket">İzin Türü</td><td>${_izKacir(k.izinTuru)}</td><td class="iz-etiket">Durum</td><td>${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</td></tr>
         <tr><td class="iz-etiket">Bölüm</td><td>${_izKacir(k.bolum)}</td><td class="iz-etiket">Lokasyon / Ekipman</td><td>${_izKacir(k.lokasyon)}</td></tr>
         <tr><td class="iz-etiket">Yüklenici / Firma</td><td>${_izKacir(k.yuklenici) || '-'}</td><td class="iz-etiket">Risk Seviyesi</td><td>${_izRozetHtml(k.riskSeviyesi, _IZ_RISK_RENK)}</td></tr>
         <tr><td class="iz-etiket">Talep Eden</td><td>${_izKacir(k.talepEden)}</td><td class="iz-etiket">Saha Sorumlusu</td><td>${_izKacir(k.sahaSorumlusu)}</td></tr>
