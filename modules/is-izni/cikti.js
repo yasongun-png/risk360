@@ -37,6 +37,18 @@ function _izRozetHtml(deger, renkTablosu) {
   return `<span style="display:inline-block; padding:2px 9px; border-radius:8px; font-size:8.5pt; font-weight:700; background:${bg}; color:${fg};">${_izKacir(deger)}</span>`;
 }
 
+// Kullanıcı isteği: "işaretli saatler arasında ise iş devam ediyor, saat
+// bittiyse iş bitti yazsın" — başlangıç/bitiş saatlerine göre, onay
+// akışından (durum) bağımsız, salt zamana dayalı basit bir bilgi.
+const _IZ_ZAMAN_DURUM_RENK = { 'Henüz Başlamadı': ['#fef3c7', '#b45309'], 'İş Devam Ediyor': ['#dbeafe', '#1d4ed8'], 'İş Bitti': ['#f1f5f9', '#475569'] };
+function _izZamanDurumu(baslangic, bitis) {
+  if (!baslangic || !bitis) return '';
+  const simdi = new Date().toISOString();
+  if (simdi < baslangic) return 'Henüz Başlamadı';
+  if (simdi <= bitis) return 'İş Devam Ediyor';
+  return 'İş Bitti';
+}
+
 function _izTarihSaatUzunGoruntu(iso) {
   if (!iso) return '-';
   const [tarih, saat] = iso.split('T');
@@ -220,6 +232,7 @@ async function izinFormunuPdfOlustur(izinId) {
         <tr><td class="iz-etiket">Yüklenici / Firma</td><td>${_izKacir(k.yuklenici) || '-'}</td><td class="iz-etiket">Risk Seviyesi</td><td>${_izRozetHtml(k.riskSeviyesi, _IZ_RISK_RENK)}</td></tr>
         <tr><td class="iz-etiket">Talep Eden</td><td>${_izKacir(k.talepEden)}</td><td class="iz-etiket">Saha Sorumlusu</td><td>${_izKacir(k.sahaSorumlusu)}</td></tr>
         <tr><td class="iz-etiket">Başlangıç</td><td>${_izTarihSaatUzunGoruntu(k.baslangic)}</td><td class="iz-etiket">Bitiş</td><td>${_izTarihSaatUzunGoruntu(k.bitis)}</td></tr>
+        ${_izZamanDurumu(k.baslangic, k.bitis) ? `<tr><td class="iz-etiket">Çalışma Durumu</td><td colspan="3">${_izRozetHtml(_izZamanDurumu(k.baslangic, k.bitis), _IZ_ZAMAN_DURUM_RENK)}</td></tr>` : ''}
         <tr><td class="iz-etiket">Çalışanlar</td><td colspan="3">${_izKacir((k.calisanlar || []).join(', ')) || '-'}</td></tr>
         <tr><td class="iz-etiket">Gerekli KKD</td><td colspan="3">${_izKacir((k.gerekliKkd || []).join(', ')) || '-'}</td></tr>
       </table>
