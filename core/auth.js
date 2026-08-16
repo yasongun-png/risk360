@@ -148,6 +148,17 @@ function girisGerekli() {
 const IK_IZINLI_MODULLER = ['personel', 'egitim'];
 const BAKIM_TALEP_YAZILABILEN_ROLLER = ['bakim', 'birim'];
 
+// 'bakim' rolündeki bir kullanıcının sınırlandığı bakım türleri (kullanıcı
+// isteği: "bakım türlerinde birden fazla seçebileyim") — yeni kayıtlar
+// bakimTurleri (dizi) kullanır; eski (tek seçimli) kayıtlardaki bakimTuru
+// alanı geriye dönük uyumluluk için burada tek elemanlı diziye çevrilir.
+// Her ikisi de boşsa "hepsini görür" anlamına gelir (bkz. çağıran taraf).
+function bakimTurleriCoz(kullanici) {
+  if (!kullanici) return [];
+  if (Array.isArray(kullanici.bakimTurleri) && kullanici.bakimTurleri.length) return kullanici.bakimTurleri;
+  return kullanici.bakimTuru ? [kullanici.bakimTuru] : [];
+}
+
 function kullaniciAdminMi(kullanici) {
   return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
 }
@@ -285,7 +296,7 @@ function ikKullanicilariGetir() {
   return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
-async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru) {
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -319,10 +330,11 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, b
   // modules/bakim-talep/service.js _btIsgOnaylayiciMi); bu bayrak SADECE
   // Düzenleyici rolüne, Bakım Onarım modülüne özel olarak bu yetkiyi ekler.
   if (temizRol === 'duzenleyici') yeniKullanici.isgOnayiVerebilir = !!isgOnayiVerebilir;
-  // Kullanıcı isteği: "elektrik ile mekanik ayrı olmalı" — 'bakim' rolü
-  // isteğe bağlı olarak tek bir bakım türüne sınırlanabilir (boşsa hepsini
-  // görür, geriye dönük uyumlu).
-  if (temizRol === 'bakim') yeniKullanici.bakimTuru = (bakimTuru || '').trim();
+  // Kullanıcı isteği: "elektrik ile mekanik ayrı olmalı", sonra "bakım
+  // türlerinde birden fazla seçebileyim" — 'bakim' rolü isteğe bağlı olarak
+  // birden fazla bakım türüne sınırlanabilir (boş dizi = hepsini görür,
+  // geriye dönük uyumlu).
+  if (temizRol === 'bakim') yeniKullanici.bakimTurleri = Array.isArray(bakimTurleri) ? bakimTurleri.filter(t => BAKIM_TALEP_BAKIM_TURLERI.includes(t)) : [];
   kullanicilar.push(yeniKullanici);
   yaz('isg_kullanicilar', kullanicilar);
   return { basarili: true, kullanici: yeniKullanici };
@@ -341,10 +353,10 @@ function _kisitliKullaniciBul(kullanicilar, id, admin) {
 // Kullanıcı isteği: "rolünü sonradan değiştirebilmek istiyorum" — rol artık
 // yeniden atanabilir (eskiden sadece oluşturmada seçilip sabit kalıyordu).
 // Rol değişince önceki role özel alanlar (birimAdi/isgOnayiVerebilir/
-// bakimTuru) temizlenip yeni role uygun alan yeniden yazılır — aksi halde
-// ör. 'birim' rolünden 'ik'ye geçen bir kullanıcıda eski birimAdi kalıntı
-// olarak kalırdı.
-function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru) {
+// bakimTurleri) temizlenip yeni role uygun alan yeniden yazılır — aksi
+// halde ör. 'birim' rolünden 'ik'ye geçen bir kullanıcıda eski birimAdi
+// kalıntı olarak kalırdı.
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -361,10 +373,11 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVe
   delete kayit.birimAdi;
   delete kayit.isgOnayiVerebilir;
   delete kayit.bakimTuru;
+  delete kayit.bakimTurleri;
   kayit.rol = temizRol;
   if (temizRol === 'birim') kayit.birimAdi = birimAdi.trim();
   if (temizRol === 'duzenleyici') kayit.isgOnayiVerebilir = !!isgOnayiVerebilir;
-  if (temizRol === 'bakim') kayit.bakimTuru = (bakimTuru || '').trim();
+  if (temizRol === 'bakim') kayit.bakimTurleri = Array.isArray(bakimTurleri) ? bakimTurleri.filter(t => BAKIM_TALEP_BAKIM_TURLERI.includes(t)) : [];
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
   kayit.adSoyad = temizAdSoyad;

@@ -173,11 +173,13 @@
       if (!b.hedefRol && !b.hedefBirim) return true;
       if (kullaniciAdminMi(kullanici)) return true;
       if (b.hedefBirim) return kullanici.rol === 'birim' && kullanici.birimAdi === b.hedefBirim;
-      // 'bakim' rolü bir bakimTuru'na sınırlanmışsa (bkz. modules/bakim-talep
-      // kkBakimTuru) sadece o türe hedeflenen (ya da hedefsiz genel) bildirimleri
-      // görür — kullanıcı isteği: "elektrik ile mekanik ayrı olmalı".
+      // 'bakim' rolü bir/birden fazla bakım türüne sınırlanmışsa (bkz.
+      // kullanicilar.html kkBakimTuruListesi) sadece o türlere hedeflenen
+      // (ya da hedefsiz genel) bildirimleri görür — kullanıcı isteği:
+      // "elektrik ile mekanik ayrı olmalı", "birden fazla seçebileyim".
       if (b.hedefRol === 'bakim') {
-        return kullanici.rol === 'bakim' && (!b.hedefBakimTuru || !kullanici.bakimTuru || kullanici.bakimTuru === b.hedefBakimTuru);
+        const kullaniciTurleri = bakimTurleriCoz(kullanici);
+        return kullanici.rol === 'bakim' && (!b.hedefBakimTuru || !kullaniciTurleri.length || kullaniciTurleri.includes(b.hedefBakimTuru));
       }
       if (b.hedefRol === 'isg') return kullanici.rol === 'duzenleyici' && !!kullanici.isgOnayiVerebilir;
       return false;

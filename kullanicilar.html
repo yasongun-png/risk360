@@ -111,10 +111,8 @@
       </div>
 
       <div id="kkBakimTuruAlani" style="display:none;">
-        <label for="kkBakimTuru">Bakım Türü</label>
-        <select id="kkBakimTuru">
-          <option value="">Tümü (tüm türleri görür)</option>
-        </select>
+        <label>Bakım Türleri <span style="font-weight:400; color:var(--metin-soluk);">(hiçbiri işaretlenmezse tümünü görür)</span></label>
+        <div id="kkBakimTuruListesi" style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0 10px;"></div>
       </div>
 
       <div id="kkIsgOnayiAlani" style="display:none;">
@@ -278,15 +276,19 @@
 
     // Kullanıcı isteği: "bakım tarafında elektrik ve otomasyon bakım da
     // var, elektrik ile mekanik ayrı olmalı" — 'bakim' rolündeki bir hesap
-    // isteğe bağlı olarak tek bir bakım türüne ("Tümü" bırakılırsa hepsine)
-    // sınırlanabilir (bkz. modules/bakim-talep/service.js bakimTalepleriGetir).
+    // isteğe bağlı olarak birden fazla bakım türüne (hiçbiri işaretlenmezse
+    // hepsine) sınırlanabilir (bkz. modules/bakim-talep/service.js
+    // bakimTalepleriGetir, core/auth.js bakimTurleriCoz).
     function _kkBakimTuruAlaniniGuncelle() {
       const goster = document.getElementById('kkRol').value === 'bakim';
       document.getElementById('kkBakimTuruAlani').style.display = goster ? '' : 'none';
       if (goster) {
-        const secim = document.getElementById('kkBakimTuru');
-        secim.innerHTML = '<option value="">Tümü (tüm türleri görür)</option>' +
-          BAKIM_TALEP_BAKIM_TURLERI.map(t => `<option value="${_kkKacir(t)}">${_kkKacir(t)}</option>`).join('');
+        const liste = document.getElementById('kkBakimTuruListesi');
+        liste.innerHTML = BAKIM_TALEP_BAKIM_TURLERI.map(t => `
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
+            <input type="checkbox" class="kkBakimTuruKutusu" value="${_kkKacir(t)}"> ${_kkKacir(t)}
+          </label>
+        `).join('');
       }
     }
 
@@ -336,7 +338,8 @@
         const rolEtiket = KK_ROL_ETIKETLERI[k.rol] || '🗂️ İK';
         const birimSatiri = k.rol === 'birim' ? `<span class="firmalar">🏭 Birim: ${_kkKacir(k.birimAdi || '—')}</span>` : '';
         const isgOnaySatiri = k.rol === 'duzenleyici' && k.isgOnayiVerebilir ? '<span class="firmalar">✅ İSG onayı verebilir (Bakım Onarım)</span>' : '';
-        const bakimTuruSatiri = k.rol === 'bakim' ? `<span class="firmalar">🔧 Bakım Türü: ${_kkKacir(k.bakimTuru || 'Tümü')}</span>` : '';
+        const kBakimTurleri = bakimTurleriCoz(k);
+        const bakimTuruSatiri = k.rol === 'bakim' ? `<span class="firmalar">🔧 Bakım Türü: ${_kkKacir(kBakimTurleri.length ? kBakimTurleri.join(', ') : 'Tümü')}</span>` : '';
         const satir = document.createElement('div');
         satir.className = 'kk-satir';
         satir.innerHTML = `
@@ -401,7 +404,10 @@
       _kkIsgOnayiAlaniniGuncelle();
       document.getElementById('kkIsgOnayi').checked = !!(kayit && kayit.isgOnayiVerebilir);
       _kkBakimTuruAlaniniGuncelle();
-      document.getElementById('kkBakimTuru').value = (kayit && kayit.bakimTuru) || '';
+      const kayitBakimTurleri = kayit ? bakimTurleriCoz(kayit) : [];
+      document.querySelectorAll('.kkBakimTuruKutusu').forEach(kutu => {
+        kutu.checked = kayitBakimTurleri.includes(kutu.value);
+      });
 
       // Düzenlemede kullanıcı adı ve şifre burada değiştirilmez (kullanıcı
       // adı sabit kalır, şifre için ayrı "Şifre Değiştir" butonu kullanılır
@@ -444,10 +450,10 @@
       const rol = document.getElementById('kkRol').value;
       const birimAdi = document.getElementById('kkBirim').value;
       const isgOnayiVerebilir = document.getElementById('kkIsgOnayi').checked;
-      const bakimTuru = document.getElementById('kkBakimTuru').value;
+      const bakimTurleri = Array.from(document.querySelectorAll('.kkBakimTuruKutusu:checked')).map(cb => cb.value);
       const sonuc = _duzenlenenId
-        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru)
-        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru);
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri)
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri);
 
       if (!sonuc.basarili) {
         hataEl.textContent = sonuc.hata;

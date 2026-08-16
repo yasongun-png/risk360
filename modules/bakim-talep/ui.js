@@ -201,13 +201,24 @@ function talepleriCiz() {
         ${uyariGoster ? '<span class="yanip-sonen-uyari">⚠️ Yanıt Bekliyor</span>' : ''}
       </td>
       <td>${_btTarihSaat(t.olusturmaTarihi)}</td>
-      <td><button type="button" class="${aksiyonBekliyor ? 'birincil' : 'ikincil'}" style="width:auto; padding:6px 12px; font-size:12px;" data-detay="${t.id}">${aksiyonBekliyor ? 'Düzenle' : 'Görüntüle'}</button></td>
+      <td>
+        <button type="button" class="${aksiyonBekliyor ? 'birincil' : 'ikincil'}" style="width:auto; padding:6px 12px; font-size:12px;" data-detay="${t.id}">${aksiyonBekliyor ? 'Düzenle' : 'Görüntüle'}</button>
+        ${kullaniciAdminMi(kullanici) ? `<button type="button" class="tablo-buton sil" style="width:auto; padding:6px 12px; font-size:12px;" data-talep-sil="${t.id}">Sil</button>` : ''}
+      </td>
     `;
     govde.appendChild(satir);
   });
 
   govde.querySelectorAll('[data-detay]').forEach(btn => {
     btn.addEventListener('click', () => _btDetayModalAc(btn.getAttribute('data-detay')));
+  });
+  govde.querySelectorAll('[data-talep-sil]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Bu bakım talebini kalıcı olarak silmek istediğinize emin misiniz?')) return;
+      const sonuc = bakimTalepSil(btn.getAttribute('data-talep-sil'));
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      talepleriCiz();
+    });
   });
 }
 

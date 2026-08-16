@@ -158,12 +158,15 @@ function bakimTalepleriGetir(aramaMetni, filtreler) {
   if (kullanici.rol === 'birim') {
     liste = liste.filter(t => t.talep.birim === kullanici.birimAdi);
   }
-  // 'bakim' rolü, hesabına bir bakimTuru atanmışsa (bkz. kullanicilar.html
-  // kkBakimTuru) SADECE o türdeki talepleri görür — kullanıcı isteği:
-  // "elektrik ile mekanik ayrı olmalı". Atanmamışsa (eski hesaplar / admin
-  // tarafından "Tümü" bırakılmış) geriye dönük uyumlu şekilde hepsini görür.
-  if (kullanici.rol === 'bakim' && kullanici.bakimTuru) {
-    liste = liste.filter(t => t.talep.bakimTuru === kullanici.bakimTuru);
+  // 'bakim' rolü, hesabına bir/birden fazla bakım türü atanmışsa (bkz.
+  // kullanicilar.html kkBakimTuruListesi) SADECE o türlerdeki talepleri
+  // görür — kullanıcı isteği: "elektrik ile mekanik ayrı olmalı", sonra
+  // "bakım türlerinde birden fazla seçebileyim". Hiç atanmamışsa (eski
+  // hesaplar / admin tarafından hiçbiri işaretlenmemiş) geriye dönük
+  // uyumlu şekilde hepsini görür.
+  const _btKullaniciBakimTurleri = bakimTurleriCoz(kullanici);
+  if (kullanici.rol === 'bakim' && _btKullaniciBakimTurleri.length) {
+    liste = liste.filter(t => _btKullaniciBakimTurleri.includes(t.talep.bakimTuru));
   }
 
   if (f.durum) liste = liste.filter(t => t.durum === f.durum);
