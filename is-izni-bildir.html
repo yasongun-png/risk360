@@ -54,6 +54,13 @@
   .ii-rol-btn { flex: 1; border: 1.5px solid var(--kenarlik, #e5e7eb); background: #fff; border-radius: 10px; padding: 12px 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--metin-ana, #111827); }
   .ii-rol-btn.aktif { border-color: var(--celik-mavi-koyu, #1d4ed8); background: #eef2ff; color: var(--celik-mavi-koyu, #1d4ed8); }
   .ii-rol-btn .imzali { display: block; font-size: 10.5px; color: var(--basari, #16a34a); font-weight: 600; margin-top: 3px; }
+
+  .ii-imza-ozeti { display: flex; justify-content: space-between; gap: 6px; background: var(--arka-plan, #f3f4f6); border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; font-size: 11px; }
+  .ii-imza-ozeti .oge { flex: 1; text-align: center; }
+  .ii-imza-ozeti .etiket { display: block; color: var(--metin-soluk, #6b7280); font-weight: 600; }
+  .ii-imza-ozeti .durum { display: block; margin-top: 2px; font-weight: 700; }
+  .ii-imza-ozeti .durum.atildi { color: var(--basari, #16a34a); }
+  .ii-imza-ozeti .durum.bekliyor { color: var(--metin-soluk, #9ca3af); }
 </style>
 </head>
 <body>
@@ -218,6 +225,13 @@
           </div>
 
           <form id="siForm" class="gizli">
+            <!-- Kullanıcı isteği: "imzaların hepsi iş izni verende çıksın,
+                 ama izin veren bölümde hepsi çıkabilir" — sorumlu bölümün
+                 (tam yetkili barkod) tek ekrandan üç imzanın durumunu da
+                 görebilmesi için, sadece Bakım/İSG değil Talep Eden imzası
+                 da burada gösterilir (salt bilgi amaçlı, buradan atılamaz). -->
+            <div class="ii-imza-ozeti" id="siImzaOzeti"></div>
+
             <div class="ii-rol-secici">
               <button type="button" class="ii-rol-btn aktif" id="siRolBakimBtn" data-rol="bakim">🔧 Bakım Personeli<span class="imzali" id="siBakimImzaliEtiket"></span></button>
               <button type="button" class="ii-rol-btn" id="siRolIsgBtn" data-rol="isg">🛡️ İSG<span class="imzali" id="siIsgImzaliEtiket"></span></button>
@@ -473,6 +487,7 @@
             isTanimi: '📱 ' + isTanimi,
             bolum, lokasyon: bolum,
             talepEden,
+            bakimTalepId,
             izinNo: izinSonrakiNoUret(mevcutListe)
           });
           yeniIzin.fotograflar = _iiFotoUrl ? [{ url: _iiFotoUrl }] : [];
@@ -689,6 +704,13 @@
       const i = document.getElementById('siIsgImzaliEtiket');
       b.textContent = (_siIzin && _siIzin.imzalar && _siIzin.imzalar.bakim) ? '✓ imzalandı' : '';
       i.textContent = (_siIzin && _siIzin.imzalar && _siIzin.imzalar.isg) ? '✓ imzalandı' : '';
+
+      const ozetKutu = document.getElementById('siImzaOzeti');
+      const roller = [['talepEden', 'Talep Eden'], ['bakim', 'Bakım'], ['isg', 'İSG']];
+      ozetKutu.innerHTML = roller.map(([rol, etiket]) => {
+        const atildi = !!(_siIzin && _siIzin.imzalar && _siIzin.imzalar[rol]);
+        return `<div class="oge"><span class="etiket">${etiket}</span><span class="durum ${atildi ? 'atildi' : 'bekliyor'}">${atildi ? '✓ İmzalandı' : 'Bekliyor'}</span></div>`;
+      }).join('');
     }
 
     function _siIzinSecildi(izinId) {

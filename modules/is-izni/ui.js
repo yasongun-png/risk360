@@ -425,10 +425,22 @@ async function _onayImzaOnayla() {
 // ===================== YENİ TALEP MODALI =====================
 // Barkod formundaki Mod 1 ("Yeni Talep") ile aynı — sadece asgari alanlar.
 
+// Bakım Onarım modülü burada yüklenmez (aynı isimli özel yardımcılar
+// çakışabilir) — tenant anahtarı doğrudan okunur, aynı is-izni-bildir.html
+// _iiBakimTalepleriniDoldur deseniyle.
+function _itBakimTalepleriniDoldur() {
+  const secim = document.getElementById('itBakimTalebi');
+  const kapali = ['Kapatıldı', 'Reddedildi'];
+  const liste = oku(tenantAnahtar('bakim_talepleri'), []).filter(t => !kapali.includes(t.durum));
+  secim.innerHTML = '<option value="">— Bağlantısız / Genel İş İzni —</option>' +
+    liste.map(t => `<option value="${t.id}">${_izKacir(t.talepNo)} — ${_izKacir(t.talep.isTanimi)}</option>`).join('');
+}
+
 function izinTalepModalAc() {
   document.getElementById('itIsTanimi').value = '';
   document.getElementById('itBolum').value = '';
   document.getElementById('itTalepEden').value = '';
+  _itBakimTalepleriniDoldur();
   document.querySelectorAll('#izinTalepForm .alan-hatasi').forEach(el => el.textContent = '');
   document.getElementById('izinTalepModalKatman').classList.add('acik');
 }
@@ -437,7 +449,24 @@ function izinTalepModalKapat() {
   document.getElementById('izinTalepModalKatman').classList.remove('acik');
 }
 
-function izinTalepFormGonderildi(e) {
+// İş izni ilgili bir bakım talebine bağlıysa, o talebin kendi kaydına da
+// bu iznin referansı işlenir (bkz. is-izni-bildir.html aynı isimli mantık
+// _iiBakimTalebineIsle) — bakım-talep modülü burada yüklenmediği için
+// doğrudan oku/yaz ile.
+async function _itBakimTalebineIsle(bakimTalepId, izin) {
+  if (!bakimTalepId) return;
+  const anahtar = tenantAnahtar('bakim_talepleri');
+  const liste = oku(anahtar, []);
+  const index = liste.findIndex(t => t.id === bakimTalepId);
+  if (index === -1) return;
+  const mevcutIzinler = Array.isArray(liste[index].isIzinleri) ? liste[index].isIzinleri : [];
+  liste[index] = Object.assign({}, liste[index], {
+    isIzinleri: mevcutIzinler.concat([{ id: izin.id, izinNo: izin.izinNo, olusturmaTarihi: izin.olusturmaTarihi }])
+  });
+  await yazVeSonucuGetir(anahtar, liste);
+}
+
+async function izinTalepFormGonderildi(e) {
   e.preventDefault();
   document.querySelectorAll('#izinTalepForm .alan-hatasi').forEach(el => el.textContent = '');
 
@@ -445,6 +474,7 @@ function izinTalepFormGonderildi(e) {
     izinTuru: document.getElementById('itTuru').value,
     isTanimi: document.getElementById('itIsTanimi').value,
     bolum: document.getElementById('itBolum').value,
+    bakimTalepId: document.getElementById('itBakimTalebi').value,
     talepEden: document.getElementById('itTalepEden').value
   };
 
@@ -456,6 +486,7 @@ function izinTalepFormGonderildi(e) {
     });
     return;
   }
+  await _itBakimTalebineIsle(veriler.bakimTalepId, sonuc.kayit);
 
   izinTalepModalKapat();
   izinleriCiz(document.getElementById('izinAramaKutusu').value);

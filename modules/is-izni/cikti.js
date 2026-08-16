@@ -177,6 +177,16 @@ async function izinFormunuPdfOlustur(izinId) {
   const gazVarMi = k.izinTuru === 'Kapalı Alan' || Object.values(k.gazOlcumu).some(Boolean);
   const izolasyonVarMi = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(k.izinTuru) || k.izolasyon.enerjiIzolasyonu || k.izolasyon.korlemeListesi;
 
+  // Kullanıcı isteği: "eğer iş izni daha önce açılmış bir bakım talebinin
+  // devamı ise formları birlikte insin ve o bakım talebinin numarası iş
+  // izninde referans olarak yer alsın" — bakım-talep modülünün kendi
+  // servis dosyaları burada YÜKLENMEZ (aynı isimli özel yardımcılar
+  // çakışabilir, bkz. merkezi-aksiyon/service.js dosya başı notu); tenant
+  // anahtarı doğrudan, tek satırda okunur.
+  const bakimTalebi = k.bakimTalepId
+    ? oku(tenantAnahtar('bakim_talepleri'), []).find(t => t.id === k.bakimTalepId) || null
+    : null;
+
   const firma = aktifFirmaGetir();
   const formAyarlari = formAyarlariGetir('is-izni');
 
@@ -228,6 +238,7 @@ async function izinFormunuPdfOlustur(izinId) {
       <table>
         <tr><td class="iz-etiket">İş Tanımı</td><td colspan="3">${_izKacir(k.isTanimi)}</td></tr>
         <tr><td class="iz-etiket">İzin Türü</td><td>${_izKacir(k.izinTuru)}</td><td class="iz-etiket">Durum</td><td>${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</td></tr>
+        ${bakimTalebi ? `<tr><td class="iz-etiket">İlgili Bakım Talebi</td><td colspan="3">${_izKacir(bakimTalebi.talepNo)} — ${_izKacir(bakimTalebi.talep.isTanimi)}</td></tr>` : ''}
         <tr><td class="iz-etiket">Bölüm</td><td>${_izKacir(k.bolum)}</td><td class="iz-etiket">Lokasyon / Ekipman</td><td>${_izKacir(k.lokasyon)}</td></tr>
         <tr><td class="iz-etiket">Yüklenici / Firma</td><td>${_izKacir(k.yuklenici) || '-'}</td><td class="iz-etiket">Risk Seviyesi</td><td>${_izRozetHtml(k.riskSeviyesi, _IZ_RISK_RENK)}</td></tr>
         <tr><td class="iz-etiket">Talep Eden</td><td>${_izKacir(k.talepEden)}</td><td class="iz-etiket">Saha Sorumlusu</td><td>${_izKacir(k.sahaSorumlusu)}</td></tr>
@@ -237,6 +248,17 @@ async function izinFormunuPdfOlustur(izinId) {
         <tr><td class="iz-etiket">Gerekli KKD</td><td colspan="3">${_izKacir((k.gerekliKkd || []).join(', ')) || '-'}</td></tr>
       </table>
     </div>
+
+    ${bakimTalebi ? `
+    <div class="iz-bolum">
+      <h2>İlgili Bakım Talebi Özeti (${_izKacir(bakimTalebi.talepNo)})</h2>
+      <table>
+        <tr><td class="iz-etiket">İş Tanımı</td><td colspan="3">${_izKacir(bakimTalebi.talep.isTanimi)}</td></tr>
+        <tr><td class="iz-etiket">Birim</td><td>${_izKacir(bakimTalebi.talep.birim)}</td><td class="iz-etiket">Ekipman Kodu</td><td>${_izKacir(bakimTalebi.talep.ekipmanKodu) || '-'}</td></tr>
+        <tr><td class="iz-etiket">Öncelik</td><td>${_izKacir(bakimTalebi.talep.oncelik)}</td><td class="iz-etiket">Bakım Türü</td><td>${_izKacir(bakimTalebi.talep.bakimTuru)}</td></tr>
+        <tr><td class="iz-etiket">Bakım Talebi Durumu</td><td colspan="3">${_izKacir(bakimTalebi.durum)}</td></tr>
+      </table>
+    </div>` : ''}
 
     ${fotoDataUrlleri.length ? `
     <div class="iz-bolum">

@@ -270,9 +270,18 @@ function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
   return !kullanicilar.some(k => k.kullaniciAdi.toLowerCase() === temiz && k.id !== haricId);
 }
 
+// Adminler ortak yönetir (bkz. core/tenant.js ortakAdminIdleri; kullanicilar.html
+// renderAdminListe de tüm admin hesaplarını hiç scope'suz listeliyor) — kısıtlı
+// kullanıcı listesi de bu yüzden SADECE "beni oluşturan admin" değil, her admin
+// için aynı tam liste olmalı. Eski olusturanId filtresi, veri gerçekte var
+// olsa da başka bir admin hesabıyla girilince listeyi boş gösteriyordu
+// (kullanıcı isteği: "kullanıcılar listesi yine görünmüyor").
 function ikKullanicilariGetir() {
   const admin = oturumdakiKullanici();
   if (!admin) return [];
+  if (kullaniciAdminMi(admin)) {
+    return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol));
+  }
   return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
