@@ -7,10 +7,21 @@ function _izKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
-function _izLogoHtml() {
-  const firma = aktifFirmaGetir();
-  const logo = firma ? firmaLogoGetir(firma.id) : '';
-  return logo ? `<img src="${logo}">` : 'LOGO YOK';
+// Üst başlık bandı — 1. sayfada normal HTML akışında, 2+. sayfalarda ise
+// _izTekrarBasligiGorseliOlustur ile görsele çevrilip her sayfaya
+// basılıyor (bkz. izinFormunuPdfOlustur). Kullanıcı isteği: "ikinci
+// sayfaya koyduğun başlık bandı ilk sayfadaki ile aynı olsun" — tek bir
+// kaynak fonksiyondan üretildikleri için ikisi de birebir aynı görünür.
+function _izUstbilgiHtml(k, logoDataUrl) {
+  return `
+    <div class="iz-ustbilgi">
+      <div class="iz-logo">${logoDataUrl ? `<img src="${logoDataUrl}">` : 'LOGO YOK'}</div>
+      <div class="iz-baslik">İŞ İZNİ FORMU
+        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)} &nbsp; ${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</small>
+      </div>
+      <div class="iz-fa">${formAyarlariKutusuHtml('is-izni')}</div>
+    </div>
+  `;
 }
 
 // Diğer modüllerdeki (uygunsuzluk vb.) küçük renkli rozetlerle aynı palet —
@@ -70,36 +81,43 @@ async function _izGorselCoz(referansVeyaUrl) {
 
 // 2+. sayfaların üst bandı (logo + başlık + kalite no) — jsPDF'in standart
 // fontları Türkçe "ı/İ/ş/Ş" karakterlerini desteklemediği için pdf.text()
-// yerine 1. sayfadaki gerçek HTML başlıkla aynı şekilde tarayıcıda render
-// edilip görsele çevrilir (bkz. izinFormunuPdfOlustur). Ekrana hiç
-// görünmeden (position:fixed; solda ekran dışında) yakalanır.
-async function _izTekrarBasligiGorseliOlustur(k, formAyarlari, logoDataUrl, genislikMm, yukseklikMm) {
+// yerine 1. sayfadaki GERÇEK HTML başlıkla (_izUstbilgiHtml) BİREBİR AYNI
+// işaretleme/CSS kullanılarak tarayıcıda render edilip görsele çevrilir —
+// kullanıcı isteği: "ikinci sayfaya koyduğun başlık bandı ilk sayfadaki ile
+// aynı olsun". Ekrana hiç görünmeden (position:fixed; solda ekran dışında)
+// yakalanır. Sabit bir yükseklik verilmez — içerik doğal yüksekliğinde
+// render edilir, PDF'e basılırken en-boy oranı korunarak ölçeklenir (bkz.
+// çağıran taraf) — böylece gerçek başlıkla birebir aynı orantıda çıkar.
+async function _izTekrarBasligiGorseliOlustur(k, logoDataUrl, genislikMm) {
   const gecici = document.createElement('div');
   gecici.style.position = 'fixed';
   gecici.style.left = '-9999px';
   gecici.style.top = '0';
   gecici.style.width = genislikMm + 'mm';
-  gecici.style.height = yukseklikMm + 'mm';
   gecici.innerHTML = `
-    <div style="width:100%; height:100%; box-sizing:border-box; display:flex; align-items:stretch; border:1.2px solid #111827; font-family:Arial, Helvetica, sans-serif; background:#fff;">
-      <div style="flex:0 0 22mm; display:flex; align-items:center; justify-content:center; border-right:1.2px solid #111827; padding:1.5mm; box-sizing:border-box;">
-        ${logoDataUrl ? `<img src="${logoDataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;">` : ''}
-      </div>
-      <div style="flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1.5mm; box-sizing:border-box;">
-        <div style="font-size:11pt; font-weight:700; color:#111827;">İŞ İZNİ FORMU</div>
-        <div style="font-size:8pt; color:#374151; margin-top:1mm;">İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)}</div>
-      </div>
-      <div style="flex:0 0 40mm; border-left:1.2px solid #111827; padding:1.5mm 2mm; font-size:6.8pt; color:#111827; display:flex; flex-direction:column; justify-content:center; gap:0.8mm; box-sizing:border-box;">
-        <div>Doküman No: ${_izKacir(formAyarlari.dokumanNo) || '-'}</div>
-        <div>Sürüm No: ${_izKacir(formAyarlari.surumNo) || '-'}</div>
-        <div>Sürüm Tarihi: ${_izKacir(formAyarlari.surumTarihi) || '-'}</div>
-      </div>
+    <div id="izTekrarBaslikKok">
+      <style>
+        #izTekrarBaslikKok{ font-family: Arial, Helvetica, sans-serif; background:#fff; }
+        #izTekrarBaslikKok *{ box-sizing:border-box; }
+        #izTekrarBaslikKok .fa-kutu{ border-collapse:collapse; font-size:6.8pt; width:100%; table-layout:fixed; }
+        #izTekrarBaslikKok .fa-kutu td{ padding:1.5px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #izTekrarBaslikKok .fa-kutu td:first-child{ font-weight:700; background:#f1f5f9; width:48%; }
+        #izTekrarBaslikKok .iz-ustbilgi{ display:flex; align-items:stretch; border:2px solid #111827; }
+        #izTekrarBaslikKok .iz-ustbilgi > div{ padding:3mm; display:flex; align-items:center; justify-content:center; border-right:2px solid #111827; }
+        #izTekrarBaslikKok .iz-ustbilgi > div:last-child{ border-right:none; }
+        #izTekrarBaslikKok .iz-logo{ flex:0 0 28mm; width:28mm; text-align:center; color:#94a3b8; font-size:8pt; font-weight:700; }
+        #izTekrarBaslikKok .iz-logo img{ max-width:24mm; max-height:16mm; }
+        #izTekrarBaslikKok .iz-baslik{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:12.5pt; font-weight:700; color:#111827; line-height:1.3; }
+        #izTekrarBaslikKok .iz-baslik small{ display:block; font-size:8pt; font-weight:400; color:#374151; margin-top:1.5mm; }
+        #izTekrarBaslikKok .iz-fa{ flex:0 0 42mm; width:42mm; padding:2mm !important; align-items:stretch !important; }
+      </style>
+      ${_izUstbilgiHtml(k, logoDataUrl)}
     </div>
   `;
   document.body.appendChild(gecici);
   try {
     const canvas = await html2canvas(gecici, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
-    return canvas.toDataURL('image/jpeg', 0.95);
+    return { url: canvas.toDataURL('image/jpeg', 0.95), yukseklikMm: (canvas.height / canvas.width) * genislikMm };
   } finally {
     document.body.removeChild(gecici);
   }
@@ -177,13 +195,7 @@ async function izinFormunuPdfOlustur(izinId) {
   `).join('') : '<tr><td colspan="5" style="text-align:center; color:#64748b;">Onaycı kaydı yok.</td></tr>';
 
   const govde = `
-    <div class="iz-ustbilgi">
-      <div class="iz-logo">${_izLogoHtml()}</div>
-      <div class="iz-baslik">İŞ İZNİ FORMU
-        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)} &nbsp; ${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</small>
-      </div>
-      <div class="iz-fa">${formAyarlariKutusuHtml('is-izni')}</div>
-    </div>
+    ${_izUstbilgiHtml(k, logoDataUrl)}
 
     <div class="iz-bolum">
       <h2>1. İş Bilgileri</h2>
@@ -323,10 +335,11 @@ async function izinFormunuPdfOlustur(izinId) {
   // /cikti.js'te de kullanılıyor). Toplam sayfa sayısı içerik uzunluğuna göre
   // değiştiğinden "Sayfa X / Y" damgası da PDF üretildikten SONRA jsPDF
   // nesnesi üzerinden basılıyor.
-  const ustBoslukMm = 24;
+  const yanMarjMm = 8;
+  const ustBoslukMm = 26;
   const worker = html2pdf()
     .set({
-      margin: [ustBoslukMm, 8, 12, 8],
+      margin: [ustBoslukMm, yanMarjMm, 12, yanMarjMm],
       filename: `Is_Izni_${k.izinNo}.pdf`,
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
@@ -344,16 +357,20 @@ async function izinFormunuPdfOlustur(izinId) {
   // jsPDF'in standart yazı tipleri (helvetica) Türkçe "ı/İ/ş/Ş" karakterlerini
   // desteklemiyor — pdf.text() ile basılırsa bu harfler bozuk çıkıyor (ör.
   // "İŞ İZNİ" → "0^ 0ZN0"). Bunun yerine 1. sayfadaki gerçek HTML başlığıyla
-  // aynı şekilde tarayıcıda render edilip görsele çevriliyor, sonra her
-  // sayfaya resim olarak basılıyor — metin her zaman doğru görünür.
-  const tekrarBasligiUrl = toplamSayfa > 1
-    ? await _izTekrarBasligiGorseliOlustur(k, formAyarlari, logoDataUrl, genislik - 8, ustBoslukMm - 6)
-    : '';
+  // BİREBİR AYNI (aynı _izUstbilgiHtml kaynağından) tarayıcıda render edilip
+  // görsele çevriliyor, sonra her sayfaya resim olarak basılıyor. İçerik
+  // genişliği (194mm), 1. sayfadaki gerçek başlığın sığdığı alanla (sayfa
+  // genişliği eksi sol/sağ marj) aynı — böylece iki başlık birebir aynı
+  // orantıda çıkar.
+  const icerikGenislikMm = genislik - 2 * yanMarjMm;
+  const tekrarBasligi = toplamSayfa > 1
+    ? await _izTekrarBasligiGorseliOlustur(k, logoDataUrl, icerikGenislikMm)
+    : null;
 
   for (let i = 1; i <= toplamSayfa; i++) {
     pdf.setPage(i);
-    if (i > 1 && tekrarBasligiUrl) {
-      pdf.addImage(tekrarBasligiUrl, 'JPEG', 4, 3, genislik - 8, ustBoslukMm - 6);
+    if (i > 1 && tekrarBasligi) {
+      pdf.addImage(tekrarBasligi.url, 'JPEG', yanMarjMm, 2, icerikGenislikMm, tekrarBasligi.yukseklikMm);
     }
     pdf.setFont(undefined, 'normal');
     pdf.setFontSize(8);
