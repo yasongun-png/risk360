@@ -219,9 +219,12 @@ function izinleriCiz(aramaMetni) {
     islemler.push(`<button class="tablo-buton" data-form="${k.id}">Form</button>`);
     if (k.durumGoruntu === 'Onay Bekliyor') {
       // Barkoddaki dijital imza rolleriyle (Bakım Personeli/İSG) aynı —
-      // kullanıcı isteği: barkod ve PC girişleri tutarlı olmalı.
-      islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="bakim">🔧 Bakım Onayı</button>`);
-      islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="isg">🛡️ İSG Onayı</button>`);
+      // kullanıcı isteği: barkod ve PC girişleri tutarlı olmalı. Genel onayı
+      // sadece İSG ilerletir (bkz. service.js izinOnayVer) — bakım onayı
+      // kendi imzasını bırakır ama İSG onayı butonunu düşürmez. Zaten
+      // imzalanmış rolün butonu tekrar tekrar tıklanmasın diye gizlenir.
+      if (!(k.imzalar && k.imzalar.bakim)) islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="bakim">🔧 Bakım Onayı</button>`);
+      if (!(k.imzalar && k.imzalar.isg)) islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="isg">🛡️ İSG Onayı</button>`);
       islemler.push(`<button class="tablo-buton sil" data-red="${k.id}">Reddet</button>`);
     } else if (['Onaylandı', 'Gerekmiyor'].includes(k.onayDurumu) && k.durum !== 'Aktif' && !IS_IZNI_TERMINAL_DURUMLAR.includes(k.durum)) {
       islemler.push(`<button class="tablo-buton" data-aktif="${k.id}">Aktifleştir</button>`);

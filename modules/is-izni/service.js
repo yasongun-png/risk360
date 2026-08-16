@@ -103,25 +103,24 @@ function izinSil(id) {
   return { basarili: true };
 }
 
-function _izinOnayDurumunuYenidenHesapla(onaycilar) {
-  if (!onaycilar.length) return 'Gerekmiyor';
-  if (onaycilar.some(a => a.durum === 'Reddedildi')) return 'Reddedildi';
-  if (onaycilar.every(a => a.durum === 'Onaylandı')) return 'Onaylandı';
-  return 'Bekliyor';
-}
-
 // Onay akışı, sırasız bir onaycı listesi üzerinden ilerler (eski uygulamadaki
 // gibi) — her "Onay Ver" tıklaması listeye yeni, zaten karar verilmiş bir
-// onaycı satırı ekler. Tümü Onaylandı ise genel onayDurumu Onaylandı'ya,
-// herhangi biri Reddedildi ise Reddedildi'ye döner.
-// Onaylayan kimliği artık serbest metinle (prompt) değil, oturum açmış
-// kullanıcıdan alınır — aksi halde herhangi biri devtools/konsoldan veya
-// prompt kutusuna istediği bir adı yazarak onayı sahteleyebilirdi.
+// onaycı satırı ekler. Onaylayan kimliği artık serbest metinle (prompt)
+// değil, oturum açmış kullanıcıdan alınır — aksi halde herhangi biri
+// devtools/konsoldan veya prompt kutusuna istediği bir adı yazarak onayı
+// sahteleyebilirdi.
 // PC'den onay artık barkoddaki "İmza At" ile birebir aynı: gerçek çizilmiş
 // bir imza gerektiriyor (bkz. ui.js _onayImzaOnayla) — kullanıcı isteği:
 // "imzanın kendisi görünmüyor, formda sadece onaylandı yazıyor". imzaAdi/
 // imzaUrl verilmezse (ör. eski/başka bir çağrı yolu) eskisi gibi sadece
 // oturumdaki kullanıcının adıyla, görselsiz onaylanır.
+// Genel onay durumunu SADECE İSG onayı ilerletir — barkoddaki "İmza At"
+// ile aynı kural (bkz. is-izni-bildir.html Mod 3: yalnızca _siAktifRol
+// === 'isg' durum/onayDurumu'nu değiştirir). Bakım onayı da AYNI şekilde
+// kayda geçer ve kendi imza kutusunu doldurur ama izni tek başına
+// "Onaylandı" yapmaz — aksi halde tek bir bakım onayı, İSG onayını
+// beklemeden izni ilerletip "İSG Onayı" butonunu listeden düşürüyordu
+// (kullanıcı isteği: "bakım onayını verdim, İSG onayı işlemlerden gitti").
 function izinOnayVer(id, rol, imzaAdi, imzaUrl) {
   const izin = izinIdIleGetirRepo(id);
   if (!izin) return { basarili: false, hata: 'Kayıt bulunamadı.' };
@@ -130,11 +129,11 @@ function izinOnayVer(id, rol, imzaAdi, imzaUrl) {
   const ad = (imzaAdi || '').trim() || kullanici.adSoyad;
   const yeniOnayci = Object.assign(onayciOlustur({ ad, rol, durum: 'Onaylandı' }), { onayTarihi: new Date().toISOString() });
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);
-  const onayDurumu = _izinOnayDurumunuYenidenHesapla(onaycilar);
-  const durum = onayDurumu === 'Onaylandı' ? 'Onaylandı' : izin.durum;
   const imzalar = ['bakim', 'isg'].includes(rol)
     ? Object.assign({}, izin.imzalar, { [rol]: izinImzaVeriUret(ad, imzaUrl || '') })
     : izin.imzalar;
+  const onayDurumu = rol === 'isg' ? 'Onaylandı' : izin.onayDurumu;
+  const durum = rol === 'isg' ? 'Onaylandı' : izin.durum;
   return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu, durum, imzalar }) };
 }
 
