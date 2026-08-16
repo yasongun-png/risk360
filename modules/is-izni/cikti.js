@@ -68,6 +68,14 @@ async function _izGorselCoz(referansVeyaUrl) {
   return _izGorseliDataUrlaCevir(cozulen);
 }
 
+// jsPDF'in addImage'i (2+. sayfa üst bandındaki logo için, bkz. aşağıda)
+// veri türünü otomatik algılamıyor — data: URL'in MIME türünden çıkarılır.
+function _izVeriUrlBicimi(dataUrl) {
+  const eslesme = /^data:image\/(\w+);/i.exec(dataUrl || '');
+  const tur = eslesme ? eslesme[1].toUpperCase() : 'PNG';
+  return tur === 'JPG' ? 'JPEG' : tur;
+}
+
 // Barkod formundan ("Formu Tamamla" / "İmza At") atılan dijital imzalar
 // (izin.imzalar.talepEden/bakim/isg) daha önce bu PDF'te hiç gösterilmiyordu
 // — imza kutuları hep boştu, sadece kağıda elle imza atmak içindi. Artık
@@ -110,11 +118,15 @@ async function izinFormunuPdfOlustur(izinId) {
   const gazVarMi = k.izinTuru === 'Kapalı Alan' || Object.values(k.gazOlcumu).some(Boolean);
   const izolasyonVarMi = IS_IZNI_LOTO_GEREKTIREN_TURLER.includes(k.izinTuru) || k.izolasyon.enerjiIzolasyonu || k.izolasyon.korlemeListesi;
 
-  const [talepEdenImzaUrl, bakimImzaUrl, isgImzaUrl, fotoDataUrlleri] = await Promise.all([
+  const firma = aktifFirmaGetir();
+  const formAyarlari = formAyarlariGetir('is-izni');
+
+  const [talepEdenImzaUrl, bakimImzaUrl, isgImzaUrl, fotoDataUrlleri, logoDataUrl] = await Promise.all([
     _izGorselCoz(k.imzalar && k.imzalar.talepEden && k.imzalar.talepEden.imzaUrl),
     _izGorselCoz(k.imzalar && k.imzalar.bakim && k.imzalar.bakim.imzaUrl),
     _izGorselCoz(k.imzalar && k.imzalar.isg && k.imzalar.isg.imzaUrl),
-    Promise.all((k.fotograflar || []).map(f => _izGorselCoz(f.url)))
+    Promise.all((k.fotograflar || []).map(f => _izGorselCoz(f.url))),
+    _izGorselCoz(firma ? firmaLogoGetir(firma.id) : '')
   ]);
 
   const kontrolSatirlari = k.kontrolMaddeleri.map(m => `
@@ -274,9 +286,18 @@ async function izinFormunuPdfOlustur(izinId) {
   mount.innerHTML = html;
   mount.style.display = 'block';
 
-  await html2pdf()
+  // Üst kenar boşluğu, 2. ve sonraki sayfalarda çizilecek tekrar eden üst
+  // bant (logo + başlık + kalite no tablosu) için ayrılıyor — kullanıcı
+  // isteği: "ikinci sayfada da 1. sayfa üstündeki başlık logo kalite no
+  // tablosu olsun". 1. sayfada bu boşluk zaten gerçek .iz-ustbilgi HTML
+  // bandını içeriyor, sadece biraz aşağı kayar (aynı desen modules/olay-kaza
+  // /cikti.js'te de kullanılıyor). Toplam sayfa sayısı içerik uzunluğuna göre
+  // değiştiğinden "Sayfa X / Y" damgası da PDF üretildikten SONRA jsPDF
+  // nesnesi üzerinden basılıyor.
+  const ustBoslukMm = 24;
+  const worker = html2pdf()
     .set({
-      margin: [8, 8, 8, 8],
+      margin: [ustBoslukMm, 8, 12, 8],
       filename: `Is_Izni_${k.izinNo}.pdf`,
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
@@ -284,7 +305,42 @@ async function izinFormunuPdfOlustur(izinId) {
       pagebreak: { mode: ['css', 'legacy'] }
     })
     .from(mount)
-    .save();
+    .toPdf();
+
+  const pdf = await worker.get('pdf');
+  const toplamSayfa = pdf.internal.getNumberOfPages();
+  const genislik = pdf.internal.pageSize.getWidth();
+  const yukseklik = pdf.internal.pageSize.getHeight();
+  for (let i = 1; i <= toplamSayfa; i++) {
+    pdf.setPage(i);
+    if (i > 1) {
+      pdf.setDrawColor(17, 24, 39);
+      pdf.setLineWidth(0.4);
+      pdf.rect(4, 3, genislik - 8, ustBoslukMm - 6);
+      if (logoDataUrl) {
+        try { pdf.addImage(logoDataUrl, _izVeriUrlBicimi(logoDataUrl), 6, 5, 18, ustBoslukMm - 10); } catch (e) { console.warn('Logo PDF başlığına eklenemedi:', e); }
+      }
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(10.5);
+      pdf.setTextColor(17, 24, 39);
+      pdf.text('İŞ İZNİ / ÇALIŞMA İZİN BELGESİ', genislik / 2, 10, { align: 'center' });
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(55, 65, 81);
+      pdf.text(`İzin No: ${k.izinNo} — ${k.izinTuru}`, genislik / 2, 15, { align: 'center' });
+      pdf.setFontSize(6.3);
+      pdf.setTextColor(17, 24, 39);
+      const saX = genislik - 46;
+      pdf.text('Doküman No: ' + (formAyarlari.dokumanNo || '-'), saX, 8);
+      pdf.text('Sürüm No: ' + (formAyarlari.surumNo || '-'), saX, 12);
+      pdf.text('Sürüm Tarihi: ' + (formAyarlari.surumTarihi || '-'), saX, 16);
+    }
+    pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Sayfa ${i} / ${toplamSayfa}`, genislik / 2, yukseklik - 5, { align: 'center' });
+  }
+  await worker.save();
 
   mount.innerHTML = '';
   mount.style.display = 'none';
