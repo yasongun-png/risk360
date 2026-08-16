@@ -150,8 +150,8 @@ async function izinFormunuPdfOlustur(izinId) {
   const govde = `
     <div class="iz-ustbilgi">
       <div class="iz-logo">${_izLogoHtml()}</div>
-      <div class="iz-baslik">İŞ İZNİ / ÇALIŞMA İZİN BELGESİ
-        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)} &nbsp; ${_izRozetHtml(k.riskSeviyesi, _IZ_RISK_RENK)} ${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</small>
+      <div class="iz-baslik">İŞ İZNİ FORMU
+        <small>İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)} &nbsp; ${_izRozetHtml(k.durum, _IZ_DURUM_RENK)}</small>
       </div>
       <div class="iz-fa">${formAyarlariKutusuHtml('is-izni')}</div>
     </div>
@@ -323,7 +323,7 @@ async function izinFormunuPdfOlustur(izinId) {
       pdf.setFont(undefined, 'bold');
       pdf.setFontSize(10.5);
       pdf.setTextColor(17, 24, 39);
-      pdf.text('İŞ İZNİ / ÇALIŞMA İZİN BELGESİ', genislik / 2, 10, { align: 'center' });
+      pdf.text('İŞ İZNİ FORMU', genislik / 2, 10, { align: 'center' });
       pdf.setFont(undefined, 'normal');
       pdf.setFontSize(8);
       pdf.setTextColor(55, 65, 81);
