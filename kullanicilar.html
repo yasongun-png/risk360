@@ -397,16 +397,17 @@
       document.getElementById('kkKullaniciAdi').disabled = !!kayit;
       document.getElementById('kkSifre').value = '';
       document.getElementById('kkRol').value = kayit ? kayit.rol : 'ik';
-      document.getElementById('kkRol').disabled = !!kayit;
       _kkBirimAlaniniGuncelle();
       _kkIsgOnayiAlaniniGuncelle();
       document.getElementById('kkIsgOnayi').checked = !!(kayit && kayit.isgOnayiVerebilir);
       _kkBakimTuruAlaniniGuncelle();
       document.getElementById('kkBakimTuru').value = (kayit && kayit.bakimTuru) || '';
 
-      // Düzenlemede kullanıcı adı, rol ve şifre burada değiştirilmez (kullanıcı
-      // adı ve rol sabit kalır, şifre için ayrı "Şifre Değiştir" butonu
-      // kullanılır) — yanlışlıkla boş şifreyle üzerine yazmayı önler.
+      // Düzenlemede kullanıcı adı ve şifre burada değiştirilmez (kullanıcı
+      // adı sabit kalır, şifre için ayrı "Şifre Değiştir" butonu kullanılır
+      // — yanlışlıkla boş şifreyle üzerine yazmayı önler). Rol ise artık
+      // değiştirilebilir (kullanıcı isteği: "rolünü sonradan
+      // değiştirebilmek istiyorum").
       const sifreAlaniGoster = !kayit;
       document.getElementById('kkSifreEtiket').style.display = sifreAlaniGoster ? '' : 'none';
       document.getElementById('kkSifre').style.display = sifreAlaniGoster ? '' : 'none';
@@ -445,7 +446,7 @@
       const isgOnayiVerebilir = document.getElementById('kkIsgOnayi').checked;
       const bakimTuru = document.getElementById('kkBakimTuru').value;
       const sonuc = _duzenlenenId
-        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, birimAdi, isgOnayiVerebilir, bakimTuru)
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru)
         : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru);
 
       if (!sonuc.basarili) {

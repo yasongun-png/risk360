@@ -328,7 +328,23 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, b
   return { basarili: true, kullanici: yeniKullanici };
 }
 
-function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi, isgOnayiVerebilir, bakimTuru) {
+// Adminler ortak yönetir (bkz. ikKullanicilariGetir) — bir admin, başka bir
+// admin'in eklediği kısıtlı kullanıcıyı da düzenleyebilmeli/silebilmeli,
+// sadece kendi eklediklerini değil.
+function _kisitliKullaniciBul(kullanicilar, id, admin) {
+  if (kullaniciAdminMi(admin)) {
+    return kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol));
+  }
+  return kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+}
+
+// Kullanıcı isteği: "rolünü sonradan değiştirebilmek istiyorum" — rol artık
+// yeniden atanabilir (eskiden sadece oluşturmada seçilip sabit kalıyordu).
+// Rol değişince önceki role özel alanlar (birimAdi/isgOnayiVerebilir/
+// bakimTuru) temizlenip yeni role uygun alan yeniden yazılır — aksi halde
+// ör. 'birim' rolünden 'ik'ye geçen bir kullanıcıda eski birimAdi kalıntı
+// olarak kalırdı.
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTuru) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -336,14 +352,19 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, birimAdi, isgOnayiVerebil
   if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
 
   const kullanicilar = oku('isg_kullanicilar', []);
-  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+  const kayit = _kisitliKullaniciBul(kullanicilar, id, admin);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
-  if (kayit.rol === 'birim') {
-    if (!(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
-    kayit.birimAdi = birimAdi.trim();
-  }
-  if (kayit.rol === 'duzenleyici') kayit.isgOnayiVerebilir = !!isgOnayiVerebilir;
-  if (kayit.rol === 'bakim') kayit.bakimTuru = (bakimTuru || '').trim();
+
+  const temizRol = KISITLI_ROLLER.includes(rol) ? rol : kayit.rol;
+  if (temizRol === 'birim' && !(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
+
+  delete kayit.birimAdi;
+  delete kayit.isgOnayiVerebilir;
+  delete kayit.bakimTuru;
+  kayit.rol = temizRol;
+  if (temizRol === 'birim') kayit.birimAdi = birimAdi.trim();
+  if (temizRol === 'duzenleyici') kayit.isgOnayiVerebilir = !!isgOnayiVerebilir;
+  if (temizRol === 'bakim') kayit.bakimTuru = (bakimTuru || '').trim();
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
   kayit.adSoyad = temizAdSoyad;
@@ -358,7 +379,7 @@ async function ikKullaniciSifreDegistir(id, yeniSifre) {
   if (!yeniSifre || yeniSifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
 
   const kullanicilar = oku('isg_kullanicilar', []);
-  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+  const kayit = _kisitliKullaniciBul(kullanicilar, id, admin);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
 
   kayit.sifre = await _sifreOzetiCikar(yeniSifre);
@@ -371,7 +392,7 @@ function ikKullaniciSil(id) {
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
   const kullanicilar = oku('isg_kullanicilar', []);
-  const kayit = kullanicilar.find(k => k.id === id && KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
+  const kayit = _kisitliKullaniciBul(kullanicilar, id, admin);
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
 
   yaz('isg_kullanicilar', kullanicilar.filter(k => k.id !== id));
