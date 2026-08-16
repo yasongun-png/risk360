@@ -184,7 +184,7 @@ async function izinFormunuPdfOlustur(izinId) {
     </div>` : ''}
 
     ${izolasyonVarMi ? `
-    <div class="iz-bolum">
+    <div class="iz-bolum iz-yeni-sayfa">
       <h2>4. İzolasyon / LOTO</h2>
       <table>
         <tr><td class="iz-etiket">LOTO Gerekli</td><td>${k.izolasyon.lotoGerekli ? 'Evet' : 'Hayır'}</td><td class="iz-etiket">LOTO Uygulandı</td><td>${k.izolasyon.lotoUygulandi ? 'Evet' : 'Hayır'}</td></tr>
@@ -242,6 +242,7 @@ async function izinFormunuPdfOlustur(izinId) {
         #izPdfKok .iz-fa{ flex:0 0 42mm; width:42mm; padding:2mm !important; align-items:stretch !important; }
 
         #izPdfKok .iz-bolum{ margin-bottom:4mm; border:1px solid #111827; page-break-inside:avoid; break-inside:avoid; }
+        #izPdfKok .iz-yeni-sayfa{ page-break-before:always; break-before:page; }
         #izPdfKok .iz-bolum h2{ margin:0; background:#fff; color:#111827; font-size:9.5pt; padding:2mm 3mm; text-transform:uppercase; border-bottom:1px solid #111827; }
         #izPdfKok .iz-bolum > table{ width:100%; border-collapse:collapse; }
         #izPdfKok .iz-bolum > table tr{ page-break-inside:avoid; break-inside:avoid; }
