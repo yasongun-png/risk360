@@ -235,12 +235,35 @@
         posterMetin: 'Tehlike gördüğünüzde veya bir ramak kala olay yaşadığınızda barkodu telefonunuzla okutarak bildirim yapabilirsiniz.',
         posterAlt: 'İsim zorunlu değildir.'
       },
+      // Kullanıcı isteği: "bakımcı sadece talep edebilsin, formu tamamlamayı
+      // işin yapılacağı bölümün sorumlusu yapsın, İSG imzası da ayrı sadece
+      // İSG'ye çıksın, ama izin veren bölümde hepsi çıkabilir" — İş İzni'nin
+      // 3 ayrı barkodu var: sorumlu bölüme asılan (tüm adımlar), bakımcıya
+      // verilen (sadece Yeni Talep'e kilitli) ve İSG'ye verilen (sadece İSG
+      // imzasına kilitli) — is-izni-bildir.html bunu ?rol= parametresiyle
+      // uygular (bkz. o dosyadaki _iiKisitliRol).
       'is-izni': {
         sayfa: 'is-izni-bildir.html',
-        baslik: 'İş İzni Oluşturma Barkodu',
-        posterBaslik: 'İŞ İZNİ OLUŞTUR',
-        posterMetin: 'İşe başlamadan önce iş izni oluşturmak için barkodu telefonunuzla okutun.',
-        posterAlt: 'Doldurmadan önce iş tanımı, bölüm ve süre bilgilerini hazır bulundurun.'
+        baslik: 'İş İzni Barkodu — Sorumlu Bölüm (Tüm Adımlar)',
+        posterBaslik: 'İŞ İZNİ',
+        posterMetin: 'İş izni talebi oluşturmak, formu tamamlamak veya imzalamak için barkodu telefonunuzla okutun.',
+        posterAlt: 'Bu barkod işin yapılacağı bölümün sorumlusu içindir, tüm adımları içerir.'
+      },
+      'is-izni-bakim': {
+        sayfa: 'is-izni-bildir.html',
+        rolParam: 'bakim',
+        baslik: 'İş İzni Barkodu — Bakımcı (Sadece Talep)',
+        posterBaslik: 'İŞ İZNİ TALEP ET',
+        posterMetin: 'İşe başlamadan önce iş izni talebi açmak için barkodu telefonunuzla okutun.',
+        posterAlt: 'Bu barkod sadece yeni talep açar; formu tamamlamak işin yapılacağı bölüme aittir.'
+      },
+      'is-izni-isg': {
+        sayfa: 'is-izni-bildir.html',
+        rolParam: 'isg',
+        baslik: 'İş İzni Barkodu — İSG İmzası',
+        posterBaslik: 'İSG ONAY İMZASI',
+        posterMetin: 'Tamamlanmış bir iş iznini İSG olarak onaylamak/imzalamak için barkodu telefonunuzla okutun.',
+        posterAlt: 'Bu barkod sadece İSG imzası içindir.'
       },
       'ekipman-bakim': {
         sayfa: 'ekipman-bakim-bildir.html',
@@ -253,7 +276,10 @@
 
     function _barkodUrlUret(slug, tip) {
       const taban = window.location.href.replace(/firma-yonetim\.html.*$/, '');
-      return taban + BARKOD_TIPLERI[tip].sayfa + '?firma=' + encodeURIComponent(slug);
+      const tanim = BARKOD_TIPLERI[tip];
+      let url = taban + tanim.sayfa + '?firma=' + encodeURIComponent(slug);
+      if (tanim.rolParam) url += '&rol=' + encodeURIComponent(tanim.rolParam);
+      return url;
     }
 
     function renderListe() {
@@ -282,7 +308,9 @@
             <button class="mini-buton" data-bolumler="${firma.id}">Bölümler</button>
             <button class="mini-buton" data-isverenler="${firma.id}">İşverenler</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ramak-kala">📷 Ramak Kala Barkodu</button>
-            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu (Sorumlu Bölüm)</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-bakim">🧾 İş İzni Barkodu (Bakımcı)</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-isg">🧾 İş İzni Barkodu (İSG)</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
             <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>

@@ -265,6 +265,13 @@
     const _iiParams = new URLSearchParams(window.location.search);
     const _iiSlug = (_iiParams.get('firma') || '').trim();
     const _iiBakimTalepIdOnSecim = (_iiParams.get('talepId') || '').trim();
+    // Kullanıcı isteği: "bakımcı sadece talep edebilsin, formu tamamlamayı
+    // işin yapılacağı bölümün sorumlusu yapsın; İSG imzası da ayrı, sadece
+    // İSG'ye çıksın; ama izin veren bölümde hepsi çıkabilir" — bakımcıya ve
+    // İSG'ye verilecek QR/link'ler ?rol=bakim / ?rol=isg ile tek bir moda
+    // kilitlenir (mod seçici gizlenir); rol parametresi olmayan (sorumlu
+    // bölüme verilen) link'te değişiklik yok, üç mod da görünür kalır.
+    const _iiKisitliRol = (_iiParams.get('rol') || '').trim();
     let _iiFirma = null;
     let _iiFotoUrl = '';
     let _iiAktifMod = 'yeni';
@@ -775,6 +782,18 @@
       _iiModYeniBaslat();
       _iiModTamamlaBaslat();
       _iiModImzaBaslat();
+
+      if (_iiKisitliRol === 'bakim') {
+        document.querySelector('.ii-mod-secici').classList.add('gizli');
+        _iiModDegistir('yeni');
+      } else if (_iiKisitliRol === 'isg') {
+        document.querySelector('.ii-mod-secici').classList.add('gizli');
+        document.getElementById('siRolBakimBtn').classList.add('gizli');
+        document.getElementById('siRolBakimBtn').classList.remove('aktif');
+        document.getElementById('siRolIsgBtn').classList.add('aktif');
+        _siAktifRol = 'isg';
+        _iiModDegistir('imza');
+      }
     }
 
     document.getElementById('iiYenidenBaslaBtn').addEventListener('click', () => {
