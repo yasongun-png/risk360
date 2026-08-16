@@ -128,7 +128,7 @@ function izinSayfasiniBaslat() {
   document.getElementById('izImzaTemizleBtn').addEventListener('click', () => { if (_izImzaPad) _izImzaPad.temizle(); });
 
   document.getElementById('izTuru').addEventListener('change', () => {
-    const isaretliVarMi = _izKontrolMaddeleri.some(m => m.isaretli || m.not);
+    const isaretliVarMi = _izKontrolMaddeleri.some(m => izinKontrolDurumuCoz(m) !== 'yapilmadi' || m.not);
     if (isaretliVarMi && !confirm('İzin türünü değiştirmek kontrol listesindeki işaretleri sıfırlayacak. Devam edilsin mi?')) return;
     _izKontrolMaddeleri = izinKontrolListesiUret(document.getElementById('izTuru').value);
     kontrolListesiniCiz();
@@ -186,12 +186,14 @@ function kontrolListesiniCiz() {
   const kutu = document.getElementById('kontrolListesi');
   kutu.innerHTML = _izKontrolMaddeleri.map((m, i) => `
     <div style="display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid var(--kenarlik);">
-      <input type="checkbox" data-ki="${i}" style="width:auto; margin:0;" ${m.isaretli ? 'checked' : ''}>
+      <select data-ki="${i}" style="width:auto; margin:0; padding:4px 6px; font-size:12px;">
+        ${IS_IZNI_KONTROL_DURUMLARI.map(d => `<option value="${d}" ${izinKontrolDurumuCoz(m) === d ? 'selected' : ''}>${IS_IZNI_KONTROL_DURUM_ETIKETLERI[d]}</option>`).join('')}
+      </select>
       <span style="flex:1; font-size:13px;">${m.metin}</span>
       <input type="text" data-kn="${i}" placeholder="Not" value="${m.not || ''}" style="width:140px; margin:0; padding:4px 6px; font-size:12px;">
     </div>
   `).join('');
-  kutu.querySelectorAll('[data-ki]').forEach(cb => cb.addEventListener('change', () => { _izKontrolMaddeleri[Number(cb.getAttribute('data-ki'))].isaretli = cb.checked; }));
+  kutu.querySelectorAll('[data-ki]').forEach(sel => sel.addEventListener('change', () => { _izKontrolMaddeleri[Number(sel.getAttribute('data-ki'))].durum = sel.value; }));
   kutu.querySelectorAll('[data-kn]').forEach(inp => inp.addEventListener('input', () => { _izKontrolMaddeleri[Number(inp.getAttribute('data-kn'))].not = inp.value; }));
 }
 

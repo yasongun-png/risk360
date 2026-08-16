@@ -41,8 +41,9 @@
   .ii-kkd-chip .ikon { font-size: 16px; }
   .ii-kkd-chip.secili { border-color: var(--celik-mavi-koyu, #1d4ed8); background: #eef2ff; color: var(--celik-mavi-koyu, #1d4ed8); }
 
-  .ii-kontrol-satir { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px dashed var(--kenarlik, #e5e7eb); }
-  .ii-kontrol-satir input { margin-top: 2px; width: auto; }
+  .ii-kontrol-satir { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px dashed var(--kenarlik, #e5e7eb); }
+  .ii-kontrol-satir select { width: auto; flex: 0 0 auto; margin: 0; padding: 4px 6px; font-size: 11.5px; }
+  .ii-kontrol-satir span { flex: 1; }
 
   .ii-imza-canvas { width: 100%; height: 140px; border: 1.5px dashed var(--kenarlik, #9ca3af); border-radius: 10px; touch-action: none; background: #fff; display: block; }
   .ii-imza-arac { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
@@ -547,12 +548,17 @@
         etiket.classList.toggle('secili', kutucuk.checked);
       });
 
+      // Kullanıcı isteği: "hangisinin onaylandığı, hangisinin ilgili
+      // olmadığı, hangisinin kontrol edilmediği anlaşılmıyor" — eski
+      // checkbox (evet/hayır) yerine üç seçenekli bir alan.
       const kontrolKutu = document.getElementById('ftKontrolListesi');
       kontrolKutu.innerHTML = (_ftIzin.kontrolMaddeleri || []).map((m, i) => `
-        <label class="ii-kontrol-satir">
-          <input type="checkbox" data-idx="${i}" ${m.isaretli ? 'checked' : ''}>
+        <div class="ii-kontrol-satir">
+          <select data-idx="${i}">
+            ${IS_IZNI_KONTROL_DURUMLARI.map(d => `<option value="${d}" ${izinKontrolDurumuCoz(m) === d ? 'selected' : ''}>${IS_IZNI_KONTROL_DURUM_ETIKETLERI[d]}</option>`).join('')}
+          </select>
           <span>${_iiKacir(m.metin)}</span>
-        </label>`).join('');
+        </div>`).join('');
 
       const gazGerekli = ['Sıcak Çalışma', 'Kapalı Alan', 'Kimyasal Çalışma', 'Basınçlı Hat Çalışması'].includes(_ftIzin.izinTuru);
       document.getElementById('ftGazBolumu').classList.toggle('gizli', !gazGerekli);
@@ -607,8 +613,8 @@
           if (index === -1) throw new Error('İş izni artık bulunamadı, sayfayı yenileyip tekrar deneyin.');
 
           const kontrolMaddeleri = (liste[index].kontrolMaddeleri || []).map((m, i) => {
-            const kutucuk = document.querySelector('#ftKontrolListesi input[data-idx="' + i + '"]');
-            return Object.assign({}, m, { isaretli: kutucuk ? kutucuk.checked : m.isaretli });
+            const secim = document.querySelector('#ftKontrolListesi select[data-idx="' + i + '"]');
+            return Object.assign({}, m, { durum: secim ? secim.value : izinKontrolDurumuCoz(m) });
           });
 
           const gazGerekli = !document.getElementById('ftGazBolumu').classList.contains('gizli');

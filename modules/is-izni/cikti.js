@@ -176,13 +176,27 @@ async function izinFormunuPdfOlustur(izinId) {
     _izGorselCoz(firma ? firmaLogoGetir(firma.id) : '')
   ]);
 
-  const kontrolSatirlari = k.kontrolMaddeleri.map(m => `
+  // Üç durum ayrı ayrı görünür olsun diye (kullanıcı isteği: "hangisinin
+  // onaylandığı, hangisinin ilgili olmadığı, hangisinin kontrol edilmediği
+  // anlaşılmıyor") — eskiden ikisi de aynı boş kutucuktu. İşaretler elle,
+  // tükenmez kalemle atılmış gibi mavi mürekkep rengi ve el yazısı
+  // fontuyla basılıyor (kullanıcı isteği: "tikler tükenmez kalemle
+  // yapılmış gibi olsun") — imza rengiyle (#1e3a8a) aynı.
+  const _IZ_KONTROL_ISARET = {
+    yapildi: '<span style="color:#1e3a8a; font-family:\'Segoe Script\',\'Bradley Hand\',cursive; font-size:14pt; font-weight:700; display:inline-block; transform:rotate(-8deg);">✓</span>',
+    ilgiliDegil: '<span style="color:#1e3a8a; font-family:\'Segoe Script\',\'Bradley Hand\',cursive; font-size:9pt; font-weight:700;">İ.D.</span>',
+    yapilmadi: '<span style="color:#94a3b8;">☐</span>'
+  };
+  const kontrolSatirlari = k.kontrolMaddeleri.map(m => {
+    const durum = izinKontrolDurumuCoz(m);
+    return `
     <tr>
-      <td style="text-align:center; width:8%;">${m.isaretli ? '✓' : '☐'}</td>
+      <td style="text-align:center; width:10%;">${_IZ_KONTROL_ISARET[durum]}</td>
       <td>${_izKacir(m.metin)}</td>
       <td>${_izKacir(m.not) || '-'}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   const onaySatirlari = k.onaycilar.length ? k.onaycilar.map(a => `
     <tr>
@@ -221,6 +235,9 @@ async function izinFormunuPdfOlustur(izinId) {
 
     <div class="iz-bolum">
       <h2>2. Kontrol Maddeleri</h2>
+      <div style="font-size:7pt; color:#64748b; padding:1.5mm 3mm 0;">
+        ${_IZ_KONTROL_ISARET.yapildi} Yapıldı / Uygun &nbsp;&nbsp; ${_IZ_KONTROL_ISARET.ilgiliDegil} İlgili Değil &nbsp;&nbsp; ${_IZ_KONTROL_ISARET.yapilmadi} Kontrol Edilmedi
+      </div>
       <table class="iz-tablo">
         <thead><tr><th></th><th>Madde</th><th>Not</th></tr></thead>
         <tbody>${kontrolSatirlari}</tbody>

@@ -4,8 +4,10 @@ function _izinZenginlestir(izin) {
   return Object.assign({}, izin, {
     durumGoruntu: izinDurumuHesapla(izin, new Date().toISOString()),
     suresiSaat: izinSuresiSaatHesapla(izin.baslangic, izin.bitis),
+    // "Yapıldı" ve "İlgili Değil" ikisi de ele alınmış/karara bağlanmış
+    // sayılır, tamamlanmayı sadece hâlâ "Kontrol Edilmedi" olanlar düşürür.
     tamamlanmaOrani: izin.kontrolMaddeleri.length
-      ? Math.round(100 * izin.kontrolMaddeleri.filter(m => m.isaretli).length / izin.kontrolMaddeleri.length)
+      ? Math.round(100 * izin.kontrolMaddeleri.filter(m => izinKontrolDurumuCoz(m) !== 'yapilmadi').length / izin.kontrolMaddeleri.length)
       : 0
   });
 }
