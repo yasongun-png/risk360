@@ -68,12 +68,41 @@ async function _izGorselCoz(referansVeyaUrl) {
   return _izGorseliDataUrlaCevir(cozulen);
 }
 
-// jsPDF'in addImage'i (2+. sayfa üst bandındaki logo için, bkz. aşağıda)
-// veri türünü otomatik algılamıyor — data: URL'in MIME türünden çıkarılır.
-function _izVeriUrlBicimi(dataUrl) {
-  const eslesme = /^data:image\/(\w+);/i.exec(dataUrl || '');
-  const tur = eslesme ? eslesme[1].toUpperCase() : 'PNG';
-  return tur === 'JPG' ? 'JPEG' : tur;
+// 2+. sayfaların üst bandı (logo + başlık + kalite no) — jsPDF'in standart
+// fontları Türkçe "ı/İ/ş/Ş" karakterlerini desteklemediği için pdf.text()
+// yerine 1. sayfadaki gerçek HTML başlıkla aynı şekilde tarayıcıda render
+// edilip görsele çevrilir (bkz. izinFormunuPdfOlustur). Ekrana hiç
+// görünmeden (position:fixed; solda ekran dışında) yakalanır.
+async function _izTekrarBasligiGorseliOlustur(k, formAyarlari, logoDataUrl, genislikMm, yukseklikMm) {
+  const gecici = document.createElement('div');
+  gecici.style.position = 'fixed';
+  gecici.style.left = '-9999px';
+  gecici.style.top = '0';
+  gecici.style.width = genislikMm + 'mm';
+  gecici.style.height = yukseklikMm + 'mm';
+  gecici.innerHTML = `
+    <div style="width:100%; height:100%; box-sizing:border-box; display:flex; align-items:stretch; border:1.2px solid #111827; font-family:Arial, Helvetica, sans-serif; background:#fff;">
+      <div style="flex:0 0 22mm; display:flex; align-items:center; justify-content:center; border-right:1.2px solid #111827; padding:1.5mm; box-sizing:border-box;">
+        ${logoDataUrl ? `<img src="${logoDataUrl}" style="max-width:100%; max-height:100%; object-fit:contain;">` : ''}
+      </div>
+      <div style="flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1.5mm; box-sizing:border-box;">
+        <div style="font-size:11pt; font-weight:700; color:#111827;">İŞ İZNİ FORMU</div>
+        <div style="font-size:8pt; color:#374151; margin-top:1mm;">İzin No: ${_izKacir(k.izinNo)} — ${_izKacir(k.izinTuru)}</div>
+      </div>
+      <div style="flex:0 0 40mm; border-left:1.2px solid #111827; padding:1.5mm 2mm; font-size:6.8pt; color:#111827; display:flex; flex-direction:column; justify-content:center; gap:0.8mm; box-sizing:border-box;">
+        <div>Doküman No: ${_izKacir(formAyarlari.dokumanNo) || '-'}</div>
+        <div>Sürüm No: ${_izKacir(formAyarlari.surumNo) || '-'}</div>
+        <div>Sürüm Tarihi: ${_izKacir(formAyarlari.surumTarihi) || '-'}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(gecici);
+  try {
+    const canvas = await html2canvas(gecici, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
+    return canvas.toDataURL('image/jpeg', 0.95);
+  } finally {
+    document.body.removeChild(gecici);
+  }
 }
 
 // Barkod formundan ("Formu Tamamla" / "İmza At") atılan dijital imzalar
@@ -311,29 +340,20 @@ async function izinFormunuPdfOlustur(izinId) {
   const toplamSayfa = pdf.internal.getNumberOfPages();
   const genislik = pdf.internal.pageSize.getWidth();
   const yukseklik = pdf.internal.pageSize.getHeight();
+
+  // jsPDF'in standart yazı tipleri (helvetica) Türkçe "ı/İ/ş/Ş" karakterlerini
+  // desteklemiyor — pdf.text() ile basılırsa bu harfler bozuk çıkıyor (ör.
+  // "İŞ İZNİ" → "0^ 0ZN0"). Bunun yerine 1. sayfadaki gerçek HTML başlığıyla
+  // aynı şekilde tarayıcıda render edilip görsele çevriliyor, sonra her
+  // sayfaya resim olarak basılıyor — metin her zaman doğru görünür.
+  const tekrarBasligiUrl = toplamSayfa > 1
+    ? await _izTekrarBasligiGorseliOlustur(k, formAyarlari, logoDataUrl, genislik - 8, ustBoslukMm - 6)
+    : '';
+
   for (let i = 1; i <= toplamSayfa; i++) {
     pdf.setPage(i);
-    if (i > 1) {
-      pdf.setDrawColor(17, 24, 39);
-      pdf.setLineWidth(0.4);
-      pdf.rect(4, 3, genislik - 8, ustBoslukMm - 6);
-      if (logoDataUrl) {
-        try { pdf.addImage(logoDataUrl, _izVeriUrlBicimi(logoDataUrl), 6, 5, 18, ustBoslukMm - 10); } catch (e) { console.warn('Logo PDF başlığına eklenemedi:', e); }
-      }
-      pdf.setFont(undefined, 'bold');
-      pdf.setFontSize(10.5);
-      pdf.setTextColor(17, 24, 39);
-      pdf.text('İŞ İZNİ FORMU', genislik / 2, 10, { align: 'center' });
-      pdf.setFont(undefined, 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(55, 65, 81);
-      pdf.text(`İzin No: ${k.izinNo} — ${k.izinTuru}`, genislik / 2, 15, { align: 'center' });
-      pdf.setFontSize(6.3);
-      pdf.setTextColor(17, 24, 39);
-      const saX = genislik - 46;
-      pdf.text('Doküman No: ' + (formAyarlari.dokumanNo || '-'), saX, 8);
-      pdf.text('Sürüm No: ' + (formAyarlari.surumNo || '-'), saX, 12);
-      pdf.text('Sürüm Tarihi: ' + (formAyarlari.surumTarihi || '-'), saX, 16);
+    if (i > 1 && tekrarBasligiUrl) {
+      pdf.addImage(tekrarBasligiUrl, 'JPEG', 4, 3, genislik - 8, ustBoslukMm - 6);
     }
     pdf.setFont(undefined, 'normal');
     pdf.setFontSize(8);
