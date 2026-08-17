@@ -118,6 +118,27 @@ function firmaTehlikeSinifiAyarla(firmaId, tehlikeSinifi) {
   return { basarili: true, firma };
 }
 
+// Hizmet Sözleşmeleri "Sicil Özeti" raporu için firma bazında tutulan
+// bilgiler (kullanıcı isteği: "hizmet sözleşmeleri tarafına birebir bu
+// excel çıktısını verecek altyapı hazırla" — sicil no, işveren vekili ve
+// personel sayısı bu raporun üretilebilmesi için gerekli, Personel
+// modülünden otomatik SAYILMAZ (kullanıcı tercihi), elle girilir/içe
+// aktarılır. bkz. modules/hizmet-sozlesmesi/service.js
+// hizmetSozlesmesiSicilOzetiHesapla.
+function firmaSicilBilgileriAyarla(firmaId, sicilBilgileri) {
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  firma.sicilBilgileri = {
+    sicilNo: ((sicilBilgileri && sicilBilgileri.sicilNo) || '').trim(),
+    iseverenVekili: ((sicilBilgileri && sicilBilgileri.iseverenVekili) || '').trim(),
+    personelSayisi: Math.max(0, parseInt((sicilBilgileri && sicilBilgileri.personelSayisi) || 0, 10) || 0)
+  };
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
 function firmaSektoruAyarla(firmaId, sektor) {
   if (!SEKTORLER.includes(sektor)) {
     return { basarili: false, hata: 'Geçersiz sektör.' };

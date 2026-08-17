@@ -29,28 +29,80 @@
 
     <div id="ozetKutusu" style="margin-bottom:16px;"></div>
 
-    <div class="arac-cubugu">
-      <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Ad soyad, belge no veya sözleşme no'ya göre ara...">
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <select id="gorevFiltre" style="width:auto; margin:0;"><option value="">Tüm Görevler</option></select>
-        <select id="durumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
-        <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
-        <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
-        <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
-        <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
-        <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
-        <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
+    <div class="sekme-cubugu">
+      <button type="button" data-sekme="kayitlar">Kayıtlar</button>
+      <button type="button" data-sekme="sicil-ozeti" class="sekme-seciliDegil">Sicil Özeti</button>
+    </div>
+
+    <!-- KAYITLAR (kişi bazlı) -->
+    <div id="bolum-kayitlar">
+      <div class="arac-cubugu">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Ad soyad, belge no veya sözleşme no'ya göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="gorevFiltre" style="width:auto; margin:0;"><option value="">Tüm Görevler</option></select>
+          <select id="durumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
+          <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
+          <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
+          <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
+        </div>
       </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>Sözleşme No / Görev</th><th>Ad Soyad</th><th>Belge No / Sınıfı</th><th>Başlangıç</th><th>Bitiş</th><th>Ayrılan Süre</th><th>Belge</th><th>Durum</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody id="tabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bosDurum"></div>
     </div>
-    <div class="tablo-scroll">
-      <table class="veri-tablosu">
-        <thead>
-          <tr><th>Sözleşme No / Görev</th><th>Ad Soyad</th><th>Belge No / Sınıfı</th><th>Başlangıç</th><th>Bitiş</th><th>Ayrılan Süre</th><th>Belge</th><th>Durum</th><th>İşlemler</th></tr>
-        </thead>
-        <tbody id="tabloGovde"></tbody>
-      </table>
+
+    <!-- SİCİL ÖZETİ (firma bazlı, kullanıcının paylaştığı Excel raporuyla birebir) -->
+    <div id="bolum-sicil-ozeti" style="display:none;">
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin:-4px 0 12px;">
+        Her satır, en az bir hizmet sözleşmesi kaydı bir firmaya bağlanmış olan sicili gösterir. "Gerekli dk/ay" personel sayısı ve tehlike sınıfına göre yasal asgariden hesaplanır; "Atanan dk/ay" o sicile bağlı kayıtların Ayrılan Dakika toplamıdır.
+      </p>
+      <div class="arac-cubugu">
+        <div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="soSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="soIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="soIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="birincil" id="soDisaAktarBtn" style="width:auto;">Dışa Aktar (Excel)</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>No</th><th>Sicil / Firma</th><th>Sicil No</th><th>İşveren Vekili</th><th>İSG Uzmanı</th><th>İşyeri Hekimi</th><th>DSP</th><th>Personel / Tehlike</th><th>Uygunluk Durumu</th><th>İşlem</th></tr>
+          </thead>
+          <tbody id="soTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="soBosDurum"></div>
     </div>
-    <div class="bos-durum" id="bosDurum"></div>
+  </div>
+
+  <!-- SİCİL BİLGİLERİ MODALI -->
+  <div class="modal-katman" id="soSicilModalKatman">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3 id="soSicilModalBaslik">Sicil Bilgileri</h3>
+      <label for="soSicilNo">Sicil No</label>
+      <input type="text" id="soSicilNo">
+      <label for="soIseverenVekili">İşveren Vekili</label>
+      <input type="text" id="soIseverenVekili" placeholder="Ad Soyad — Unvan">
+      <label for="soPersonelSayisi">Personel Sayısı</label>
+      <input type="number" id="soPersonelSayisi" min="0" step="1">
+      <p style="font-size:11.5px; color:var(--metin-soluk); margin-top:-6px;">Tehlike sınıfı Firma Yönetimi'ndeki mevcut sınıftan alınır.</p>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="soSicilModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="soSicilModalKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="soSicilModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
   </div>
 
   <div id="yazdirmaAlani"></div>
@@ -84,6 +136,9 @@
           </div>
         </div>
 
+        <label for="hizmetFirmaId">Hizmet Verilen Firma / Sicil <span style="color:var(--metin-soluk); font-weight:400;">(Sicil Özeti raporuna dahil olması için)</span></label>
+        <select id="hizmetFirmaId"><option value="">— Bağlantısız —</option></select>
+
         <div class="form-satir-ikili">
           <div>
             <label for="sozlesmeBaslangicTarihi">Sözleşme Başlangıç Tarihi</label>
@@ -97,8 +152,16 @@
           </div>
         </div>
 
-        <label for="ayrilanSure">Ayrılan Süre <span style="color:var(--metin-soluk); font-weight:400;">(ör. Ayda 8 saat)</span></label>
-        <input type="text" id="ayrilanSure">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ayrilanSure">Ayrılan Süre <span style="color:var(--metin-soluk); font-weight:400;">(serbest metin, ör. "Ayda 8 saat")</span></label>
+            <input type="text" id="ayrilanSure">
+          </div>
+          <div>
+            <label for="ayrilanDakika">Ayrılan Dakika/Ay <span style="color:var(--metin-soluk); font-weight:400;">(Sicil Özeti hesabı için)</span></label>
+            <input type="number" id="ayrilanDakika" min="0" step="1">
+          </div>
+        </div>
 
         <div class="form-satir-ikili">
           <div>

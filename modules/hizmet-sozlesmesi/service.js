@@ -49,6 +49,45 @@ function hizmetSozlesmesiSil(id) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "hizmet sözleşmeleri tarafına birebir bu excel
+// çıktısını verecek altyapı hazırla" — firmaId'si dolu (ve feshedilmemiş)
+// her kayıt, hizmet verdiği firmanın altında görev türüne göre gruplanır;
+// "Atanan dk/ay" o gruptaki ayrilanDakika toplamıdır. "Gerekli dk/ay" ve
+// "Uygunluk", firmanın tehlikeSinifi + sicilBilgileri.personelSayisi
+// kullanılarak hizmetSozlesmesiGerekliDakikaHesapla ile YENİDEN hesaplanır
+// (Excel'den asla doğrudan alınmaz — bkz. modules/hizmet-sozlesmesi/ui.js
+// içe aktarma, sadece ham atama verisini alır).
+function hizmetSozlesmesiSicilOzetiHesapla() {
+  const zengin = hizmetSozlesmeleriniGetir('', {}).filter(k => k.firmaId);
+
+  const firmaGrubu = {};
+  zengin.forEach(k => {
+    if (k.durum === 'Feshedildi') return;
+    if (!firmaGrubu[k.firmaId]) firmaGrubu[k.firmaId] = {};
+    if (!firmaGrubu[k.firmaId][k.gorevTuru]) firmaGrubu[k.firmaId][k.gorevTuru] = [];
+    firmaGrubu[k.firmaId][k.gorevTuru].push(k);
+  });
+
+  return getFirmalar().filter(f => firmaGrubu[f.id]).map(firma => {
+    const sicil = firma.sicilBilgileri || { sicilNo: '', iseverenVekili: '', personelSayisi: 0 };
+    const gorevOzetleri = HIZMET_GOREV_TURLERI.map(gorevTuru => {
+      const gorevliler = (firmaGrubu[firma.id][gorevTuru]) || [];
+      const atananDakika = gorevliler.reduce((toplam, g) => toplam + (g.ayrilanDakika || 0), 0);
+      const hesap = hizmetSozlesmesiGerekliDakikaHesapla(gorevTuru, firma.tehlikeSinifi, sicil.personelSayisi);
+      return Object.assign({ gorevTuru, gorevliler, atananDakika, uygunMu: hesap.kapsamDisiMi || atananDakika >= hesap.gerekliDakika }, hesap);
+    });
+    return {
+      firma,
+      sicilNo: sicil.sicilNo,
+      iseverenVekili: sicil.iseverenVekili,
+      personelSayisi: sicil.personelSayisi,
+      tehlikeSinifi: firma.tehlikeSinifi,
+      gorevOzetleri,
+      tumuUygunMu: gorevOzetleri.every(g => g.uygunMu)
+    };
+  });
+}
+
 function hizmetSozlesmesiOzetiHesapla() {
   const liste = hizmetSozlesmeleriniGetir('', {});
   return {
