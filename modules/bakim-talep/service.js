@@ -25,13 +25,23 @@ function _btTalepSahibiMi(kullanici, kayit) {
   return kullanici.rol === 'birim' && kullanici.birimAdi === kayit.talep.birim;
 }
 
-// Ekipman envanteri kaydını kim düzenleyebilir: Bakım/İSG'nin yanı sıra
-// Üretim/Talep Eden Birim tarafı da ekleyebilir (kullanıcı isteği: "bunu
-// ekleyebilecekler üretim ve bakım tarafı olacak") — 'birim' burada kendi
-// birimiyle sınırlı DEĞİLDİR, çünkü envanter firma genelinde ortak/paylaşılan
-// tek bir liste (talep formundaki gibi birim bazlı ayrım yok).
+// Ekipman envanteri kaydını kim düzenleyebilir/görebilir: kullanıcı isteği
+// ("ekipman envanterine giriş yapabilecekler sınırlı olsun, bakımdan ayrı
+// bir kullanıcı ve admin sadece girebilsin") üzerine artık SADECE admin/
+// düzenleyici ve özel "Envanter Sorumlusu" rolü — bakım ve birim rolleri
+// (üretim/talep eden taraf) artık envanter ekranına giremez. Bakım
+// taleplerinde envanter kaydı yine de OTOMATİK büyümeye devam eder (bkz.
+// _ekipmanEnvanteriGuncelle, _ekipmanBakimKartinaYaz) — bu, kullanıcının
+// elle envantere girip düzenlemesinden ayrı bir arka plan işlemidir.
 function _btEkipmanDuzenleyebilirMi(kullanici) {
-  return _btBakimRoluMu(kullanici) || kullanici.rol === 'birim';
+  return kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici' || kullanici.rol === 'envanter';
+}
+
+// Ekipman Envanteri sekmesine kim GİREBİLİR (görüntüleyebilir) — düzenleme
+// yetkisiyle aynı: sadece admin/düzenleyici/envanter. Bakım ve birim
+// rolleri sekmeyi hiç görmez.
+function _btEnvanterErisebilirMi(kullanici) {
+  return _btEkipmanDuzenleyebilirMi(kullanici);
 }
 
 // Hedefli bildirim: hedefRol/hedefBirim boşsa herkese görünür (bkz.

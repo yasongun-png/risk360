@@ -154,7 +154,12 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
 const _MODUL_ANAHTARI_DEPOLAMA_SONEKLERI = {
   personel: ['personel'],
   egitim: ['egitim_kayitlari'],
-  'bakim-talep': ['bakim_talepleri', 'bakim_ekipman_envanteri'],
+  'bakim-talep': ['bakim_talepleri'],
+  // Ekipman envanteri kasıtlı olarak 'bakim-talep'ten AYRI bir modül
+  // anahtarı — kullanıcı isteği: "ekipman envanterine giriş yapabilecekler
+  // sınırlı olsun, bakımdan ayrı bir kullanıcı ve admin sadece girebilsin"
+  // (bkz. core/auth.js kullaniciEklemeYapabilirMi 'envanter' rolü).
+  'bakim-ekipman': ['bakim_ekipman_envanteri'],
   'is-izni': ['is_izinleri']
 };
 

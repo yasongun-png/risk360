@@ -103,6 +103,7 @@
         <option value="duzenleyici">Düzenleyici — tüm modüller, silme yok</option>
         <option value="bakim">Bakım — sadece Bakım Onarım, tüm birimler</option>
         <option value="birim">Talep Eden Birim — sadece Bakım Onarım, kendi birimi</option>
+        <option value="envanter">Envanter Sorumlusu — sadece Ekipman Envanteri</option>
       </select>
 
       <div id="kkBirimAlani" style="display:none;">
@@ -258,7 +259,8 @@
     const KK_ROL_ETIKETLERI = {
       duzenleyici: '✏️ Düzenleyici (silme yok)',
       bakim: '🔧 Bakım',
-      birim: '🏭 Talep Eden Birim'
+      birim: '🏭 Talep Eden Birim',
+      envanter: '📦 Envanter Sorumlusu'
     };
 
     function _kkBirimAlaniniGuncelle() {

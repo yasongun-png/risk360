@@ -64,6 +64,10 @@ function _btKayitAksiyonBekliyorMu(k, kullanici) {
 }
 
 function _btGorunumDegistir(gorunum) {
+  // Sekme butonu gizli olsa da savunma amaçlı: envanter sekmesine erişim
+  // yetkisi olmayan biri (ör. bakım/birim) buraya başka bir yoldan
+  // ulaşmaya çalışırsa yine de talepler görünümünde kalınır.
+  if (gorunum === 'envanter' && !_btEnvanterErisebilirMi(oturumdakiKullanici())) gorunum = 'talepler';
   _btGorunum = gorunum;
   document.getElementById('bolum-talepler').style.display = gorunum === 'talepler' ? '' : 'none';
   document.getElementById('bolum-envanter').style.display = gorunum === 'envanter' ? '' : 'none';
@@ -82,6 +86,19 @@ function bakimTalepSayfasiniBaslat() {
   });
 
   const kullanici = oturumdakiKullanici();
+
+  // Kullanıcı isteği: "ekipman envanterine giriş yapabilecekler sınırlı
+  // olsun, bakımdan ayrı bir kullanıcı ve admin sadece girebilsin" —
+  // Envanter Sorumlusu rolündeki bir kullanıcı SADECE envanter sekmesini
+  // görür/kullanır, diğer roller artık envanter sekmesini hiç görmez.
+  const envanterErisebilirMi = _btEnvanterErisebilirMi(kullanici);
+  document.querySelector('[data-sekme="envanter"]').style.display = envanterErisebilirMi ? '' : 'none';
+  if (kullanici.rol === 'envanter') {
+    document.querySelector('[data-sekme="talepler"]').style.display = 'none';
+    document.querySelector('[data-sekme="ozet"]').style.display = 'none';
+    _btGorunumDegistir('envanter');
+  }
+
   const btnYeni = document.getElementById('btYeniTalepBtn');
   // Sadece 'birim' kullanıcıları (kendi biriminden) veya admin/düzenleyici
   // yeni talep açabilir — Bakım/İSG rolleri açmaz, sadece işler.
@@ -178,7 +195,7 @@ function bakimTalepSayfasiniBaslat() {
     }
   });
 
-  _btGorunumDegistir('talepler');
+  if (kullanici.rol !== 'envanter') _btGorunumDegistir('talepler');
 }
 
 // ---- Liste ----

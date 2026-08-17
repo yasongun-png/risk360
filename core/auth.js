@@ -176,12 +176,22 @@ function kullaniciModuleErisebilirMi(kullanici) {
 // modüllerinde ekleyebilir — kullanıcı isteği: "formu tamamlayıp izin
 // verecek sorumlu bölüm (birim rolü)" barkod üzerinden İş İzni formunu
 // tamamlayıp imzalayabilmeli, bakım rolü de kendi onay imzasını atabilmeli;
-// diğer modüllerde sadece görüntülerler.
+// diğer modüllerde sadece görüntülerler. 'bakim-ekipman' (ekipman envanteri)
+// ayrı bir modül anahtarı: bakim/birim rolleri buraya HÂLÂ yazabilir çünkü
+// bir bakım talebi açıldığında/kapatıldığında envanter kaydı OTOMATİK
+// güncellenir (bkz. modules/bakim-talep/service.js _ekipmanEnvanteriGuncelle,
+// _ekipmanBakimKartinaYaz) — bu arka plan yazımı engellenirse talep açma/
+// kapama sırasında beklenmedik bir "yetkiniz yok" hatası çıkar. Kullanıcı
+// isteği ("ekipman envanterine giriş yapabilecekler sınırlı olsun, bakımdan
+// ayrı bir kullanıcı ve admin sadece girebilsin") ekranın KENDİSİNE elle
+// girip düzenleme erişimini kısıtlamakla ilgili — bu, arayüz katmanında
+// _btEkipmanDuzenleyebilirMi ile uygulanır, burada değil.
 function kullaniciEklemeYapabilirMi(kullanici, modulAnahtari) {
   if (!kullanici) return false;
   if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
   if (kullanici.rol === 'ik') return IK_IZINLI_MODULLER.includes(modulAnahtari);
-  if (BAKIM_TALEP_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'bakim-talep' || modulAnahtari === 'is-izni';
+  if (kullanici.rol === 'envanter') return modulAnahtari === 'bakim-ekipman';
+  if (BAKIM_TALEP_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'bakim-talep' || modulAnahtari === 'is-izni' || modulAnahtari === 'bakim-ekipman';
   return false;
 }
 
@@ -268,14 +278,18 @@ async function adminEkle(kullaniciAdi, sifre, adSoyad) {
 
 // ---- Kısıtlı kullanıcı yönetimi (admin tarafından) ----
 //
-// Her kısıtlı kullanıcı (İK, düzenleyici, bakım, birim) bir admin tarafından
-// (olusturanId) oluşturulur ve SADECE o admin tarafından görülür/düzenlenir —
-// firmaların sahipId'yle izole edilmesiyle aynı mantık. Hepsi aynı
-// erisimFirmaIdleri mekanizmasını kullanır; farkları modül/silme yetkisidir
-// (bkz. kullaniciEklemeYapabilirMi, kullaniciSilebilirMi). 'birim' rolü ayrıca
-// bir birimAdi taşır (Bakım Talep modülünde SADECE o birimin taleplerini
-// görür — bkz. modules/bakim-talep/service.js).
-const KISITLI_ROLLER = ['ik', 'duzenleyici', 'bakim', 'birim'];
+// Her kısıtlı kullanıcı (İK, düzenleyici, bakım, birim, envanter) bir admin
+// tarafından (olusturanId) oluşturulur ve SADECE o admin tarafından
+// görülür/düzenlenir — firmaların sahipId'yle izole edilmesiyle aynı
+// mantık. Hepsi aynı erisimFirmaIdleri mekanizmasını kullanır; farkları
+// modül/silme yetkisidir (bkz. kullaniciEklemeYapabilirMi,
+// kullaniciSilebilirMi). 'birim' rolü ayrıca bir birimAdi taşır (Bakım
+// Talep modülünde SADECE o birimin taleplerini görür — bkz.
+// modules/bakim-talep/service.js). 'envanter' rolü (kullanıcı isteği:
+// "ekipman envanterine giriş yapabilecekler sınırlı olsun, bakımdan ayrı
+// bir kullanıcı ve admin sadece girebilsin") SADECE ekipman envanterine
+// girip düzenleyebilir, bakım taleplerine ERİŞEMEZ.
+const KISITLI_ROLLER = ['ik', 'duzenleyici', 'bakim', 'birim', 'envanter'];
 
 function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
   const temiz = (kullaniciAdi || '').trim().toLowerCase();
