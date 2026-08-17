@@ -282,3 +282,121 @@ function bosPlanOlustur() {
     notlar: ''
   };
 }
+
+// ---- Hazır Acil Durum Planı Şablonları ----
+
+// İşyeri türüne göre başlangıç içeriği: seçilen şablon yalnızca "Olası Acil
+// Durumlar", "Önleyici Tedbirler", "Tahliye Planı", "Uyarı Sistemleri" ve
+// "Dış Kurum İletişim Bilgileri" alanlarını doldurur (bkz. service.js
+// acilDurumPlanSablonUygula). Tarih, hazırlayan/onaylayan, toplanma yerleri
+// (zaten ekipman verisinden türetiliyor), özel risk bölgeleri ve notlar
+// işyerine özgü olduğundan şablondan etkilenmez. Metinler başlangıç
+// önerisidir; işyerine göre düzenlenmelidir.
+const ACIL_DURUM_PLAN_SABLONLARI = [
+  {
+    id: 'ofis',
+    ad: 'Ofis / İdari Bina',
+    aciklama: 'Üretim/saha alanı olmayan büro, çağrı merkezi, idari bina vb.',
+    olasiAcilDurumlar: [
+      'Yangın (elektrik kontağı, mutfak/çay ocağı)',
+      'Deprem',
+      'Gaz sızıntısı (mutfak/kombi dairesi)',
+      'Elektrik kesintisi',
+      'Su baskını (sıhhi tesisat arızası)',
+      'Asansörde mahsur kalma',
+      'Bina tahliyesini gerektiren dış tehdit (bomba ihbarı, şüpheli paket)'
+    ],
+    onleyiciTedbirler: '- Duman dedektörü, yangın alarm butonu ve yangın söndürme tüplerinin periyodik bakım/kontrolü aksatılmadan yaptırılır.\n- Elektrik pano ve tesisatının periyodik topraklama/kaçak akım kontrolleri yapılır.\n- Mutfak/çay ocağında gaz kaçağı algılama sensörü bulunur, kombi dairesi yılda bir kez bakımdan geçirilir.\n- Kaçış yolları ve acil çıkış kapıları hiçbir zaman malzeme ile kapatılmaz; aylık kontrol formuyla denetlenir.\n- Deprem çantası bulundurulur, masa altı güvenli alan bilgilendirmesi tüm katlarda asılı tutulur.',
+    tahliyePlani: 'Alarmın duyulması/anonsun yapılmasıyla birlikte tüm personel çalışmayı bırakır, mümkünse elektrikli cihazları kapatır ve en yakın acil çıkışa yönlendirilir. Asansör KESİNLİKLE kullanılmaz. Kat sorumluları kendi katlarındaki personeli sayarak toplanma alanına yönlendirir ve kimsenin kalmadığını kontrol eder. Toplanma alanında kat sorumluları personel sayımını tamamlayıp Acil Durum Koordinatörüne bildirir. Eksik personel varsa arama/kurtarma ekibi ve itfaiyeye derhal bilgi verilir.',
+    uyariSistemleri: 'Sesli/ışıklı yangın alarm sistemi, kat anons sistemi, kat sorumluları tarafından sözlü uyarı, toplu bilgilendirme (SMS/mesajlaşma grubu).',
+    disKurumIletisim: 'İtfaiye: 110\nAcil Sağlık (Ambulans): 112\nPolis İmdat: 155\nAFAD: 122\nDoğalgaz Acil: 187\n[En yakın hastane adı ve telefonu]\n[Bina yönetimi / güvenlik telefonu]'
+  },
+  {
+    id: 'uretim',
+    ad: 'Üretim / Fabrika (Genel)',
+    aciklama: 'Makine/ekipman kullanılan imalat, montaj veya işleme tesisi.',
+    olasiAcilDurumlar: [
+      'Yangın (makine/motor kaynaklı, kısa devre, kaynak-kesme işleri)',
+      'Patlama (basınçlı kap, tozlu/gaz ortam)',
+      'Ağır iş kazası (makineye sıkışma, ezilme)',
+      'Kimyasal madde dökülmesi/sızıntısı',
+      'Elektrik çarpması',
+      'Vinç/kaldırma ekipmanı arızası veya yük düşmesi',
+      'Deprem'
+    ],
+    onleyiciTedbirler: '- Makine koruyucuları ve acil durdurma butonları çalışır durumda tutulur, periyodik kontrolden geçirilir.\n- Kaynak/kesme, parlayıcı-patlayıcı madde bulunan bölgelerden uzakta ve yangın gözcüsü eşliğinde yapılır.\n- Elektrik pano ve tesisatının periyodik bakım/termal kamera kontrolleri yapılır.\n- Kaldırma ekipmanları (vinç, forklift) yıllık periyodik kontrole tabi tutulur, günlük kontrol formuyla operatör tarafından denetlenir.\n- Tozlu/parlayıcı ortamlarda lokal egzoz ve topraklama önlemleri uygulanır.\n- Üretim hatlarına yakın yerlerde yangın dolabı/tüpü ve göz duşu bulundurulur.',
+    tahliyePlani: 'Alarm/siren çalınca üretim hattı güvenli şekilde durdurulur (mümkünse acil durdurma butonuyla), enerji/gaz beslemesi vardiya amiri tarafından kesilir. Personel makine başındaki güvenli tahliye güzergâhından toplanma alanına yönlendirilir; forklift ve araçlar kullanılmaz. Vardiya amirleri/ekip başları kendi bölümlerindeki personeli sayarak Acil Durum Koordinatörüne bildirir. Yaralı varsa İlk Yardım ekibi derhal müdahale eder, gerekiyorsa ambulans çağrılır.',
+    uyariSistemleri: 'Fabrika geneli sesli siren, üretim hattı üzerindeki ikaz lambaları, anons sistemi, vardiya amirleri tarafından telsiz/sözlü uyarı.',
+    disKurumIletisim: 'İtfaiye: 110\nAcil Sağlık (Ambulans): 112\nPolis İmdat: 155\nAFAD: 122\nOSGB / İşyeri Hekimi: [telefon]\n[En yakın hastane adı ve telefonu]\n[En yakın itfaiye istasyonu adı ve telefonu]'
+  },
+  {
+    id: 'insaat',
+    ad: 'İnşaat Şantiyesi',
+    aciklama: 'Yapı, altyapı veya taahhüt işlerinin yürütüldüğü şantiye sahası.',
+    olasiAcilDurumlar: [
+      'Yüksekten düşme (iskele, çatı, kat boşluğu)',
+      'Kazı/istinat yapısı göçmesi',
+      'Vinç/kule vinç devrilmesi veya yük düşmesi',
+      'Elektrik çarpması (şantiye hattı, yer altı/üstü kablo)',
+      'Yangın (kaynak-kesme işleri, yakıt/tüp depolama)',
+      'Malzeme düşmesi',
+      'Hava muhalefeti (fırtına, şiddetli yağış, don)'
+    ],
+    onleyiciTedbirler: '- Şantiyeye giriş için iş güvenliği eğitimi ve KKD (baret, emniyet kemeri vb.) zorunluluğu uygulanır, turnike/kontrol noktasında denetlenir.\n- İskele ve kalıp sistemleri kurulum sonrası yetkili kişi tarafından kontrol edilip onay etiketi asılmadan kullanıma açılmaz.\n- Kazı/istinat çalışmalarında şev/iksa uygunluğu proje ile denetlenir, kazı kenarına güvenlik şeridi ve bariyer konur.\n- Vinç/kule vinç günlük ve periyodik kontrole tabi tutulur, rüzgar hızı sınırının üzerinde çalışma durdurulur.\n- Kaynak/kesme işleri için yangın gözcüsü ve iş izni sistemi uygulanır, yanıcı malzeme çalışma alanından uzaklaştırılır.\n- Şiddetli hava koşullarında (fırtına, don, yoğun yağış) yüksekte/vinçli çalışma durdurulur.',
+    tahliyePlani: 'Alarm/düdük sinyaliyle birlikte tüm çalışma (kaynak, kazı, vinç, yüksekte çalışma) derhal durdurulur, ekipmanlar güvenli konuma alınır. Personel en yakın güvenli güzergâhtan şantiye girişindeki toplanma alanına yönlendirilir. Taşeron/ekip başları kendi personelini sayarak İSG uzmanına/şantiye şefine bildirir. Yaralı/mahsur kalan personel varsa derhal İlk Yardım ve kurtarma ekibi yönlendirilir, gerekiyorsa itfaiye/ambulans çağrılır.',
+    uyariSistemleri: 'Şantiye geneli düdük/siren sinyali, şantiye şefliği anons sistemi, ekip başları tarafından telsiz uyarısı.',
+    disKurumIletisim: 'İtfaiye: 110\nAcil Sağlık (Ambulans): 112\nPolis İmdat: 155\nAFAD: 122\nOSGB / İşyeri Hekimi: [telefon]\n[En yakın hastane adı ve telefonu]\n[Elektrik dağıtım şirketi acil hattı]'
+  },
+  {
+    id: 'depo',
+    ad: 'Depo / Lojistik',
+    aciklama: 'Palet/raf sistemli depolama, elleçleme ve sevkiyat tesisi.',
+    olasiAcilDurumlar: [
+      'Raf/istif çökmesi',
+      'Forklift/istif makinesi kazası',
+      'Yangın (ambalaj malzemesi, palet, şarj ünitesi)',
+      'Yüksekten malzeme düşmesi',
+      'Elektrikli forklift şarj istasyonu kaynaklı patlama/yangın',
+      'Deprem'
+    ],
+    onleyiciTedbirler: '- Raf sistemleri azami yük kapasitesine göre etiketlenir, periyodik olarak hasar/eğilme yönünden kontrol edilir.\n- Forklift/istif makinesi operatörleri sertifikalı olur, araçlar günlük kontrol formuyla denetlenir.\n- Yaya-araç güzergâhları yer işaretleriyle ayrılır, kör noktalara ayna/uyarı sistemi konur.\n- Şarj istasyonu havalandırmalı, yanıcı malzemeden uzak ve yangın söndürme tüpü/battaniyesi erişilebilir alanda kurulur.\n- Depo koridorları ve acil çıkışlar her zaman açık tutulur, malzeme ile kapatılmaz.\n- Yangın algılama/söndürme sistemi (sprinkler, yangın dolabı) periyodik bakımdan geçirilir.',
+    tahliyePlani: 'Alarm çalınca forklift/istif makineleri güvenli şekilde durdurulur ve park edilir, personel yaya güzergâhından en yakın acil çıkışa yönlendirilir. Raf aralarında kalan personel olup olmadığı vardiya sorumlusu tarafından kontrol edilir. Toplanma alanında sayım yapılıp Acil Durum Koordinatörüne bildirilir. Devrilen raf/malzeme altında kalan olması ihtimaline karşı kurtarma ekibi derhal yönlendirilir.',
+    uyariSistemleri: 'Depo geneli sesli alarm/siren, forklift/araç trafiğine yönelik ışıklı ikaz, anons sistemi, vardiya sorumlusu telsiz uyarısı.',
+    disKurumIletisim: 'İtfaiye: 110\nAcil Sağlık (Ambulans): 112\nPolis İmdat: 155\nAFAD: 122\n[En yakın hastane adı ve telefonu]\n[En yakın itfaiye istasyonu adı ve telefonu]'
+  },
+  {
+    id: 'kimyasal',
+    ad: 'Kimyasal Madde Üretim / Depolama',
+    aciklama: 'Tehlikeli kimyasalların üretildiği, işlendiği veya depolandığı tesis.',
+    olasiAcilDurumlar: [
+      'Kimyasal sızıntı/dökülme',
+      'Zehirli/boğucu gaz yayılımı',
+      'Yangın (yanıcı/parlayıcı kimyasal)',
+      'Patlama',
+      'Kontrolsüz reaksiyon kaynaklı ani ısınma/basınç artışı',
+      'Kişisel maruziyet (solunum, cilt veya göz teması)'
+    ],
+    onleyiciTedbirler: '- Tüm kimyasallar için güncel Güvenlik Bilgi Formu (GBF/SDS) bulundurulur, depolama uyumluluk tablosuna göre (birbiriyle tepkimeye giren maddeler ayrı) depolanır.\n- Sabit/taşınabilir gaz dedektörü ve otomatik alarm sistemi kritik noktalarda bulunur.\n- Kapalı alan/tank çalışmalarında giriş öncesi gaz ölçümü, sürekli havalandırma ve gözcü personel zorunludur.\n- Dökülme/sızıntı müdahale kiti (absorban, nötralize edici) erişilebilir noktalarda hazır bulundurulur.\n- Göz duşu ve acil duş üniteleri kimyasal kullanılan her noktaya yakın konumlandırılır, periyodik olarak test edilir.\n- Uygun KKD (kimyasala dayanıklı eldiven, gözlük, gerektiğinde solunum koruyucu) zorunlu kullanılır.',
+    tahliyePlani: 'Alarm çalınca kimyasal işlem/transfer derhal durdurulur, mümkünse kaynak izole edilir (vana kapatma vb.) — bu işlem sadece eğitimli personel tarafından ve kişisel risk oluşturmayacak şekilde yapılır. Rüzgar yönü dikkate alınarak rüzgar üstü/yukarı yönde güvenli toplanma alanına gidilir. Maruz kalan personel derhal göz duşu/acil duş ile arındırılır ve sağlık birimine yönlendirilir. Ekip başları personel sayımını yapıp Acil Durum Koordinatörüne ve gerekiyorsa itfaiye/AFAD\'a bilgi verir. Sızıntının çevreye/kanalizasyona karışmaması için bariyer alınır.',
+    uyariSistemleri: 'Sabit gaz dedektörü otomatik alarmı, tesis geneli siren, anons sistemi, ekip başları telsiz uyarısı.',
+    disKurumIletisim: 'İtfaiye: 110\nAcil Sağlık (Ambulans): 112\nZehir Danışma Merkezi: 114\nAFAD: 122\nPolis İmdat: 155\n[En yakın hastane adı ve telefonu — kimyasal maruziyet tedavisi yapabilen]\n[Kimyasal tedarikçisi/üreticisi acil hattı]'
+  },
+  {
+    id: 'saglik',
+    ad: 'Sağlık Kuruluşu',
+    aciklama: 'Hastane, poliklinik veya tıp merkezi gibi sağlık hizmeti verilen tesis.',
+    olasiAcilDurumlar: [
+      'Yangın',
+      'Deprem',
+      'Tıbbi gaz (oksijen) tesisatı/tüpü kaynaklı yangın veya patlama',
+      'Kesintisiz güç kaynağı arızası (kritik cihazların durması)',
+      'Enfeksiyon/salgın kaynaklı yayılım riski',
+      'Hasta/hasta yakını kaynaklı şiddet olayı',
+      'Yatağa bağımlı/hareket kısıtlı hastanın tahliyesi'
+    ],
+    onleyiciTedbirler: '- Tıbbi gaz tesisatı ve tüp depoları periyodik olarak kontrol edilir, açık ateş/kaynak işleri bu alanlardan uzak tutulur.\n- Jeneratör ve kesintisiz güç kaynağı (UPS) düzenli test edilir, kritik cihazlar (yoğun bakım, ameliyathane) yedekli beslemeye bağlanır.\n- Enfeksiyon kontrol komitesi izolasyon protokollerini günceller, KKD stoku (maske, eldiven, önlük) sürekli hazır bulundurulur.\n- Yatağa bağımlı hasta tahliyesi için tekerlekli sedye/evacuation chair gibi ekipman her katta bulunur, personel bu ekipmanların kullanımı konusunda eğitilir.\n- Güvenlik personeli, artan gerginlik/şiddet olaylarına erken müdahale için eğitilir; panik butonu/çağrı sistemi kritik noktalara yerleştirilir.',
+    tahliyePlani: 'Alarm/anons ile birlikte önce yürüyebilen hastalar ve ziyaretçiler en yakın çıkışa yönlendirilir. Yatağa bağımlı/hareket kısıtlı hastalar önceden belirlenmiş sorumlu personel tarafından tahliye ekipmanıyla (evacuation chair, sedye) taşınır — kritik hastalarda hekim eşliğinde ve tıbbi ekipman (taşınabilir oksijen vb.) ile birlikte. Yatay tahliye (aynı kattaki yangın kompartımanına geçiş) mümkünse dikey tahliyeye tercih edilir. Servis sorumluları hasta/personel sayımını yapıp Acil Durum Koordinatörüne bildirir. Kritik bakım hastaları için önceden belirlenmiş komşu sağlık kuruluşuna sevk protokolü uygulanır.',
+    uyariSistemleri: 'Yangın alarm sistemi (kod anonsu ile, hasta panik yaratmayacak şekilde), servis içi çağrı sistemi, güvenlik/santral üzerinden anons.',
+    disKurumIletisim: 'İtfaiye: 110\nAcil Sağlık (Ambulans): 112\nAFAD: 122\nPolis İmdat: 155\n[İl Sağlık Müdürlüğü acil hattı]\n[En yakın/komşu hastane sevk protokolü telefonu]\n[Tıbbi gaz tedarikçisi acil hattı]'
+  }
+];

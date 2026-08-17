@@ -2,47 +2,91 @@
 
 let _planFirma = null;
 
+const _PLAN_ALAN_ESLESME = {
+  planHazirlanmaTarihi: 'hazirlanmaTarihi',
+  planGecerlilikTarihi: 'gecerlilikTarihi',
+  planHazirlayan: 'hazirlayan',
+  planHazirlayanUnvan: 'hazirlayanUnvan',
+  planOnaylayan: 'onaylayan',
+  planOnaylayanUnvan: 'onaylayanUnvan',
+  planUyariSistemleri: 'uyariSistemleri',
+  planNotlar: 'notlar',
+  planOnleyiciTedbirler: 'onleyiciTedbirler',
+  planTahliyePlani: 'tahliyePlani',
+  planDisKurumIletisim: 'disKurumIletisim'
+};
+
+const _PLAN_LISTE_ALAN_ESLESME = {
+  planOlasiAcilDurumlar: 'olasiAcilDurumlar',
+  planToplanmaYerleri: 'toplanmaYerleri',
+  planOzelRiskBolgeleri: 'ozelRiskBolgeleri'
+};
+
+// Bir plan nesnesindeki değerleri form alanlarına yazar (dinleyici eklemez) —
+// hem ilk yüklemede hem de hazır şablon uygulandıktan sonra ekranı
+// güncellemek için kullanılır (bkz. planSablonUygulandi).
+function planAlanlariniDoldur(plan) {
+  Object.entries(_PLAN_ALAN_ESLESME).forEach(([elId, alan]) => {
+    document.getElementById(elId).value = plan[alan] || '';
+  });
+  Object.entries(_PLAN_LISTE_ALAN_ESLESME).forEach(([elId, alan]) => {
+    document.getElementById(elId).value = (plan[alan] || []).join('\n');
+  });
+}
+
 function planSayfasiniBaslat(firma) {
   _planFirma = firma;
   const plan = planGetirVeyaOlustur(firma);
+  planAlanlariniDoldur(plan);
 
-  const alanEslesme = {
-    planHazirlanmaTarihi: 'hazirlanmaTarihi',
-    planGecerlilikTarihi: 'gecerlilikTarihi',
-    planHazirlayan: 'hazirlayan',
-    planHazirlayanUnvan: 'hazirlayanUnvan',
-    planOnaylayan: 'onaylayan',
-    planOnaylayanUnvan: 'onaylayanUnvan',
-    planUyariSistemleri: 'uyariSistemleri',
-    planNotlar: 'notlar'
-  };
-  Object.entries(alanEslesme).forEach(([elId, alan]) => {
-    const el = document.getElementById(elId);
-    el.value = plan[alan] || '';
-    el.addEventListener('change', () => planGuncelle(alan, el.value));
+  Object.entries(_PLAN_ALAN_ESLESME).forEach(([elId, alan]) => {
+    document.getElementById(elId).addEventListener('change', e => planGuncelle(alan, e.target.value));
   });
-
-  const listeAlanEslesme = {
-    planOlasiAcilDurumlar: 'olasiAcilDurumlar',
-    planToplanmaYerleri: 'toplanmaYerleri',
-    planOzelRiskBolgeleri: 'ozelRiskBolgeleri'
-  };
-  Object.entries(listeAlanEslesme).forEach(([elId, alan]) => {
-    const el = document.getElementById(elId);
-    el.value = (plan[alan] || []).join('\n');
-    el.addEventListener('change', () => planGuncelle(alan, katilimcilariAyir(el.value)));
+  Object.entries(_PLAN_LISTE_ALAN_ESLESME).forEach(([elId, alan]) => {
+    document.getElementById(elId).addEventListener('change', e => planGuncelle(alan, katilimcilariAyir(e.target.value)));
   });
-
-  document.getElementById('planOnleyiciTedbirler').value = plan.onleyiciTedbirler || '';
-  document.getElementById('planOnleyiciTedbirler').addEventListener('change', e => planGuncelle('onleyiciTedbirler', e.target.value));
-  document.getElementById('planTahliyePlani').value = plan.tahliyePlani || '';
-  document.getElementById('planTahliyePlani').addEventListener('change', e => planGuncelle('tahliyePlani', e.target.value));
-  document.getElementById('planDisKurumIletisim').value = plan.disKurumIletisim || '';
-  document.getElementById('planDisKurumIletisim').addEventListener('change', e => planGuncelle('disKurumIletisim', e.target.value));
 
   ozetBilgileriCiz();
   ekipTablosunuCiz();
   document.getElementById('planYazdirBtn').addEventListener('click', planYazdir);
+  document.getElementById('planSablonBtn').addEventListener('click', planSablonModalAc);
+  document.getElementById('planSablonModalKapatBtn').addEventListener('click', planSablonModalKapat);
+}
+
+// ---- Hazır Şablon Modalı ----
+
+function planSablonModalAc() {
+  const liste = document.getElementById('planSablonListesi');
+  liste.innerHTML = acilDurumPlanSablonlariniGetir().map(s => `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--kenarlik);">
+      <div>
+        <b style="font-size:14px;">${s.ad}</b>
+        <div style="font-size:12px; color:var(--metin-soluk); margin-top:2px;">${s.aciklama}</div>
+      </div>
+      <button type="button" class="birincil" style="width:auto; white-space:nowrap;" data-sablon-uygula="${s.id}">Bu Şablonu Kullan</button>
+    </div>
+  `).join('');
+
+  liste.querySelectorAll('[data-sablon-uygula]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const onay = await onayModali(
+        'Bu şablon; Olası Acil Durumlar, Önleyici Tedbirler, Tahliye Planı, Uyarı Sistemleri ve ' +
+        'Dış Kurum İletişim Bilgileri alanlarının üzerine yazacak (diğer alanlar değişmez). Devam edilsin mi?',
+        'Uygula'
+      );
+      if (!onay) return;
+      const sonuc = acilDurumPlanSablonUygula(btn.getAttribute('data-sablon-uygula'));
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      planAlanlariniDoldur(sonuc.plan);
+      planSablonModalKapat();
+    });
+  });
+
+  document.getElementById('planSablonModalKatman').classList.add('acik');
+}
+
+function planSablonModalKapat() {
+  document.getElementById('planSablonModalKatman').classList.remove('acik');
 }
 
 function ozetBilgileriCiz() {

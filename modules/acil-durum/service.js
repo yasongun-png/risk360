@@ -329,3 +329,24 @@ function planGuncelleTumden(veriler) {
   planKaydetRepo(plan);
   return plan;
 }
+
+function acilDurumPlanSablonlariniGetir() {
+  return ACIL_DURUM_PLAN_SABLONLARI;
+}
+
+// Şablonun sadece serbest metin alanlarını (olasiAcilDurumlar/onleyiciTedbirler/
+// tahliyePlani/uyariSistemleri/disKurumIletisim) mevcut planın üzerine yazar;
+// tarih, hazırlayan/onaylayan, toplanma yerleri, özel risk bölgeleri ve notlar
+// korunur (bkz. model.js ACIL_DURUM_PLAN_SABLONLARI).
+function acilDurumPlanSablonUygula(sablonId) {
+  const sablon = ACIL_DURUM_PLAN_SABLONLARI.find(s => s.id === sablonId);
+  if (!sablon) return { basarili: false, hata: 'Şablon bulunamadı.' };
+  const plan = planGuncelleTumden({
+    olasiAcilDurumlar: sablon.olasiAcilDurumlar.slice(),
+    onleyiciTedbirler: sablon.onleyiciTedbirler,
+    tahliyePlani: sablon.tahliyePlani,
+    uyariSistemleri: sablon.uyariSistemleri,
+    disKurumIletisim: sablon.disKurumIletisim
+  });
+  return { basarili: true, plan };
+}
