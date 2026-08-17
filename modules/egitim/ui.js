@@ -187,16 +187,18 @@ async function _eskiEgitimMatrisiIceAktar(dosya) {
     let isverenModu = false;
     let satirlar = satirlarHam;
     if (gruplar.length > 1) {
-      isverenModu = confirm(
+      isverenModu = await onayModali(
         `Dosyada ${gruplar.length} farklı "Grup" değeri var:\n${gruplar.join(', ')}\n\n` +
         `Bunlar aynı firmanın farklı işverenleri/sicilleri ise (ör. BAĞFAŞ'ın 3 sicili) "Tamam" deyin: ` +
         `TÜM satırlar aktif firma "${_aktifFirma ? _aktifFirma.ad : '?'}" içine aktarılır, Grup değeri her personelin İşveren alanına yazılır.\n\n` +
-        `Bunun yerine SADECE BİR grubu (farklı bir OSGB müşterisi gibi) aktarmak isterseniz "İptal" deyin.`
+        `Bunun yerine SADECE BİR grubu (farklı bir OSGB müşterisi gibi) aktarmak isterseniz "İptal" deyin.`,
+        'Tamam'
       );
       if (!isverenModu) {
         const varsayilan = (_aktifFirma && gruplar.find(g => _basligiNormallestir(g) === _basligiNormallestir(_aktifFirma.ad))) || gruplar[0];
-        const girdi = prompt(
+        const girdi = await metinIstemModali(
           `Aktarılacak grubun adını (aşağıdaki gibi) yazın:\n\n${gruplar.map((g, i) => `${i + 1}. ${g}`).join('\n')}`,
+          '',
           varsayilan
         );
         if (girdi === null) return;
@@ -210,7 +212,7 @@ async function _eskiEgitimMatrisiIceAktar(dosya) {
     if (!satirlar.length) { alert('Seçili grup için satır bulunamadı.'); return; }
 
     const ozetBaslik = isverenModu ? `${gruplar.length} grup (İşveren etiketi olarak)` : (seciliGrup || 'Tüm satırlar');
-    if (!confirm(`"${ozetBaslik}" için ${satirlar.length} personel satırı, aktif firma "${_aktifFirma ? _aktifFirma.ad : '?'}" içine aktarılacak. Devam edilsin mi?`)) return;
+    if (!(await onayModali(`"${ozetBaslik}" için ${satirlar.length} personel satırı, aktif firma "${_aktifFirma ? _aktifFirma.ad : '?'}" içine aktarılacak. Devam edilsin mi?`, 'Devam Et'))) return;
 
     const dugme = document.getElementById('eskiMatrisIceAktarBtn');
     const eskiMetin = dugme.textContent;
@@ -523,8 +525,8 @@ function _ozelTurListesiCiz() {
       <button type="button" class="tablo-buton sil" data-ozel-tur-sil="${t.id}">Sil</button>
     </div>
   `).join('');
-  kutu.querySelectorAll('[data-ozel-tur-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (!confirm('Bu eğitim türünü listeden kaldırmak istediğinize emin misiniz? (Bu türle daha önce girilmiş kayıtlar etkilenmez.)')) return;
+  kutu.querySelectorAll('[data-ozel-tur-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!(await onayModali('Bu eğitim türünü listeden kaldırmak istediğinize emin misiniz? (Bu türle daha önce girilmiş kayıtlar etkilenmez.)', 'Kaldır'))) return;
     const sonuc = firmaOzelEgitimTuruSil(_aktifFirma.id, btn.getAttribute('data-ozel-tur-sil'));
     if (sonuc.basarili) {
       _aktifFirma = sonuc.firma;
@@ -591,10 +593,10 @@ function egitimSayfasiniBaslat(firma) {
     kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
   });
 
-  document.getElementById('topluSilBtn').addEventListener('click', () => {
+  document.getElementById('topluSilBtn').addEventListener('click', async () => {
     const sayi = _seciliKayitIdleri.size;
     if (!sayi) return;
-    if (!confirm(`Seçili ${sayi} eğitim/sertifika kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+    if (!(await onayModali(`Seçili ${sayi} eğitim/sertifika kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`, 'Sil'))) return;
     _seciliKayitIdleri.forEach(id => egitimKaydiSil(id));
     _seciliKayitIdleri.clear();
     kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
@@ -803,8 +805,8 @@ function kayitTablosunuCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu kaydı silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) {
         const id = btn.getAttribute('data-sil');
         egitimKaydiSil(id);
         _seciliKayitIdleri.delete(id);
