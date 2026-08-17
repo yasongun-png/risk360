@@ -214,8 +214,8 @@ function hsKayitlariCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => hsKayitModalAc(hizmetSozlesmesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-yazdir]').forEach(btn => btn.addEventListener('click', () => hizmetSozlesmesiniYazdir(btn.getAttribute('data-yazdir'))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu sözleşme kaydını silmek istediğinize emin misiniz?')) { hizmetSozlesmesiSil(btn.getAttribute('data-sil')); hsKayitlariCiz(document.getElementById('aramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu sözleşme kaydını silmek istediğinize emin misiniz?', 'Sil')) { hizmetSozlesmesiSil(btn.getAttribute('data-sil')); hsKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
 }
 

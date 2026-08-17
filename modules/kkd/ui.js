@@ -154,8 +154,8 @@ function envanterleriCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => envanterModalAc(envanterIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu envanter kaydını silmek istediğinize emin misiniz?')) { envanterSil(btn.getAttribute('data-sil')); envanterleriCiz(document.getElementById('envanterAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu envanter kaydını silmek istediğinize emin misiniz?', 'Sil')) { envanterSil(btn.getAttribute('data-sil')); envanterleriCiz(document.getElementById('envanterAramaKutusu').value); }
   }));
 }
 
@@ -337,11 +337,11 @@ function zimmetleriCiz(aramaMetni) {
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {
     try { await kkdZimmetFormuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-iade]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu KKD iade edildi olarak işaretlensin mi?')) { zimmetIadeEt(btn.getAttribute('data-iade')); zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value); }
+  govde.querySelectorAll('[data-iade]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu KKD iade edildi olarak işaretlensin mi?', 'İşaretle')) { zimmetIadeEt(btn.getAttribute('data-iade')); zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu zimmet kaydını silmek istediğinize emin misiniz?')) { zimmetSil(btn.getAttribute('data-sil')); zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu zimmet kaydını silmek istediğinize emin misiniz?', 'Sil')) { zimmetSil(btn.getAttribute('data-sil')); zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value); }
   }));
 }
 
@@ -528,8 +528,8 @@ function ihlalleriCiz(aramaMetni) {
   govde.querySelectorAll('[data-tutanak]').forEach(btn => btn.addEventListener('click', async () => {
     try { await kkdIhlalTutanagiPdfOlustur(btn.getAttribute('data-tutanak')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu ihlal kaydını silmek istediğinize emin misiniz?')) { ihlalSil(btn.getAttribute('data-sil')); ihlalleriCiz(document.getElementById('ihlalAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu ihlal kaydını silmek istediğinize emin misiniz?', 'Sil')) { ihlalSil(btn.getAttribute('data-sil')); ihlalleriCiz(document.getElementById('ihlalAramaKutusu').value); }
   }));
 }
 

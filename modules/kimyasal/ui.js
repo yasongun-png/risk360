@@ -209,8 +209,8 @@ function kimyasallariCiz(aramaMetni) {
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {
     try { await kimyasalFormunuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu kimyasal kaydını silmek istediğinize emin misiniz?')) { kimyasalSil(btn.getAttribute('data-sil')); kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value); kimyasalOzetiVeUyarilariCiz(); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kimyasal kaydını silmek istediğinize emin misiniz?', 'Sil')) { kimyasalSil(btn.getAttribute('data-sil')); kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value); kimyasalOzetiVeUyarilariCiz(); }
   }));
 }
 
