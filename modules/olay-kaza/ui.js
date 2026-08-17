@@ -213,7 +213,7 @@ function olayKazaSayfasiniBaslat() {
     if (!Array.isArray(veri.kayitlar) && Array.isArray(veri.accidents)) {
       kayitlar = kayitlar.map(_eskiKazaPaneliKaydiEsle);
     }
-    if (!confirm(`${kayitlar.length} olay/kaza kaydı içe aktarılacak. Devam edilsin mi?`)) return;
+    if (!(await onayModali(`${kayitlar.length} olay/kaza kaydı içe aktarılacak. Devam edilsin mi?`, 'İçe Aktar'))) return;
 
     const dugme = document.getElementById('jsonIceAktarBtn');
     const eskiMetin = dugme.textContent;
@@ -368,8 +368,8 @@ function kayitlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-rapor-word]').forEach(btn => btn.addEventListener('click', async () => {
     try { await kazaRaporuWordOlustur(btn.getAttribute('data-rapor-word')); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu kaydı silmek istediğinize emin misiniz?')) { olayKaydiSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { olayKaydiSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
 }
 

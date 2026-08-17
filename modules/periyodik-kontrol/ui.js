@@ -151,8 +151,8 @@ function ekipmanlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-gecmis]').forEach(btn => btn.addEventListener('click', async () => {
     try { await periyodikEkipmanGecmisiniYazdir(btn.getAttribute('data-gecmis')); } catch (hata) { console.error(hata); alert('Yazdırılamadı: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu ekipmanı ve tüm kontrol geçmişini silmek istediğinize emin misiniz?')) { periyodikEkipmanSil(btn.getAttribute('data-sil')); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu ekipmanı ve tüm kontrol geçmişini silmek istediğinize emin misiniz?', 'Sil')) { periyodikEkipmanSil(btn.getAttribute('data-sil')); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
 }
 
@@ -314,8 +314,8 @@ function kontrolleriCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kontrolModalAc(periyodikKontrolIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu kontrol kaydını silmek istediğinize emin misiniz?')) { periyodikKontrolSil(btn.getAttribute('data-sil')); kontrolleriCiz(document.getElementById('kontrolAramaKutusu').value); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kontrol kaydını silmek istediğinize emin misiniz?', 'Sil')) { periyodikKontrolSil(btn.getAttribute('data-sil')); kontrolleriCiz(document.getElementById('kontrolAramaKutusu').value); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
 }
 

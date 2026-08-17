@@ -390,8 +390,8 @@ function takipListesiniCiz(aramaMetni) {
     try { await malzemeTalepWordOlustur(btn.getAttribute('data-word')); } catch (hata) { console.error(hata); alert('Word oluşturulamadı: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-yazdir]').forEach(btn => btn.addEventListener('click', () => malzemeTalepOnizlemeYazdir(btn.getAttribute('data-yazdir'))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu talebi silmek istediğinize emin misiniz?')) { malzemeTalepSil(btn.getAttribute('data-sil')); takipListesiniCiz(document.getElementById('takipAramaKutusu').value); mtOzetiCiz(); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu talebi silmek istediğinize emin misiniz?', 'Sil')) { malzemeTalepSil(btn.getAttribute('data-sil')); takipListesiniCiz(document.getElementById('takipAramaKutusu').value); mtOzetiCiz(); }
   }));
 }
 
@@ -476,8 +476,8 @@ function katalogListesiniCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => malzemeModalAc(malzemeIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu malzemeyi katalogdan silmek istediğinize emin misiniz?')) { malzemeSil(btn.getAttribute('data-sil')); katalogListesiniCiz(document.getElementById('katalogAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu malzemeyi katalogdan silmek istediğinize emin misiniz?', 'Sil')) { malzemeSil(btn.getAttribute('data-sil')); katalogListesiniCiz(document.getElementById('katalogAramaKutusu').value); }
   }));
 }
 
