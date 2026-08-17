@@ -110,6 +110,15 @@ function izinSayfasiniBaslat() {
   document.getElementById('izinModalKapatBtn').addEventListener('click', izinModalKapat);
   document.getElementById('izinModalIptalBtn').addEventListener('click', izinModalKapat);
   document.getElementById('izinForm').addEventListener('submit', izinFormGonderildi);
+  // Kullanıcı isteği: bir alanı doldurduktan sonra o alanın kırmızı hata
+  // metni, tekrar "Kaydet"e basmadan hemen temizlensin (aksi halde dolu bir
+  // alanın altında hâlâ "zorunludur" yazması, kayıt engelleniyormuş gibi
+  // yanlış izlenim veriyordu).
+  document.getElementById('izinForm').addEventListener('input', e => {
+    if (!e.target.id) return;
+    const hataEl = document.getElementById(e.target.id + 'Hata');
+    if (hataEl) hataEl.textContent = '';
+  });
   document.getElementById('izinAramaKutusu').addEventListener('input', e => izinleriCiz(e.target.value));
   document.getElementById('turFiltre').addEventListener('change', () => izinleriCiz(document.getElementById('izinAramaKutusu').value));
   document.getElementById('durumFiltre').addEventListener('change', () => izinleriCiz(document.getElementById('izinAramaKutusu').value));
@@ -118,6 +127,11 @@ function izinSayfasiniBaslat() {
   document.getElementById('izinTalepModalKapatBtn').addEventListener('click', izinTalepModalKapat);
   document.getElementById('izinTalepModalIptalBtn').addEventListener('click', izinTalepModalKapat);
   document.getElementById('izinTalepForm').addEventListener('submit', izinTalepFormGonderildi);
+  document.getElementById('izinTalepForm').addEventListener('input', e => {
+    if (!e.target.id) return;
+    const hataEl = document.getElementById(e.target.id + 'Hata');
+    if (hataEl) hataEl.textContent = '';
+  });
 
   document.getElementById('onayImzaKapatBtn').addEventListener('click', _onayImzaModalKapat);
   document.getElementById('onayImzaIptalBtn').addEventListener('click', _onayImzaModalKapat);
