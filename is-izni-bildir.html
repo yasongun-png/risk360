@@ -77,6 +77,22 @@
         <p>Bu barkod/link geçerli bir işyerine ait değil. Lütfen İSG ekibinizle iletişime geçin.</p>
       </div>
 
+      <!-- Kullanıcı isteği: "barkod ile taransa bile bir şifre istesin,
+           bakım için ayrı, İSG için ayrı, bölüm için ayrı" — Firma
+           Yönetimi'nde bu barkod türü için bir şifre tanımlanmışsa, formu
+           göstermeden önce burada istenir (bkz. _iiSifreGerekliMi). Şifre
+           tanımlanmamışsa bu ekran hiç gösterilmez (eski davranış korunur). -->
+      <div id="iiSifreDurumu" class="ii-durum gizli">
+        <div class="ikon">🔒</div>
+        <h2 id="iiSifreBaslik">Şifre Gerekli</h2>
+        <p id="iiSifreAciklama">Devam etmek için bu barkoda ait şifreyi girin.</p>
+        <div class="ii-alan" style="text-align:left;">
+          <input type="password" id="iiSifreInput" placeholder="Şifre" style="text-align:center; font-size:16px; letter-spacing:2px;">
+        </div>
+        <div class="alan-hatasi" id="iiSifreHata" style="color:var(--hata,#dc2626); font-size:12px; margin-bottom:10px;"></div>
+        <button type="button" class="birincil ii-gonder-btn" id="iiSifreGirisBtn">Giriş</button>
+      </div>
+
       <div id="iiIcerikAlani" class="gizli">
         <div class="ii-baslik">🧾 İş İzni</div>
         <div class="ii-firma" id="iiFirmaAdi"></div>
@@ -845,6 +861,53 @@
       _iiModDegistir(_iiAktifMod);
     });
 
+    // Şifre kapısı: rol'e (bölüm/bakım/İSG) karşılık gelen bir özet Firma
+    // Yönetimi'nde tanımlanmışsa, doğru şifre girilene kadar form hiç
+    // gösterilmez. Tanımlanmamışsa (varsayılan) bu adım tamamen atlanır.
+    // Doğrulama sekmenin ömrü boyunca (sessionStorage) hatırlanır — "Başa
+    // Dön" ile tekrar tekrar şifre sorulmaz, ama yeni bir tarama/sekmede
+    // tekrar istenir.
+    function _iiSifreRolAnahtari() {
+      return _iiKisitliRol === 'bakim' || _iiKisitliRol === 'isg' ? _iiKisitliRol : 'bolum';
+    }
+
+    function _iiSifreOturumAnahtari() {
+      return 'iiSifreDogrulandi_' + _iiFirma.slug + '_' + _iiSifreRolAnahtari();
+    }
+
+    function _iiSifreGerekliMi() {
+      const ozet = (_iiFirma.isIzniSifreleri || {})[_iiSifreRolAnahtari()];
+      return !!ozet && sessionStorage.getItem(_iiSifreOturumAnahtari()) !== '1';
+    }
+
+    function _iiSifreEkraniniGoster() {
+      const rolEtiketleri = { bolum: 'Sorumlu Bölüm', bakim: 'Bakımcı', isg: 'İSG' };
+      document.getElementById('iiSifreBaslik').textContent = rolEtiketleri[_iiSifreRolAnahtari()] + ' Şifresi Gerekli';
+      document.getElementById('iiYukleniyor').classList.add('gizli');
+      document.getElementById('iiSifreDurumu').classList.remove('gizli');
+      document.getElementById('iiSifreInput').value = '';
+      document.getElementById('iiSifreHata').textContent = '';
+      document.getElementById('iiSifreInput').focus();
+    }
+
+    async function _iiSifreDenendi() {
+      const girilen = document.getElementById('iiSifreInput').value;
+      const dogruOzet = (_iiFirma.isIzniSifreleri || {})[_iiSifreRolAnahtari()] || '';
+      const girilenOzet = await _sifreOzetiCikar(girilen);
+      if (!girilen || girilenOzet !== dogruOzet) {
+        document.getElementById('iiSifreHata').textContent = 'Şifre yanlış, tekrar deneyin.';
+        document.getElementById('iiSifreInput').value = '';
+        document.getElementById('iiSifreInput').focus();
+        return;
+      }
+      sessionStorage.setItem(_iiSifreOturumAnahtari(), '1');
+      document.getElementById('iiSifreDurumu').classList.add('gizli');
+      _iiFormuBaslat();
+    }
+
+    document.getElementById('iiSifreGirisBtn').addEventListener('click', _iiSifreDenendi);
+    document.getElementById('iiSifreInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); _iiSifreDenendi(); } });
+
     if (!_iiSlug) {
       document.getElementById('iiYukleniyor').classList.add('gizli');
       document.getElementById('iiHataDurumu').classList.remove('gizli');
@@ -857,7 +920,10 @@
           document.getElementById('iiHataDurumu').classList.remove('gizli');
           return;
         }
-        bulutFirmaHazirOlduğunda(_iiFirma.slug, _iiFormuBaslat);
+        bulutFirmaHazirOlduğunda(_iiFirma.slug, () => {
+          if (_iiSifreGerekliMi()) _iiSifreEkraniniGoster();
+          else _iiFormuBaslat();
+        });
       });
     }
   </script>

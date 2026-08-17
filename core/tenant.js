@@ -149,6 +149,27 @@ function firmaBolumleriAyarla(firmaId, bolumler) {
   return { basarili: true, firma };
 }
 
+// İş İzni barkodları için isteğe bağlı şifre kapısı — kullanıcı isteği:
+// "barkod ile tarasa bile bir şifre istesin, bakım için ayrı, İSG için
+// ayrı, bölüm için ayrı" (bkz. is-izni-bildir.html _iiSifreGerekliMi).
+// Şifreler core/auth.js'teki kullanıcı şifreleriyle aynı yöntemle
+// (SHA-256 özeti) saklanır — çağıran taraf (firma-yonetim.html) düz metni
+// buraya vermeden önce _sifreOzetiCikar ile özetler. Bir rol için şifre
+// boş bırakılırsa o barkod tipi şifresiz (eski davranış) kalır.
+function firmaIsIzniSifreleriAyarla(firmaId, sifreOzetleri) {
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  firma.isIzniSifreleri = {
+    bolum: (sifreOzetleri && sifreOzetleri.bolum) || '',
+    bakim: (sifreOzetleri && sifreOzetleri.bakim) || '',
+    isg: (sifreOzetleri && sifreOzetleri.isg) || ''
+  };
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
 function firmaIsverenleriAyarla(firmaId, isverenler) {
   const tumFirmalar = oku('isg_firmalar', []);
   const firma = tumFirmalar.find(f => f.id === firmaId);

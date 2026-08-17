@@ -90,6 +90,33 @@
     </div>
   </div>
 
+  <!-- Kullanıcı isteği: "barkod ile taransa bile bir şifre istesin, o
+       şifreyi girmeden giriş yapılamasın, bakım için ayrı, İSG için ayrı,
+       bölüm için ayrı" — İş İzni'nin 3 barkod tipine (Sorumlu Bölüm/Bakım/
+       İSG) isteğe bağlı, birbirinden bağımsız birer şifre atanabilir. Boş
+       bırakılan bir alan o barkod tipini şifresiz (eski davranış) bırakır. -->
+  <div class="modal-katman" id="isIzniSifreModalKatman">
+    <div class="modal-kutu">
+      <h3 id="isIzniSifreModalBaslik">İş İzni Barkod Şifreleri</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Bir alan boş bırakılırsa o barkod türü şifre istemeden (eskisi gibi) açılır. Şifreyi değiştirmeden bırakmak için alanı boş bırakın — mevcut şifre korunur.</p>
+
+      <label for="isIzniSifreBolum">Sorumlu Bölüm Barkodu Şifresi</label>
+      <input type="text" id="isIzniSifreBolum" placeholder="Mevcut şifreyi korumak için boş bırakın" autocomplete="off">
+
+      <label for="isIzniSifreBakim">Bakımcı Barkodu Şifresi</label>
+      <input type="text" id="isIzniSifreBakim" placeholder="Mevcut şifreyi korumak için boş bırakın" autocomplete="off">
+
+      <label for="isIzniSifreIsg">İSG Barkodu Şifresi</label>
+      <input type="text" id="isIzniSifreIsg" placeholder="Mevcut şifreyi korumak için boş bırakın" autocomplete="off">
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="isIzniSifreTemizleBtn" style="color:var(--hata);">Tüm Şifreleri Kaldır</button>
+        <button type="button" class="ikincil" id="isIzniSifreIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="isIzniSifreKaydetBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-katman" id="barkodModalKatman">
     <div class="modal-kutu">
       <h3 id="barkodModalBaslik">Ramak Kala / Tehlike Bildirimi Barkodu</h3>
@@ -179,6 +206,31 @@
         document.getElementById('isverenlerModalKatman').classList.remove('acik');
       });
 
+      document.getElementById('isIzniSifreIptalBtn').addEventListener('click', () => {
+        document.getElementById('isIzniSifreModalKatman').classList.remove('acik');
+      });
+      document.getElementById('isIzniSifreKaydetBtn').addEventListener('click', async () => {
+        const firma = getFirmaById(_duzenlenenIsIzniSifreFirmaId);
+        const mevcut = firma.isIzniSifreleri || {};
+        // Boş bırakılan alan mevcut özeti korur — kullanıcı sadece
+        // DEĞİŞTİRMEK istediği şifreyi yazar.
+        const bolumDeger = document.getElementById('isIzniSifreBolum').value;
+        const bakimDeger = document.getElementById('isIzniSifreBakim').value;
+        const isgDeger = document.getElementById('isIzniSifreIsg').value;
+        const sifreOzetleri = {
+          bolum: bolumDeger ? await _sifreOzetiCikar(bolumDeger) : (mevcut.bolum || ''),
+          bakim: bakimDeger ? await _sifreOzetiCikar(bakimDeger) : (mevcut.bakim || ''),
+          isg: isgDeger ? await _sifreOzetiCikar(isgDeger) : (mevcut.isg || '')
+        };
+        firmaIsIzniSifreleriAyarla(_duzenlenenIsIzniSifreFirmaId, sifreOzetleri);
+        document.getElementById('isIzniSifreModalKatman').classList.remove('acik');
+      });
+      document.getElementById('isIzniSifreTemizleBtn').addEventListener('click', () => {
+        if (!confirm('Bu firmanın 3 İş İzni barkodu için de şifre kaldırılsın mı? (Şifresiz, eski davranışa döner)')) return;
+        firmaIsIzniSifreleriAyarla(_duzenlenenIsIzniSifreFirmaId, { bolum: '', bakim: '', isg: '' });
+        document.getElementById('isIzniSifreModalKatman').classList.remove('acik');
+      });
+
       document.getElementById('barkodModalKapatBtn').addEventListener('click', () => {
         document.getElementById('barkodModalKatman').classList.remove('acik');
       });
@@ -217,6 +269,7 @@
 
     let _duzenlenenBolumlerFirmaId = null;
     let _duzenlenenIsverenlerFirmaId = null;
+    let _duzenlenenIsIzniSifreFirmaId = null;
     let _barkodAktifFirma = null;
     let _barkodAktifTip = 'ramak-kala';
 
@@ -311,6 +364,7 @@
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu (Sorumlu Bölüm)</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-bakim">🧾 İş İzni Barkodu (Bakımcı)</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-isg">🧾 İş İzni Barkodu (İSG)</button>
+            <button class="mini-buton" data-is-izni-sifre="${firma.id}">🔒 İş İzni Şifreleri</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
             <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>
@@ -390,6 +444,21 @@
           document.getElementById('barkodLinkKutusu').value = url;
           document.getElementById('barkodQrGorsel').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
           document.getElementById('barkodModalKatman').classList.add('acik');
+        });
+      });
+
+      liste.querySelectorAll('[data-is-izni-sifre]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          _duzenlenenIsIzniSifreFirmaId = btn.getAttribute('data-is-izni-sifre');
+          const firma = getFirmaById(_duzenlenenIsIzniSifreFirmaId);
+          document.getElementById('isIzniSifreModalBaslik').textContent = `${firma.ad} — İş İzni Barkod Şifreleri`;
+          // Mevcut şifreler SHA-256 özeti olarak saklanıyor, geri çözülemez
+          // — alanlar her zaman boş açılır; kullanıcı yeni bir şey yazmazsa
+          // Kaydet mevcut özeti korur (bkz. aşağıdaki Kaydet handler'ı).
+          document.getElementById('isIzniSifreBolum').value = '';
+          document.getElementById('isIzniSifreBakim').value = '';
+          document.getElementById('isIzniSifreIsg').value = '';
+          document.getElementById('isIzniSifreModalKatman').classList.add('acik');
         });
       });
 
