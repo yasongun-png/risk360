@@ -296,8 +296,8 @@ function ekipleriCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipModalAc(ekipUyesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu ekip üyesini silmek istediğinize emin misiniz?')) { ekipUyesiSil(btn.getAttribute('data-sil')); ekipleriCiz(document.getElementById('ekipAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu ekip üyesini silmek istediğinize emin misiniz?', 'Sil')) { ekipUyesiSil(btn.getAttribute('data-sil')); ekipleriCiz(document.getElementById('ekipAramaKutusu').value); }
   }));
 }
 
@@ -453,8 +453,8 @@ function ekipmanlariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu ekipmanı silmek istediğinize emin misiniz?')) { ekipmanSil(btn.getAttribute('data-sil')); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
 }
 
@@ -575,8 +575,8 @@ function yanginTupleriniCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => yanginTupuModalAc(yanginTupuIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu yangın tüpünü silmek istediğinize emin misiniz?')) { yanginTupuSil(btn.getAttribute('data-sil')); yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu yangın tüpünü silmek istediğinize emin misiniz?', 'Sil')) { yanginTupuSil(btn.getAttribute('data-sil')); yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value); }
   }));
 }
 
@@ -700,8 +700,8 @@ function tatbikatlariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => tatbikatModalAc(tatbikatIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu tatbikatı silmek istediğinize emin misiniz?')) { tatbikatSil(btn.getAttribute('data-sil')); tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu tatbikatı silmek istediğinize emin misiniz?', 'Sil')) { tatbikatSil(btn.getAttribute('data-sil')); tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value); }
   }));
 }
 
@@ -779,8 +779,8 @@ function senaryolariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => senaryoModalAc(senaryoIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu senaryoyu silmek istediğinize emin misiniz?')) { senaryoSil(btn.getAttribute('data-sil')); senaryolariCiz(document.getElementById('senaryoAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu senaryoyu silmek istediğinize emin misiniz?', 'Sil')) { senaryoSil(btn.getAttribute('data-sil')); senaryolariCiz(document.getElementById('senaryoAramaKutusu').value); }
   }));
 }
 
