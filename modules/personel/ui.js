@@ -46,10 +46,10 @@ function personelSayfasiniBaslat() {
     tabloyuCiz(document.getElementById('aramaKutusu').value);
   });
 
-  document.getElementById('topluSilBtn').addEventListener('click', () => {
+  document.getElementById('topluSilBtn').addEventListener('click', async () => {
     const sayi = _seciliPersonelIdleri.size;
     if (!sayi) return;
-    if (!confirm(`Seçili ${sayi} personeli silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+    if (!(await onayModali(`Seçili ${sayi} personeli silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`, 'Sil'))) return;
     _seciliPersonelIdleri.forEach(id => personelSil(id));
     _seciliPersonelIdleri.clear();
     tabloyuCiz(document.getElementById('aramaKutusu').value);
@@ -169,10 +169,10 @@ function tabloyuCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-sil');
       const p = personelIdIleGetirRepo(id);
-      if (confirm(`"${p.adSoyad}" adlı personeli silmek istediğinize emin misiniz?`)) {
+      if (await onayModali(`"${p.adSoyad}" adlı personeli silmek istediğinize emin misiniz?`, 'Sil')) {
         personelSil(id);
         _seciliPersonelIdleri.delete(id);
         tabloyuCiz(document.getElementById('aramaKutusu').value);

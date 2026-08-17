@@ -47,9 +47,9 @@ function agaciCiz() {
   kutu.innerHTML = `<ul class="org-agac">${kokler.map(d => dugumCiz(d, tumPersonel)).join('')}</ul>`;
 
   kutu.querySelectorAll('[data-pozisyon-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-pozisyon-sil');
-      if (confirm('Bu pozisyonu (ve varsa alt pozisyonlarını) silmek istediğinize emin misiniz? Bu pozisyona atanmış personelin ataması kaldırılır.')) {
+      if (await onayModali('Bu pozisyonu (ve varsa alt pozisyonlarını) silmek istediğinize emin misiniz? Bu pozisyona atanmış personelin ataması kaldırılır.', 'Sil')) {
         pozisyonSil(id);
         agaciCiz();
       }
