@@ -198,15 +198,15 @@ function toKayitlariCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => toKayitModalAc(tespitOneriIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-yazdir]').forEach(btn => btn.addEventListener('click', () => tespitOneriKaydiniYazdir(btn.getAttribute('data-yazdir'))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu kaydı silmek istediğinize emin misiniz?')) { tespitOneriSil(btn.getAttribute('data-sil')); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-tebligEt]').forEach(btn => btn.addEventListener('click', () => {
-    const tebligEdilen = prompt('Tebliğ edilen birim/kişi:', '');
+  govde.querySelectorAll('[data-tebligEt]').forEach(btn => btn.addEventListener('click', async () => {
+    const tebligEdilen = await metinIstemModali('Tebliğ edilen birim/kişi:', '', '');
     if (tebligEdilen !== null) { tespitOneriTebligEt(btn.getAttribute('data-tebligEt'), tebligEdilen); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', () => {
-    const yapilanIslem = prompt('Yapılan işlem / kapanış açıklaması (opsiyonel):', '');
+  govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', async () => {
+    const yapilanIslem = await metinIstemModali('Yapılan işlem / kapanış açıklaması (opsiyonel):', '', '');
     if (yapilanIslem !== null) { tespitOneriKapat(btn.getAttribute('data-kapat'), yapilanIslem); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
 }

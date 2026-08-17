@@ -136,8 +136,8 @@ function uygunsuzlukSayfasiniBaslat() {
     if (_usGorunum === 'kayitlar') kayitlariCiz(document.getElementById('aramaKutusu').value);
     else ozetiCiz();
   });
-  document.getElementById('konuYeniBtn').addEventListener('click', () => {
-    const ad = prompt('Yeni konu/defter adı:', '');
+  document.getElementById('konuYeniBtn').addEventListener('click', async () => {
+    const ad = await metinIstemModali('Yeni konu/defter adı:', '', '');
     if (ad === null) return;
     const sonuc = uygunsuzlukKonuEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -147,10 +147,10 @@ function uygunsuzlukSayfasiniBaslat() {
     _secilenKonuId = sonuc.konu.id;
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
-  document.getElementById('konuYenidenAdlandirBtn').addEventListener('click', () => {
+  document.getElementById('konuYenidenAdlandirBtn').addEventListener('click', async () => {
     if (!_secilenKonuId) { alert('Önce yeniden adlandırılacak konuyu seçin.'); return; }
     const mevcut = uygunsuzlukKonulariniGetir().find(k => k.id === _secilenKonuId);
-    const yeniAd = prompt('Yeni konu adı:', mevcut ? mevcut.ad : '');
+    const yeniAd = await metinIstemModali('Yeni konu adı:', '', mevcut ? mevcut.ad : '');
     if (yeniAd === null) return;
     const sonuc = uygunsuzlukKonuYenidenAdlandir(_secilenKonuId, yeniAd);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -332,7 +332,7 @@ async function _eskiJsonIceAktar(dosya) {
 
     const kayitlar = Array.isArray(veri) ? veri : veri.records;
     if (!Array.isArray(kayitlar) || !kayitlar.length) { alert('Dosyada içe aktarılabilir kayıt bulunamadı.'); return; }
-    if (!confirm(`${kayitlar.length} kayıt küçük gruplar hâlinde, fotoğraflarıyla birlikte sırayla içe aktarılacak. Bu biraz sürebilir. Devam edilsin mi?`)) return;
+    if (!(await onayModali(`${kayitlar.length} kayıt küçük gruplar hâlinde, fotoğraflarıyla birlikte sırayla içe aktarılacak. Bu biraz sürebilir. Devam edilsin mi?`, 'İçe Aktar'))) return;
 
     const eslenmisKayitlar = [];
     for (const r of kayitlar) {
@@ -556,19 +556,19 @@ function kayitlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', async () => {
     try { await uygunsuzlukKayitPdfOlustur(btn.getAttribute('data-pdf')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu kaydı silmek istediğinize emin misiniz?')) { uygunsuzlukSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { uygunsuzlukSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', () => {
-    const kanit = prompt('Kapanış için kanıt / açıklama girin (opsiyonel):', '');
+  govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', async () => {
+    const kanit = await metinIstemModali('Kapanış için kanıt / açıklama girin (opsiyonel):', '', '');
     if (kanit !== null) { uygunsuzlukKapat(btn.getAttribute('data-kapat'), kanit); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-onayla]').forEach(btn => btn.addEventListener('click', () => {
-    const onaylayan = prompt('Onaylayan adı:', '');
+  govde.querySelectorAll('[data-onayla]').forEach(btn => btn.addEventListener('click', async () => {
+    const onaylayan = await metinIstemModali('Onaylayan adı:', '', '');
     if (onaylayan !== null) { uygunsuzlukOnayla(btn.getAttribute('data-onayla'), onaylayan); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-reddet]').forEach(btn => btn.addEventListener('click', () => {
-    const sebep = prompt('Red sebebi:', '');
+  govde.querySelectorAll('[data-reddet]').forEach(btn => btn.addEventListener('click', async () => {
+    const sebep = await metinIstemModali('Red sebebi:', '', '');
     if (sebep !== null) { uygunsuzlukReddet(btn.getAttribute('data-reddet'), '', sebep); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
   govde.querySelectorAll('[data-konu-tasi]').forEach(btn => btn.addEventListener('click', () => {

@@ -95,8 +95,8 @@ function riskSayfasiniBaslat() {
   document.getElementById('riskForm').addEventListener('submit', formGonderildi);
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
   document.getElementById('bolumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
-  document.getElementById('bolumYeniBtn').addEventListener('click', () => {
-    const ad = prompt('Yeni bölüm adı:', '');
+  document.getElementById('bolumYeniBtn').addEventListener('click', async () => {
+    const ad = await metinIstemModali('Yeni bölüm adı:', '', '');
     if (ad === null) return;
     const sonuc = bolumEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -184,7 +184,7 @@ function riskSayfasiniBaslat() {
       alert('Tanınmayan dosya biçimi: "kayitlar" listesi bulunamadı.');
       return;
     }
-    if (!confirm(`${kayitlar.length} risk kaydı içe aktarılacak. Devam edilsin mi?`)) return;
+    if (!(await onayModali(`${kayitlar.length} risk kaydı içe aktarılacak. Devam edilsin mi?`, 'İçe Aktar'))) return;
 
     const dugme = document.getElementById('jsonIceAktarBtn');
     const eskiMetin = dugme.textContent;
@@ -251,8 +251,8 @@ function riskSayfasiniBaslat() {
   document.getElementById('sablonSektorFiltre').addEventListener('change', sablonlariCiz);
   document.getElementById('sablonKonuFiltre').addEventListener('change', sablonlariCiz);
   document.getElementById('sablonYonetmelikFiltre').addEventListener('change', sablonlariCiz);
-  document.getElementById('sablonBolumYeniBtn').addEventListener('click', () => {
-    const ad = prompt('Yeni bölüm adı:', '');
+  document.getElementById('sablonBolumYeniBtn').addEventListener('click', async () => {
+    const ad = await metinIstemModali('Yeni bölüm adı:', '', '');
     if (ad === null) return;
     const sonuc = bolumEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -359,10 +359,10 @@ function sablonlariCiz() {
   `).join('');
 
   kutu.querySelectorAll('[data-sablon-sil]').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', async e => {
       e.preventDefault();
       const id = btn.getAttribute('data-sablon-sil');
-      if (!confirm('Bu şablonu silmek istediğinize emin misiniz?')) return;
+      if (!(await onayModali('Bu şablonu silmek istediğinize emin misiniz?', 'Sil'))) return;
       const sonuc = riskSablonSil(id);
       if (!sonuc.basarili) { alert(sonuc.hata); return; }
       sablonlariCiz();
@@ -467,9 +467,9 @@ function kayitlariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-sablon-yap]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-sablon-yap');
-      if (!confirm('Bu risk kaydı (tehlike/risk/önlem metinleri) hazır şablon olarak kaydedilsin mi? Bu şablonu daha sonra bu veya başka bir firmada yeniden kullanabilirsiniz.')) return;
+      if (!(await onayModali('Bu risk kaydı (tehlike/risk/önlem metinleri) hazır şablon olarak kaydedilsin mi? Bu şablonu daha sonra bu veya başka bir firmada yeniden kullanabilirsiniz.', 'Kaydet'))) return;
       const sonuc = riskSablonKaydetKayittan(id);
       if (!sonuc.basarili) { alert(sonuc.hata); return; }
       alert('Şablon kaydedildi. "Hazır Şablonlar" listesinde "Kendi Şablonum" olarak görünecek.');
@@ -477,9 +477,9 @@ function kayitlariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-sil');
-      if (confirm('Bu risk kaydını silmek istediğinize emin misiniz?')) {
+      if (await onayModali('Bu risk kaydını silmek istediğinize emin misiniz?', 'Sil')) {
         riskSil(id);
         _bolumFiltreDoldur();
         kayitlariCiz(document.getElementById('aramaKutusu').value);
