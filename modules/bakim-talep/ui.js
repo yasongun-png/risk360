@@ -222,8 +222,8 @@ function talepleriCiz() {
     btn.addEventListener('click', () => _btDetayModalAc(btn.getAttribute('data-detay')));
   });
   govde.querySelectorAll('[data-talep-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!confirm('Bu bakım talebini kalıcı olarak silmek istediğinize emin misiniz?')) return;
+    btn.addEventListener('click', async () => {
+      if (!(await onayModali('Bu bakım talebini kalıcı olarak silmek istediğinize emin misiniz?', 'Sil'))) return;
       const sonuc = bakimTalepSil(btn.getAttribute('data-talep-sil'));
       if (!sonuc.basarili) { alert(sonuc.hata); return; }
       talepleriCiz();
@@ -657,8 +657,8 @@ function envanteriCiz() {
     });
   });
   govde.querySelectorAll('[data-ekipman-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!confirm('Bu ekipman envanter kaydını silmek istediğinize emin misiniz?')) return;
+    btn.addEventListener('click', async () => {
+      if (!(await onayModali('Bu ekipman envanter kaydını silmek istediğinize emin misiniz?', 'Sil'))) return;
       const sonuc = ekipmanKaydiSil(btn.getAttribute('data-ekipman-sil'));
       if (!sonuc.basarili) { alert(sonuc.hata); return; }
       envanteriCiz();

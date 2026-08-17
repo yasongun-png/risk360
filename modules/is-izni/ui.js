@@ -141,9 +141,9 @@ function izinSayfasiniBaslat() {
   _izKkdGridiCiz();
   document.getElementById('izImzaTemizleBtn').addEventListener('click', () => { if (_izImzaPad) _izImzaPad.temizle(); });
 
-  document.getElementById('izTuru').addEventListener('change', () => {
+  document.getElementById('izTuru').addEventListener('change', async () => {
     const isaretliVarMi = _izKontrolMaddeleri.some(m => izinKontrolDurumuCoz(m) !== 'yapilmadi' || m.not);
-    if (isaretliVarMi && !confirm('İzin türünü değiştirmek kontrol listesindeki işaretleri sıfırlayacak. Devam edilsin mi?')) return;
+    if (isaretliVarMi && !(await onayModali('İzin türünü değiştirmek kontrol listesindeki işaretleri sıfırlayacak. Devam edilsin mi?', 'Devam Et'))) return;
     _izKontrolMaddeleri = izinKontrolListesiUret(document.getElementById('izTuru').value);
     kontrolListesiniCiz();
   });
@@ -291,15 +291,15 @@ function izinleriCiz(aramaMetni) {
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     izinleriCiz(document.getElementById('izinAramaKutusu').value);
   }));
-  govde.querySelectorAll('[data-durdur]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu izin durdurulsun mu?')) { izinDurdur(btn.getAttribute('data-durdur')); izinleriCiz(document.getElementById('izinAramaKutusu').value); }
+  govde.querySelectorAll('[data-durdur]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu izin durdurulsun mu?', 'Durdur')) { izinDurdur(btn.getAttribute('data-durdur')); izinleriCiz(document.getElementById('izinAramaKutusu').value); }
   }));
   govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', async () => {
     const not = await metinIstemModali('Kapanış Notu', 'Notunuzu yazın (opsiyonel)…', 'İş güvenli şekilde tamamlandı.');
     if (not !== null) { izinKapat(btn.getAttribute('data-kapat'), not); izinleriCiz(document.getElementById('izinAramaKutusu').value); izOzetiCiz(); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu iş izni kaydını silmek istediğinize emin misiniz?')) { izinSil(btn.getAttribute('data-sil')); izinleriCiz(document.getElementById('izinAramaKutusu').value); izOzetiCiz(); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu iş izni kaydını silmek istediğinize emin misiniz?', 'Sil')) { izinSil(btn.getAttribute('data-sil')); izinleriCiz(document.getElementById('izinAramaKutusu').value); izOzetiCiz(); }
   }));
 }
 

@@ -46,3 +46,42 @@ function metinIstemModali(baslik, yerTutucu, varsayilanDeger) {
     metinEl.focus();
   });
 }
+
+// Evet/Hayır onayı gerektiren yerlerde (silme, durdurma, tür değişikliği
+// gibi geri dönüşü zor işlemler) tarayıcının native confirm() kutusu
+// yerine kullanılan ortak modal — aynı "ilk çağrıda kendi modalını
+// enjekte et" deseni. Promise<boolean> döner: true = kullanıcı onayladı,
+// false = İptal (confirm()'ün dönüş değerleriyle aynı anlam).
+function onayModali(mesaj, onaylaButonMetni) {
+  return new Promise(resolve => {
+    let katman = document.getElementById('onayModaliKatmani');
+    if (!katman) {
+      katman = document.createElement('div');
+      katman.id = 'onayModaliKatmani';
+      katman.className = 'modal-katman';
+      katman.innerHTML = `
+        <div class="modal-kutu" style="max-width:400px;">
+          <p id="omMesaj" style="margin:0 0 4px; font-size:14px; line-height:1.5;"></p>
+          <div class="modal-eylemler">
+            <button type="button" class="ikincil" id="omIptalBtn">İptal</button>
+            <button type="button" class="birincil" id="omOnaylaBtn"></button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(katman);
+    }
+
+    document.getElementById('omMesaj').textContent = mesaj || '';
+    document.getElementById('omOnaylaBtn').textContent = onaylaButonMetni || 'Onayla';
+
+    const kapat = sonuc => {
+      katman.classList.remove('acik');
+      resolve(sonuc);
+    };
+
+    document.getElementById('omIptalBtn').onclick = () => kapat(false);
+    document.getElementById('omOnaylaBtn').onclick = () => kapat(true);
+
+    katman.classList.add('acik');
+  });
+}
