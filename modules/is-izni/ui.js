@@ -363,11 +363,15 @@ function izinModalAc(kayit, tamamlaModu) {
 
   // Salt-okunur bilgi amaçlı: onayDurumu/durum bu formdan gönderilmez, sadece
   // Onay Ver/Reddet/Aktifleştir/Durdur/Kapat aksiyonlarıyla değişir (bkz.
-  // izinGuncelle) — bu yüzden alanlar devre dışı bırakılır.
-  document.getElementById('izOnayDurumu').innerHTML = IS_IZNI_ONAY_DURUMLARI.map(o => `<option ${kayit && kayit.onayDurumu === o ? 'selected' : ''}>${o}</option>`).join('');
-  document.getElementById('izOnayDurumu').disabled = true;
-  document.getElementById('izDurum').innerHTML = IS_IZNI_DURUMLARI.map(d => `<option ${(kayit ? kayit.durum : 'Taslak') === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('izDurum').disabled = true;
+  // izinGuncelle) — bu yüzden düzenlenebilir bir alan (select) yerine düz
+  // etiket olarak gösterilir (kullanıcı isteği: "neden değiştiremiyorum"
+  // izlenimi vermesin).
+  const onayDurumuMetni = kayit ? kayit.onayDurumu : 'Gerekmiyor';
+  const durumMetni = kayit ? kayit.durum : 'Taslak';
+  document.getElementById('izOnayDurumuEtiket').textContent = onayDurumuMetni;
+  document.getElementById('izOnayDurumuEtiket').className = 'genel-rozet rozet-' + izRozetSinifAdi(onayDurumuMetni);
+  document.getElementById('izDurumEtiket').textContent = durumMetni;
+  document.getElementById('izDurumEtiket').className = 'genel-rozet rozet-' + izRozetSinifAdi(durumMetni);
   document.getElementById('izNotlar').value = kayit ? kayit.notlar : '';
 
   document.querySelectorAll('#izinForm .alan-hatasi').forEach(el => el.textContent = '');
