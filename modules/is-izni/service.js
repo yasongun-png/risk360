@@ -1,5 +1,21 @@
 // İş İzni iş kuralları: yaşam döngüsü (Taslak → Onay → Aktif → Kapalı) ve özet.
 
+// bakim-talep/service.js'deki _btIsgOnaylayiciMi/_btBakimRoluMu ile aynı
+// mantık — kullanıcı isteği: "isg imzası sadece İSG'ye çıksın", "ama izin
+// veren bölümde hepsi çıkabilir" (barkod formunda ?rol= ile zaten
+// uygulanıyordu). PC'deki İş İzni listesinde ise Bakım/İSG Onayı butonları
+// hiçbir rol kontrolü olmadan HERKESE gösteriliyordu ve izinOnayVer de
+// çağıranın gerçek rolünü değil, butonun gönderdiği rol parametresini
+// olduğu gibi kabul ediyordu — bir Bakım/Sorumlu Bölüm kullanıcısı PC'den
+// doğrudan modülü açıp İSG onayını taklit edebilirdi.
+function _izIsgOnaylayiciMi(kullanici) {
+  return kullaniciAdminMi(kullanici) || (kullanici.rol === 'duzenleyici' && !!kullanici.isgOnayiVerebilir);
+}
+
+function _izBakimRoluMu(kullanici) {
+  return _izIsgOnaylayiciMi(kullanici) || kullanici.rol === 'bakim';
+}
+
 function _izinZenginlestir(izin) {
   return Object.assign({}, izin, {
     durumGoruntu: izinDurumuHesapla(izin, new Date().toISOString()),
@@ -133,6 +149,8 @@ function izinOnayVer(id, rol, imzaAdi, imzaUrl) {
   if (!izin) return { basarili: false, hata: 'Kayıt bulunamadı.' };
   const kullanici = oturumdakiKullanici();
   if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  if (rol === 'isg' && !_izIsgOnaylayiciMi(kullanici)) return { basarili: false, hata: 'İSG onayı verme yetkiniz yok.' };
+  if (rol === 'bakim' && !_izBakimRoluMu(kullanici)) return { basarili: false, hata: 'Bakım onayı verme yetkiniz yok.' };
   const ad = (imzaAdi || '').trim() || kullanici.adSoyad;
   const yeniOnayci = Object.assign(onayciOlustur({ ad, rol, durum: 'Onaylandı' }), { onayTarihi: new Date().toISOString() });
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);

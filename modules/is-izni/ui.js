@@ -215,6 +215,7 @@ function izinleriCiz(aramaMetni) {
   const govde = document.getElementById('izinTabloGovde');
   const bosDurum = document.getElementById('izinBosDurum');
   const liste = izinleriGetir(aramaMetni, _izFiltreleriOku());
+  const kullanici = oturumdakiKullanici();
 
   govde.innerHTML = '';
   if (!liste.length) {
@@ -239,8 +240,8 @@ function izinleriCiz(aramaMetni) {
       // sadece İSG ilerletir (bkz. service.js izinOnayVer) — bakım onayı
       // kendi imzasını bırakır ama İSG onayı butonunu düşürmez. Zaten
       // imzalanmış rolün butonu tekrar tekrar tıklanmasın diye gizlenir.
-      if (!(k.imzalar && k.imzalar.bakim)) islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="bakim">🔧 Bakım Onayı</button>`);
-      if (!(k.imzalar && k.imzalar.isg)) islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="isg">🛡️ İSG Onayı</button>`);
+      if (!(k.imzalar && k.imzalar.bakim) && _izBakimRoluMu(kullanici)) islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="bakim">🔧 Bakım Onayı</button>`);
+      if (!(k.imzalar && k.imzalar.isg) && _izIsgOnaylayiciMi(kullanici)) islemler.push(`<button class="tablo-buton" data-onay="${k.id}" data-rol="isg">🛡️ İSG Onayı</button>`);
       islemler.push(`<button class="tablo-buton sil" data-red="${k.id}">Reddet</button>`);
     } else if (['Onaylandı', 'Gerekmiyor'].includes(k.onayDurumu) && k.durum !== 'Aktif' && !IS_IZNI_TERMINAL_DURUMLAR.includes(k.durum)) {
       islemler.push(`<button class="tablo-buton" data-aktif="${k.id}">Aktifleştir</button>`);
@@ -248,7 +249,11 @@ function izinleriCiz(aramaMetni) {
       islemler.push(`<button class="tablo-buton" data-kapat="${k.id}">Kapat</button>`);
       islemler.push(`<button class="tablo-buton sil" data-durdur="${k.id}">Durdur</button>`);
     }
-    islemler.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
+    // Kullanıcı isteği: bakım onarım listesindeki gibi Sil sadece admin'e
+    // görünsün — diğer roller zaten servis katmanında engelleniyordu, ama
+    // buton herkese görünüyor olması gereksiz tıklama/"yetkiniz yok" hatası
+    // üretiyordu.
+    if (kullaniciAdminMi(kullanici)) islemler.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
 
     satir.innerHTML = `
       <td>${_izKacir(k.izinNo)}</td>
