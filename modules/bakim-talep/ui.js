@@ -4,6 +4,7 @@ let _btGorunum = 'talepler';
 let _btAcikKayitId = null;
 let _btDunFiltresiAktif = false;
 let _btGecikmisFiltresiAktif = false;
+let _btYonlendirilenFiltresiAktif = false;
 
 // İki tarih AYNI takvim günü mü (saat farkı önemsiz).
 function _btAyniGunMu(isoA, isoB) {
@@ -25,6 +26,14 @@ function _btDonusGecikmisMi(k) {
   const gecmis = Array.isArray(k.gecmis) ? k.gecmis : [];
   const sonTarih = gecmis.length ? gecmis[gecmis.length - 1].tarih : k.olusturmaTarihi;
   return !_btAyniGunMu(sonTarih, new Date().toISOString());
+}
+
+// Kayıt en az bir kez farklı bir bakım türüne yönlendirilmiş mi (bkz.
+// service.js bakimTuruYonlendir) — kullanıcı isteği: "yönlendirilen
+// talepler için filtrelenebilir ayrı bir görünüm olsun". Ayrı bir alan
+// tutulmadığından geçmiş kayıtlarından anlaşılır.
+function _btYonlendirilmisMi(k) {
+  return Array.isArray(k.gecmis) && k.gecmis.some(g => (g.not || '').includes('ekibine yönlendirildi'));
 }
 
 function _btKacir(v) {
@@ -151,6 +160,11 @@ function bakimTalepSayfasiniBaslat() {
     document.getElementById('btGecikmisFiltreBtn').classList.toggle('filtre-aktif', _btGecikmisFiltresiAktif);
     talepleriCiz();
   });
+  document.getElementById('btYonlendirilenFiltreBtn').addEventListener('click', () => {
+    _btYonlendirilenFiltresiAktif = !_btYonlendirilenFiltresiAktif;
+    document.getElementById('btYonlendirilenFiltreBtn').classList.toggle('filtre-aktif', _btYonlendirilenFiltresiAktif);
+    talepleriCiz();
+  });
   document.getElementById('btFiltreTemizleBtn').addEventListener('click', () => {
     document.getElementById('btAramaKutusu').value = '';
     document.getElementById('btDurumFiltre').value = '';
@@ -158,8 +172,10 @@ function bakimTalepSayfasiniBaslat() {
     document.getElementById('btBakimTuruFiltre').value = '';
     _btDunFiltresiAktif = false;
     _btGecikmisFiltresiAktif = false;
+    _btYonlendirilenFiltresiAktif = false;
     document.getElementById('btDunFiltreBtn').classList.remove('filtre-aktif');
     document.getElementById('btGecikmisFiltreBtn').classList.remove('filtre-aktif');
+    document.getElementById('btYonlendirilenFiltreBtn').classList.remove('filtre-aktif');
     talepleriCiz();
   });
   // Barkod okutunca açılan AYNI iş izni formu — kullanıcı isteği: "aynı
@@ -231,11 +247,12 @@ function talepleriCiz() {
   let liste = bakimTalepleriGetir(document.getElementById('btAramaKutusu').value, filtreler);
   if (_btDunFiltresiAktif) liste = liste.filter(t => _btDunTarihiMi(t.olusturmaTarihi));
   if (_btGecikmisFiltresiAktif) liste = liste.filter(t => !BAKIM_TALEP_KAPALI_DURUMLAR.includes(t.durum) && bakimTalepBeklemeGunSayisi(t) >= BAKIM_TALEP_GECIKME_ESIK_GUN);
+  if (_btYonlendirilenFiltresiAktif) liste = liste.filter(_btYonlendirilmisMi);
 
   govde.innerHTML = '';
   if (!liste.length) {
     bosDurum.classList.add('gorunur');
-    bosDurum.textContent = _btDunFiltresiAktif ? 'Dün açılan talep bulunamadı.' : _btGecikmisFiltresiAktif ? 'Gecikmiş talep bulunamadı.' : 'Eşleşen talep bulunamadı.';
+    bosDurum.textContent = _btDunFiltresiAktif ? 'Dün açılan talep bulunamadı.' : _btGecikmisFiltresiAktif ? 'Gecikmiş talep bulunamadı.' : _btYonlendirilenFiltresiAktif ? 'Yönlendirilmiş talep bulunamadı.' : 'Eşleşen talep bulunamadı.';
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -250,7 +267,7 @@ function talepleriCiz() {
       <td>${_btKacir(t.talep.birim)}</td>
       <td>${_btKacir(t.talep.isTanimi)}</td>
       <td><span class="genel-rozet ${_btDurumRozetSinifi(t.talep.oncelik)}">${_btKacir(t.talep.oncelik)}</span></td>
-      <td>${_btKacir(t.talep.bakimTuru)}</td>
+      <td>${_btKacir(t.talep.bakimTuru)}${_btYonlendirilmisMi(t) ? ' <span title="Bu talep bir bakım türünden diğerine yönlendirildi">🔀</span>' : ''}</td>
       <td>
         <span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span>
         ${uyariGoster ? `<span class="yanip-sonen-uyari">⚠️ ${bakimTalepBeklemeGunSayisi(t)} gündür yanıt bekliyor</span>` : ''}
