@@ -144,7 +144,7 @@ async function _eskiKurulJsonIceAktar(dosya) {
   }
   const gecerliToplantiIdSeti = new Set(gecerliToplantilar.map(m => m.id));
 
-  if (!confirm(`${gecerliToplantilar.length} toplantı ve ilişkili kararlar/olaylar/imzalar/fotoğraflar içe aktarılacak. Devam edilsin mi?`)) return;
+  if (!(await onayModali(`${gecerliToplantilar.length} toplantı ve ilişkili kararlar/olaylar/imzalar/fotoğraflar içe aktarılacak. Devam edilsin mi?`, 'İçe Aktar'))) return;
 
   const dugme = document.getElementById('eskiJsonIceAktarBtn');
   const eskiMetin = dugme.textContent;
@@ -319,8 +319,8 @@ function kurulSayfasiniBaslat() {
     }));
     excelDisaAktar(satirlar, DENETIM_EXPORT_KOLONLARI, 'kurul_denetim_kaydi.xlsx');
   });
-  document.getElementById('denetimTemizleBtn').addEventListener('click', () => {
-    if (confirm('Tüm denetim kaydı kalıcı olarak silinecek. Devam edilsin mi?')) {
+  document.getElementById('denetimTemizleBtn').addEventListener('click', async () => {
+    if (await onayModali('Tüm denetim kaydı kalıcı olarak silinecek. Devam edilsin mi?', 'Temizle')) {
       denetimTemizle();
       denetimCiz();
     }
@@ -454,8 +454,8 @@ function toplantilariCiz(aramaMetni) {
     btn.addEventListener('click', () => modalAc(toplantiIdIleGetirRepo(btn.getAttribute('data-duzenle'))));
   });
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu toplantıyı ve bağlı kararlarını silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu toplantıyı ve bağlı kararlarını silmek istediğinize emin misiniz?', 'Sil')) {
         toplantiSil(btn.getAttribute('data-sil'));
         toplantilariCiz(document.getElementById('aramaKutusu').value);
       }

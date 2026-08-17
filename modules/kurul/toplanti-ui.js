@@ -389,8 +389,8 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu kararı silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu kararı silmek istediğinize emin misiniz?', 'Sil')) {
         kararSil(btn.getAttribute('data-sil'));
         kararlariCiz();
       }
@@ -398,11 +398,11 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
   });
 
   govde.querySelectorAll('[data-tasi]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const digerToplantilar = toplantiTumunuGetir().filter(t => t.id !== _toplantiId);
       if (!digerToplantilar.length) { alert('Taşınacak başka bir toplantı yok.'); return; }
       const secenekler = digerToplantilar.map((t, i) => `${i + 1}. ${t.toplantiNo} - ${t.baslik} (${gunAyYil(t.tarih)})`).join('\n');
-      const secim = prompt('Bu kararı hangi toplantıya taşımak istiyorsunuz?\n(Devreden/Bu Toplantının Kararı ayrımı, taşındığı toplantıya göre otomatik belirlenir.)\n\n' + secenekler + '\n\nNumara girin:');
+      const secim = await metinIstemModali('Bu kararı hangi toplantıya taşımak istiyorsunuz?\n(Devreden/Bu Toplantının Kararı ayrımı, taşındığı toplantıya göre otomatik belirlenir.)\n\n' + secenekler, 'Numara girin', '');
       const index = parseInt(secim, 10) - 1;
       if (Number.isInteger(index) && digerToplantilar[index]) {
         kararTasi(btn.getAttribute('data-tasi'), digerToplantilar[index].id);
@@ -482,16 +482,16 @@ function olaylariCiz() {
       olayModalAc(olay);
     }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     const id = btn.getAttribute('data-sil');
     const olay = olaylar.find(o => o.id === id);
     if (!olay) return;
     if (olay.otomatik) {
-      if (confirm('Bu olay bu toplantının listesinden gizlenecek (Olay/Kaza modülündeki asıl kayıt silinmez). Devam edilsin mi?')) {
+      if (await onayModali('Bu olay bu toplantının listesinden gizlenecek (Olay/Kaza modülündeki asıl kayıt silinmez). Devam edilsin mi?', 'Devam Et')) {
         kurulOtomatikOlayiGizle(_toplantiId, id.replace(/^oto-/, ''));
         olaylariCiz();
       }
-    } else if (confirm('Bu olayı silmek istediğinize emin misiniz?')) {
+    } else if (await onayModali('Bu olayı silmek istediğinize emin misiniz?', 'Sil')) {
       kurulOlayiSil(id);
       olaylariCiz();
     }
@@ -632,8 +632,8 @@ function imzalariCiz() {
   govde.querySelectorAll('[data-atama]').forEach(btn => btn.addEventListener('click', async () => {
     try { await atamaYazisiWordOlustur(btn.getAttribute('data-atama')); } catch (hata) { console.error(hata); alert('Atama yazısı üretilemedi: ' + (hata.message || hata)); }
   }));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu katılımcıyı silmek istediğinize emin misiniz?')) { imzaSatiriSil(btn.getAttribute('data-sil')); imzalariCiz(); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu katılımcıyı silmek istediğinize emin misiniz?', 'Sil')) { imzaSatiriSil(btn.getAttribute('data-sil')); imzalariCiz(); }
   }));
 }
 
@@ -908,8 +908,8 @@ function ayIciFaaliyetleriCiz() {
     govde.appendChild(satir);
   });
 
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu faaliyeti silmek istediğinize emin misiniz?')) { ayIciFaaliyetSil(btn.getAttribute('data-sil')); ayIciFaaliyetleriCiz(); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu faaliyeti silmek istediğinize emin misiniz?', 'Sil')) { ayIciFaaliyetSil(btn.getAttribute('data-sil')); ayIciFaaliyetleriCiz(); }
   }));
 }
 

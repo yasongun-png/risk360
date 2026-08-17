@@ -133,14 +133,14 @@ async function toplantiDavetiWordOlustur() {
 // kullanıcı isteği: "oy kısmı doldurulmadı ise rapor yazdırırken beni uyarsın".
 // Onaylarsa true döner (rapor devam eder), iptal ederse false (çağıran fonksiyon
 // hiçbir dosya üretmeden çıkar). Word/PDF/PPTX üçünde de ortak kullanılır.
-function _oyEksikKontrolVeUyar(yeni, devreden) {
+async function _oyEksikKontrolVeUyar(yeni, devreden) {
   const eksikYeni = yeni.filter(k => !kararOyDokumMetni(k));
   const eksikDevreden = devreden.filter(k => !kararOyDokumMetni(k));
   if (!eksikYeni.length && !eksikDevreden.length) return true;
   const satirlar = [];
   if (eksikYeni.length) satirlar.push(`Bu toplantının kararları: ${eksikYeni.map(k => k.kararNo).join(', ')}`);
   if (eksikDevreden.length) satirlar.push(`Devreden kararlar: ${eksikDevreden.map(k => k.kararNo).join(', ')}`);
-  return confirm(`Aşağıdaki kararlarda oy dökümü (Kabul/Ret/Çekimser) girilmemiş:\n\n${satirlar.join('\n')}\n\nYine de rapor oluşturulsun mu?`);
+  return onayModali(`Aşağıdaki kararlarda oy dökümü (Kabul/Ret/Çekimser) girilmemiş:\n\n${satirlar.join('\n')}\n\nYine de rapor oluşturulsun mu?`, 'Yine de Oluştur');
 }
 
 // ==================== 2) KURUL RAPORU (WORD) ====================
@@ -318,7 +318,7 @@ async function kurulRaporuWordOlustur() {
   const gundem = toplanti.gundem || [];
   const olaylarHam = toplantiOlaylariniGetir(_toplantiId);
   const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
-  if (!_oyEksikKontrolVeUyar(yeniHam, devredenHam)) return;
+  if (!(await _oyEksikKontrolVeUyar(yeniHam, devredenHam))) return;
   const tespitEdilenUygunsuzluklarHam = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
   const kapananUygunsuzluklarHam = toplantiKapananUygunsuzluklariGetir(toplanti);
   const aylikEgitimler = toplantiAylikEgitimleriGetir(toplanti);
@@ -781,7 +781,7 @@ async function kurulRaporuPdfOlustur() {
   const gundem = toplanti.gundem || [];
   const olaylarHam = toplantiOlaylariniGetir(_toplantiId);
   const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
-  if (!_oyEksikKontrolVeUyar(yeniHam, devredenHam)) return;
+  if (!(await _oyEksikKontrolVeUyar(yeniHam, devredenHam))) return;
   const tespitEdilenUygunsuzluklarHam = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
   const kapananUygunsuzluklarHam = toplantiKapananUygunsuzluklariGetir(toplanti);
   const aylikEgitimler = toplantiAylikEgitimleriGetir(toplanti);
@@ -1014,7 +1014,7 @@ async function pptxOlustur() {
   const gundem = toplanti.gundem || [];
   const olaylarHam = toplantiOlaylariniGetir(_toplantiId);
   const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
-  if (!_oyEksikKontrolVeUyar(yeniHam, devredenHam)) return;
+  if (!(await _oyEksikKontrolVeUyar(yeniHam, devredenHam))) return;
   const tespitEdilenUygunsuzluklarHam = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
   const kapananUygunsuzluklarHam = toplantiKapananUygunsuzluklariGetir(toplanti);
   const aylikEgitimler = toplantiAylikEgitimleriGetir(toplanti);
