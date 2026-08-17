@@ -266,6 +266,7 @@
             </div>
 
             <div class="hata-mesaji" id="siHataMesaji"></div>
+            <div id="siBasariMesaji" class="gizli" style="background:#dcfce7; color:#15803d; border-radius:8px; padding:10px 12px; font-size:12.5px; font-weight:700; margin-bottom:10px; text-align:center;"></div>
             <button type="submit" class="birincil ii-gonder-btn" id="siGonderBtn">İmzayı Kaydet</button>
           </form>
         </div>
@@ -733,6 +734,7 @@
       const liste = oku(_iiIzinAnahtari(), []);
       _siIzin = liste.find(k => k.id === izinId) || null;
       const form = document.getElementById('siForm');
+      document.getElementById('siBasariMesaji').classList.add('gizli');
       if (!_siIzin) { form.classList.add('gizli'); return; }
       form.classList.remove('gizli');
       _siImzaliEtiketleriGuncelle();
@@ -754,6 +756,7 @@
         e.preventDefault();
         const hataMesaji = document.getElementById('siHataMesaji');
         hataMesaji.classList.remove('gorunur');
+        document.getElementById('siBasariMesaji').classList.add('gizli');
 
         const adSoyad = document.getElementById('siAdSoyad').value.trim();
         if (!_siIzin || !adSoyad) {
@@ -794,14 +797,35 @@
 
           await _iiBildirimEkle(guncellenen, null, adSoyad, (_siAktifRol === 'isg' ? 'İSG' : 'Bakım Personeli') + ' imzaladı');
 
-          document.getElementById('iiBasariBaslik').textContent = 'İmza Kaydedildi';
-          document.getElementById('iiBasariMetin').textContent = guncellenen.izinNo + ' numaralı iş izni ' + (_siAktifRol === 'isg' ? 'İSG' : 'bakım personeli') + ' tarafından imzalandı.';
-          document.getElementById('iiIcerikAlani').classList.add('gizli');
-          document.getElementById('iiBasariDurumu').classList.remove('gizli');
+          // Kullanıcı isteği: "imzayı kaydedince sayfa kapanmasın, diğer
+          // imzalara kolaylıkla geçilebilsin" — aynı telefon/QR üzerinden
+          // art arda birden fazla kişi (ör. önce bakım, sonra İSG)
+          // imzalayabiliyor; tam ekran "Form Tamamlandı" sonucu yerine
+          // ekranda kalınır, imza alanı temizlenir ve bir sonraki role
+          // otomatik geçilir.
+          _siIzin = guncellenen;
+          _siImzaliEtiketleriGuncelle();
+          if (_siImzaPad) _siImzaPad.temizle();
+          document.getElementById('siAdSoyad').value = '';
+
+          // İSG'ye özel barkodda (bkz. _iiKisitliRol) Bakım rol butonu hiç
+          // gösterilmiyor — o durumda otomatik rol değiştirme yapılmaz.
+          if (_iiKisitliRol !== 'isg') {
+            const digerRol = _siAktifRol === 'isg' ? 'bakim' : 'isg';
+            const digerRolImzaliMi = !!(guncellenen.imzalar && guncellenen.imzalar[digerRol]);
+            if (!digerRolImzaliMi) {
+              document.getElementById(digerRol === 'isg' ? 'siRolIsgBtn' : 'siRolBakimBtn').click();
+            }
+          }
+
+          const basariEl = document.getElementById('siBasariMesaji');
+          basariEl.textContent = '✓ ' + (_siAktifRol === 'isg' ? 'İSG' : 'Bakım Personeli') + ' imzası kaydedildi. Başka biri imzalayacaksa rolü seçip devam edebilir.';
+          basariEl.classList.remove('gizli');
         } catch (hata) {
           console.error('İmza kaydedilemedi:', hata);
           hataMesaji.textContent = 'Bir hata oluştu, imza kaydedilemedi. Lütfen tekrar deneyin.';
           hataMesaji.classList.add('gorunur');
+        } finally {
           gonderBtn.disabled = false;
           gonderBtn.textContent = 'İmzayı Kaydet';
         }

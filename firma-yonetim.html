@@ -91,10 +91,14 @@
   </div>
 
   <!-- Kullanıcı isteği: "barkod ile taransa bile bir şifre istesin, o
-       şifreyi girmeden giriş yapılamasın, bakım için ayrı, İSG için ayrı,
-       bölüm için ayrı" — İş İzni'nin 3 barkod tipine (Sorumlu Bölüm/Bakım/
-       İSG) isteğe bağlı, birbirinden bağımsız birer şifre atanabilir. Boş
-       bırakılan bir alan o barkod tipini şifresiz (eski davranış) bırakır. -->
+       şifreyi girmeden giriş yapılamasın, İSG için ayrı, bölüm için ayrı" —
+       İş İzni'nin 2 barkod tipine (Sorumlu Bölüm/İSG) isteğe bağlı,
+       birbirinden bağımsız birer şifre atanabilir. Boş bırakılan bir alan
+       o barkod tipini şifresiz (eski davranış) bırakır. Bakımcıya özel
+       barkod kaldırıldı (kullanıcı isteği: "sorumlu bölüm iş izni
+       formunu doldursun, barkod veya uygulama fark etmez") — bakimTuru
+       tuşu geriye dönük uyumluluk için firma kaydında (isIzniSifreleri)
+       hâlâ tutulur, sadece bu ekranda ayrı bir alan olarak gösterilmez. -->
   <div class="modal-katman" id="isIzniSifreModalKatman">
     <div class="modal-kutu">
       <h3 id="isIzniSifreModalBaslik">İş İzni Barkod Şifreleri</h3>
@@ -102,9 +106,6 @@
 
       <label for="isIzniSifreBolum">Sorumlu Bölüm Barkodu Şifresi</label>
       <input type="text" id="isIzniSifreBolum" placeholder="Mevcut şifreyi korumak için boş bırakın" autocomplete="off">
-
-      <label for="isIzniSifreBakim">Bakımcı Barkodu Şifresi</label>
-      <input type="text" id="isIzniSifreBakim" placeholder="Mevcut şifreyi korumak için boş bırakın" autocomplete="off">
 
       <label for="isIzniSifreIsg">İSG Barkodu Şifresi</label>
       <input type="text" id="isIzniSifreIsg" placeholder="Mevcut şifreyi korumak için boş bırakın" autocomplete="off">
@@ -215,18 +216,17 @@
         // Boş bırakılan alan mevcut özeti korur — kullanıcı sadece
         // DEĞİŞTİRMEK istediği şifreyi yazar.
         const bolumDeger = document.getElementById('isIzniSifreBolum').value;
-        const bakimDeger = document.getElementById('isIzniSifreBakim').value;
         const isgDeger = document.getElementById('isIzniSifreIsg').value;
         const sifreOzetleri = {
           bolum: bolumDeger ? await _sifreOzetiCikar(bolumDeger) : (mevcut.bolum || ''),
-          bakim: bakimDeger ? await _sifreOzetiCikar(bakimDeger) : (mevcut.bakim || ''),
+          bakim: mevcut.bakim || '',
           isg: isgDeger ? await _sifreOzetiCikar(isgDeger) : (mevcut.isg || '')
         };
         firmaIsIzniSifreleriAyarla(_duzenlenenIsIzniSifreFirmaId, sifreOzetleri);
         document.getElementById('isIzniSifreModalKatman').classList.remove('acik');
       });
       document.getElementById('isIzniSifreTemizleBtn').addEventListener('click', () => {
-        if (!confirm('Bu firmanın 3 İş İzni barkodu için de şifre kaldırılsın mı? (Şifresiz, eski davranışa döner)')) return;
+        if (!confirm('Bu firmanın İş İzni barkodları için de şifre kaldırılsın mı? (Şifresiz, eski davranışa döner)')) return;
         firmaIsIzniSifreleriAyarla(_duzenlenenIsIzniSifreFirmaId, { bolum: '', bakim: '', isg: '' });
         document.getElementById('isIzniSifreModalKatman').classList.remove('acik');
       });
@@ -302,14 +302,6 @@
         posterMetin: 'İş izni talebi oluşturmak, formu tamamlamak veya imzalamak için barkodu telefonunuzla okutun.',
         posterAlt: 'Bu barkod işin yapılacağı bölümün sorumlusu içindir, tüm adımları içerir.'
       },
-      'is-izni-bakim': {
-        sayfa: 'is-izni-bildir.html',
-        rolParam: 'bakim',
-        baslik: 'İş İzni Barkodu — Bakımcı (Sadece Talep)',
-        posterBaslik: 'İŞ İZNİ TALEP ET',
-        posterMetin: 'İşe başlamadan önce iş izni talebi açmak için barkodu telefonunuzla okutun.',
-        posterAlt: 'Bu barkod sadece yeni talep açar; formu tamamlamak işin yapılacağı bölüme aittir.'
-      },
       'is-izni-isg': {
         sayfa: 'is-izni-bildir.html',
         rolParam: 'isg',
@@ -362,7 +354,6 @@
             <button class="mini-buton" data-isverenler="${firma.id}">İşverenler</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ramak-kala">📷 Ramak Kala Barkodu</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu (Sorumlu Bölüm)</button>
-            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-bakim">🧾 İş İzni Barkodu (Bakımcı)</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-isg">🧾 İş İzni Barkodu (İSG)</button>
             <button class="mini-buton" data-is-izni-sifre="${firma.id}">🔒 İş İzni Şifreleri</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
@@ -456,7 +447,6 @@
           // — alanlar her zaman boş açılır; kullanıcı yeni bir şey yazmazsa
           // Kaydet mevcut özeti korur (bkz. aşağıdaki Kaydet handler'ı).
           document.getElementById('isIzniSifreBolum').value = '';
-          document.getElementById('isIzniSifreBakim').value = '';
           document.getElementById('isIzniSifreIsg').value = '';
           document.getElementById('isIzniSifreModalKatman').classList.add('acik');
         });
