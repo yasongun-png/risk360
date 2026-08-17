@@ -75,7 +75,10 @@ function _ekipmanEnvanteriGuncelle(kod, konum) {
       konum: konum || mevcut.konum
     });
   } else {
-    ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, temizKod, konum));
+    // Ad kasıtlı olarak boş bırakılır (kod ile aynı doldurulmuyor) —
+    // envanter listesinde "-" olarak görünür, "Düzenle" ile elle
+    // girilene kadar kod ile adın aynı şey olduğu yanılgısına yol açmaz.
+    ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, '', konum));
   }
 }
 
@@ -107,7 +110,7 @@ function ekipmanBakimKartiGirdiEkle(ekipmanKodu, konum, girdi) {
   if (!temizKod) return { basarili: false, hata: 'Ekipman kodu zorunludur.' };
   let ekipmanId = _ekipmanKoduIleIdBul(temizKod);
   if (!ekipmanId) {
-    const yeni = ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, temizKod, konum));
+    const yeni = ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(temizKod, '', konum));
     ekipmanId = yeni.id;
   } else {
     ekipmanEnvanterKaydiGuncelleRepo(ekipmanId, { sonKullanimTarihi: new Date().toISOString() });

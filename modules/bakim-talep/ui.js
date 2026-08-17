@@ -128,6 +128,15 @@ function bakimTalepSayfasiniBaslat() {
     document.getElementById('btDunFiltreBtn').classList.toggle('filtre-aktif', _btDunFiltresiAktif);
     talepleriCiz();
   });
+  document.getElementById('btFiltreTemizleBtn').addEventListener('click', () => {
+    document.getElementById('btAramaKutusu').value = '';
+    document.getElementById('btDurumFiltre').value = '';
+    document.getElementById('btBirimFiltre').value = '';
+    document.getElementById('btBakimTuruFiltre').value = '';
+    _btDunFiltresiAktif = false;
+    document.getElementById('btDunFiltreBtn').classList.remove('filtre-aktif');
+    talepleriCiz();
+  });
   // Barkod okutunca açılan AYNI iş izni formu — kullanıcı isteği: "aynı
   // barkodun yönlendirdiği form Bakım Onarım tarafında da olsun, barkodla
   // gelen formla aynı form açılsın". Yeni sekmede açılır ki liste ekranı
@@ -194,7 +203,7 @@ function talepleriCiz() {
       <td><button type="button" class="tablo-buton" data-detay="${t.id}">${_btKacir(t.talepNo)}</button></td>
       <td>${_btKacir(t.talep.birim)}</td>
       <td>${_btKacir(t.talep.isTanimi)}</td>
-      <td>${_btKacir(t.talep.oncelik)}</td>
+      <td><span class="genel-rozet ${_btDurumRozetSinifi(t.talep.oncelik)}">${_btKacir(t.talep.oncelik)}</span></td>
       <td>${_btKacir(t.talep.bakimTuru)}</td>
       <td>
         <span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span>
