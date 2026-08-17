@@ -422,8 +422,8 @@ function firmalariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => firmaModalAc(yukleniciFirmaIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu firmayı ve bağlı personelini silmek istediğinize emin misiniz?')) { yukleniciFirmaSil(btn.getAttribute('data-sil')); firmalariCiz(document.getElementById('firmaAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu firmayı ve bağlı personelini silmek istediğinize emin misiniz?', 'Sil')) { yukleniciFirmaSil(btn.getAttribute('data-sil')); firmalariCiz(document.getElementById('firmaAramaKutusu').value); }
   }));
 }
 
@@ -514,8 +514,8 @@ function kisileriCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kisiModalAc(yukleniciKisiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu kişiyi silmek istediğinize emin misiniz?')) { yukleniciKisiSil(btn.getAttribute('data-sil')); kisileriCiz(document.getElementById('kisiAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kişiyi silmek istediğinize emin misiniz?', 'Sil')) { yukleniciKisiSil(btn.getAttribute('data-sil')); kisileriCiz(document.getElementById('kisiAramaKutusu').value); }
   }));
 }
 
@@ -647,8 +647,8 @@ function araclariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => aracModalAc(yukleniciAracIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu araç/ekipman kaydını silmek istediğinize emin misiniz?')) { yukleniciAracSil(btn.getAttribute('data-sil')); araclariCiz(document.getElementById('aracAramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu araç/ekipman kaydını silmek istediğinize emin misiniz?', 'Sil')) { yukleniciAracSil(btn.getAttribute('data-sil')); araclariCiz(document.getElementById('aracAramaKutusu').value); }
   }));
 }
 
@@ -758,8 +758,8 @@ function ziyaretcileriCiz() {
     govde.appendChild(satir);
   });
 
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu ziyaretçi kaydını silmek istediğinize emin misiniz?')) { yukleniciZiyaretciSil(btn.getAttribute('data-sil')); ziyaretcileriCiz(); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu ziyaretçi kaydını silmek istediğinize emin misiniz?', 'Sil')) { yukleniciZiyaretciSil(btn.getAttribute('data-sil')); ziyaretcileriCiz(); }
   }));
 }
 
@@ -837,8 +837,8 @@ function kayitlariCiz(aramaMetni) {
     });
   });
   govde.querySelectorAll('[data-sil-kayit]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+    btn.addEventListener('click', async () => {
+      if (!(await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil'))) return;
       const id = btn.getAttribute('data-sil-kayit');
       if (btn.getAttribute('data-kind') === 'personel') yukleniciKisiSil(id); else yukleniciAracSil(id);
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
@@ -846,11 +846,11 @@ function kayitlariCiz(aramaMetni) {
   });
 }
 
-function kayitSecilenleriSil() {
+async function kayitSecilenleriSil() {
   const secililer = Array.from(document.querySelectorAll('#kayitTabloGovde [data-kayit-sec]:checked'))
     .map(cb => ({ kind: cb.getAttribute('data-kind'), id: cb.getAttribute('data-id') }));
   if (!secililer.length) { alert('Lütfen silmek için en az bir kayıt seçin.'); return; }
-  if (!confirm(`${secililer.length} kayıt silinsin mi?`)) return;
+  if (!(await onayModali(`${secililer.length} kayıt silinsin mi?`, 'Sil'))) return;
 
   const sonuc = yukleniciKayitlariToplusil(secililer);
   alert(`${sonuc.silinen} kayıt silindi.`);
