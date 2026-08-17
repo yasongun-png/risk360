@@ -16,6 +16,9 @@ const BAKIM_TALEP_DURUMLARI = [
 // Kapalı sayılan (aktif takip listelerinden/merkezi aksiyondan düşen) durumlar.
 const BAKIM_TALEP_KAPALI_DURUMLAR = ['Kapatıldı', 'Reddedildi'];
 
+// Bir kayıt aynı aşamada bu kadar gündür hareketsizse "gecikmiş" sayılır.
+const BAKIM_TALEP_GECIKME_ESIK_GUN = 2;
+
 const BAKIM_TALEP_ONCELIKLERI = ['Acil', 'Yüksek', 'Normal', 'Düşük'];
 
 // Kullanıcı isteği: "bakım tarafında elektrik ve otomasyon bakım da var,
@@ -88,6 +91,17 @@ function bakimTalepGecmisSatiri(durum, kullanici, not) {
     tarih: new Date().toISOString(),
     not: not || ''
   };
+}
+
+// Kaydın en son hareket (geçmiş) tarihinden bu yana kaç GÜN geçtiğini
+// hesaplar — kullanıcı isteği: "X günden uzun süre aynı aşamada bekleyen
+// talepler için genel bir uyarı olsun". Sadece "bugün mü değil mi" yerine
+// gerçek gün sayısı vererek listede ve özet ekranında kullanılır.
+function bakimTalepBeklemeGunSayisi(k) {
+  const gecmis = Array.isArray(k.gecmis) ? k.gecmis : [];
+  const sonTarih = gecmis.length ? gecmis[gecmis.length - 1].tarih : k.olusturmaTarihi;
+  if (!sonTarih) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(sonTarih).getTime()) / 86400000));
 }
 
 // ---- Ekipman Envanteri (talep formlarından kendiliğinden oluşur) ----

@@ -508,10 +508,17 @@ function bakimTalepOzetiHesapla() {
   const tamamlanan = liste.filter(t => t.durum === 'Kapatıldı').length;
   const reddedilen = liste.filter(t => t.durum === 'Reddedildi').length;
 
+  // Kullanıcı isteği: "X günden uzun süre aynı aşamada bekleyen talepler
+  // için genel bir uyarı olsun" — açık (kapanmamış) kayıtlardan, son
+  // hareketinin üzerinden BAKIM_TALEP_GECIKME_ESIK_GUN veya daha fazla gün
+  // geçmiş olanların sayısı.
+  const gecikmisSayisi = liste.filter(t => acikDurumlar.includes(t.durum) && bakimTalepBeklemeGunSayisi(t) >= BAKIM_TALEP_GECIKME_ESIK_GUN).length;
+
   return {
     toplam: liste.length,
     acik: liste.filter(t => acikDurumlar.includes(t.durum)).length,
     onayBekleyen: liste.filter(t => t.durum === 'İSG Onayında').length,
+    gecikmisSayisi,
     tamamlanan,
     reddedilen,
     tamamlanmaOrani: liste.length ? Math.round((tamamlanan / liste.length) * 100) : 0,

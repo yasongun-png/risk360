@@ -3,6 +3,7 @@
 let _btGorunum = 'talepler';
 let _btAcikKayitId = null;
 let _btDunFiltresiAktif = false;
+let _btGecikmisFiltresiAktif = false;
 
 // İki tarih AYNI takvim günü mü (saat farkı önemsiz).
 function _btAyniGunMu(isoA, isoB) {
@@ -128,13 +129,20 @@ function bakimTalepSayfasiniBaslat() {
     document.getElementById('btDunFiltreBtn').classList.toggle('filtre-aktif', _btDunFiltresiAktif);
     talepleriCiz();
   });
+  document.getElementById('btGecikmisFiltreBtn').addEventListener('click', () => {
+    _btGecikmisFiltresiAktif = !_btGecikmisFiltresiAktif;
+    document.getElementById('btGecikmisFiltreBtn').classList.toggle('filtre-aktif', _btGecikmisFiltresiAktif);
+    talepleriCiz();
+  });
   document.getElementById('btFiltreTemizleBtn').addEventListener('click', () => {
     document.getElementById('btAramaKutusu').value = '';
     document.getElementById('btDurumFiltre').value = '';
     document.getElementById('btBirimFiltre').value = '';
     document.getElementById('btBakimTuruFiltre').value = '';
     _btDunFiltresiAktif = false;
+    _btGecikmisFiltresiAktif = false;
     document.getElementById('btDunFiltreBtn').classList.remove('filtre-aktif');
+    document.getElementById('btGecikmisFiltreBtn').classList.remove('filtre-aktif');
     talepleriCiz();
   });
   // Barkod okutunca açılan AYNI iş izni formu — kullanıcı isteği: "aynı
@@ -185,11 +193,12 @@ function talepleriCiz() {
   };
   let liste = bakimTalepleriGetir(document.getElementById('btAramaKutusu').value, filtreler);
   if (_btDunFiltresiAktif) liste = liste.filter(t => _btDunTarihiMi(t.olusturmaTarihi));
+  if (_btGecikmisFiltresiAktif) liste = liste.filter(t => !BAKIM_TALEP_KAPALI_DURUMLAR.includes(t.durum) && bakimTalepBeklemeGunSayisi(t) >= BAKIM_TALEP_GECIKME_ESIK_GUN);
 
   govde.innerHTML = '';
   if (!liste.length) {
     bosDurum.classList.add('gorunur');
-    bosDurum.textContent = _btDunFiltresiAktif ? 'Dün açılan talep bulunamadı.' : 'Eşleşen talep bulunamadı.';
+    bosDurum.textContent = _btDunFiltresiAktif ? 'Dün açılan talep bulunamadı.' : _btGecikmisFiltresiAktif ? 'Gecikmiş talep bulunamadı.' : 'Eşleşen talep bulunamadı.';
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -207,7 +216,7 @@ function talepleriCiz() {
       <td>${_btKacir(t.talep.bakimTuru)}</td>
       <td>
         <span class="genel-rozet ${_btDurumRozetSinifi(t.durum)}">${_btKacir(t.durum)}</span>
-        ${uyariGoster ? '<span class="yanip-sonen-uyari">⚠️ Yanıt Bekliyor</span>' : ''}
+        ${uyariGoster ? `<span class="yanip-sonen-uyari">⚠️ ${bakimTalepBeklemeGunSayisi(t)} gündür yanıt bekliyor</span>` : ''}
       </td>
       <td>${_btTarihSaat(t.olusturmaTarihi)}</td>
       <td>
@@ -762,6 +771,7 @@ function ozetiCiz() {
       <div class="istatistik-kutu"><span>Toplam Talep</span><b>${ozet.toplam}</b></div>
       <div class="istatistik-kutu"><span>Açık Talep</span><b>${ozet.acik}</b></div>
       <div class="istatistik-kutu"><span>İSG Onayı Bekleyen</span><b>${ozet.onayBekleyen}</b></div>
+      <div class="istatistik-kutu"${ozet.gecikmisSayisi ? ' style="background:#fee2e2;"' : ''}><span>${BAKIM_TALEP_GECIKME_ESIK_GUN}+ Gündür Bekleyen</span><b${ozet.gecikmisSayisi ? ' style="color:#b91c1c;"' : ''}>${ozet.gecikmisSayisi}</b></div>
       <div class="istatistik-kutu"><span>Tamamlanma Oranı</span><b>%${ozet.tamamlanmaOrani}</b></div>
       <div class="istatistik-kutu"><span>Red Oranı</span><b>%${ozet.redOrani}</b></div>
       <div class="istatistik-kutu"><span>Ort. Çözüm Süresi</span><b>${ozet.ortalamaCozumGunu ?? '—'}${ozet.ortalamaCozumGunu != null ? ' gün' : ''}</b></div>

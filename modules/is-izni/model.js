@@ -157,6 +157,19 @@ const IS_IZNI_ONAY_DURUMLARI = ['Gerekmiyor', 'Bekliyor', 'Onaylandı', 'Reddedi
 const IS_IZNI_RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Kritik'];
 const IS_IZNI_TERMINAL_DURUMLAR = ['Kapalı', 'Reddedildi', 'İptal'];
 
+// Bir izin "Onay Bekliyor" aşamasında bu kadar gündür bekliyorsa gecikmiş
+// sayılır — kullanıcı isteği: "X günden uzun süre aynı aşamada bekleyen
+// talepler/izinler için genel bir uyarı olsun". İş izninde ayrı bir
+// "aşamaya giriş tarihi" tutulmadığından oluşturma tarihinden hesaplanır
+// (yaklaşık ama pratikte yeterli: formu tamamlama genelde talebi açtıktan
+// kısa süre sonra yapılır).
+const IS_IZNI_GECIKME_ESIK_GUN = 2;
+
+function izinBeklemeGunSayisi(k) {
+  if (!k.olusturmaTarihi) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(k.olusturmaTarihi).getTime()) / 86400000));
+}
+
 function izinSonrakiNoUret(mevcutListe) {
   let maks = 0;
   (mevcutListe || []).forEach(k => {

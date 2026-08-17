@@ -238,6 +238,7 @@ function izinOzetiHesapla() {
     toplam: liste.length,
     acik: liste.filter(k => acikDurumlar.includes(k.durumGoruntu)).length,
     onayBekleyen: liste.filter(k => k.durumGoruntu === 'Onay Bekliyor').length,
+    onayGecikenSayisi: liste.filter(k => k.durumGoruntu === 'Onay Bekliyor' && izinBeklemeGunSayisi(k) >= IS_IZNI_GECIKME_ESIK_GUN).length,
     suresiGecen: liste.filter(k => k.durumGoruntu === 'Süresi Geçti').length,
     yuksekVeUstuRisk: liste.filter(k => acikDurumlar.includes(k.durumGoruntu) && (k.riskSeviyesi === 'Yüksek' || k.riskSeviyesi === 'Kritik')).length,
     tamamlanmaUyarilari: liste.filter(k => acikDurumlar.includes(k.durumGoruntu) && k.tamamlanmaOrani < 80).slice(0, 10),

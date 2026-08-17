@@ -263,7 +263,10 @@ function izinleriCiz(aramaMetni) {
       <td>${_izTarihSaatGoruntu(k.baslangic)}</td>
       <td>${_izTarihSaatGoruntu(k.bitis)}</td>
       <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.riskSeviyesi)}">${_izKacir(k.riskSeviyesi)}</span></td>
-      <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.durumGoruntu)}">${_izKacir(k.durumGoruntu)}</span> <span style="font-size:11px; color:var(--metin-soluk);">%${k.tamamlanmaOrani}</span></td>
+      <td>
+        <span class="genel-rozet rozet-${izRozetSinifAdi(k.durumGoruntu)}">${_izKacir(k.durumGoruntu)}</span> <span style="font-size:11px; color:var(--metin-soluk);">%${k.tamamlanmaOrani}</span>
+        ${k.durumGoruntu === 'Onay Bekliyor' && izinBeklemeGunSayisi(k) >= IS_IZNI_GECIKME_ESIK_GUN ? `<span class="yanip-sonen-uyari">⚠️ ${izinBeklemeGunSayisi(k)} gündür bekliyor</span>` : ''}
+      </td>
       <td><span class="genel-rozet rozet-${izRozetSinifAdi(k.onayDurumu)}">${_izKacir(k.onayDurumu)}</span></td>
       <td>${islemler.join(' ')}</td>
     `;
@@ -586,7 +589,7 @@ async function izinFormGonderildi(e) {
 function izOzetiCiz() {
   const ozet = izinOzetiHesapla();
   const kutu = document.getElementById('izinOzetKutusu');
-  const kart = (etiket, deger) => `<div class="istatistik-kutu"><span>${etiket}</span><b>${deger}</b></div>`;
+  const kart = (etiket, deger, uyariMi) => `<div class="istatistik-kutu"${uyariMi ? ' style="background:#fee2e2;"' : ''}><span>${etiket}</span><b${uyariMi ? ' style="color:#b91c1c;"' : ''}>${deger}</b></div>`;
   const liste = (baslik, satirlar, bosMetin) => `
     <div class="kart" style="margin-bottom:14px;">
       <div class="card-title" style="margin-bottom:8px;"><h3 style="margin:0; font-size:14px;">${baslik}</h3></div>
@@ -600,6 +603,7 @@ function izOzetiCiz() {
     <div class="istatistik-grid">
       ${kart('Açık İzinler', ozet.acik)}
       ${kart('Onay Bekleyen', ozet.onayBekleyen)}
+      ${kart(IS_IZNI_GECIKME_ESIK_GUN + '+ Gündür Onay Bekleyen', ozet.onayGecikenSayisi, ozet.onayGecikenSayisi > 0)}
       ${kart('Süresi Geçen', ozet.suresiGecen)}
       ${kart('Yüksek/Kritik Risk (Açık)', ozet.yuksekVeUstuRisk)}
     </div>
