@@ -278,8 +278,9 @@ function izinleriCiz(aramaMetni) {
   govde.querySelectorAll('[data-onay]').forEach(btn => btn.addEventListener('click', () => {
     _onayImzaModalAc(btn.getAttribute('data-onay'), btn.getAttribute('data-rol'));
   }));
-  govde.querySelectorAll('[data-red]').forEach(btn => btn.addEventListener('click', () => {
-    const sebep = prompt('Red sebebi:', '') || '';
+  govde.querySelectorAll('[data-red]').forEach(btn => btn.addEventListener('click', async () => {
+    const sebep = await metinIstemModali('Red Sebebi', 'Sebebi yazın…', '');
+    if (sebep === null) return;
     const sonuc = izinReddet(btn.getAttribute('data-red'), '', sebep);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     izinleriCiz(document.getElementById('izinAramaKutusu').value);
@@ -293,8 +294,8 @@ function izinleriCiz(aramaMetni) {
   govde.querySelectorAll('[data-durdur]').forEach(btn => btn.addEventListener('click', () => {
     if (confirm('Bu izin durdurulsun mu?')) { izinDurdur(btn.getAttribute('data-durdur')); izinleriCiz(document.getElementById('izinAramaKutusu').value); }
   }));
-  govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', () => {
-    const not = prompt('Kapanış notu (opsiyonel):', 'İş güvenli şekilde tamamlandı.');
+  govde.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', async () => {
+    const not = await metinIstemModali('Kapanış Notu', 'Notunuzu yazın (opsiyonel)…', 'İş güvenli şekilde tamamlandı.');
     if (not !== null) { izinKapat(btn.getAttribute('data-kapat'), not); izinleriCiz(document.getElementById('izinAramaKutusu').value); izOzetiCiz(); }
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {

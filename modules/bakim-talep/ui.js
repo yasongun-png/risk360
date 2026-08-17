@@ -486,10 +486,10 @@ function _btDetayOlaylariBagla(k, kullanici) {
   if (btBkKaydet) btBkKaydet.addEventListener('click', () => _btBakimKaydet(k.id, false));
 
   const btBkYonlendir = document.getElementById('btBkYonlendirBtn');
-  if (btBkYonlendir) btBkYonlendir.addEventListener('click', () => {
+  if (btBkYonlendir) btBkYonlendir.addEventListener('click', async () => {
     const yeniTur = document.getElementById('btBkYonlendirTur').value;
     if (!yeniTur) { alert('Lütfen yönlendirilecek bakım türünü seçin.'); return; }
-    const not = prompt('Yönlendirme notu (opsiyonel):', '');
+    const not = await metinIstemModali('Yönlendirme Notu', 'Notunuzu yazın (opsiyonel)…', '');
     if (not === null) return;
     const sonuc = bakimTuruYonlendir(k.id, yeniTur, not);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -509,8 +509,8 @@ function _btDetayOlaylariBagla(k, kullanici) {
   });
 
   const btBkReddet = document.getElementById('btBkReddetBtn');
-  if (btBkReddet) btBkReddet.addEventListener('click', () => {
-    const gerekce = prompt('Reddetme gerekçesi:', '');
+  if (btBkReddet) btBkReddet.addEventListener('click', async () => {
+    const gerekce = await metinIstemModali('Reddetme Gerekçesi', 'Gerekçeyi yazın…', '');
     if (gerekce === null) return;
     const sonuc = talepReddet(k.id, gerekce);
     if (!sonuc.basarili) { alert(sonuc.hata || Object.values(sonuc.hatalar || {}).join(' ')); return; }
@@ -533,8 +533,8 @@ function _btDetayOlaylariBagla(k, kullanici) {
   });
 
   const btIsgReddet = document.getElementById('btIsgReddetBtn');
-  if (btIsgReddet) btIsgReddet.addEventListener('click', () => {
-    const gerekce = prompt('Reddetme gerekçesi:', '');
+  if (btIsgReddet) btIsgReddet.addEventListener('click', async () => {
+    const gerekce = await metinIstemModali('Reddetme Gerekçesi', 'Gerekçeyi yazın…', '');
     if (gerekce === null) return;
     const sonuc = talepReddet(k.id, gerekce);
     if (!sonuc.basarili) { alert(sonuc.hata || Object.values(sonuc.hatalar || {}).join(' ')); return; }
