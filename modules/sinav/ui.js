@@ -186,8 +186,8 @@ function soruTablosunuCiz() {
     btn.addEventListener('click', () => soruModalAc(btn.getAttribute('data-duzenle')));
   });
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu soruyu silmek istediğinize emin misiniz? (Bu soruyu kullanan geçmiş sınavlar etkilenmez.)')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu soruyu silmek istediğinize emin misiniz? (Bu soruyu kullanan geçmiş sınavlar etkilenmez.)', 'Sil')) {
         soruSil(btn.getAttribute('data-sil'));
         soruTablosunuCiz();
         _konuSecimleriniDoldur('soruKonuFiltre', true);
@@ -304,8 +304,8 @@ function sinavTablosunuCiz() {
     btn.addEventListener('click', () => sonucModalAc(btn.getAttribute('data-sonuc')));
   });
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu sınavı silmek istediğinize emin misiniz? Bu sınava ait tüm sonuçlar da silinecek.')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu sınavı silmek istediğinize emin misiniz? Bu sınava ait tüm sonuçlar da silinecek.', 'Sil')) {
         sinavSil(btn.getAttribute('data-sil'));
         sinavTablosunuCiz();
       }
@@ -383,8 +383,8 @@ function sonucTablosunuCiz() {
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu sonucu silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu sonucu silmek istediğinize emin misiniz?', 'Sil')) {
         sinavSonucSil(btn.getAttribute('data-sil'));
         sonucTablosunuCiz();
         sinavTablosunuCiz();
@@ -447,8 +447,8 @@ function sonucModalTablosunuCiz() {
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu sonucu silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu sonucu silmek istediğinize emin misiniz?', 'Sil')) {
         sinavSonucSil(btn.getAttribute('data-sil'));
         sonucModalTablosunuCiz();
         sinavTablosunuCiz();

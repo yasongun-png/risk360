@@ -179,8 +179,8 @@ function kayitlariCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(stajyerIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sertifika]').forEach(btn => btn.addEventListener('click', () => sertifikaAyarModalAc(btn.getAttribute('data-sertifika'))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', () => {
-    if (confirm('Bu stajyer kaydını silmek istediğinize emin misiniz?')) { stajyerSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu stajyer kaydını silmek istediğinize emin misiniz?', 'Sil')) { stajyerSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
 }
 

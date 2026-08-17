@@ -122,8 +122,8 @@ function denetimTablosunuCiz() {
     btn.addEventListener('click', () => denetimYazdir(btn.getAttribute('data-yazdir')));
   });
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu denetimi silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu denetimi silmek istediğinize emin misiniz?', 'Sil')) {
         denetimSil(btn.getAttribute('data-sil'));
         denetimTablosunuCiz();
       }
@@ -268,9 +268,9 @@ function denetimNotDegisti() {
   denetimNotGuncelle(_detayModalDenetimId, document.getElementById('denetimDetayNotlar').value);
 }
 
-function denetimTamamlaTiklandi() {
+async function denetimTamamlaTiklandi() {
   if (!_detayModalDenetimId) return;
-  if (confirm('Bu denetimi tamamlandı olarak işaretlemek istediğinize emin misiniz?')) {
+  if (await onayModali('Bu denetimi tamamlandı olarak işaretlemek istediğinize emin misiniz?', 'Tamamla')) {
     denetimTamamla(_detayModalDenetimId);
     denetimDetayCiz();
   }

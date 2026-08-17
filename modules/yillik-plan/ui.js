@@ -199,8 +199,8 @@ function _girdileriBagla(kutu, tur) {
   });
 
   kutu.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu satırı silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu satırı silmek istediğinize emin misiniz?', 'Sil')) {
         sil(yil, btn.getAttribute('data-sil'));
         yenidenCiz();
       }
@@ -245,8 +245,8 @@ function renderRapor() {
     el.addEventListener('change', () => raporSatiriGuncelle(yil, el.getAttribute('data-id'), el.getAttribute('data-alan'), el.value));
   });
   govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm('Bu faaliyet satırını silmek istediğinize emin misiniz?')) {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu faaliyet satırını silmek istediğinize emin misiniz?', 'Sil')) {
         raporSatiriSil(yil, btn.getAttribute('data-sil'));
         renderRapor();
       }
