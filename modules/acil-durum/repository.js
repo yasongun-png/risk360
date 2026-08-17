@@ -6,6 +6,7 @@ function _yanginTupuAnahtari() { return tenantAnahtar('acil_durum_yangin_tupleri
 function _tatbikatAnahtari() { return tenantAnahtar('acil_durum_tatbikatlari'); }
 function _senaryoAnahtari() { return tenantAnahtar('acil_durum_senaryolari'); }
 function _planAnahtari() { return tenantAnahtar('acil_durum_plani'); }
+function _tesisBilgiAnahtari() { return tenantAnahtar('acil_durum_tesis_bilgi'); }
 
 function _genelListeGetir(anahtarFn) { return oku(anahtarFn(), []); }
 function _genelListeKaydet(anahtarFn, liste) { yaz(anahtarFn(), liste); }
@@ -65,3 +66,6 @@ function senaryoIdIleGetirRepo(id) { return senaryolariTumunuGetir().find(x => x
 
 function planGetirRepo() { return oku(_planAnahtari(), null); }
 function planKaydetRepo(plan) { yaz(_planAnahtari(), plan); return plan; }
+
+function tesisBilgiGetirRepo() { return oku(_tesisBilgiAnahtari(), null); }
+function tesisBilgiKaydetRepo(tesisBilgi) { yaz(_tesisBilgiAnahtari(), tesisBilgi); return tesisBilgi; }

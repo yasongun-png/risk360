@@ -278,18 +278,19 @@ function senaryoGuncelle(id, veriler) {
   const dogrulama = senaryoDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  const guncellenen = senaryoGuncelleRepo(id, {
-    baslik: veriler.baslik.trim(),
-    tur: veriler.tur,
-    bolum: (veriler.bolum || '').trim(),
-    lokasyon: (veriler.lokasyon || '').trim(),
-    tetikleyici: veriler.tetikleyici.trim(),
-    mudahaleAdimlari: katilimcilariAyir(veriler.mudahaleAdimlari),
-    sorumluEkip: veriler.sorumluEkip,
-    gozdenGecirmeTarihi: veriler.gozdenGecirmeTarihi || '',
-    durum: veriler.durum || 'Aktif',
-    notlar: (veriler.notlar || '').trim()
+  // Formun göndermediği (henüz Faz 2 UI'ı yazılmamış) genişletilmiş alanları
+  // (senaryo kartı, risk matrisi, en kötü makul senaryo) KORUMAK için önce
+  // mevcut kayıtla birleştirip sonra senaryoOlustur() ile aynı normalize/
+  // varsayılan mantığından geçiriyoruz — aksi halde eski formla kaydetmek
+  // hazır kütüphaneden eklenmiş zengin alanları sessizce sıfırlardı.
+  const mevcut = senaryoIdIleGetirRepo(id) || {};
+  const birlesik = Object.assign({}, mevcut, veriler, {
+    id: mevcut.id,
+    senaryoNo: mevcut.senaryoNo,
+    olusturmaTarihi: mevcut.olusturmaTarihi,
+    sablonKaynagiId: mevcut.sablonKaynagiId
   });
+  const guncellenen = senaryoGuncelleRepo(id, senaryoOlustur(birlesik));
   return { basarili: true, senaryo: guncellenen };
 }
 
@@ -349,4 +350,43 @@ function acilDurumPlanSablonUygula(sablonId) {
     disKurumIletisim: sablon.disKurumIletisim
   });
   return { basarili: true, plan };
+}
+
+// ---- Tesis Bilgi Formu ----
+
+function tesisBilgiGetirVeyaOlustur() {
+  const mevcut = tesisBilgiGetirRepo();
+  if (mevcut) return mevcut;
+  const yeni = bosTesisBilgiOlustur();
+  tesisBilgiKaydetRepo(yeni);
+  return yeni;
+}
+
+function tesisBilgiGuncelle(alan, deger) {
+  const tesisBilgi = tesisBilgiGetirRepo() || bosTesisBilgiOlustur();
+  tesisBilgi[alan] = deger;
+  tesisBilgiKaydetRepo(tesisBilgi);
+  return tesisBilgi;
+}
+
+function tesisBilgiGuncelleTumden(veriler) {
+  const tesisBilgi = Object.assign(bosTesisBilgiOlustur(), tesisBilgiGetirRepo() || {}, veriler);
+  tesisBilgiKaydetRepo(tesisBilgi);
+  return tesisBilgi;
+}
+
+// ---- Hazır Acil Durum Senaryo Kütüphanesi ----
+
+// modules/risk/service.js riskSablonlariGetir ile aynı desen: hazır kütüphane
+// + oturumdaki kullanıcının kendi kaydettiği şablonlar (sahipId eşleşen)
+// birleştirilip filtrelenir.
+function acilDurumSenaryoSablonlariGetir(tesisTuruFiltresi, kategoriFiltresi) {
+  const kullanici = oturumdakiKullanici();
+  const kendi = kullanici
+    ? acilDurumSenaryoSablonlariTumunuGetir().filter(s => s.kaynak === 'kullanici' && s.sahipId === kullanici.id)
+    : [];
+  let tumu = HAZIR_ACIL_DURUM_SENARYOLARI.concat(kendi);
+  if (tesisTuruFiltresi) tumu = tumu.filter(s => s.tesisTuru === tesisTuruFiltresi);
+  if (kategoriFiltresi) tumu = tumu.filter(s => s.kategori === kategoriFiltresi);
+  return tumu;
 }
