@@ -16,6 +16,27 @@ function _izBakimRoluMu(kullanici) {
   return _izIsgOnaylayiciMi(kullanici) || kullanici.rol === 'bakim';
 }
 
+// PC modülü şu ana kadar hiç bildirim üretmiyordu — sadece barkod formu
+// (is-izni-bildir.html _iiBildirimEkle, kendi kopyası) bildirim atıyordu.
+// Kullanıcı isteği doğrultusunda ("iş izni sürecini kullanıcı dostu hale
+// getir") PC'den yapılan işlemler de aynı bildirim zilini besler — aynı
+// hedefRol kuralları (bakim-talep/service.js _btBildirimEkle ile aynı desen).
+function _izBildirimEkle(izin, hedefRol, ekEtiket) {
+  const kullanici = oturumdakiKullanici();
+  const bildirimler = oku('isg_bildirimler', []);
+  bildirimler.push({
+    id: rastgeleId(),
+    kullaniciAdi: kullanici ? kullanici.kullaniciAdi : '',
+    adSoyad: kullanici ? kullanici.adSoyad : '',
+    anahtar: _izinAnahtari(),
+    kayitEtiketleri: [izin.izinNo + ': ' + izin.izinTuru + (ekEtiket ? ' — ' + ekEtiket : '')],
+    hedefRol: hedefRol || null,
+    tarih: new Date().toISOString(),
+    okuyanKullaniciIdleri: []
+  });
+  yaz('isg_bildirimler', bildirimler.slice(-300));
+}
+
 function _izinZenginlestir(izin) {
   return Object.assign({}, izin, {
     durumGoruntu: izinDurumuHesapla(izin, new Date().toISOString()),
@@ -69,6 +90,8 @@ function izinEkle(veriler) {
   // hep boş kalır.
   const yeniKayit = izinOlustur(Object.assign({}, veriler, { izinNo, lokasyon: veriler.lokasyon || veriler.bolum }));
   izinEkleRepo(yeniKayit);
+  // Barkod Mod 1'deki _iiBildirimEkle(yeniIzin, 'bakim', ...) ile aynı kural.
+  _izBildirimEkle(yeniKayit, 'bakim', veriler.isTanimi ? veriler.isTanimi.slice(0, 60) : '');
   return { basarili: true, kayit: yeniKayit };
 }
 
@@ -113,11 +136,15 @@ function izinFormunuTamamla(id, veriler, talepEdenImza) {
   if (!sonuc.basarili) return sonuc;
 
   const guncellemeler = {};
-  if (sonuc.kayit.durum === 'Taslak') guncellemeler.durum = 'Onay Bekliyor';
+  const ilkTamamlamaMi = sonuc.kayit.durum === 'Taslak';
+  if (ilkTamamlamaMi) guncellemeler.durum = 'Onay Bekliyor';
   if (talepEdenImza) guncellemeler.imzalar = Object.assign({}, sonuc.kayit.imzalar, { talepEden: talepEdenImza });
   if (!Object.keys(guncellemeler).length) return sonuc;
 
-  return { basarili: true, kayit: izinGuncelleRepo(id, guncellemeler) };
+  const guncellenen = izinGuncelleRepo(id, guncellemeler);
+  // Barkod Mod 2'deki _iiBildirimEkle(liste[index], 'isg', ...) ile aynı kural.
+  if (ilkTamamlamaMi) _izBildirimEkle(guncellenen, 'isg', 'form tamamlandı, İSG onayı bekliyor');
+  return { basarili: true, kayit: guncellenen };
 }
 
 function izinSil(id) {
@@ -159,7 +186,11 @@ function izinOnayVer(id, rol, imzaAdi, imzaUrl) {
     : izin.imzalar;
   const onayDurumu = rol === 'isg' ? 'Onaylandı' : izin.onayDurumu;
   const durum = rol === 'isg' ? 'Onaylandı' : izin.durum;
-  return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu, durum, imzalar }) };
+  const guncellenen = izinGuncelleRepo(id, { onaycilar, onayDurumu, durum, imzalar });
+  // Barkod Mod 3'teki _iiBildirimEkle(guncellenen, null, ...) ile aynı kural
+  // — imzalayan kim olursa olsun herkese (hedefRol yok) görünür.
+  _izBildirimEkle(guncellenen, null, (rol === 'isg' ? 'İSG' : 'Bakım Personeli') + ' imzaladı');
+  return { basarili: true, kayit: guncellenen };
 }
 
 function izinReddet(id, rol, sebep) {
@@ -169,7 +200,9 @@ function izinReddet(id, rol, sebep) {
   if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
   const yeniOnayci = Object.assign(onayciOlustur({ ad: kullanici.adSoyad, rol, durum: 'Reddedildi', not: sebep }), { onayTarihi: new Date().toISOString() });
   const onaycilar = izin.onaycilar.concat([yeniOnayci]);
-  return { basarili: true, kayit: izinGuncelleRepo(id, { onaycilar, onayDurumu: 'Reddedildi', durum: 'Reddedildi' }) };
+  const guncellenen = izinGuncelleRepo(id, { onaycilar, onayDurumu: 'Reddedildi', durum: 'Reddedildi' });
+  _izBildirimEkle(guncellenen, null, 'Reddedildi: ' + sebep);
+  return { basarili: true, kayit: guncellenen };
 }
 
 function izinAktifEt(id) {
