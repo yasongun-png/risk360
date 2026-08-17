@@ -682,8 +682,8 @@ function haritaOkDuzenleModaliAc(ok) {
   `, true);
 
   document.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', haritaModalKapat));
-  document.getElementById('okSilBtn').addEventListener('click', () => {
-    if (!confirm('Bu ok silinsin mi?')) return;
+  document.getElementById('okSilBtn').addEventListener('click', async () => {
+    if (!(await onayModali('Bu ok silinsin mi?', 'Sil'))) return;
     haritaOkSil(ok.id);
     state.oklar = haritaOklariGetir(state.aktifTesisId);
     haritaOklariCiz();
@@ -752,8 +752,8 @@ function haritaEtiketDuzenleModaliAc(etk, yeniKonum) {
 
   document.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', haritaModalKapat));
   if (etk) {
-    document.getElementById('etiketSilBtn').addEventListener('click', () => {
-      if (!confirm('Bu etiket silinsin mi?')) return;
+    document.getElementById('etiketSilBtn').addEventListener('click', async () => {
+      if (!(await onayModali('Bu etiket silinsin mi?', 'Sil'))) return;
       haritaEtiketSil(etk.id);
       state.etiketler = haritaEtiketleriGetir(state.aktifTesisId);
       haritaEtiketleriCiz();
@@ -1151,7 +1151,7 @@ function haritaDisKaynakDetayAc(r) {
 
   document.querySelectorAll('[data-kapat]').forEach(btn => btn.addEventListener('click', haritaModalKapat));
   document.getElementById('disKaynakKaldirBtn').addEventListener('click', async () => {
-    if (!confirm('Bu işaret haritadan kaldırılsın mı? ' + kaynak.modulAdi + ' kaydının kendisi silinmez, sadece konum bağlantısı temizlenir.')) return;
+    if (!(await onayModali('Bu işaret haritadan kaldırılsın mı? ' + kaynak.modulAdi + ' kaydının kendisi silinmez, sadece konum bağlantısı temizlenir.', 'Kaldır'))) return;
     await kaynak.konumGuncelle(r.kaynakId, '', 0, 0);
     haritaKayitlariYukle(state.aktifTesisId);
     haritaModalKapat();
@@ -1236,7 +1236,7 @@ async function haritaDetayModaliAc(id) {
 }
 
 async function haritaKayitSilOnayla(id) {
-  if (!confirm('Bu kayıt silinsin mi?')) return;
+  if (!(await onayModali('Bu kayıt silinsin mi?', 'Sil'))) return;
   haritaKayitSil(id);
   haritaKayitlariYukle(state.aktifTesisId);
   haritaModalKapat();
@@ -1269,10 +1269,10 @@ async function haritaBakimiTamamla(ariza) {
 }
 
 async function haritaKontrolGirdisiEkle(r) {
-  const sonuc = prompt('Kontrol sonucu: Uygun / Uygun Değil', 'Uygun');
+  const sonuc = await metinIstemModali('Kontrol sonucu: Uygun / Uygun Değil', '', 'Uygun');
   if (sonuc === null) return;
-  const not = prompt('Not (opsiyonel):', '') || '';
-  const sonrakiKontrol = prompt('Sonraki kontrol tarihi (YYYY-AA-GG, opsiyonel):', (r.ek && r.ek.sonrakiKontrol) || '') || '';
+  const not = (await metinIstemModali('Not (opsiyonel):', '', '')) || '';
+  const sonrakiKontrol = (await metinIstemModali('Sonraki kontrol tarihi (YYYY-AA-GG, opsiyonel):', '', (r.ek && r.ek.sonrakiKontrol) || '')) || '';
   haritaKontrolEkle(r.id, sonuc.trim() || 'Uygun', not.trim(), sonrakiKontrol.trim());
   haritaKayitlariYukle(state.aktifTesisId);
   await haritaHepsiniCiz();
@@ -1285,7 +1285,7 @@ async function haritaTesisSilUi() {
   if (state.tesisler.length <= 1) return;
   const tesis = aktifTesis();
   if (!tesis) return;
-  if (!confirm(`"${tesis.ad}" tesisini silmek istediğinize emin misiniz? Bu tesisin haritadaki yerel noktaları da silinir (uygunsuzluk/risk/acil durum kayıtları kendi modüllerinde kalır, sadece harita konum bağlantısı kopar).`)) return;
+  if (!(await onayModali(`"${tesis.ad}" tesisini silmek istediğinize emin misiniz? Bu tesisin haritadaki yerel noktaları da silinir (uygunsuzluk/risk/acil durum kayıtları kendi modüllerinde kalır, sadece harita konum bağlantısı kopar).`, 'Sil'))) return;
   haritaTesisSil(tesis.id);
   state.tesisler = haritaTesisleriGetir();
   state.aktifTesisId = state.tesisler[0].id;
@@ -1296,7 +1296,7 @@ async function haritaTesisSilUi() {
 }
 
 async function haritaTesisEkleUi() {
-  const ad = prompt('Yeni tesis adı:', 'Yeni Tesis');
+  const ad = await metinIstemModali('Yeni tesis adı:', '', 'Yeni Tesis');
   if (!ad) return;
   const tesis = haritaTesisEkle(ad.trim());
   state.tesisler.push(tesis);
