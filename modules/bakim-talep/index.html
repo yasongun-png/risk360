@@ -67,7 +67,13 @@
     <div id="bolum-envanter" style="display:none;">
       <div class="arac-cubugu">
         <p style="font-size:13px; color:var(--metin-soluk); margin:0;">Talep formlarına girilen ekipman kodlarından kendiliğinden oluşur. Ad/Tip/Konum/Fotoğraf sonradan Düzenle ile eklenebilir.</p>
-        <button type="button" class="ikincil" id="btEkipmanBakimBarkoduBtn" style="white-space:nowrap;">🔧 Bakım Kartı Girdisi Ekle</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="btEkipmanSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="btEkipmanIceAktarBtn">Toplu İçe Aktar</button>
+          <input type="file" id="btEkipmanIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="btEkipmanDisaAktarBtn">Toplu Dışa Aktar</button>
+          <button type="button" class="ikincil" id="btEkipmanBakimBarkoduBtn" style="white-space:nowrap;">🔧 Bakım Kartı Girdisi Ekle</button>
+        </div>
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
@@ -183,6 +189,7 @@
   <script src="../../core/tenant.js"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/excel.js"></script>
   <script src="../personel/model.js"></script>
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>

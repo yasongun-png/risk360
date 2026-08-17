@@ -149,6 +149,34 @@ function ekipmanKaydiDuzenle(id, veriler) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// Kullanıcı isteği: "ekipman listesini toplu aktarma ve toplu indirme
+// olsun" — Excel'den satır satır gelen kayıtlar kod eşleşmesine göre
+// güncellenir (varsa) veya yeni eklenir (yoksa). ekipmanKaydiDuzenle'den
+// FARKLI olarak fotoğraf/bakım geçmişi/harita gibi Excel'de olmayan
+// alanlara DOKUNMAZ (excelToplulIceAktarSonucOzetle ile satır satır
+// çağrılır, bkz. core/excel.js).
+function ekipmanKaydiIceAktar(veriler) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici || !_btEkipmanDuzenleyebilirMi(kullanici)) return { basarili: false, hatalar: { kod: 'Bu işlem için yetkiniz yok.' } };
+  const kod = (veriler.kod || '').trim();
+  if (!kod) return { basarili: false, hatalar: { kod: 'Ekipman kodu zorunludur.' } };
+
+  const alanlar = {
+    kod,
+    ad: (veriler.ad || '').trim(),
+    tip: (veriler.tip || '').trim(),
+    konum: (veriler.konum || '').trim()
+  };
+  const mevcut = ekipmanEnvanteriTumunuGetirRepo().find(e => e.kod.toLowerCase() === kod.toLowerCase());
+  if (mevcut) {
+    ekipmanEnvanterKaydiGuncelleRepo(mevcut.id, alanlar);
+  } else {
+    const yeni = ekipmanEnvanterKaydiEkleRepo(ekipmanEnvanterKaydiOlustur(kod, alanlar.ad, alanlar.konum));
+    if (alanlar.tip) ekipmanEnvanterKaydiGuncelleRepo(yeni.id, { tip: alanlar.tip });
+  }
+  return { basarili: true };
+}
+
 // Kullanıcı isteği: "envanterden ekipman silmeyi admin yapabilsin".
 function ekipmanKaydiSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };

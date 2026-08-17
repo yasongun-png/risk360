@@ -177,6 +177,26 @@ function bakimTalepSayfasiniBaslat() {
     window.open('../../ekipman-bakim-bildir.html?firma=' + encodeURIComponent(firma.slug), '_blank');
   });
 
+  // Kullanıcı isteği: "ekipman listesini toplu aktarma ve toplu indirme
+  // olsun" — diğer modüllerdeki Excel şablon/içe-dışa aktar deseniyle
+  // aynı (bkz. core/excel.js, modules/kkd/ui.js).
+  document.getElementById('btEkipmanSablonIndirBtn').addEventListener('click', () => excelSablonIndir(BT_EKIPMAN_IMPORT_KOLONLARI, 'ekipman_envanteri_sablonu.xlsx'));
+  document.getElementById('btEkipmanDisaAktarBtn').addEventListener('click', () => {
+    const liste = ekipmanEnvanteriTumunuGetirRepo().map(e => Object.assign({}, e, { sonKullanimTarihiMetin: _btTarihSaat(e.sonKullanimTarihi) }));
+    excelDisaAktar(liste, BT_EKIPMAN_EXPORT_KOLONLARI, 'ekipman_envanteri.xlsx');
+  });
+  document.getElementById('btEkipmanIceAktarBtn').addEventListener('click', () => document.getElementById('btEkipmanIceAktarDosya').click());
+  document.getElementById('btEkipmanIceAktarDosya').addEventListener('change', e => {
+    const dosya = e.target.files[0];
+    excelIceAktar(dosya, BT_EKIPMAN_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, ekipmanKaydiIceAktar);
+      alert(excelIceAktarOzetMesaji(sonuc));
+      envanteriCiz();
+    });
+  });
+
   document.getElementById('btEkipmanDuzenleIptalBtn').addEventListener('click', _btEkipmanDuzenleModalKapat);
   document.getElementById('btEkipmanDuzenleKaydetBtn').addEventListener('click', _btEkipmanDuzenleKaydet);
   document.getElementById('btEkBakimKartiWordBtn').addEventListener('click', async () => {
@@ -644,6 +664,18 @@ function _btBakimKaydet(id, gonder, sonrasi) {
 }
 
 // ---- Ekipman Envanteri (Bakım modülü içinde bir sekme/rapor) ----
+
+const BT_EKIPMAN_IMPORT_KOLONLARI = [
+  { anahtar: 'kod', baslik: 'Ekipman Kodu' },
+  { anahtar: 'ad', baslik: 'Ad' },
+  { anahtar: 'tip', baslik: 'Tip' },
+  { anahtar: 'konum', baslik: 'Konum' }
+];
+
+const BT_EKIPMAN_EXPORT_KOLONLARI = BT_EKIPMAN_IMPORT_KOLONLARI.concat([
+  { anahtar: 'talepSayisi', baslik: 'Talep Sayısı' },
+  { anahtar: 'sonKullanimTarihiMetin', baslik: 'Son Kullanım Tarihi' }
+]);
 
 function envanteriCiz() {
   const govde = document.getElementById('btEnvanterTabloGovde');
