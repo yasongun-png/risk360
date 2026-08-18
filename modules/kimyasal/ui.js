@@ -89,6 +89,14 @@ function kimyasalSayfasiniBaslat() {
       pKodlariMetin: (k.pKodlari || []).join('; ')
     })));
   });
+  document.getElementById('depolamaMatrisiBtn').addEventListener('click', () => {
+    const filtreler = _kimyasalFiltreleriOku();
+    const kayitlar = kimyasallariGetir(document.getElementById('kimyasalAramaKutusu').value, filtreler)
+      .filter(k => k.durum !== 'İptal')
+      .sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+    if (kayitlar.length < 2) { alert('Matris oluşturmak için en az 2 aktif kimyasal kaydı gerekli.'); return; }
+    _raporYazdirmaAlaniniGoster(_kimDepolamaMatrisiHtml(kayitlar));
+  });
   document.getElementById('iceAktarBtn').addEventListener('click', () => document.getElementById('iceAktarDosya').click());
   document.getElementById('iceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
@@ -238,6 +246,30 @@ function _sdsGorseliOnizlemeCiz() {
 function _kimKisalt(metin, uzunluk) {
   const m = String(metin || '');
   return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
+}
+
+// Depolama Grubu bazlı ikili uyumluluk kontrolü (kimyasalGruplarUyumluMu)
+// kullanılarak kayıtlar arasında bir kimyasal x kimyasal ızgara (matris)
+// oluşturur. Satır/sütun başlıkları Kimyasal No -- tam ad zaten satır
+// etiketinde de yazdığı için sütunları dar tutmak için tekrarlanmaz.
+function _kimDepolamaMatrisiHtml(kayitlar) {
+  const basliklar = kayitlar.map(k => `<th>${_raporKacir(k.kimyasalNo)}</th>`).join('');
+  const govde = kayitlar.map((satirK, i) => {
+    const hucreler = kayitlar.map((sutunK, j) => {
+      if (i === j) return '<td style="background:#f1f5f9; text-align:center;">—</td>';
+      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubu, sutunK.depolamaGrubu);
+      return uyumluMu
+        ? '<td style="text-align:center; color:#15803d;">Uyumlu</td>'
+        : '<td style="text-align:center; color:#b91c1c; font-weight:700; background:#fee2e2;">✕ UYUMSUZ</td>';
+    }).join('');
+    return `<tr><td style="font-weight:700; white-space:nowrap;">${_raporKacir(satirK.kimyasalNo)} — ${_raporKacir(satirK.ad)} <span style="font-weight:400; color:#555;">(${_raporKacir(satirK.depolamaGrubu)})</span></td>${hucreler}</tr>`;
+  }).join('');
+
+  return `
+    <div class="doc-title">Kimyasal Depolama Uyumluluk Matrisi</div>
+    <div class="doc-meta">Depolama Grubu bazlı, KIMYASAL_UYUMSUZLUK_KURALLARI referans alınarak oluşturulmuştur. Toplam ${kayitlar.length} kimyasal. Sütun başlıkları Kimyasal No'dur, tam ad ve depolama grubu satır etiketinde yer alır.</div>
+    <table><tr><th>Kimyasal</th>${basliklar}</tr>${govde}</table>
+  `;
 }
 
 function _kimGhsHucre(k) {

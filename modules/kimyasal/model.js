@@ -137,6 +137,17 @@ function kimyasalSdsSuresiGecmisMi(sdsRevizyonTarihi, bugunStr) {
   return gunFarki > 1825;
 }
 
+// İki depolama grubunun birlikte depolanabilir olup olmadığını söyler.
+// KIMYASAL_UYUMSUZLUK_KURALLARI tek yönlü tanımlı olabileceğinden (ör.
+// yalnızca 'Asit': [...'Oksitleyici'] yazılıp tersi unutulmuş olabilir) her
+// iki yönde de bakılır. Aynı grup veya boş grup her zaman uyumlu sayılır.
+function kimyasalGruplarUyumluMu(grubuA, grubuB) {
+  if (!grubuA || !grubuB || grubuA === grubuB) return true;
+  const aYonu = (KIMYASAL_UYUMSUZLUK_KURALLARI[grubuA] || []).includes(grubuB);
+  const bYonu = (KIMYASAL_UYUMSUZLUK_KURALLARI[grubuB] || []).includes(grubuA);
+  return !(aYonu || bYonu);
+}
+
 // Aynı lokasyondaki, aktif kayıtları ikili karşılaştırarak birlikte
 // depolanmaması gereken çiftleri tespit eder.
 function kimyasalDepolamaUyumsuzluklariBul(kayitlar) {
@@ -147,8 +158,7 @@ function kimyasalDepolamaUyumsuzluklariBul(kayitlar) {
       const a = aktifler[i];
       const b = aktifler[j];
       if (a.lokasyon !== b.lokasyon) continue;
-      const uyumsuzMu = (KIMYASAL_UYUMSUZLUK_KURALLARI[a.depolamaGrubu] || []).includes(b.depolamaGrubu);
-      if (!uyumsuzMu) continue;
+      if (kimyasalGruplarUyumluMu(a.depolamaGrubu, b.depolamaGrubu)) continue;
       sonuc.push({
         lokasyon: a.lokasyon,
         a: a.ad, aGrup: a.depolamaGrubu,
