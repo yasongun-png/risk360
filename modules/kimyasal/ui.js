@@ -213,6 +213,11 @@ function _sdsGorseliOnizlemeCiz() {
   }
 }
 
+function _kimKisalt(metin, uzunluk) {
+  const m = String(metin || '');
+  return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
+}
+
 function _kimGhsHucre(k) {
   const rozetler = (k.ghsPiktogramlari || []).map(g => `<span class="genel-rozet" style="background:#fee2e2; color:#b91c1c;">${g.split(' ')[0]}</span>`).join(' ');
   return `${rozetler}${k.hKodlari && k.hKodlari.length ? `<div style="font-size:10px; color:var(--metin-soluk); margin-top:3px;">${k.hKodlari.join(', ')}</div>` : ''}` || '-';
@@ -238,7 +243,7 @@ function kimyasallariCiz(aramaMetni) {
       : '<span class="genel-rozet rozet-gecikmis">Eksik</span>';
     satir.innerHTML = `
       <td>${k.kimyasalNo}</td>
-      <td>${k.ad}${k.kritikMi ? ' <span class="genel-rozet rozet-cok-yuksek">Kritik</span>' : ''}</td>
+      <td title="${k.ad}">${_kimKisalt(k.ad, 60)}${k.kritikMi ? ' <span class="genel-rozet rozet-cok-yuksek">Kritik</span>' : ''}</td>
       <td>${[k.bolum, k.lokasyon].filter(Boolean).join(' / ') || '-'}</td>
       <td>${_kimGhsHucre(k)}</td>
       <td>${k.nfpaSaglik}-${k.nfpaYanicilik}-${k.nfpaKararsizlik}${k.nfpaOzelKod.length ? ' ' + k.nfpaOzelKod.join('/') : ''}</td>
