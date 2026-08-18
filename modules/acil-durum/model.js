@@ -17,11 +17,11 @@ const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Bo
 // bağımsız sayacına sahip (bkz. service.js ekipmanEkle, aynı önekteki
 // kayıtlara göre filtrelenip numara üretilir).
 const EKIPMAN_TUR_ONEKLERI = {
-  'Hidrant': 'HYD',
+  'Hidrant': 'HDR',
   'Yangın Dolabı': 'YD',
   'Göz Duşu': 'GD',
-  'Göz ve Boy Duşu': 'GBD',
-  'Monitör': 'MON',
+  'Göz ve Boy Duşu': 'GVB',
+  'Monitör': 'MNT',
   'Kaçış Yolu': 'KY',
   'Toplanma Alanı': 'TA',
   'Alarm / Siren': 'ALS',
@@ -209,10 +209,12 @@ function sonrakiNoUret(onEk, mevcutListe, alanAdi) {
     const m = String(item[alanAdi] || '').match(/(\d+)$/);
     if (m) maks = Math.max(maks, parseInt(m[1], 10));
   });
-  // "YSC 1", "YSC 2" biçimi (kullanıcı isteği) — önek + boşluk + düz sayı,
-  // sıfırla doldurma yok. Eski "ADE0005" gibi kayıtlar da aynı düzenli
-  // ifadeyle (sondaki rakamlar) doğru okunduğu için numaralandırma bozulmaz.
-  return onEk + ' ' + (maks + 1);
+  // "YD01", "GVB01" biçimi (kullanıcı isteği: "ade yerine her ekipman için
+  // ayrı isimli ekipman no olsun") — önek + boşluksuz + 2 haneli sıfır
+  // dolgulu sayı, yanginTupuSonrakiNoUret ile aynı kalıp. Eski "ADE 5" gibi
+  // kayıtlar da aynı düzenli ifadeyle (sondaki rakamlar) doğru okunduğu
+  // için numaralandırma bozulmaz.
+  return onEk + String(maks + 1).padStart(2, '0');
 }
 
 // Yangın tüpleri sahadaki fiziksel etiketlerle aynı biçimde numaralanır

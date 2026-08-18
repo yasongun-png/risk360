@@ -476,7 +476,7 @@ function ekipmanlariCiz(aramaMetni) {
   liste.forEach(e => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.ad)}</td><td>${_adKacir(e.lokasyon)}</td>
+      <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.ad)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
       <td>${_adKacir(e.bulgular) || '-'}</td>
