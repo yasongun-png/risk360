@@ -34,3 +34,15 @@ function senaryoDogrula(veriler) {
   if (!veriler.tetikleyici || !veriler.tetikleyici.trim()) hatalar.tetikleyici = 'Tetikleyici olay zorunludur.';
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
+
+function ekipTanimiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.ekipTuru) hatalar.ekipTuru = 'Ekip türü zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
+function komutaPozisyonuDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.pozisyonAdi || !veriler.pozisyonAdi.trim()) hatalar.pozisyonAdi = 'Pozisyon adı zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}

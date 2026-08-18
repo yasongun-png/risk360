@@ -908,3 +908,54 @@ const HAZIR_ACIL_DURUM_SENARYOLARI = [
     guvenliDurdurmaNoktalari: 'Bina ana doğalgaz vanası.', kkd: '-',
     mudahaleSiniri: 'Gaz kokusu alan hiç kimse elektrikli anahtar/zil kullanmaz veya açık ateş yakmaz; müdahale doğalgaz şirketi ve itfaiyeye bırakılır.', disKurumBildirimi: 'Doğalgaz Acil (187), itfaiye.' }
 ].map(s => acilDurumSenaryoSablonuOlustur(Object.assign({ kaynak: 'hazir', sahipId: null }, s)));
+
+// ---- Ekip Tanımları ve Komuta Yapısı ----
+
+// Madde 10: her EKIP_TURLERI için bir "tanım" kaydı (ekipman/müdahale sınırı/
+// haberleşme/görev/eğitim) — kişi ataması değil, ekip TÜRÜNÜN tanımıdır.
+// Kişi ataması zaten ekipUyesiOlustur (ekip türü + kişi) ile yapılıyor.
+function ekipTanimiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    ekipTuru: EKIP_TURLERI.includes(veriler.ekipTuru) ? veriler.ekipTuru : EKIP_TURLERI[0],
+    ekipmanListesi: Array.isArray(veriler.ekipmanListesi) ? veriler.ekipmanListesi : katilimcilariAyir(veriler.ekipmanListesi),
+    mudahaleSiniri: (veriler.mudahaleSiniri || '').trim(),
+    haberlesmeYontemi: (veriler.haberlesmeYontemi || '').trim(),
+    gorevTanimi: (veriler.gorevTanimi || '').trim(),
+    egitimGereksinimi: (veriler.egitimGereksinimi || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
+// Madde 11: Acil Durum Yöneticisi -> Olay Komutanı -> (Yangın/Kurtarma/İlk
+// Yardım/Tahliye/Teknik Müdahale/Güvenlik/Haberleşme). ustPozisyonAdi, bu
+// sabit dizide "Standart Yapıyı Oluştur" ile tek seferde tüm ağacı kurmak
+// için kullanılır (bkz. service.js komutaYapisiStandartOlustur); gerçek
+// kayıtlarda ağaç ustPozisyonId (id referansı) ile tutulur.
+const KOMUTA_POZISYON_SABLONU = [
+  { pozisyonAdi: 'Acil Durum Yöneticisi', ustPozisyonAdi: null },
+  { pozisyonAdi: 'Olay Komutanı', ustPozisyonAdi: 'Acil Durum Yöneticisi' },
+  { pozisyonAdi: 'Yangın / Söndürme Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' },
+  { pozisyonAdi: 'Kurtarma Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' },
+  { pozisyonAdi: 'İlk Yardım Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' },
+  { pozisyonAdi: 'Tahliye Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' },
+  { pozisyonAdi: 'Teknik Müdahale Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' },
+  { pozisyonAdi: 'Güvenlik Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' },
+  { pozisyonAdi: 'Haberleşme Sorumlusu', ustPozisyonAdi: 'Olay Komutanı' }
+];
+
+function komutaPozisyonuOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    pozisyonAdi: (veriler.pozisyonAdi || '').trim(),
+    ustPozisyonId: veriler.ustPozisyonId || null,
+    personelId: veriler.personelId || '',
+    personelAdi: (veriler.personelAdi || '').trim(),
+    yedekPersonelId: veriler.yedekPersonelId || '',
+    yedekPersonelAdi: (veriler.yedekPersonelAdi || '').trim(),
+    vardiya: veriler.vardiya || 'Genel',
+    telefon: (veriler.telefon || '').trim(),
+    gorevYetki: (veriler.gorevYetki || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}

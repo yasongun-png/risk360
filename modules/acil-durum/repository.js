@@ -7,6 +7,8 @@ function _tatbikatAnahtari() { return tenantAnahtar('acil_durum_tatbikatlari'); 
 function _senaryoAnahtari() { return tenantAnahtar('acil_durum_senaryolari'); }
 function _planAnahtari() { return tenantAnahtar('acil_durum_plani'); }
 function _tesisBilgiAnahtari() { return tenantAnahtar('acil_durum_tesis_bilgi'); }
+function _ekipTanimiAnahtari() { return tenantAnahtar('acil_durum_ekip_tanimlari'); }
+function _komutaPozisyonuAnahtari() { return tenantAnahtar('acil_durum_komuta_pozisyonlari'); }
 
 function _genelListeGetir(anahtarFn) { return oku(anahtarFn(), []); }
 function _genelListeKaydet(anahtarFn, liste) { yaz(anahtarFn(), liste); }
@@ -69,3 +71,15 @@ function planKaydetRepo(plan) { yaz(_planAnahtari(), plan); return plan; }
 
 function tesisBilgiGetirRepo() { return oku(_tesisBilgiAnahtari(), null); }
 function tesisBilgiKaydetRepo(tesisBilgi) { yaz(_tesisBilgiAnahtari(), tesisBilgi); return tesisBilgi; }
+
+function ekipTanimlariTumunuGetir() { return _genelListeGetir(_ekipTanimiAnahtari); }
+function ekipTanimiEkleRepo(k) { return _genelEkle(_ekipTanimiAnahtari, k); }
+function ekipTanimiGuncelleRepo(id, v) { return _genelGuncelle(_ekipTanimiAnahtari, id, v); }
+function ekipTanimiSilRepo(id) { _genelSil(_ekipTanimiAnahtari, id); }
+function ekipTanimiIdIleGetirRepo(id) { return ekipTanimlariTumunuGetir().find(x => x.id === id) || null; }
+
+function komutaPozisyonlariTumunuGetir() { return _genelListeGetir(_komutaPozisyonuAnahtari); }
+function komutaPozisyonuEkleRepo(k) { return _genelEkle(_komutaPozisyonuAnahtari, k); }
+function komutaPozisyonuGuncelleRepo(id, v) { return _genelGuncelle(_komutaPozisyonuAnahtari, id, v); }
+function komutaPozisyonuSilRepo(id) { _genelSil(_komutaPozisyonuAnahtari, id); }
+function komutaPozisyonuIdIleGetirRepo(id) { return komutaPozisyonlariTumunuGetir().find(x => x.id === id) || null; }

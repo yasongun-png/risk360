@@ -1,4 +1,6 @@
-// Acil Durum Yönetimi ana sayfa DOM işlemleri (Ekipler / Uygunluk / Ekipman / Tatbikat / Senaryo).
+// Acil Durum Yönetimi ana sayfa DOM işlemleri (Ekipler / Uygunluk / Ekipman /
+// Yangın Tüpü / Tatbikat). Tehlike & Senaryo Kartları, Tesis Bilgi Formu ve
+// Komuta Yapısı plan-detay.html/plan-detay-ui.js'e taşındı.
 
 let _adGorunum = 'ekipler';
 let _adFirma = null;
@@ -10,7 +12,6 @@ let _duzenlenenYanginTupuId = null;
 // eklenir. Düzenlemede kullanılmaz.
 let _bekleyenHaritaKonum = null;
 let _duzenlenenTatbikatId = null;
-let _duzenlenenSenaryoId = null;
 
 function _adKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -55,13 +56,6 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('tatbikatModalIptalBtn').addEventListener('click', tatbikatModalKapat);
   document.getElementById('tatbikatForm').addEventListener('submit', tatbikatFormGonderildi);
   document.getElementById('tatbikatAramaKutusu').addEventListener('input', e => tatbikatlariCiz(e.target.value));
-
-  // Senaryo
-  document.getElementById('yeniSenaryoBtn').addEventListener('click', () => senaryoModalAc());
-  document.getElementById('senaryoModalKapatBtn').addEventListener('click', senaryoModalKapat);
-  document.getElementById('senaryoModalIptalBtn').addEventListener('click', senaryoModalKapat);
-  document.getElementById('senaryoForm').addEventListener('submit', senaryoFormGonderildi);
-  document.getElementById('senaryoAramaKutusu').addEventListener('input', e => senaryolariCiz(e.target.value));
 
   _acilDurumExcelRaporBaglantilariniKur();
 
@@ -147,15 +141,6 @@ const TATBIKAT_EXPORT_KOLONLARI = [
   { anahtar: 'durumGoruntu', baslik: 'Durum' }
 ];
 
-const SENARYO_EXPORT_KOLONLARI = [
-  { anahtar: 'senaryoNo', baslik: 'Senaryo No' },
-  { anahtar: 'baslik', baslik: 'Başlık' },
-  { anahtar: 'tur', baslik: 'Tür' },
-  { anahtar: 'sorumluEkip', baslik: 'Sorumlu Ekip' },
-  { anahtar: 'gozdenGecirmeTarihi', baslik: 'Gözden Geçirme' },
-  { anahtar: 'durumGoruntu', baslik: 'Durum' }
-];
-
 function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipSablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(EKIP_IMPORT_KOLONLARI, 'acil_durum_ekip_sablonu.xlsx');
@@ -235,13 +220,6 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('tatbikatYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Tatbikatları', _adFirma ? _adFirma.ad : '', TATBIKAT_EXPORT_KOLONLARI, tatbikatlariGetir(document.getElementById('tatbikatAramaKutusu').value));
   });
-
-  document.getElementById('senaryoDisaAktarBtn').addEventListener('click', () => {
-    excelDisaAktar(senaryolariGetir(''), SENARYO_EXPORT_KOLONLARI, 'acil_durum_senaryolari.xlsx');
-  });
-  document.getElementById('senaryoYazdirBtn').addEventListener('click', () => {
-    raporListesiYazdir('Acil Durum Senaryoları', _adFirma ? _adFirma.ad : '', SENARYO_EXPORT_KOLONLARI, senaryolariGetir(document.getElementById('senaryoAramaKutusu').value));
-  });
 }
 
 function gorunumDegistir(gorunum) {
@@ -249,7 +227,7 @@ function gorunumDegistir(gorunum) {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
-  ['ekipler', 'uygunluk', 'ekipman', 'yanginTupu', 'tatbikat', 'senaryo'].forEach(g => {
+  ['ekipler', 'uygunluk', 'ekipman', 'yanginTupu', 'tatbikat'].forEach(g => {
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
@@ -258,7 +236,6 @@ function gorunumDegistir(gorunum) {
   else if (gorunum === 'ekipman') ekipmanlariCiz('');
   else if (gorunum === 'yanginTupu') yanginTupleriniCiz('');
   else if (gorunum === 'tatbikat') tatbikatlariCiz('');
-  else if (gorunum === 'senaryo') senaryolariCiz('');
 }
 
 // ==================== EKİPLER ====================
@@ -747,87 +724,6 @@ function tatbikatFormGonderildi(e) {
 
   tatbikatModalKapat();
   tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value);
-}
-
-// ==================== SENARYO ====================
-
-function senaryolariCiz(aramaMetni) {
-  const govde = document.getElementById('senaryoTabloGovde');
-  const bosDurum = document.getElementById('senaryoBosDurum');
-  const liste = senaryolariGetir(aramaMetni);
-
-  govde.innerHTML = '';
-  if (liste.length === 0) {
-    bosDurum.classList.add('gorunur');
-    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen senaryo bulunamadı.' : 'Henüz senaryo eklenmedi.';
-    return;
-  }
-  bosDurum.classList.remove('gorunur');
-
-  liste.forEach(s => {
-    const satir = document.createElement('tr');
-    satir.innerHTML = `
-      <td>${_adKacir(s.senaryoNo)}</td><td>${_adKacir(s.baslik)}</td><td>${_adKacir(s.tur)}</td><td>${_adKacir(s.sorumluEkip)}</td>
-      <td>${s.gozdenGecirmeTarihi || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(s.durumGoruntu)}">${_adKacir(s.durumGoruntu)}</span></td>
-      <td>
-        <button class="tablo-buton" data-duzenle="${s.id}">Düzenle</button>
-        <button class="tablo-buton sil" data-sil="${s.id}">Sil</button>
-      </td>
-    `;
-    govde.appendChild(satir);
-  });
-
-  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => senaryoModalAc(senaryoIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
-    if (await onayModali('Bu senaryoyu silmek istediğinize emin misiniz?', 'Sil')) { senaryoSil(btn.getAttribute('data-sil')); senaryolariCiz(document.getElementById('senaryoAramaKutusu').value); }
-  }));
-}
-
-function senaryoModalAc(senaryo) {
-  _duzenlenenSenaryoId = senaryo ? senaryo.id : null;
-  document.getElementById('senaryoModalBaslik').textContent = senaryo ? 'Senaryoyu Düzenle' : 'Yeni Senaryo';
-  document.getElementById('senaryoBaslik').value = senaryo ? senaryo.baslik : '';
-  document.getElementById('senaryoTur').innerHTML = SENARYO_TURLERI.map(t => `<option ${senaryo && senaryo.tur === t ? 'selected' : ''}>${t}</option>`).join('');
-  document.getElementById('senaryoBolum').value = senaryo ? senaryo.bolum : '';
-  document.getElementById('senaryoLokasyon').value = senaryo ? senaryo.lokasyon : '';
-  document.getElementById('senaryoTetikleyici').value = senaryo ? senaryo.tetikleyici : '';
-  document.getElementById('senaryoMudahaleAdimlari').value = senaryo ? senaryo.mudahaleAdimlari.join('\n') : '';
-  document.getElementById('senaryoSorumluEkip').innerHTML = EKIP_TURLERI.map(t => `<option ${senaryo && senaryo.sorumluEkip === t ? 'selected' : ''}>${t}</option>`).join('');
-  document.getElementById('senaryoGozdenGecirmeTarihi').value = senaryo ? senaryo.gozdenGecirmeTarihi : '';
-  document.getElementById('senaryoDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${senaryo && senaryo.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('senaryoNotlar').value = senaryo ? senaryo.notlar : '';
-  temizleFormHatalari('senaryoForm');
-  document.getElementById('senaryoModalKatman').classList.add('acik');
-}
-
-function senaryoModalKapat() {
-  document.getElementById('senaryoModalKatman').classList.remove('acik');
-  _duzenlenenSenaryoId = null;
-}
-
-function senaryoFormGonderildi(e) {
-  e.preventDefault();
-  temizleFormHatalari('senaryoForm');
-
-  const veriler = {
-    baslik: document.getElementById('senaryoBaslik').value,
-    tur: document.getElementById('senaryoTur').value,
-    bolum: document.getElementById('senaryoBolum').value,
-    lokasyon: document.getElementById('senaryoLokasyon').value,
-    tetikleyici: document.getElementById('senaryoTetikleyici').value,
-    mudahaleAdimlari: document.getElementById('senaryoMudahaleAdimlari').value,
-    sorumluEkip: document.getElementById('senaryoSorumluEkip').value,
-    gozdenGecirmeTarihi: document.getElementById('senaryoGozdenGecirmeTarihi').value,
-    durum: document.getElementById('senaryoDurum').value,
-    notlar: document.getElementById('senaryoNotlar').value
-  };
-
-  const sonuc = _duzenlenenSenaryoId ? senaryoGuncelle(_duzenlenenSenaryoId, veriler) : senaryoEkle(veriler);
-  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'senaryo'); return; }
-
-  senaryoModalKapat();
-  senaryolariCiz(document.getElementById('senaryoAramaKutusu').value);
 }
 
 // ==================== Ortak yardımcılar ====================

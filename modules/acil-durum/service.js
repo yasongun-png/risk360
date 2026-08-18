@@ -390,3 +390,119 @@ function acilDurumSenaryoSablonlariGetir(tesisTuruFiltresi, kategoriFiltresi) {
   if (kategoriFiltresi) tumu = tumu.filter(s => s.kategori === kategoriFiltresi);
   return tumu;
 }
+
+// Seçilen şablon kartlarını gerçek senaryo kayıtlarına dönüştürür (kopyalar) —
+// modules/risk/service.js riskSablonlardanEkle ile aynı "toplu ekle, başarısız
+// olanları raporla" deseni. senaryoDogrula 'tetikleyici' alanını zorunlu
+// kıldığından, şablonun olayinTanimi'i (yoksa başlığı) tetikleyici olarak kullanılır.
+function acilDurumSenaryolariSablonlardanEkle(sablonIdleri) {
+  const tumSablonlar = acilDurumSenaryoSablonlariGetir();
+  const secilenler = (sablonIdleri || []).map(id => tumSablonlar.find(s => s.id === id)).filter(Boolean);
+  const eklenenler = [];
+  const hatalar = [];
+  secilenler.forEach(sablon => {
+    const sonuc = senaryoEkle({
+      baslik: sablon.baslik,
+      tur: sablon.tur,
+      kategori: sablon.kategori,
+      tetikleyici: sablon.olayinTanimi || sablon.baslik,
+      olayinTanimi: sablon.olayinTanimi,
+      muhtemelNedenler: sablon.muhtemelNedenler,
+      ilkBelirtiTespit: sablon.ilkBelirtiTespit,
+      tehlikeKaynaklari: sablon.tehlikeKaynaklari,
+      etkilenecekAlanlar: sablon.etkilenecekAlanlar,
+      etkiInsan: sablon.etkiInsan,
+      etkiCevre: sablon.etkiCevre,
+      etkiTesis: sablon.etkiTesis,
+      ilk1Dk: sablon.ilk1Dk,
+      ilk5Dk: sablon.ilk5Dk,
+      ilk15Dk: sablon.ilk15Dk,
+      alarmIhbarYontemi: sablon.alarmIhbarYontemi,
+      tahliyeKarari: sablon.tahliyeKarari,
+      toplanmaAlani: sablon.toplanmaAlani,
+      guvenliDurdurmaNoktalari: sablon.guvenliDurdurmaNoktalari.slice(),
+      kkd: sablon.kkd.slice(),
+      mudahaleSiniri: sablon.mudahaleSiniri,
+      disKurumBildirimi: sablon.disKurumBildirimi,
+      sablonKaynagiId: sablon.id
+    });
+    if (sonuc.basarili) eklenenler.push(sonuc.senaryo);
+    else hatalar.push(sablon.baslik);
+  });
+  return { basarili: true, eklenen: eklenenler.length, hatalar };
+}
+
+// ---- Ekip Tanımları ----
+
+function ekipTanimlariGetir() {
+  return ekipTanimlariTumunuGetir();
+}
+
+function ekipTanimiEkle(veriler) {
+  const dogrulama = ekipTanimiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = ekipTanimiOlustur(veriler);
+  ekipTanimiEkleRepo(yeni);
+  return { basarili: true, ekipTanimi: yeni };
+}
+
+function ekipTanimiGuncelle(id, veriler) {
+  const dogrulama = ekipTanimiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = ekipTanimiIdIleGetirRepo(id) || {};
+  const guncellenen = ekipTanimiGuncelleRepo(id, ekipTanimiOlustur(Object.assign({}, mevcut, veriler, { id: mevcut.id, olusturmaTarihi: mevcut.olusturmaTarihi })));
+  return { basarili: true, ekipTanimi: guncellenen };
+}
+
+function ekipTanimiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  ekipTanimiSilRepo(id);
+  return { basarili: true };
+}
+
+// ---- Komuta Yapısı ----
+
+function komutaPozisyonlariGetir() {
+  return komutaPozisyonlariTumunuGetir();
+}
+
+function komutaPozisyonuEkle(veriler) {
+  const dogrulama = komutaPozisyonuDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = komutaPozisyonuOlustur(veriler);
+  komutaPozisyonuEkleRepo(yeni);
+  return { basarili: true, pozisyon: yeni };
+}
+
+function komutaPozisyonuGuncelle(id, veriler) {
+  const dogrulama = komutaPozisyonuDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = komutaPozisyonuIdIleGetirRepo(id) || {};
+  const guncellenen = komutaPozisyonuGuncelleRepo(id, komutaPozisyonuOlustur(Object.assign({}, mevcut, veriler, { id: mevcut.id, olusturmaTarihi: mevcut.olusturmaTarihi })));
+  return { basarili: true, pozisyon: guncellenen };
+}
+
+function komutaPozisyonuSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  // Alt pozisyonların üst referansı kopmasın diye önce onları köke (null) bağla.
+  komutaPozisyonlariTumunuGetir().filter(p => p.ustPozisyonId === id).forEach(p => komutaPozisyonuGuncelleRepo(p.id, { ustPozisyonId: null }));
+  komutaPozisyonuSilRepo(id);
+  return { basarili: true };
+}
+
+// Madde 11'deki standart komuta ağacını (KOMUTA_POZISYON_SABLONU) tek
+// tıkla oluşturur — hiç pozisyon yoksa çalışır, mevcut pozisyonlara dokunmaz.
+function komutaYapisiStandartOlustur() {
+  const mevcut = komutaPozisyonlariTumunuGetir();
+  if (mevcut.length) return { basarili: false, hata: 'Komuta yapısında zaten pozisyon var. Önce mevcutları silin veya manuel ekleyin.' };
+  const adIdEslesmesi = {};
+  KOMUTA_POZISYON_SABLONU.forEach(p => {
+    const yeni = komutaPozisyonuOlustur({
+      pozisyonAdi: p.pozisyonAdi,
+      ustPozisyonId: p.ustPozisyonAdi ? adIdEslesmesi[p.ustPozisyonAdi] : null
+    });
+    komutaPozisyonuEkleRepo(yeni);
+    adIdEslesmesi[p.pozisyonAdi] = yeni.id;
+  });
+  return { basarili: true, pozisyonlar: komutaPozisyonlariTumunuGetir() };
+}
