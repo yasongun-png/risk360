@@ -9,6 +9,14 @@ function _kimKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// Kimyasal Adı/Ticari Adı/Tedarikçi gibi tek satırlık kimlik alanları --
+// hatalı bir veri girişi (ör. eski bir SDS içe aktarma hatası) yüzünden
+// paragraflarca metin içerirse formu sayfalarca taşırmasın diye kesilir.
+function _kimKisalt(v, uzunluk) {
+  const m = String(v ?? '');
+  return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
+}
+
 function _kimLogoHtml(logoUrl) {
   return logoUrl ? `<img src="${logoUrl}">` : 'LOGO YOK';
 }
@@ -35,9 +43,9 @@ async function kimyasalFormunuPdfOlustur(id) {
     <div class="kim-bolum">
       <h2>1. Genel Bilgiler</h2>
       <table>
-        <tr><td class="kim-etiket">Kimyasal Adı</td><td>${_kimKacir(k.ad)}</td><td class="kim-etiket">Ticari Adı</td><td>${_kimKacir(k.ticariAdi) || '-'}</td></tr>
+        <tr><td class="kim-etiket">Kimyasal Adı</td><td>${_kimKacir(_kimKisalt(k.ad, 150))}</td><td class="kim-etiket">Ticari Adı</td><td>${_kimKacir(_kimKisalt(k.ticariAdi, 150)) || '-'}</td></tr>
         <tr><td class="kim-etiket">CAS No</td><td>${_kimKacir(k.casNo) || '-'}</td><td class="kim-etiket">EC No</td><td>${_kimKacir(k.ecNo) || '-'}</td></tr>
-        <tr><td class="kim-etiket">Tedarikçi</td><td>${_kimKacir(k.tedarikci) || '-'}</td><td class="kim-etiket">Fiziksel Hali</td><td>${_kimKacir(k.fizikselHali)}</td></tr>
+        <tr><td class="kim-etiket">Tedarikçi</td><td>${_kimKacir(_kimKisalt(k.tedarikci, 150)) || '-'}</td><td class="kim-etiket">Fiziksel Hali</td><td>${_kimKacir(k.fizikselHali)}</td></tr>
         <tr><td class="kim-etiket">Bölüm</td><td>${_kimKacir(k.bolum)}</td><td class="kim-etiket">Lokasyon / Raf</td><td>${_kimKacir(k.lokasyon) || '-'}</td></tr>
         <tr><td class="kim-etiket">Depolama Grubu</td><td>${_kimKacir(k.depolamaGrubu)}</td><td class="kim-etiket">Miktar</td><td>${k.miktar != null ? _kimKacir(k.miktar) + ' ' + _kimKacir(k.birim) : '-'}</td></tr>
       </table>
