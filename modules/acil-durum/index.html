@@ -89,7 +89,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Ad</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
           <tbody id="ekipmanTabloGovde"></tbody>
         </table>
       </div>
@@ -208,17 +208,9 @@
     <div class="modal-kutu" style="max-width:600px;">
       <h3 id="ekipmanModalBaslik">Yeni Ekipman</h3>
       <form id="ekipmanForm">
-        <div class="form-satir-ikili">
-          <div>
-            <label for="ekipmanTur">Tür</label>
-            <select id="ekipmanTur"></select>
-            <div class="alan-hatasi" id="ekipmanTurHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
-          </div>
-          <div>
-            <label for="ekipmanAd">Ad</label>
-            <input type="text" id="ekipmanAd">
-          </div>
-        </div>
+        <label for="ekipmanTur">Tür</label>
+        <select id="ekipmanTur"></select>
+        <div class="alan-hatasi" id="ekipmanTurHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
         <label for="ekipmanNo">Ekipman No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa türe göre otomatik üretilir)</span></label>
         <input type="text" id="ekipmanNo">

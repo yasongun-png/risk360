@@ -113,7 +113,6 @@ const EKIP_EXPORT_KOLONLARI = [
 
 const EKIPMAN_IMPORT_KOLONLARI = [
   { anahtar: 'tur', baslik: 'Tür' },
-  { anahtar: 'ad', baslik: 'Ad' },
   { anahtar: 'bolum', baslik: 'Bölüm' },
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'periyotGun', baslik: 'Kontrol Periyodu (Gün)' },
@@ -125,7 +124,6 @@ const EKIPMAN_IMPORT_KOLONLARI = [
 const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'ekipmanNo', baslik: 'Ekipman No' },
   { anahtar: 'tur', baslik: 'Tür' },
-  { anahtar: 'ad', baslik: 'Ad' },
   { anahtar: 'bolum', baslik: 'Bölüm' },
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol' },
@@ -498,7 +496,7 @@ function ekipmanlariCiz(aramaMetni) {
   liste.forEach(e => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.ad)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
+      <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
       <td>${_adKacir(e.bulgular) || '-'}</td>
@@ -521,7 +519,6 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanModalBaslik').textContent = ekipman ? 'Ekipmanı Düzenle' : 'Yeni Ekipman';
   document.getElementById('ekipmanTur').innerHTML = EKIPMAN_TURLERI.map(t => `<option ${ekipman && ekipman.tur === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('ekipmanNo').value = ekipman ? ekipman.ekipmanNo : '';
-  document.getElementById('ekipmanAd').value = ekipman ? ekipman.ad : '';
   // Kullanıcı isteği: "bölümler ise listeden seçilsin" — personel
   // modülündeki kayıtlı bölüm adlarından oluşan listeden seçiliyor (serbest
   // metin girişi değil). Kaydın mevcut bölümü bu listede yoksa (eski/serbest
@@ -617,7 +614,6 @@ function ekipmanFormGonderildi(e) {
   const veriler = {
     ekipmanNo: document.getElementById('ekipmanNo').value,
     tur: document.getElementById('ekipmanTur').value,
-    ad: document.getElementById('ekipmanAd').value,
     bolum: document.getElementById('ekipmanBolum').value,
     lokasyon: document.getElementById('ekipmanLokasyon').value,
     periyotGun: document.getElementById('ekipmanPeriyot').value,

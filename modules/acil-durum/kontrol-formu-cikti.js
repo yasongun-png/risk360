@@ -74,7 +74,7 @@ function _kfEkipmanBlogu(ekipman, sorular) {
     new docx.Paragraph({
       spacing: { before: 200, after: 80 },
       shading: { fill: 'F3F4F6' },
-      children: [new docx.TextRun({ text: `${ekipman.ekipmanNo || '-'} — ${ekipman.ad || ''}`, bold: true, size: 22 })]
+      children: [new docx.TextRun({ text: `${ekipman.ekipmanNo || '-'} — ${ekipman.lokasyon || ''}`, bold: true, size: 22 })]
     }),
     _kfParagraf(
       `Lokasyon: ${_kfTireVeyaDeger(ekipman.lokasyon)}   |   Sorumlu: ${_kfTireVeyaDeger(ekipman.sorumlu)}`,

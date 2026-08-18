@@ -41,24 +41,25 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'erisim', soru: 'Hidranta erişim kolay mı, önü açık mı?' },
     { id: 'govde', soru: 'Gövde hasarsız/paslanmamış mı?' },
     { id: 'vana', soru: 'Vana çalışıyor mu?' },
-    { id: 'sizinti', soru: 'Sızıntı var mı?' },
+    { id: 'sizinti', soru: 'Sızıntı yok mu?' },
     { id: 'korRekor', soru: 'Kör rekorlar takılı mı?' },
-    { id: 'rekorKirik', soru: 'Rekorlarda kırık/hasar var mı?' },
+    { id: 'rekorKirik', soru: 'Rekorlarda kırık/hasar yok mu?' },
     { id: 'vanaKollari', soru: 'Vana kolları sağlam mı?' }
   ],
   'Yangın Dolabı': [
     { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor mu, önü boş mu?' },
     { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli mi?' },
-    { id: 'vanaLans', soru: 'Vana ve lans çalışır durumda mı?' },
-    { id: 'camEtiket', soru: 'Dolap camı/etiketi sağlam mı?' },
-    { id: 'basincSu', soru: 'Basınç/su beslemesi yeterli mi?' }
+    { id: 'dolapKapagi', soru: 'Dolap kapağı var mı?' },
+    { id: 'dolapSaglam', soru: 'Dolap sağlam mı?' },
+    { id: 'dolapBoyasi', soru: 'Dolap boyası iyi mi?' },
+    { id: 'lansMevcut', soru: 'Lans mevcut mu?' },
+    { id: 'lansSaglam', soru: 'Lans sağlam ve çalışır durumda mı?' }
   ],
   'Göz Duşu': [
     { id: 'erisim', soru: 'Göz duşuna erişim engelsiz mi?' },
     { id: 'akisBasinc', soru: 'Su akışı ve basıncı yeterli mi?' },
     { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor mu?' },
-    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde mi?' },
-    { id: 'isaretleme', soru: 'Konum işaretlemesi mevcut mu?' }
+    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde mi?' }
   ],
   'Göz ve Boy Duşu': [
     { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz mi?' },
@@ -149,10 +150,10 @@ const YANGIN_TUPU_HIDROSTATIK_TEST_GUN = 1460;
 const YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI = ['Uygun', 'Uygun Değil', 'İlgili Değil'];
 const YANGIN_TUPU_KONTROL_SORULARI = [
   { id: 'ulasim', soru: 'Yangın tüpüne kolayca ulaşılabiliyor mu?' },
-  { id: 'onEngel', soru: 'Önünde herhangi bir engel var mı?' },
+  { id: 'onEngel', soru: 'Önünde engel yok mu?' },
   { id: 'sabitleme', soru: 'Yangın tüpü uygun şekilde sabitlenmiş mi?' },
   { id: 'fizikselDurum', soru: 'Yangın tüpünün fiziksel durumu iyi mi?' },
-  { id: 'paslanmaHasar', soru: 'Tüp üzerinde paslanma veya ciddi hasar var mı?' },
+  { id: 'paslanmaHasar', soru: 'Tüp üzerinde paslanma veya ciddi hasar yok mu?' },
   { id: 'hortumNozul', soru: 'Hortum ve nozul sağlam mı?' },
   { id: 'emniyetPimi', soru: 'Emniyet pimi mevcut mu?' },
   { id: 'muhurPlomba', soru: 'Mühür/plomba sağlam mı?' },
