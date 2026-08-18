@@ -10,7 +10,110 @@ const EKIP_ROLLERI = ['Acil Durum Sorumlusu', 'Acil Durum Koordinatörü', 'Ekip
 const VARDIYALAR = ['A', 'B', 'C', 'D', 'G', '08-16', '16-24', '00-08', 'Genel'];
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Acil Duş', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Diğer'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Diğer'];
+
+// Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
+// türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
+// bağımsız sayacına sahip (bkz. service.js ekipmanEkle, aynı önekteki
+// kayıtlara göre filtrelenip numara üretilir).
+const EKIPMAN_TUR_ONEKLERI = {
+  'Hidrant': 'HYD',
+  'Yangın Dolabı': 'YD',
+  'Göz Duşu': 'GD',
+  'Göz ve Boy Duşu': 'GBD',
+  'Monitör': 'MON',
+  'Kaçış Yolu': 'KY',
+  'Toplanma Alanı': 'TA',
+  'Alarm / Siren': 'ALS',
+  'Acil Aydınlatma': 'AAY',
+  'Döküntü Kiti': 'DKT',
+  'Diğer': 'DGR',
+  'Yangın Tüpü': 'YSC'
+};
+
+// Ekipman türüne göre madde bazlı kontrol kriterleri — kullanıcı isteği:
+// "kontrol soruları ekleyeceksin ekipmana uygun ama bulgular kısmı da
+// kalacak" (serbest metin "Bulgular" alanı KALDIRILMIYOR, üzerine eklenen
+// yapılandırılmış bir kontrol listesi).
+const EKIPMAN_KONTROL_CEVAP_SECENEKLERI = ['Uygun', 'Uygun Değil', 'İlgili Değil'];
+const EKIPMAN_KONTROL_SORULARI = {
+  'Hidrant': [
+    { id: 'erisim', soru: 'Hidranta erişim kolay mı, önü açık mı?' },
+    { id: 'govde', soru: 'Gövde hasarsız/paslanmamış mı?' },
+    { id: 'vana', soru: 'Vana çalışıyor mu, sızıntı var mı?' },
+    { id: 'hortumLans', soru: 'Hortum/lans takılı ve sağlam mı?' },
+    { id: 'basinc', soru: 'Basınç göstergesi uygun seviyede mi?' },
+    { id: 'isaretleme', soru: 'Konum işaretlemesi mevcut mu?' }
+  ],
+  'Yangın Dolabı': [
+    { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor mu, önü boş mu?' },
+    { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli mi?' },
+    { id: 'vanaLans', soru: 'Vana ve lans çalışır durumda mı?' },
+    { id: 'camEtiket', soru: 'Dolap camı/etiketi sağlam mı?' },
+    { id: 'basincSu', soru: 'Basınç/su beslemesi yeterli mi?' }
+  ],
+  'Göz Duşu': [
+    { id: 'erisim', soru: 'Göz duşuna erişim engelsiz mi?' },
+    { id: 'akisBasinc', soru: 'Su akışı ve basıncı yeterli mi?' },
+    { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor mu?' },
+    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde mi?' },
+    { id: 'isaretleme', soru: 'Konum işaretlemesi mevcut mu?' }
+  ],
+  'Göz ve Boy Duşu': [
+    { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz mi?' },
+    { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli mi?' },
+    { id: 'sicaklik', soru: 'Su sıcaklığı uygun mu (ılık su)?' },
+    { id: 'aktivasyon', soru: 'Aktivasyon kolu/pedalı çalışıyor mu?' },
+    { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız mı?' },
+    { id: 'isaretleme', soru: 'Konum işaretlemesi (tabela) mevcut mu?' },
+    { id: 'testKaydi', soru: 'Periyodik test/akış kaydı güncel mi?' },
+    { id: 'etrafiAcik', soru: 'Etrafında engel/malzeme yığılması yok mu?' }
+  ],
+  'Monitör': [
+    { id: 'erisim', soru: 'Monitöre erişim engelsiz mi?' },
+    { id: 'donme', soru: 'Döner/yönlendirme mekanizması çalışıyor mu?' },
+    { id: 'besleme', soru: 'Su/köpük beslemesi yeterli mi?' },
+    { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız mı?' },
+    { id: 'basinc', soru: 'Basınç göstergesi uygun mu?' }
+  ],
+  'Kaçış Yolu': [
+    { id: 'engelsiz', soru: 'Kaçış yolu engelsiz mi?' },
+    { id: 'tabela', soru: 'Yönlendirme/tabela levhaları görünür ve sağlam mı?' },
+    { id: 'aydinlatma', soru: 'Acil aydınlatma çalışıyor mu?' },
+    { id: 'zemin', soru: 'Zemin kayma riski taşımıyor mu?' },
+    { id: 'kapilar', soru: 'Kapılar kilitli/engelli değil mi?' }
+  ],
+  'Toplanma Alanı': [
+    { id: 'isaretleme', soru: 'Toplanma alanı işaretlemesi görünür mü?' },
+    { id: 'erisim', soru: 'Alan engelsiz ve erişilebilir mi?' },
+    { id: 'kapasite', soru: 'Alan kapasiteye yeterli mi?' },
+    { id: 'guvenliMesafe', soru: 'Tehlikeli alanlardan güvenli mesafede mi?' }
+  ],
+  'Alarm / Siren': [
+    { id: 'erisim', soru: 'Alarm butonu/siren erişilebilir ve görünür mü?' },
+    { id: 'testCalisir', soru: 'Test edildiğinde çalışıyor mu?' },
+    { id: 'sesIsik', soru: 'Ses/ışık seviyesi yeterli mi?' },
+    { id: 'govde', soru: 'Gövde hasarsız mı?' }
+  ],
+  'Acil Aydınlatma': [
+    { id: 'calisir', soru: 'Armatür çalışıyor mu?' },
+    { id: 'batarya', soru: 'Batarya/şarj durumu yeterli mi?' },
+    { id: 'aydinlatmaSeviyesi', soru: 'Aydınlatma seviyesi kaçış yolunu yeterince aydınlatıyor mu?' },
+    { id: 'govdeLens', soru: 'Gövde/lens hasarsız mı?' }
+  ],
+  'Döküntü Kiti': [
+    { id: 'erisim', soru: 'Kit erişilebilir konumda mı?' },
+    { id: 'icerikEksiksiz', soru: 'İçerik eksiksiz mi (emici, eldiven, gözlük, torba vb.)?' },
+    { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok mu?' },
+    { id: 'talimat', soru: 'Kullanım talimatı mevcut mu?' }
+  ],
+  'Diğer': [
+    { id: 'erisim', soru: 'Ekipman erişilebilir konumda mı?' },
+    { id: 'fizikselDurum', soru: 'Ekipman fiziksel olarak sağlam/hasarsız mı?' },
+    { id: 'isaretleme', soru: 'Etiket/işaretleme mevcut mu?' },
+    { id: 'kontrolKaydi', soru: 'Periyodik kontrol kaydı güncel mi?' }
+  ]
+};
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
 const SENARYO_TURLERI = ['Yangın', 'Patlama', 'Kimyasal Yayılım', 'Amonyak Kaçağı', 'Asit Dökülmesi', 'Deprem', 'Kapalı Alan', 'Çevresel Olay', 'Diğer'];
 
@@ -217,10 +320,12 @@ function ekipmanOlustur(veriler) {
   const periyotGun = Number(veriler.periyotGun || 30);
   const sonKontrol = veriler.sonKontrol || '';
   const sonrakiKontrol = veriler.sonrakiKontrol || (sonKontrol ? gunEkle(sonKontrol, periyotGun) : '');
+  const tur = veriler.tur || 'Diğer';
+  const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
   return {
     id: veriler.id || rastgeleId(),
     ekipmanNo: veriler.ekipmanNo || '',
-    tur: veriler.tur || 'Diğer',
+    tur,
     ad: (veriler.ad || '').trim() || veriler.tur || 'Diğer',
     bolum: (veriler.bolum || '').trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
@@ -229,7 +334,14 @@ function ekipmanOlustur(veriler) {
     sonrakiKontrol,
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
+    // "Bulgular" serbest metni korunuyor — üzerine türe özgü madde bazlı
+    // kontrol listesi eklendi (bkz. EKIPMAN_KONTROL_SORULARI), ikisi bir arada.
     bulgular: (veriler.bulgular || '').trim(),
+    kontrolCevaplari: sorular.reduce((acc, s) => {
+      const cevap = (veriler.kontrolCevaplari || {})[s.id];
+      acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
+      return acc;
+    }, {}),
     notlar: (veriler.notlar || '').trim(),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
 

@@ -92,19 +92,23 @@ function ekipmanlariGetir(aramaMetni) {
   return liste.filter(e => e.ad.toLowerCase().includes(kucuk) || e.lokasyon.toLowerCase().includes(kucuk) || e.bolum.toLowerCase().includes(kucuk));
 }
 
-// Ekipman türüne göre farklı kayıt öneki — Yangın Tüpü'nün resmi kısaltması
-// "YSC" (Yangın Söndürme Cihazı) ile gösterilsin diye (kullanıcı isteği),
-// diğer tüm türler eskisi gibi genel "ADE" (Acil Durum Ekipmanı) önekini kullanır.
+// Ekipman türüne göre kayıt öneki — bkz. model.js EKIPMAN_TUR_ONEKLERI.
 function _ekipmanOnekAl(tur) {
-  if (tur === 'Yangın Tüpü') return 'YSC';
-  return 'ADE';
+  return EKIPMAN_TUR_ONEKLERI[tur] || 'DGR';
 }
 
 function ekipmanEkle(veriler) {
   const dogrulama = ekipmanDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  const ekipmanNo = sonrakiNoUret(_ekipmanOnekAl(veriler.tur), ekipmanlariTumunuGetir(), 'ekipmanNo');
+  // Kullanıcı isteği: "acil durum ekipmanlarının türüne göre numaralandırma
+  // olsun" — her tür kendi bağımsız sayacına sahip; numara üretirken yalnızca
+  // AYNI öneki taşıyan (yani aynı türdeki) kayıtlara bakılır.
+  const onEk = _ekipmanOnekAl(veriler.tur);
+  const ayniTurdekiler = ekipmanlariTumunuGetir().filter(e => _ekipmanOnekAl(e.tur) === onEk);
+  const ekipmanNo = veriler.ekipmanNo && veriler.ekipmanNo.trim()
+    ? veriler.ekipmanNo.trim()
+    : sonrakiNoUret(onEk, ayniTurdekiler, 'ekipmanNo');
   const yeni = ekipmanOlustur(Object.assign({}, veriler, { ekipmanNo }));
   ekipmanEkleRepo(yeni);
   return { basarili: true, ekipman: yeni };
@@ -116,7 +120,12 @@ function ekipmanGuncelle(id, veriler) {
 
   const periyotGun = Number(veriler.periyotGun || 30);
   const sonrakiKontrol = veriler.sonrakiKontrol || (veriler.sonKontrol ? gunEkle(veriler.sonKontrol, periyotGun) : '');
+  const mevcut = ekipmanIdIleGetirRepo(id) || {};
+  const sorular = EKIPMAN_KONTROL_SORULARI[veriler.tur] || [];
   const guncellenen = ekipmanGuncelleRepo(id, {
+    // Kullanıcı isteği: "bu no ları istersem kendim de düzeltebileyim" —
+    // boş bırakılırsa mevcut numara korunur, otomatik yeniden üretilmez.
+    ekipmanNo: (veriler.ekipmanNo && veriler.ekipmanNo.trim()) || mevcut.ekipmanNo || '',
     tur: veriler.tur,
     ad: (veriler.ad || '').trim() || veriler.tur,
     bolum: (veriler.bolum || '').trim(),
@@ -127,6 +136,11 @@ function ekipmanGuncelle(id, veriler) {
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
     bulgular: (veriler.bulgular || '').trim(),
+    kontrolCevaplari: sorular.reduce((acc, s) => {
+      const cevap = (veriler.kontrolCevaplari || {})[s.id];
+      acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
+      return acc;
+    }, {}),
     notlar: (veriler.notlar || '').trim()
   });
   return { basarili: true, ekipman: guncellenen };
@@ -166,8 +180,10 @@ function yanginTupuEkle(veriler) {
   const dogrulama = yanginTupuDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  // Sahadaki fiziksel tüp etiketleriyle aynı biçim: "YSC01", "YSC02"...
-  const tupNo = yanginTupuSonrakiNoUret(yanginTupleriTumunuGetir());
+  // Kullanıcı isteği: "modalda yangın tüpü no olsun istersem değiştirebileyim"
+  // — kullanıcı bir numara girdiyse onu kullan, boşsa sahadaki fiziksel tüp
+  // etiketleriyle aynı biçimde ("YSC 1", "YSC 2"...) otomatik üret.
+  const tupNo = (veriler.tupNo && veriler.tupNo.trim()) || yanginTupuSonrakiNoUret(yanginTupleriTumunuGetir());
   const yeni = yanginTupuOlustur(Object.assign({}, veriler, { tupNo }));
   yanginTupuEkleRepo(yeni);
   return { basarili: true, tup: yeni };
@@ -179,7 +195,9 @@ function yanginTupuGuncelle(id, veriler) {
 
   const sonrakiYillikBakim = veriler.sonrakiYillikBakim || (veriler.yillikBakimTarihi ? gunEkle(veriler.yillikBakimTarihi, YANGIN_TUPU_YILLIK_BAKIM_GUN) : '');
   const sonrakiHidrostatikTest = veriler.sonrakiHidrostatikTest || (veriler.hidrostatikTestTarihi ? gunEkle(veriler.hidrostatikTestTarihi, YANGIN_TUPU_HIDROSTATIK_TEST_GUN) : '');
+  const mevcutTup = yanginTupuIdIleGetirRepo(id) || {};
   const guncellenen = yanginTupuGuncelleRepo(id, {
+    tupNo: (veriler.tupNo && veriler.tupNo.trim()) || mevcutTup.tupNo || '',
     tip: veriler.tip,
     kapasite: (veriler.kapasite || '').trim(),
     bolum: (veriler.bolum || '').trim(),

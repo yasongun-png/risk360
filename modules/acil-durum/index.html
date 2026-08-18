@@ -72,7 +72,10 @@
     <!-- EKİPMAN -->
     <div id="bolum-ekipman" style="display:none;">
       <div class="arac-cubugu">
-        <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
+          <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
+          <select id="ekipmanTurFiltre" style="width:auto;"><option value="">Tüm Türler (birleşik liste)</option></select>
+        </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="ikincil" id="ekipmanSablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="ekipmanIceAktarBtn">İçe Aktar</button>
@@ -84,7 +87,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Ad</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Ad</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
           <tbody id="ekipmanTabloGovde"></tbody>
         </table>
       </div>
@@ -214,6 +217,9 @@
           </div>
         </div>
 
+        <label for="ekipmanNo">Ekipman No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa türe göre otomatik üretilir)</span></label>
+        <input type="text" id="ekipmanNo">
+
         <div class="form-satir-ikili">
           <div>
             <label for="ekipmanBolum">Bölüm</label>
@@ -251,6 +257,9 @@
           </div>
         </div>
 
+        <label>Kontrol Kriterleri <span style="color:var(--metin-soluk); font-weight:400;">(seçilen türe göre)</span></label>
+        <div id="ekipmanKontrolListesi" style="margin-bottom:14px;"></div>
+
         <label for="ekipmanBulgular">Bulgular</label>
         <textarea id="ekipmanBulgular"></textarea>
         <label for="ekipmanNotlar">Notlar</label>
@@ -273,6 +282,9 @@
     <div class="modal-kutu" style="max-width:600px;">
       <h3 id="yanginTupuModalBaslik">Yeni Yangın Tüpü</h3>
       <form id="yanginTupuForm">
+        <label for="yanginTupuNo">Tüp No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa otomatik üretilir)</span></label>
+        <input type="text" id="yanginTupuNo">
+
         <div class="form-satir-ikili">
           <div>
             <label for="yanginTupuTip">Tip</label>

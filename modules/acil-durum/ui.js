@@ -52,6 +52,9 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('ekipmanModalIptalBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanForm').addEventListener('submit', ekipmanFormGonderildi);
   document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
+  const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
+  ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
+  ekipmanTurFiltreEl.addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
 
   // Yangın Tüpü
   document.getElementById('yeniYanginTupuBtn').addEventListener('click', () => yanginTupuModalAc());
@@ -110,7 +113,8 @@ const EKIPMAN_IMPORT_KOLONLARI = [
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'periyotGun', baslik: 'Kontrol Periyodu (Gün)' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol Tarihi' },
-  { anahtar: 'sorumlu', baslik: 'Sorumlu' }
+  { anahtar: 'sorumlu', baslik: 'Sorumlu' },
+  { anahtar: 'bulgular', baslik: 'Bulgular' }
 ];
 
 const EKIPMAN_EXPORT_KOLONLARI = [
@@ -120,7 +124,8 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol' },
   { anahtar: 'sonrakiKontrol', baslik: 'Sonraki Kontrol' },
-  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+  { anahtar: 'durumGoruntu', baslik: 'Durum' },
+  { anahtar: 'bulgular', baslik: 'Bulgular' }
 ];
 
 const YANGIN_TUPU_IMPORT_KOLONLARI = [
@@ -427,7 +432,12 @@ function uygunlugCiz() {
 function ekipmanlariCiz(aramaMetni) {
   const govde = document.getElementById('ekipmanTabloGovde');
   const bosDurum = document.getElementById('ekipmanBosDurum');
-  const liste = ekipmanlariGetir(aramaMetni);
+  const turFiltre = document.getElementById('ekipmanTurFiltre');
+  let liste = ekipmanlariGetir(aramaMetni);
+  // Kullanıcı isteği: "ayrı listeler olarak da görebileyim yani yangın
+  // tüpleri listesi vb" — türe göre filtrelenmiş, tek ekipman türünün
+  // listesi olarak görüntülenebilir.
+  if (turFiltre && turFiltre.value) liste = liste.filter(e => e.tur === turFiltre.value);
 
   govde.innerHTML = '';
   if (liste.length === 0) {
@@ -443,6 +453,7 @@ function ekipmanlariCiz(aramaMetni) {
       <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.ad)}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
+      <td>${_adKacir(e.bulgular) || '-'}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${e.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${e.id}">Sil</button>
@@ -461,6 +472,7 @@ function ekipmanModalAc(ekipman) {
   _duzenlenenEkipmanId = ekipman ? ekipman.id : null;
   document.getElementById('ekipmanModalBaslik').textContent = ekipman ? 'Ekipmanı Düzenle' : 'Yeni Ekipman';
   document.getElementById('ekipmanTur').innerHTML = EKIPMAN_TURLERI.map(t => `<option ${ekipman && ekipman.tur === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('ekipmanNo').value = ekipman ? ekipman.ekipmanNo : '';
   document.getElementById('ekipmanAd').value = ekipman ? ekipman.ad : '';
   document.getElementById('ekipmanBolum').value = ekipman ? ekipman.bolum : '';
   document.getElementById('ekipmanLokasyon').value = ekipman ? ekipman.lokasyon : '';
@@ -471,6 +483,8 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
+  _ekipmanKontrolListesiCiz(ekipman);
+  document.getElementById('ekipmanTur').onchange = () => _ekipmanKontrolListesiCiz(ekipman);
   _ekipmanKonumAlaniCiz(ekipman);
   temizleFormHatalari('ekipmanForm');
   document.getElementById('ekipmanModalKatman').classList.add('acik');
@@ -512,11 +526,40 @@ function ekipmanModalKapat() {
   _duzenlenenEkipmanId = null;
 }
 
+// "Bulgular" serbest metninin yanına, seçilen ekipman türüne uygun madde
+// bazlı kontrol listesi — bkz. model.js EKIPMAN_KONTROL_SORULARI. Tür
+// değiştikçe yeniden çizilir (bkz. ekipmanModalAc'taki change dinleyicisi).
+function _ekipmanKontrolListesiCiz(ekipman) {
+  const kutu = document.getElementById('ekipmanKontrolListesi');
+  if (!kutu) return;
+  const tur = document.getElementById('ekipmanTur').value;
+  const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
+  const cevaplar = ekipman ? ekipman.kontrolCevaplari || {} : {};
+  kutu.innerHTML = sorular.map(s => `
+    <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
+      <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
+      <select data-kontrol-soru="${s.id}" style="width:auto; min-width:150px;">
+        <option value="">— Seçilmedi —</option>
+        ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${cevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+function _ekipmanKontrolListesiTopla() {
+  const cevaplar = {};
+  document.querySelectorAll('#ekipmanKontrolListesi [data-kontrol-soru]').forEach(sel => {
+    cevaplar[sel.getAttribute('data-kontrol-soru')] = sel.value;
+  });
+  return cevaplar;
+}
+
 function ekipmanFormGonderildi(e) {
   e.preventDefault();
   temizleFormHatalari('ekipmanForm');
 
   const veriler = {
+    ekipmanNo: document.getElementById('ekipmanNo').value,
     tur: document.getElementById('ekipmanTur').value,
     ad: document.getElementById('ekipmanAd').value,
     bolum: document.getElementById('ekipmanBolum').value,
@@ -527,6 +570,7 @@ function ekipmanFormGonderildi(e) {
     sorumlu: document.getElementById('ekipmanSorumlu').value,
     durum: document.getElementById('ekipmanDurum').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
+    kontrolCevaplari: _ekipmanKontrolListesiTopla(),
     notlar: document.getElementById('ekipmanNotlar').value
   };
 
@@ -589,6 +633,7 @@ function yanginTupuModalAc(tup, onSablon) {
   _duzenlenenYanginTupuId = tup ? tup.id : null;
   const sablon = (!tup && onSablon) ? onSablon : null;
   document.getElementById('yanginTupuModalBaslik').textContent = tup ? 'Yangın Tüpünü Düzenle' : 'Yeni Yangın Tüpü';
+  document.getElementById('yanginTupuNo').value = tup ? tup.tupNo : '';
   document.getElementById('yanginTupuTip').innerHTML = YANGIN_TUPU_TIPLERI.map(t => `<option ${(tup || sablon) && (tup || sablon).tip === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('yanginTupuKapasite').value = tup ? tup.kapasite : (sablon ? sablon.kapasite || '' : '');
   document.getElementById('yanginTupuBolum').value = tup ? tup.bolum : '';
@@ -691,6 +736,7 @@ function yanginTupuFormGonderildi(e) {
   temizleFormHatalari('yanginTupuForm');
 
   const veriler = {
+    tupNo: document.getElementById('yanginTupuNo').value,
     tip: document.getElementById('yanginTupuTip').value,
     kapasite: document.getElementById('yanginTupuKapasite').value,
     bolum: document.getElementById('yanginTupuBolum').value,
