@@ -33,51 +33,83 @@ function _eoTarihIsoyeCevir(ham) {
   return '';
 }
 
-// "6 KG KKT" -> { tip:'Kuru Kimyevi Toz (KKT)', kapasite:'6 KG' }
-function _eoYscCinsiAyikla(ham) {
-  const sonuc = { tip: '', kapasite: '' };
-  if (!ham) return sonuc;
-  const kapasiteEslesme = ham.match(/(\d+(?:[.,]\d+)?)\s*KG/i);
-  if (kapasiteEslesme) sonuc.kapasite = kapasiteEslesme[1].replace(',', '.') + ' KG';
-  const buyuk = _eoAnahtarNormallestir(ham);
-  if (/KKT|KURU KIM/.test(buyuk)) sonuc.tip = 'Kuru Kimyevi Toz (KKT)';
-  else if (/CO2|KARBONDIOKSIT/.test(buyuk)) sonuc.tip = 'CO2';
-  else if (/KOPUK|FOAM/.test(buyuk)) sonuc.tip = 'Köpük';
-  else if (/\bSU\b|SULU/.test(buyuk)) sonuc.tip = 'Su';
-  return sonuc;
+const _EO_TIP_HARITASI = { KKT: 'Kuru Kimyevi Toz (KKT)', CO2: 'CO2', KOPUK: 'Köpük', SU: 'Su' };
+
+function _eoTemizle(s) {
+  return (s || '').replace(/\s+/g, ' ').trim();
 }
 
-// OCR'ın ham metnini satır satır tarayıp "ANAHTAR : DEĞER" eşlemelerini
-// bilinen alan adlarıyla eşleştirir. Tanınmayan satırlar sessizce atlanır.
+// Serbest metin alanları (üretici/lokasyon/firma) hiçbir sayı/newline sınırı
+// olmadan "sonraki alanın adına kadar" her şeyi yutabiliyordu (ör. "POWEREX
+// YSC CINSI" gibi) — hem yakalanan değerde hem de (daha önemlisi) metinden
+// SİLİNEN kısımda, bu da bir sonraki alanın anahtar kelimesini bozup o alanın
+// hiç bulunamamasına yol açıyordu. Regex'in kendisine "bilinen bir alan
+// anahtarı görürsen dur" negatif ileriye bakışı (lookahead) ekleyerek hem
+// yakalamayı hem metinden çıkarmayı aynı anda doğru sınırda tutuyoruz.
+const _EO_DURDURMA_DESENI = '(?:YSC|CINSI|BULUNDUGU|YER|URETIM|DOLUM|TEKRAR|TEST|SERI|FIRMA|URETICI|TARIHI|NUMARASI|KONTROLLER)';
+function _eoAnahtarSonrasiMetinDeseni(anahtarDeseni, azMiktar, cokMiktar) {
+  return new RegExp(anahtarDeseni + '[^A-Z]{0,10}([A-Z](?:(?!\\b' + _EO_DURDURMA_DESENI + '\\b)[A-Z .]){' + (azMiktar - 1) + ',' + (cokMiktar - 1) + '})');
+}
+
+// Kullanıcının paylaştığı gerçek etiketler her zaman aynı sabit şablon:
+// üstte servis firmasının başlık bloğu (adres/telefon), bir "KONTROLLER"
+// çeyrek dönem kontrol tablosu, QR kod ve yuvarlak tarih çarkı etiketi —
+// ardından 9 satırlık "ANAHTAR : DEĞER" bilgi bloğu. Satır satır ayrıştırma
+// OCR satırları birleştirdiğinde/böldüğünde kırılgan kalıyordu; bunun yerine
+// TÜM ham metin üzerinde her alanı ayrı, dar kapsamlı bir "anahtar kelimeden
+// sonraki yakın değer" deseniyle arıyoruz — bu, satır sınırlarından ve
+// KONTROLLER/QR/telefon gibi etraftaki gürültüden etkilenmiyor. Bir alan
+// bulunduğunda metinden çıkarılıyor ki aynı sayı/metin grubu başka bir alanla
+// yanlışlıkla tekrar eşleşmesin (ör. "TEKRAR DOLUM" içindeki "DOLUM" ayrı bir
+// "DOLUM TARİHİ" eşleşmesi olarak tekrar sayılmasın).
 function _eoAlanlariAyikla(hamMetin) {
-  const ham = { firma: '' };
   const alanlar = {};
+  let kalan = _eoAnahtarNormallestir(_eoTemizle(hamMetin || ''));
 
-  (hamMetin || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(satir => {
-    const esleme = satir.match(/^(.{2,40}?)\s*[:;]\s*(.+)$/);
-    if (!esleme) return;
-    const anahtar = _eoAnahtarNormallestir(esleme[1]);
-    const deger = esleme[2].trim();
-    if (!deger) return;
+  const bul = (desen) => {
+    const e = kalan.match(desen);
+    if (e) kalan = kalan.replace(e[0], ' ');
+    return e;
+  };
 
-    // "SERİ NUMARASI" normalize edilince "SERI NUMARASI" olur — "NUMARASI"
-    // içinde "NO" alt dizisi YOKTUR (N-U-M-A-R-A-S-I), bu yüzden yalnızca
-    // "SERI" aranır (etikette bu anahtarla başlayan başka alan yok).
-    if (/SERI/.test(anahtar)) alanlar.seriNumarasi = deger;
-    else if (/URETICI/.test(anahtar)) alanlar.uretici = deger;
-    else if (/^FIRMA/.test(anahtar)) ham.firma = deger;
-    else if (/YSC/.test(anahtar) || /CINSI/.test(anahtar)) Object.assign(alanlar, _eoYscCinsiAyikla(deger));
-    else if (/BULUNDUGU/.test(anahtar) || /YER$/.test(anahtar)) alanlar.lokasyon = deger;
-    else if (/URETIM/.test(anahtar)) alanlar.uretimTarihi = deger;
-    else if (/TEKRAR/.test(anahtar) && /DOLUM/.test(anahtar)) alanlar.sonrakiYillikBakim = _eoTarihIsoyeCevir(deger);
-    else if (/DOLUM/.test(anahtar)) alanlar.doluTarihi = _eoTarihIsoyeCevir(deger);
-    else if (/TEST/.test(anahtar)) alanlar.sonrakiHidrostatikTest = _eoTarihIsoyeCevir(deger);
-  });
+  // "6 KG KKT" / "30 KG CO2" — çok belirgin bir sayı+birim+tür örüntüsü,
+  // metnin neresinde geçerse geçsin güvenle yakalanabilir.
+  const yscEslesme = bul(/(\d{1,3}(?:[.,]\d+)?)\s*KG\s*(KKT|CO2|KOPUK|SU)\b/);
+  if (yscEslesme) {
+    alanlar.kapasite = yscEslesme[1].replace(',', '.') + ' KG';
+    alanlar.tip = _EO_TIP_HARITASI[yscEslesme[2]] || '';
+  }
+
+  // "Tekrar Dolum Tarihi" — genel "Dolum Tarihi" aramasından ÖNCE bulunup
+  // metinden çıkarılmalı, aksi halde aşağıdaki arama onu tekrar yakalar.
+  const tekrarEslesme = bul(/TEKRAR[^0-9A-Z]{0,20}DOLUM[^0-9]{0,10}(\d{1,2}[.\/-]\d{4}|\d{4})/);
+  if (tekrarEslesme) alanlar.sonrakiYillikBakim = _eoTarihIsoyeCevir(tekrarEslesme[1]);
+
+  // "SERİ NUMARASI" -> "SERI NUMARASI"; OCR "İ"yi zaman zaman "1"/"L" olarak
+  // okuyabildiğinden "SER" + 1-2 belirsiz karakterle eşleşiyoruz.
+  const seriEslesme = bul(/SER[İIL1]{1,2}[^0-9]{0,20}(\d{1,6})\b/);
+  if (seriEslesme) alanlar.seriNumarasi = seriEslesme[1];
+
+  const uretimEslesme = bul(/URET[İIL1]M[^0-9]{0,15}(\d{4})/);
+  if (uretimEslesme) alanlar.uretimTarihi = uretimEslesme[1];
+
+  const testEslesme = bul(/TEST[^0-9]{0,15}(\d{4})/);
+  if (testEslesme) alanlar.sonrakiHidrostatikTest = _eoTarihIsoyeCevir(testEslesme[1]);
+
+  const dolumEslesme = bul(/DOLUM[^0-9]{0,15}(\d{1,2}[.\/-]\d{4}|\d{4})/);
+  if (dolumEslesme) alanlar.doluTarihi = _eoTarihIsoyeCevir(dolumEslesme[1]);
+
+  const ureticiEslesme = bul(_eoAnahtarSonrasiMetinDeseni('URET[İIL1]C[İIL1]', 1, 30));
+  if (ureticiEslesme) alanlar.uretici = _eoTemizle(ureticiEslesme[1]);
+
+  const yerEslesme = bul(_eoAnahtarSonrasiMetinDeseni('BULUNDU[GĞ]U\\s*YER', 2, 40));
+  if (yerEslesme) alanlar.lokasyon = _eoTemizle(yerEslesme[1]);
 
   // Etiketteki "Firma" bölgede kurulu olan işyerinin adıdır (bakım/dolum
   // firmasının müşterisi) — uygulamada zaten aktif firma bağlamı var,
   // otomatik forma yazılmaz; sadece notlar alanına bilgi olarak eklenir.
-  if (ham.firma) alanlar.firmaNotu = ham.firma;
+  const firmaEslesme = bul(_eoAnahtarSonrasiMetinDeseni('\\bFIRMA', 2, 40));
+  if (firmaEslesme) alanlar.firmaNotu = _eoTemizle(firmaEslesme[1]);
 
   return alanlar;
 }
@@ -88,6 +120,51 @@ function _eoAlanlariAyikla(hamMetin) {
 // dönebiliyor (hata fırlatmadan). Bunu iyileştirmek için fotoğrafı OCR'a
 // vermeden önce gri tonlamaya çevirip kontrastı güçlendiriyoruz — metal
 // etiket üzerindeki siyah yazı/beyaz zemin ayrımını netleştirir.
+// Bradley'nin yerel ortalama uyarlamalı eşikleme algoritması — her pikseli
+// KENDİ çevresindeki (pencere) ortalama parlaklıkla karşılaştırıp siyah/beyaz
+// karar verir. Metal etiketler eğik/kavisli yüzeyde parlama ve gölge
+// içerdiğinden (fotoğrafın bir köşesi parlak, diğeri karanlık olabilir), tek
+// bir global eşik (ör. min-max kontrast germe) bunu düzeltemiyor — yerel
+// pencere yaklaşımı aydınlatma farklılıklarına karşı çok daha dayanıklı.
+// (integral image ile O(piksel) karmaşıklıkta, pencere boyutundan bağımsız hızlı.)
+function _eoUyarlamaliEsikle(griler, genislik, yukseklik) {
+  const integral = new Float64Array(genislik * yukseklik);
+  for (let y = 0; y < yukseklik; y++) {
+    let satirToplami = 0;
+    for (let x = 0; x < genislik; x++) {
+      const idx = y * genislik + x;
+      satirToplami += griler[idx];
+      integral[idx] = satirToplami + (y > 0 ? integral[idx - genislik] : 0);
+    }
+  }
+
+  const pencereYarisi = Math.max(8, Math.round(genislik / 16));
+  const esikOrani = 0.85; // pikselin siyah sayılması için yerel ortalamanın altında kalması gereken oran
+  const sonuc = new Uint8ClampedArray(genislik * yukseklik);
+
+  const alanToplami = (x1, y1, x2, y2) => {
+    const a = y2 * genislik + x2;
+    const b = x1 > 0 ? y2 * genislik + (x1 - 1) : -1;
+    const c = y1 > 0 ? (y1 - 1) * genislik + x2 : -1;
+    const d = (x1 > 0 && y1 > 0) ? (y1 - 1) * genislik + (x1 - 1) : -1;
+    return integral[a] - (b >= 0 ? integral[b] : 0) - (c >= 0 ? integral[c] : 0) + (d >= 0 ? integral[d] : 0);
+  };
+
+  for (let y = 0; y < yukseklik; y++) {
+    const y1 = Math.max(0, y - pencereYarisi);
+    const y2 = Math.min(yukseklik - 1, y + pencereYarisi);
+    for (let x = 0; x < genislik; x++) {
+      const x1 = Math.max(0, x - pencereYarisi);
+      const x2 = Math.min(genislik - 1, x + pencereYarisi);
+      const alan = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const ortalama = alanToplami(x1, y1, x2, y2) / alan;
+      const idx = y * genislik + x;
+      sonuc[idx] = griler[idx] < ortalama * esikOrani ? 0 : 255;
+    }
+  }
+  return sonuc;
+}
+
 function _eoGoruntuOnIsle(dosya) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -110,19 +187,14 @@ function _eoGoruntuOnIsle(dosya) {
 
       const veri = ctx.getImageData(0, 0, genislik, yukseklik);
       const p = veri.data;
-      // Gri tonlama + basit kontrast germe (min-max normalizasyonu).
-      let enKucuk = 255;
-      let enBuyuk = 0;
       const griler = new Uint8ClampedArray(p.length / 4);
       for (let i = 0; i < p.length; i += 4) {
-        const gri = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
-        griler[i / 4] = gri;
-        if (gri < enKucuk) enKucuk = gri;
-        if (gri > enBuyuk) enBuyuk = gri;
+        griler[i / 4] = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
       }
-      const aralik = Math.max(1, enBuyuk - enKucuk);
+
+      const esiklenmis = _eoUyarlamaliEsikle(griler, genislik, yukseklik);
       for (let i = 0; i < p.length; i += 4) {
-        const g = Math.round(((griler[i / 4] - enKucuk) / aralik) * 255);
+        const g = esiklenmis[i / 4];
         p[i] = g; p[i + 1] = g; p[i + 2] = g;
       }
       ctx.putImageData(veri, 0, 0);
@@ -139,14 +211,12 @@ async function yanginTupuEtiketiOku(dosya, ilerlemeCallback) {
   const islenmisGorsel = await _eoGoruntuOnIsle(dosya);
 
   // Deprecated Tesseract.recognize() kısayolu sayfa segmentasyon modunu
-  // (PSM) değiştirmeye izin vermiyor ve varsayılanı PSM.SINGLE_BLOCK — yani
-  // "tüm görüntü TEK biçimli metin bloğu" varsayıyor. Bizim fotoğrafımızda
-  // ise çerçevenin büyük kısmı düz kırmızı tüp gövdesi + QR kod + ayrı
-  // biçimli üst bilgi bloğu var; bu varsayım OCR'ın hiç metin bulamamasına
-  // ya da alakasız bölgeleri birbirine karıştırmasına (ör. "2024 he 5 dl"
-  // gibi anlamsız çıktılara) yol açıyordu. worker.setParameters ile
-  // PSM.SPARSE_TEXT'e geçiyoruz — "görüntüde nerede olursa olsun bulabildiğin
-  // kadar metni bul" modu, dağınık/karışık fotoğraflar için daha uygun.
+  // (PSM) değiştirmeye izin vermiyor, bu yüzden worker'ı elle oluşturup
+  // worker.setParameters çağırıyoruz. PSM.AUTO ("tam otomatik sayfa
+  // segmentasyonu") — etiket fotoğrafında birbirinden farklı biçimli birden
+  // fazla blok olduğundan (üst bilgi paragrafı, KONTROLLER tablosu, QR kod,
+  // alan listesi) hem "tek düzgün blok" varsayan SINGLE_BLOCK hem de "sadece
+  // dağınık tek kelimeler" varsayan SPARSE_TEXT modundan daha dengeli.
   const worker = await Tesseract.createWorker('tur', 1, {
     logger: m => {
       if (ilerlemeCallback && m.status === 'recognizing text') ilerlemeCallback(Math.round((m.progress || 0) * 100));
@@ -154,7 +224,7 @@ async function yanginTupuEtiketiOku(dosya, ilerlemeCallback) {
   });
   let hamMetin = '';
   try {
-    await worker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
+    await worker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.AUTO });
     const sonuc = await worker.recognize(islenmisGorsel);
     hamMetin = (sonuc && sonuc.data && sonuc.data.text) || '';
   } finally {
