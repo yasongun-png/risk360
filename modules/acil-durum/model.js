@@ -40,6 +40,24 @@ const YANGIN_TUPU_TIPLERI = ['Kuru Kimyevi Toz (KKT)', 'CO2', 'Köpük', 'Su', '
 const YANGIN_TUPU_YILLIK_BAKIM_GUN = 365;
 const YANGIN_TUPU_HIDROSTATIK_TEST_GUN = 1460;
 
+// Kullanıcı isteği: "yangın tüpü girişinde bulgular yerine soru listesi
+// olsun, var/yok gibi sorulara cevap verilsin" — serbest metin "bulgular"
+// alanı yerine, her kontrol için "Var" veya "Yok" seçilen bir kontrol
+// listesi kullanılır (bkz. yanginTupuKontrolListesiUret).
+const YANGIN_TUPU_KONTROL_MADDELERI = [
+  'Manometre basıncı uygun',
+  'Tetik sağlam',
+  'Mühür var',
+  'Pimde paslanma yok, çekilebilir',
+  'Asılı (konumunda asılı duruyor)'
+];
+const YANGIN_TUPU_KONTROL_DURUMLARI = ['var', 'yok'];
+const YANGIN_TUPU_KONTROL_DURUM_ETIKETLERI = { var: 'Var', yok: 'Yok' };
+
+function yanginTupuKontrolListesiUret() {
+  return YANGIN_TUPU_KONTROL_MADDELERI.map(metin => ({ metin, durum: 'var' }));
+}
+
 // Md.11: Söndürme/Kurtarma/Koruma ekiplerinin her biri için tehlike sınıfına göre bu sayıya
 // kadar her çalışan grubunda en az 1 destek elemanı.
 const MUDAHALE_EKIP_ORANI = { 'Çok Tehlikeli': 30, 'Tehlikeli': 40, 'Az Tehlikeli': 50 };
@@ -243,7 +261,7 @@ function yanginTupuOlustur(veriler) {
     sonrakiHidrostatikTest,
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
-    bulgular: (veriler.bulgular || '').trim(),
+    kontrolMaddeleri: Array.isArray(veriler.kontrolMaddeleri) && veriler.kontrolMaddeleri.length ? veriler.kontrolMaddeleri : yanginTupuKontrolListesiUret(),
     notlar: (veriler.notlar || '').trim(),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
 

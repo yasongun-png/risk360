@@ -194,7 +194,7 @@ function yanginTupuGuncelle(id, veriler) {
     sonrakiHidrostatikTest,
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
-    bulgular: (veriler.bulgular || '').trim(),
+    kontrolMaddeleri: Array.isArray(veriler.kontrolMaddeleri) && veriler.kontrolMaddeleri.length ? veriler.kontrolMaddeleri : yanginTupuKontrolListesiUret(),
     notlar: (veriler.notlar || '').trim()
   });
   return { basarili: true, tup: guncellenen };

@@ -12,6 +12,7 @@ let _duzenlenenYanginTupuId = null;
 // eklenir. Düzenlemede kullanılmaz.
 let _bekleyenHaritaKonum = null;
 let _duzenlenenTatbikatId = null;
+let _yanginTupuKontrolMaddeleri = [];
 
 function _adKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -135,7 +136,6 @@ const YANGIN_TUPU_IMPORT_KOLONLARI = [
   { anahtar: 'sonrakiHidrostatikTest', baslik: 'Sonraki Hidrostatik Test' },
   { anahtar: 'sorumlu', baslik: 'Sorumlu' },
   { anahtar: 'durum', baslik: 'Durum' },
-  { anahtar: 'bulgular', baslik: 'Bulgular' },
   { anahtar: 'notlar', baslik: 'Notlar' }
 ];
 
@@ -559,11 +559,15 @@ function yanginTupleriniCiz(aramaMetni) {
   bosDurum.classList.remove('gorunur');
 
   liste.forEach(t => {
+    const eksikMaddeVarMi = Array.isArray(t.kontrolMaddeleri) && t.kontrolMaddeleri.some(m => m.durum === 'yok');
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${t.tupNo}</td><td>${t.seriNumarasi || '-'}</td><td>${t.tip}</td><td>${t.kapasite || '-'}</td><td>${t.lokasyon}</td>
       <td>${t.doluTarihi || '-'}</td><td>${t.sonrakiYillikBakim || '-'}</td><td>${t.sonrakiHidrostatikTest || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span></td>
+      <td>
+        <span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span>
+        ${eksikMaddeVarMi ? '<span class="yanip-sonen-uyari" title="En az bir kontrol maddesi \'Yok\' işaretli">⚠️ Kontrol Eksik</span>' : ''}
+      </td>
       <td>
         <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
@@ -575,6 +579,24 @@ function yanginTupleriniCiz(aramaMetni) {
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => yanginTupuModalAc(yanginTupuIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu yangın tüpünü silmek istediğinize emin misiniz?', 'Sil')) { yanginTupuSil(btn.getAttribute('data-sil')); yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value); }
+  }));
+}
+
+// Kullanıcı isteği: "yangın tüpü girişinde bulgular yerine soru listesi
+// olsun, var/yok gibi sorulara cevap verilsin" — İş İzni kontrol
+// maddeleri ile aynı desen (select + değişiklikte diziyi güncelle).
+function _yanginTupuKontrolListesiCiz() {
+  const kutu = document.getElementById('yanginTupuKontrolListesi');
+  kutu.innerHTML = _yanginTupuKontrolMaddeleri.map((m, i) => `
+    <div style="display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid var(--kenarlik);">
+      <select data-yk="${i}" style="width:auto; margin:0; padding:4px 6px; font-size:12px;">
+        ${YANGIN_TUPU_KONTROL_DURUMLARI.map(d => `<option value="${d}" ${m.durum === d ? 'selected' : ''}>${YANGIN_TUPU_KONTROL_DURUM_ETIKETLERI[d]}</option>`).join('')}
+      </select>
+      <span style="flex:1; font-size:13px;">${_adKacir(m.metin)}</span>
+    </div>
+  `).join('');
+  kutu.querySelectorAll('[data-yk]').forEach(sel => sel.addEventListener('change', () => {
+    _yanginTupuKontrolMaddeleri[Number(sel.getAttribute('data-yk'))].durum = sel.value;
   }));
 }
 
@@ -598,7 +620,8 @@ function yanginTupuModalAc(tup, onSablon) {
   document.getElementById('yanginTupuSonrakiHidrostatikTest').value = tup ? tup.sonrakiHidrostatikTest : (sablon ? sablon.sonrakiHidrostatikTest || '' : '');
   document.getElementById('yanginTupuSorumlu').value = tup ? tup.sorumlu : '';
   document.getElementById('yanginTupuDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${tup && tup.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('yanginTupuBulgular').value = tup ? tup.bulgular : '';
+  _yanginTupuKontrolMaddeleri = tup && Array.isArray(tup.kontrolMaddeleri) && tup.kontrolMaddeleri.length ? JSON.parse(JSON.stringify(tup.kontrolMaddeleri)) : yanginTupuKontrolListesiUret();
+  _yanginTupuKontrolListesiCiz();
   document.getElementById('yanginTupuNotlar').value = tup ? tup.notlar : (sablon && sablon.firmaNotu ? 'Etiketten okunan firma bilgisi: ' + sablon.firmaNotu : '');
   _yanginTupuKonumAlaniCiz(tup);
   _yanginTupuSeriNumarasiUyariGuncelle();
@@ -674,7 +697,7 @@ function yanginTupuFormGonderildi(e) {
     sonrakiHidrostatikTest: document.getElementById('yanginTupuSonrakiHidrostatikTest').value,
     sorumlu: document.getElementById('yanginTupuSorumlu').value,
     durum: document.getElementById('yanginTupuDurum').value,
-    bulgular: document.getElementById('yanginTupuBulgular').value,
+    kontrolMaddeleri: _yanginTupuKontrolMaddeleri,
     notlar: document.getElementById('yanginTupuNotlar').value
   };
 
