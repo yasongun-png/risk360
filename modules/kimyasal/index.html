@@ -30,33 +30,48 @@
     <div id="kimyasalOzetKutusu" style="margin-bottom:14px;"></div>
     <div id="kimyasalUyarilarKutusu"></div>
 
-    <div class="arac-cubugu">
-      <input type="text" id="kimyasalAramaKutusu" class="arama-kutusu" placeholder="Kimyasal adı, CAS no veya bölüme göre ara...">
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <select id="depolamaGrubuFiltre" style="width:auto; margin:0;"><option value="">Tüm Depolama Grupları</option></select>
-        <select id="riskSeviyesiFiltre" style="width:auto; margin:0;"><option value="">Tüm Risk Seviyeleri</option></select>
-        <select id="kritikFiltre" style="width:auto; margin:0;">
-          <option value="">Kritik: Tümü</option>
-          <option>Kritik</option>
-          <option>Kritik Değil</option>
-        </select>
-        <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
-        <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
-        <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
-        <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
-        <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
-        <button type="button" class="ikincil" id="depolamaMatrisiBtn">Depolama Matrisi</button>
-        <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
-        <button type="button" class="birincil" id="yeniKimyasalBtn" style="width:auto;">+ Yeni Kimyasal</button>
+    <div class="sekme-cubugu">
+      <button type="button" data-sekme="liste">Liste</button>
+      <button type="button" data-sekme="matris" class="sekme-seciliDegil">Depolama Matrisi</button>
+    </div>
+
+    <div id="bolum-liste">
+      <div class="arac-cubugu">
+        <input type="text" id="kimyasalAramaKutusu" class="arama-kutusu" placeholder="Kimyasal adı, CAS no veya bölüme göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="depolamaGrubuFiltre" style="width:auto; margin:0;"><option value="">Tüm Depolama Grupları</option></select>
+          <select id="riskSeviyesiFiltre" style="width:auto; margin:0;"><option value="">Tüm Risk Seviyeleri</option></select>
+          <select id="kritikFiltre" style="width:auto; margin:0;">
+            <option value="">Kritik: Tümü</option>
+            <option>Kritik</option>
+            <option>Kritik Değil</option>
+          </select>
+          <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
+          <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
+          <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
+          <button type="button" class="birincil" id="yeniKimyasalBtn" style="width:auto;">+ Yeni Kimyasal</button>
+        </div>
       </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>No</th><th style="min-width:240px;">Kimyasal</th><th>Bölüm / Lokasyon</th><th>Tehlike (GHS)</th><th>NFPA</th><th>Risk</th><th>GBF / SDS</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="kimyasalTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="kimyasalBosDurum"></div>
     </div>
-    <div class="tablo-scroll">
-      <table class="veri-tablosu">
-        <thead><tr><th>No</th><th style="min-width:240px;">Kimyasal</th><th>Bölüm / Lokasyon</th><th>Tehlike (GHS)</th><th>NFPA</th><th>Risk</th><th>GBF / SDS</th><th>Durum</th><th>İşlemler</th></tr></thead>
-        <tbody id="kimyasalTabloGovde"></tbody>
-      </table>
+
+    <div id="bolum-matris" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="color:var(--metin-soluk); font-size:13px; margin:0;">Aktif kimyasalların Depolama Grubu'na göre ikili uyumluluğu (yeşil: uyumlu, kırmızı: birlikte depolanmamalı).</p>
+        <button type="button" class="ikincil" id="matrisYazdirBtn" style="width:auto;">Yazdır</button>
+      </div>
+      <div class="tablo-scroll" id="depolamaMatrisiIcerik"></div>
+      <div class="bos-durum" id="depolamaMatrisiBosDurum"></div>
     </div>
-    <div class="bos-durum" id="kimyasalBosDurum"></div>
   </div>
 
   <div id="yazdirmaAlani"></div>

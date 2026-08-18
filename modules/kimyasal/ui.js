@@ -2,12 +2,28 @@
 
 let _duzenlenenKimyasalId = null;
 let _kimyasalSdsGorseli = '';
+let _kimGorunum = 'liste';
 
 function kimRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+function kimyasalGorunumDegistir(gorunum) {
+  _kimGorunum = gorunum;
+  ['liste', 'matris'].forEach(g => {
+    document.querySelector(`[data-sekme="${g}"]`).classList.toggle('sekme-seciliDegil', g !== gorunum);
+    document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
+  });
+
+  if (gorunum === 'liste') kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value);
+  else _kimDepolamaMatrisiniEkranaCiz();
+}
+
 function kimyasalSayfasiniBaslat() {
+  document.querySelectorAll('[data-sekme]').forEach(btn => {
+    btn.addEventListener('click', () => kimyasalGorunumDegistir(btn.getAttribute('data-sekme')));
+  });
+
   // Katlanabilir form bölümleri (bkz. modules/acil-durum/ui.js ile aynı genel
   // desen) -- form kısa kalsın diye ikincil alanlar varsayılan kapalı.
   document.querySelectorAll('.form-bolum-baslik.katlanir').forEach(baslik => {
@@ -97,11 +113,8 @@ function kimyasalSayfasiniBaslat() {
       pKodlariMetin: (k.pKodlari || []).join('; ')
     })));
   });
-  document.getElementById('depolamaMatrisiBtn').addEventListener('click', () => {
-    const filtreler = _kimyasalFiltreleriOku();
-    const kayitlar = kimyasallariGetir(document.getElementById('kimyasalAramaKutusu').value, filtreler)
-      .filter(k => k.durum !== 'İptal')
-      .sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+  document.getElementById('matrisYazdirBtn').addEventListener('click', () => {
+    const kayitlar = _kimDepolamaMatrisiKayitlariGetir();
     if (kayitlar.length < 2) { alert('Matris oluşturmak için en az 2 aktif kimyasal kaydı gerekli.'); return; }
     _raporYazdirmaAlaniniGoster(_kimDepolamaMatrisiHtml(kayitlar));
   });
@@ -119,7 +132,7 @@ function kimyasalSayfasiniBaslat() {
   });
 
   kimyasalOzetiVeUyarilariCiz();
-  kimyasallariCiz('');
+  kimyasalGorunumDegistir('liste');
 }
 
 const KIMYASAL_IMPORT_KOLONLARI = [
@@ -262,6 +275,41 @@ function _kimKisalt(metin, uzunluk) {
   return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
 }
 
+function _kimDepolamaMatrisiKayitlariGetir() {
+  return kimyasallariGetir('', {})
+    .filter(k => k.durum !== 'İptal')
+    .sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+}
+
+// "Depolama Matrisi" sekmesinin ekran görünümü -- yazdırma çıktısıyla aynı
+// veriyi (kimyasalGruplarUyumluMu) kullanır ama uygulamanın kendi rozet
+// (genel-rozet) renklerine sahip bir tablo olarak ekrana çizer.
+function _kimDepolamaMatrisiniEkranaCiz() {
+  const icerik = document.getElementById('depolamaMatrisiIcerik');
+  const bosDurum = document.getElementById('depolamaMatrisiBosDurum');
+  const kayitlar = _kimDepolamaMatrisiKayitlariGetir();
+
+  if (kayitlar.length < 2) {
+    icerik.innerHTML = '';
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Matris için en az 2 aktif kimyasal kaydı gerekli.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  const basliklar = kayitlar.map(k => `<th>${_kimKacir(k.kimyasalNo)}</th>`).join('');
+  const govde = kayitlar.map((satirK, i) => {
+    const hucreler = kayitlar.map((sutunK, j) => {
+      if (i === j) return '<td style="text-align:center; background:#f1f5f9;">—</td>';
+      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubu, sutunK.depolamaGrubu);
+      return `<td style="text-align:center;"><span class="genel-rozet rozet-${uyumluMu ? 'dusuk' : 'kritik'}">${uyumluMu ? '✓ Uyumlu' : '✕ Uyumsuz'}</span></td>`;
+    }).join('');
+    return `<tr><td style="font-weight:700; white-space:nowrap;">${_kimKacir(satirK.kimyasalNo)} — ${_kimKacir(_kimKisalt(satirK.ad, 30))} <span style="font-weight:400; color:var(--metin-soluk);">(${_kimKacir(satirK.depolamaGrubu)})</span></td>${hucreler}</tr>`;
+  }).join('');
+
+  icerik.innerHTML = `<table class="veri-tablosu"><thead><tr><th>Kimyasal</th>${basliklar}</tr></thead><tbody>${govde}</tbody></table>`;
+}
+
 // Depolama Grubu bazlı ikili uyumluluk kontrolü (kimyasalGruplarUyumluMu)
 // kullanılarak kayıtlar arasında bir kimyasal x kimyasal ızgara (matris)
 // oluşturur. Satır/sütun başlıkları Kimyasal No -- tam ad zaten satır
@@ -311,7 +359,7 @@ function kimyasallariCiz(aramaMetni) {
       : '<span class="genel-rozet rozet-gecikmis">Eksik</span>';
     satir.innerHTML = `
       <td>${k.kimyasalNo}</td>
-      <td title="${k.ad}">${_kimKisalt(k.ad, 60)}${k.kritikMi ? ' <span class="genel-rozet rozet-cok-yuksek">Kritik</span>' : ''}</td>
+      <td title="${_kimKacir(k.ad)}">${_kimKacir(_kimKisalt(k.ad, 60))}${k.kritikMi ? ' <span class="genel-rozet rozet-cok-yuksek">Kritik</span>' : ''}</td>
       <td>${[k.bolum, k.lokasyon].filter(Boolean).join(' / ') || '-'}</td>
       <td>${_kimGhsHucre(k)}</td>
       <td>${k.nfpaSaglik}-${k.nfpaYanicilik}-${k.nfpaKararsizlik}${k.nfpaOzelKod.length ? ' ' + k.nfpaOzelKod.join('/') : ''}</td>
