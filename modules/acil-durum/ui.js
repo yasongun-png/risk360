@@ -172,6 +172,21 @@ const TATBIKAT_EXPORT_KOLONLARI = [
   { anahtar: 'durumGoruntu', baslik: 'Durum' }
 ];
 
+// Kullanıcı isteği: "yeniden yüklediğimde eski hali kalıyor, güncellenmesi
+// lazım" — normal içe aktarma her satırı hep YENİ kayıt olarak ekliyordu;
+// aynı listeyi düzeltip tekrar yüklediğinde bu, aynı tüpler için ikinci bir
+// kopya oluşturuyordu. Bunun yerine: satırda Tüp No (veya yoksa Seri
+// Numarası) envanterde zaten varsa o kayıt GÜNCELLENİR, yoksa yeni eklenir.
+function _yanginTupuIceAktarSatiriUpsert(satir) {
+  const tumu = yanginTupleriTumunuGetir();
+  const tupNo = (satir.tupNo || '').trim().toLowerCase();
+  const seri = (satir.seriNumarasi || '').trim().toLowerCase();
+  const mevcut = (tupNo && tumu.find(t => (t.tupNo || '').trim().toLowerCase() === tupNo))
+    || (seri && tumu.find(t => (t.seriNumarasi || '').trim().toLowerCase() === seri))
+    || null;
+  return mevcut ? yanginTupuGuncelle(mevcut.id, satir) : yanginTupuEkle(satir);
+}
+
 function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipSablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(EKIP_IMPORT_KOLONLARI, 'acil_durum_ekip_sablonu.xlsx');
@@ -248,7 +263,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
         satir.sonrakiHidrostatikTest = excelTarihiNormallestir(satir.sonrakiHidrostatikTest);
         if (!['Aktif', 'Pasif', 'İptal'].includes(satir.durum)) satir.durum = 'Aktif';
       });
-      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, yanginTupuEkle);
+      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, _yanginTupuIceAktarSatiriUpsert);
       alert(excelIceAktarOzetMesaji(sonuc));
       yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
     });
