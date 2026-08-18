@@ -120,6 +120,24 @@ function kimyasalNfpaTahminEt(hKodlari, depolamaGrubu) {
   return { saglik, yanicilik, kararsizlik, ozelKod };
 }
 
+// Kimyasal adındaki (ve varsa H kodlarındaki) anahtar kelimelere göre
+// Depolama Grubu başlangıç önerisi -- bkz. dosya başı uyarı: kesin değildir,
+// kullanıcı SDS'e göre teyit/değiştirmelidir. Eşleşme yoksa '' döner (mevcut
+// seçim değiştirilmez).
+function kimyasalDepolamaGrubuTahminEt(ad, hKodlari) {
+  const isim = String(ad || '').toLocaleLowerCase('tr');
+  const h = (hKodlari || []).join(' ');
+  const iceren = (liste) => liste.some(kelime => isim.includes(kelime));
+
+  if (iceren(['nitrat', 'perklorat', 'peroksit', 'permanganat', 'kromat', 'klorat'])) return 'Oksitleyici';
+  if (iceren(['asit'])) return 'Asit';
+  if (iceren(['hidroksit', 'kostik', 'amonyak', 'karbonat'])) return 'Baz / Alkali';
+  if (iceren(['kükürt', 'benzin', 'tiner', 'etanol', 'metanol', 'solvent', 'aseton', 'lpg', 'propan', 'bütan', 'hidrojen'])) return 'Yanıcı / Parlayıcı';
+  if (/H2[4-7]\d/.test(h)) return 'Oksitleyici';
+  if (/H31[489]|H320/.test(h)) return 'Korozif';
+  return '';
+}
+
 function kimyasalNfpaGenelSeviye(saglik, yanicilik, kararsizlik) {
   const maks = Math.max(Number(saglik) || 0, Number(yanicilik) || 0, Number(kararsizlik) || 0);
   if (maks >= 4) return 'Kritik';

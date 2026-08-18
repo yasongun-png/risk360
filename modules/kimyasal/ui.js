@@ -41,6 +41,14 @@ function kimyasalSayfasiniBaslat() {
     document.getElementById('nfpaOzelKod').value = oneri.ozelKod.join('; ');
   });
 
+  document.getElementById('depolamaGrubuTahminBtn').addEventListener('click', () => {
+    const hKodlari = document.getElementById('hKodlari').value.split(/[;,]+/).map(s => s.trim()).filter(Boolean);
+    const oneri = kimyasalDepolamaGrubuTahminEt(document.getElementById('ad').value, hKodlari);
+    if (!oneri) { alert('Kimyasal adından bir depolama grubu önerisi çıkarılamadı, lütfen elle seçin.'); return; }
+    const secim = document.getElementById('depolamaGrubu');
+    Array.from(secim.options).forEach(o => { o.selected = (o.value === oneri); });
+  });
+
   document.getElementById('sdsGorseliDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
     e.target.value = '';
@@ -218,6 +226,12 @@ function _kimSdsVerisiniFormaYaz(veri, dosyaAdi) {
     const secim = document.getElementById('fizikselHali');
     Array.from(secim.options).forEach(o => { o.selected = (o.value === veri.fizikselHali); });
     dolanlar.push('Fiziksel Hali');
+  }
+  const depolamaOnerisi = kimyasalDepolamaGrubuTahminEt(veri.ad, veri.hKodlari);
+  if (depolamaOnerisi) {
+    const secim = document.getElementById('depolamaGrubu');
+    Array.from(secim.options).forEach(o => { o.selected = (o.value === depolamaOnerisi); });
+    dolanlar.push('Depolama Grubu (öneri, kontrol edin)');
   }
   if (dosyaAdi) {
     document.getElementById('sdsDosyaAdi').value = dosyaAdi;
