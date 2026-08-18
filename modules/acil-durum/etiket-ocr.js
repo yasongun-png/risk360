@@ -46,9 +46,38 @@ function _eoTemizle(s) {
 // hiç bulunamamasına yol açıyordu. Regex'in kendisine "bilinen bir alan
 // anahtarı görürsen dur" negatif ileriye bakışı (lookahead) ekleyerek hem
 // yakalamayı hem metinden çıkarmayı aynı anda doğru sınırda tutuyoruz.
-const _EO_DURDURMA_DESENI = '(?:YSC|CINSI|BULUNDUGU|YER|URETIM|DOLUM|TEKRAR|TEST|SERI|FIRMA|URETICI|TARIHI|NUMARASI|KONTROLLER)';
+// "URET" ayrıca eklendi: OCR "ÜRETİM TARİHİ" etiketini bazen "ÜRET)" gibi çok
+// kırpılmış/bozuk okuyabiliyor — bu durumda "URETIM" ile tam eşleşmediği için
+// bir önceki alanın (ör. Bulunduğu Yer) değeri sanılıp yanlışlıkla yakalanıyordu.
+const _EO_DURDURMA_DESENI = '(?:YSC|CINSI|BULUNDUGU|YER|URETIM|URET|DOLUM|TEKRAR|TEST|SERI|FIRMA|URETICI|TARIHI|NUMARASI|KONTROLLER)';
 function _eoAnahtarSonrasiMetinDeseni(anahtarDeseni, azMiktar, cokMiktar) {
-  return new RegExp(anahtarDeseni + '[^A-Z]{0,10}([A-Z](?:(?!\\b' + _EO_DURDURMA_DESENI + '\\b)[A-Z .]){' + (azMiktar - 1) + ',' + (cokMiktar - 1) + '})');
+  // Anahtarın kendisi başka bir (bozuk/birleşmiş) kelimenin İÇİNDE geçtiğinde
+  // yanlışlıkla eşleşmesin diye (ör. "TEKRAR DOLUM" OCR'da "RDOLUMT" olarak
+  // birleştiğinde bunun içindeki "DOLUM" ayrı bir alan sanılmasın) anahtarın
+  // hemen öncesinde/sonrasında başka bir harf OLMAMASI şartı ekleniyor.
+  // NOT: yakalama grubunun İLK karakteri de durdurma denetiminden geçmeli —
+  // aksi halde "URETICI" hemen ardından "YSC CINSI" (bir sonraki alanın
+  // anahtarı) geldiğinde, zorunlu ilk karakter denetimsiz tüketildiğinden
+  // "YSC" değer sanılıp yakalanıyordu.
+  return new RegExp('(?<![A-Z])' + anahtarDeseni + '(?![A-Z])[^A-Z]{0,10}((?:(?!\\b' + _EO_DURDURMA_DESENI + '\\b)[A-Z .]){' + azMiktar + ',' + cokMiktar + '})');
+}
+
+// Üretim/Dolum/Tekrar Dolum/Test tarihleri etikette HER ZAMAN bu sırada ve bu
+// şekilde basılı: Üretim ve Test yalnızca YIL (ör. "2024"), Dolum ve Tekrar
+// Dolum AY/YIL (ör. "07/2024"). OCR bu alanların anahtar kelimesini sık sık
+// kaybediyor ya da bozuyor (ör. "TEKRAR DOLUM T." -> "RDOLUMT."), bu yüzden
+// anahtar kelimeye değil DEĞERLERİN kendi şekline ve basılı sırasına
+// güveniyoruz: veri bölgesindeki (başlık/adres/telefon hariç) tüm tarih
+// şekilli jetonlar sırayla bulunup ilk YIL -> üretim, ilk AY/YIL -> dolum,
+// ikinci AY/YIL -> tekrar dolum, ikinci YIL -> test olarak eşleniyor.
+function _eoTarihJetonlariniBul(metin) {
+  const ayYil = [...metin.matchAll(/(?<!\d)(\d{1,2})[.\/-](\d{4})(?!\d)/g)]
+    .map(m => ({ index: m.index, uzunluk: m[0].length, tip: 'ayYil', iso: m[2] + '-' + m[1].padStart(2, '0') + '-01' }));
+  const icindeMi = (idx) => ayYil.some(a => idx >= a.index && idx < a.index + a.uzunluk);
+  const yil = [...metin.matchAll(/(?<!\d)(\d{4})(?!\d)/g)]
+    .filter(m => !icindeMi(m.index))
+    .map(m => ({ index: m.index, tip: 'yil', ham: m[1], iso: m[1] + '-01-01' }));
+  return [...ayYil, ...yil].sort((a, b) => a.index - b.index);
 }
 
 // Kullanıcının paylaştığı gerçek etiketler her zaman aynı sabit şablon:
@@ -80,24 +109,32 @@ function _eoAlanlariAyikla(hamMetin) {
     alanlar.tip = _EO_TIP_HARITASI[yscEslesme[2]] || '';
   }
 
-  // "Tekrar Dolum Tarihi" — genel "Dolum Tarihi" aramasından ÖNCE bulunup
-  // metinden çıkarılmalı, aksi halde aşağıdaki arama onu tekrar yakalar.
-  const tekrarEslesme = bul(/TEKRAR[^0-9A-Z]{0,20}DOLUM[^0-9]{0,10}(\d{1,2}[.\/-]\d{4}|\d{4})/);
-  if (tekrarEslesme) alanlar.sonrakiYillikBakim = _eoTarihIsoyeCevir(tekrarEslesme[1]);
-
   // "SERİ NUMARASI" -> "SERI NUMARASI"; OCR "İ"yi zaman zaman "1"/"L" olarak
-  // okuyabildiğinden "SER" + 1-2 belirsiz karakterle eşleşiyoruz.
-  const seriEslesme = bul(/SER[İIL1]{1,2}[^0-9]{0,20}(\d{1,6})\b/);
+  // okuyabildiğinden "SER" + 1-2 belirsiz karakterle eşleşiyoruz. Tarih
+  // taramasıyla çakışmaması için (4 haneli seri no bir "yıl" sanılmasın)
+  // bulunduğunda hemen metinden çıkarılıyor.
+  const seriEslesme = bul(/(?<![A-Z])SER[İIL1]{1,2}(?![A-Z])[^0-9]{0,20}(\d{1,6})\b/);
   if (seriEslesme) alanlar.seriNumarasi = seriEslesme[1];
 
-  const uretimEslesme = bul(/URET[İIL1]M[^0-9]{0,15}(\d{4})/);
-  if (uretimEslesme) alanlar.uretimTarihi = uretimEslesme[1];
-
-  const testEslesme = bul(/TEST[^0-9]{0,15}(\d{4})/);
-  if (testEslesme) alanlar.sonrakiHidrostatikTest = _eoTarihIsoyeCevir(testEslesme[1]);
-
-  const dolumEslesme = bul(/DOLUM[^0-9]{0,15}(\d{1,2}[.\/-]\d{4}|\d{4})/);
-  if (dolumEslesme) alanlar.doluTarihi = _eoTarihIsoyeCevir(dolumEslesme[1]);
+  // Anahtar kelimeye değil değerin şekline/basılı sırasına güvenen tarih
+  // taraması — bkz. _eoTarihJetonlariniBul üstündeki açıklama. Başlık/adres/
+  // telefon bloğundaki sayılarla (ör. "TELEFON:0212 671 10 89") karışmasın
+  // diye, taramayı bilinen İLK alan anahtarının bulunduğu noktadan başlatıyoruz.
+  const ilkAlanEslesme = kalan.match(/SER[İIL1]{1,2}\s*NUMARAS|FIRMA|URET[İIL1]C[İIL1]|CINS|BULUNDU[GĞ]U|URET[İIL1]M|DOLUM|TEST\s*TAR/);
+  const veriBolgesi = kalan.slice(ilkAlanEslesme ? ilkAlanEslesme.index : 0);
+  const tarihJetonlari = _eoTarihJetonlariniBul(veriBolgesi);
+  let yilSayaci = 0, ayYilSayaci = 0;
+  tarihJetonlari.forEach(j => {
+    if (j.tip === 'yil') {
+      yilSayaci++;
+      if (yilSayaci === 1) alanlar.uretimTarihi = j.ham;
+      else if (yilSayaci === 2) alanlar.sonrakiHidrostatikTest = j.iso;
+    } else {
+      ayYilSayaci++;
+      if (ayYilSayaci === 1) alanlar.doluTarihi = j.iso;
+      else if (ayYilSayaci === 2) alanlar.sonrakiYillikBakim = j.iso;
+    }
+  });
 
   const ureticiEslesme = bul(_eoAnahtarSonrasiMetinDeseni('URET[İIL1]C[İIL1]', 1, 30));
   if (ureticiEslesme) alanlar.uretici = _eoTemizle(ureticiEslesme[1]);
