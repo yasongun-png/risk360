@@ -55,6 +55,7 @@ function acilDurumSayfasiniBaslat(firma) {
   const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
   ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
   ekipmanTurFiltreEl.addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
+  document.getElementById('ekipmanBolumFiltre').addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
 
   // Yangın Tüpü
   document.getElementById('yeniYanginTupuBtn').addEventListener('click', () => yanginTupuModalAc());
@@ -121,6 +122,7 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'ekipmanNo', baslik: 'Ekipman No' },
   { anahtar: 'tur', baslik: 'Tür' },
   { anahtar: 'ad', baslik: 'Ad' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol' },
   { anahtar: 'sonrakiKontrol', baslik: 'Sonraki Kontrol' },
@@ -205,7 +207,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // yalnız o türün, seçili değilse kaydı olan HER türün ayrı bölüm/sayfa
   // olarak basıldığı tek bir Word belgesi üretilir.
   document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
-    ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value);
+    ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
   });
   document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
   document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
@@ -216,6 +218,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
       satirlar.forEach(satir => { satir.sonKontrol = excelTarihiNormallestir(satir.sonKontrol); });
       const sonuc = excelToplulIceAktarSonucOzetle(satirlar, ekipmanEkle);
       alert(excelIceAktarOzetMesaji(sonuc));
+      _ekipmanBolumFiltreDoldur();
       ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
     });
   });
@@ -267,7 +270,7 @@ function gorunumDegistir(gorunum) {
 
   if (gorunum === 'ekipler') ekipleriCiz('');
   else if (gorunum === 'uygunluk') uygunlugCiz();
-  else if (gorunum === 'ekipman') ekipmanlariCiz('');
+  else if (gorunum === 'ekipman') { _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(''); }
   else if (gorunum === 'yanginTupu') yanginTupleriniCiz('');
   else if (gorunum === 'tatbikat') tatbikatlariCiz('');
 }
@@ -436,15 +439,31 @@ function uygunlugCiz() {
 
 // ==================== EKİPMAN ====================
 
+// #ekipmanBolumFiltre seçeneklerini mevcut ekipman kayıtlarındaki bölümlerden
+// dinamik doldurur (bkz. modules/uygunsuzluk/ui.js _usBolumFiltreDoldur ile
+// aynı desen) — önceki seçim, hâlâ listede varsa korunur.
+function _ekipmanBolumFiltreDoldur() {
+  const secim = document.getElementById('ekipmanBolumFiltre');
+  if (!secim) return;
+  const oncekiSecim = secim.value;
+  const bolumler = Array.from(new Set(ekipmanlariTumunuGetir().map(e => (e.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
+  secim.innerHTML = '<option value="">Tüm Bölümler</option>' + bolumler.map(b => `<option value="${_adKacir(b)}">${_adKacir(b)}</option>`).join('');
+  if (bolumler.includes(oncekiSecim)) secim.value = oncekiSecim;
+}
+
 function ekipmanlariCiz(aramaMetni) {
   const govde = document.getElementById('ekipmanTabloGovde');
   const bosDurum = document.getElementById('ekipmanBosDurum');
   const turFiltre = document.getElementById('ekipmanTurFiltre');
+  const bolumFiltre = document.getElementById('ekipmanBolumFiltre');
   let liste = ekipmanlariGetir(aramaMetni);
   // Kullanıcı isteği: "ayrı listeler olarak da görebileyim yani yangın
   // tüpleri listesi vb" — türe göre filtrelenmiş, tek ekipman türünün
   // listesi olarak görüntülenebilir.
   if (turFiltre && turFiltre.value) liste = liste.filter(e => e.tur === turFiltre.value);
+  // Kullanıcı isteği: "bölüm filtresi de olsun ve buna göre rapor
+  // hazırlanabilsin" — bölüme göre de filtrelenebiliyor.
+  if (bolumFiltre && bolumFiltre.value) liste = liste.filter(e => (e.bolum || '').trim() === bolumFiltre.value);
 
   govde.innerHTML = '';
   if (liste.length === 0) {
@@ -471,7 +490,7 @@ function ekipmanlariCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
-    if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
+    if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
 }
 
@@ -481,7 +500,15 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanTur').innerHTML = EKIPMAN_TURLERI.map(t => `<option ${ekipman && ekipman.tur === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('ekipmanNo').value = ekipman ? ekipman.ekipmanNo : '';
   document.getElementById('ekipmanAd').value = ekipman ? ekipman.ad : '';
-  document.getElementById('ekipmanBolum').value = ekipman ? ekipman.bolum : '';
+  // Kullanıcı isteği: "bölümler ise listeden seçilsin" — personel
+  // modülündeki kayıtlı bölüm adlarından oluşan listeden seçiliyor (serbest
+  // metin girişi değil). Kaydın mevcut bölümü bu listede yoksa (eski/serbest
+  // girilmiş veri) kaybolmasın diye seçeneklere ekleniyor.
+  const mevcutBolumler = Array.from(new Set(personelleriGetir('', false).map(p => (p.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
+  const ekipmanBolumu = ekipman ? (ekipman.bolum || '').trim() : '';
+  if (ekipmanBolumu && !mevcutBolumler.includes(ekipmanBolumu)) mevcutBolumler.push(ekipmanBolumu);
+  document.getElementById('ekipmanBolum').innerHTML = '<option value="">— Bölüm seçiniz —</option>' +
+    mevcutBolumler.map(b => `<option ${ekipmanBolumu === b ? 'selected' : ''}>${_adKacir(b)}</option>`).join('');
   document.getElementById('ekipmanLokasyon').value = ekipman ? ekipman.lokasyon : '';
   document.getElementById('ekipmanPeriyot').value = ekipman ? ekipman.periyotGun : 30;
   document.getElementById('ekipmanSonKontrol').value = ekipman ? ekipman.sonKontrol : '';

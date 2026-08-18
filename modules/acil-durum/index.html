@@ -75,6 +75,7 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
           <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
           <select id="ekipmanTurFiltre" style="width:auto;"><option value="">Tüm Türler (birleşik liste)</option></select>
+          <select id="ekipmanBolumFiltre" style="width:auto;"><option value="">Tüm Bölümler</option></select>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="ikincil" id="ekipmanSablonIndirBtn">Şablon İndir</button>
@@ -224,7 +225,7 @@
         <div class="form-satir-ikili">
           <div>
             <label for="ekipmanBolum">Bölüm</label>
-            <input type="text" id="ekipmanBolum">
+            <select id="ekipmanBolum"></select>
           </div>
           <div>
             <label for="ekipmanLokasyon">Lokasyon</label>
