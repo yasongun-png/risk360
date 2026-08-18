@@ -74,8 +74,7 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'erisim', soru: 'Monitöre erişim engelsiz mi?' },
     { id: 'donme', soru: 'Döner/yönlendirme mekanizması çalışıyor mu?' },
     { id: 'besleme', soru: 'Su/köpük beslemesi yeterli mi?' },
-    { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız mı?' },
-    { id: 'basinc', soru: 'Basınç göstergesi uygun mu?' }
+    { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız mı?' }
   ],
   'Kaçış Yolu': [
     { id: 'engelsiz', soru: 'Kaçış yolu engelsiz mi?' },
