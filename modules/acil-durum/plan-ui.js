@@ -51,6 +51,117 @@ function planSayfasiniBaslat(firma) {
   document.getElementById('planYazdirBtn').addEventListener('click', planYazdir);
   document.getElementById('planSablonBtn').addEventListener('click', planSablonModalAc);
   document.getElementById('planSablonModalKapatBtn').addEventListener('click', planSablonModalKapat);
+
+  revizyonleriCiz();
+  document.getElementById('yeniRevizyonBtn').addEventListener('click', revizyonModalAc);
+  document.getElementById('revizyonModalKapatBtn').addEventListener('click', revizyonModalKapat);
+  document.getElementById('revizyonModalIptalBtn').addEventListener('click', revizyonModalKapat);
+  document.getElementById('revizyonForm').addEventListener('submit', revizyonFormGonderildi);
+
+  eksikVeriUyarisiniCiz();
+  document.getElementById('planWordIndirBtn').addEventListener('click', () => _planCiktiTiklandi(() => acilDurumPlaniWordOlustur(_planFirma)));
+  document.getElementById('planPdfIndirBtn').addEventListener('click', () => _planCiktiTiklandi(() => acilDurumPlaniPdfOlustur(_planFirma)));
+  document.getElementById('planPptxIndirBtn').addEventListener('click', () => _planCiktiTiklandi(() => acilDurumPlaniPptxOlustur(_planFirma)));
+}
+
+function temizleFormHatalari(formId) {
+  document.querySelectorAll('#' + formId + ' .alan-hatasi').forEach(el => el.textContent = '');
+}
+
+function formHatalariniGoster(hatalar, onEk) {
+  Object.keys(hatalar).forEach(alan => {
+    const buyukAlan = alan.charAt(0).toUpperCase() + alan.slice(1);
+    const hataEl = document.getElementById(onEk + buyukAlan + 'Hata');
+    if (hataEl) hataEl.textContent = hatalar[alan];
+  });
+}
+
+async function _planCiktiTiklandi(uretFn) {
+  try {
+    await uretFn();
+  } catch (hata) {
+    console.error(hata);
+    alert('Belge oluşturulurken bir hata oluştu: ' + (hata && hata.message ? hata.message : hata));
+  }
+}
+
+// ---- Doküman Kontrol / Revizyon Geçmişi ----
+
+function eksikVeriUyarisiniCiz() {
+  const veri = acilDurumBelgeVerisiTopla(_planFirma);
+  const eksikler = acilDurumEksikVerileriTespitEt(veri);
+  const kutu = document.getElementById('planEksikVeriUyarisi');
+  if (!eksikler.length) { kutu.innerHTML = ''; return; }
+  kutu.innerHTML = `
+    <div style="border:1px solid #f59e0b; background:#fffbeb; border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:13px;">
+      <b>⚠ Belge üretmeden önce tamamlanması önerilen alanlar:</b>
+      <ul style="margin:6px 0 0; padding-left:18px;">
+        ${eksikler.map(e => `<li>${e}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function revizyonleriCiz() {
+  const govde = document.getElementById('revizyonTabloGovde');
+  const bosDurum = document.getElementById('revizyonBosDurum');
+  const liste = revizyonleriGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz revizyon kaydı eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(r => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${r.revizyonNo}</td>
+      <td>${gunAyYil(r.tarih) || '-'}</td>
+      <td style="max-width:280px; white-space:normal;">${r.degisiklikOzeti}</td>
+      <td>${r.hazirlayan}</td>
+      <td>${r.onaylayan || '-'}</td>
+      <td><button class="tablo-buton sil" data-sil="${r.id}">Sil</button></td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu revizyon kaydını silmek istediğinize emin misiniz?', 'Sil')) { revizyonSil(btn.getAttribute('data-sil')); revizyonleriCiz(); }
+  }));
+}
+
+function revizyonModalAc() {
+  document.getElementById('rvTarih').value = bugunIso();
+  document.getElementById('rvDegisiklikOzeti').value = '';
+  document.getElementById('rvHazirlayan').value = '';
+  document.getElementById('rvOnaylayan').value = '';
+  temizleFormHatalari('revizyonForm');
+  document.getElementById('revizyonModalKatman').classList.add('acik');
+}
+
+function revizyonModalKapat() {
+  document.getElementById('revizyonModalKatman').classList.remove('acik');
+}
+
+function revizyonFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('revizyonForm');
+
+  const veriler = {
+    tarih: document.getElementById('rvTarih').value,
+    degisiklikOzeti: document.getElementById('rvDegisiklikOzeti').value,
+    hazirlayan: document.getElementById('rvHazirlayan').value,
+    onaylayan: document.getElementById('rvOnaylayan').value
+  };
+
+  const sonuc = revizyonEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'rv'); return; }
+
+  revizyonModalKapat();
+  revizyonleriCiz();
 }
 
 // ---- Hazır Şablon Modalı ----

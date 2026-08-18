@@ -816,3 +816,47 @@ function revizyonSil(id) {
   planKaydetRepo(plan);
   return { basarili: true };
 }
+
+// ---- Belge Üretimi ----
+
+// Word/PDF/PPTX çıktısının tamamının okuduğu tek "belge veri objesi" — salt
+// okunur, modules/acil-durum/plan-cikti.js tarafından kullanılır. Firma
+// başına tek plan objesi (bosPlanOlustur) ile çoklu-kayıt varlıkların
+// (senaryolar, ekip tanımları vb.) tümü tek noktada toplanır ki çıktı
+// dosyaları birbirinden bağımsız yeniden veri çekmesin.
+function acilDurumBelgeVerisiTopla(firma) {
+  return {
+    firma,
+    plan: planGetirVeyaOlustur(firma),
+    tesisBilgi: tesisBilgiGetirVeyaOlustur(),
+    senaryolar: senaryolariGetir(''),
+    ekipTanimlari: ekipTanimlariGetir(),
+    komutaPozisyonlari: komutaPozisyonlariGetir(),
+    tahliyeAlanlari: tahliyeAlanlariGetir(),
+    kimyasalEkleri: kimyasalEkleriGetir(),
+    krokiKontrolleri: krokiKontrolleriGetir(),
+    disKurumlar: disKurumlariGetir(),
+    ozDenetim: ozDenetimGetirVeyaOlustur(),
+    eylemPlani: eylemPlaniGetir(),
+    mevzuatUygunluk: mevzuatUygunlukGetirVeyaOlustur(),
+    revizyonGecmisi: revizyonleriGetir()
+  };
+}
+
+// Öz denetim sorularından boş bırakılmış zorunlu alanları tarar — çıktının
+// başında "Gerekli Bilgiler / Eksik Veriler" bölümü için kullanılır, denetime
+// hazır olup olmadığını belge üretmeden önce görmek için.
+function acilDurumEksikVerileriTespitEt(veri) {
+  const eksikler = [];
+  if (!veri.tesisBilgi.adres) eksikler.push('Tesis Bilgi Formu — Adres');
+  if (!veri.tesisBilgi.tesisTurleri.length) eksikler.push('Tesis Bilgi Formu — Tesis Sınıflandırması');
+  if (!veri.senaryolar.length) eksikler.push('Tehlike & Senaryo Kartları — hiç senaryo eklenmemiş');
+  if (!veri.ekipTanimlari.length) eksikler.push('Ekip Tanımları — hiç ekip tanımı eklenmemiş');
+  if (!veri.komutaPozisyonlari.length) eksikler.push('Komuta Yapısı — hiç pozisyon eklenmemiş');
+  if (!veri.tahliyeAlanlari.length) eksikler.push('Tahliye Planları — hiç tahliye planı eklenmemiş');
+  if (!veri.disKurumlar.length) eksikler.push('Dış Kurumlar — hiç kayıt eklenmemiş');
+  const ozDenetimBos = Object.values(veri.ozDenetim.cevaplar).every(c => !c.cevap);
+  if (ozDenetimBos) eksikler.push('Öz Denetim — hiçbir soru cevaplanmamış');
+  if (!veri.plan.hazirlayan || !veri.plan.onaylayan) eksikler.push('Doküman Kontrol — hazırlayan/onaylayan bilgisi eksik');
+  return eksikler;
+}
