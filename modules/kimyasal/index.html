@@ -67,28 +67,9 @@
       <input type="file" id="sdsPdfDosya" accept="application/pdf">
       <div id="sdsPdfSonucu" style="font-size:12px; color:var(--metin-soluk); margin:6px 0 14px;"></div>
       <form id="kimyasalForm">
-        <div class="form-satir-ikili">
-          <div>
-            <label for="ad">Kimyasal Adı</label>
-            <input type="text" id="ad">
-            <div class="alan-hatasi" id="adHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
-          </div>
-          <div>
-            <label for="ticariAdi">Ticari Adı</label>
-            <input type="text" id="ticariAdi">
-          </div>
-        </div>
-
-        <div class="form-satir-ikili">
-          <div>
-            <label for="casNo">CAS No</label>
-            <input type="text" id="casNo" placeholder="ör. 7664-93-9">
-          </div>
-          <div>
-            <label for="ecNo">EC No</label>
-            <input type="text" id="ecNo">
-          </div>
-        </div>
+        <label for="ad">Kimyasal Adı</label>
+        <input type="text" id="ad">
+        <div class="alan-hatasi" id="adHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
         <div class="form-satir-ikili">
           <div>
@@ -104,70 +85,24 @@
 
         <div class="form-satir-ikili">
           <div>
-            <label for="tedarikci">Tedarikçi</label>
-            <input type="text" id="tedarikci">
-          </div>
-          <div>
             <label for="depolamaGrubu">Depolama Grubu</label>
             <select id="depolamaGrubu"></select>
           </div>
-        </div>
-
-        <div class="form-satir-ikili">
           <div>
             <label for="fizikselHali">Fiziksel Hali</label>
             <select id="fizikselHali"></select>
           </div>
-          <div class="form-satir-ikili" style="margin:0;">
-            <div>
-              <label for="miktar">Miktar</label>
-              <input type="number" id="miktar" min="0" step="any">
-              <div class="alan-hatasi" id="miktarHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
-            </div>
-            <div>
-              <label for="birim">Birim</label>
-              <input type="text" id="birim" placeholder="kg, ton, litre...">
-            </div>
-          </div>
         </div>
 
-        <div class="form-bolum-baslik">Tehlike Sınıflandırması (GHS / H / P)</div>
-        <label for="ghsPiktogramlari">GHS Piktogramları <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın)</span></label>
-        <input type="text" id="ghsPiktogramlari" list="ghsListesi" placeholder="ör. GHS05; GHS08">
-        <datalist id="ghsListesi"></datalist>
         <div class="form-satir-ikili">
           <div>
-            <label for="hKodlari">H Kodları</label>
-            <input type="text" id="hKodlari" placeholder="ör. H314; H290">
+            <label for="miktar">Miktar</label>
+            <input type="number" id="miktar" min="0" step="any">
+            <div class="alan-hatasi" id="miktarHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
           <div>
-            <label for="pKodlari">P Kodları</label>
-            <input type="text" id="pKodlari" placeholder="ör. P280; P305+P351+P338">
-          </div>
-        </div>
-        <label for="riskSeviyesi">Risk Seviyesi <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa GHS/H koduna göre otomatik önerilir)</span></label>
-        <select id="riskSeviyesi"><option value="">Otomatik</option></select>
-
-        <div class="form-bolum-baslik">NFPA 704 (Yangın Elması) <button type="button" class="tablo-buton" id="nfpaTahminBtn" style="margin-left:10px;">H Koduna Göre Tahmin Et</button></div>
-        <p style="font-size:11px; color:var(--metin-soluk); margin-top:-8px;">Otomatik öneri başlangıç noktasıdır; SDS Bölüm 2/16'ya göre teyit edin.</p>
-        <div class="form-satir-ikili">
-          <div>
-            <label for="nfpaSaglik">Sağlık (0-4)</label>
-            <input type="number" id="nfpaSaglik" min="0" max="4">
-          </div>
-          <div>
-            <label for="nfpaYanicilik">Yanıcılık (0-4)</label>
-            <input type="number" id="nfpaYanicilik" min="0" max="4">
-          </div>
-        </div>
-        <div class="form-satir-ikili">
-          <div>
-            <label for="nfpaKararsizlik">Kararsızlık (0-4)</label>
-            <input type="number" id="nfpaKararsizlik" min="0" max="4">
-          </div>
-          <div>
-            <label for="nfpaOzelKod">Özel Kod <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın: OX, W)</span></label>
-            <input type="text" id="nfpaOzelKod">
+            <label for="birim">Birim</label>
+            <input type="text" id="birim" placeholder="kg, ton, litre...">
           </div>
         </div>
 
@@ -182,20 +117,90 @@
             <input type="text" id="sdsDosyaAdi" placeholder="GBF_Kimyasal_Adi.pdf">
           </div>
         </div>
-        <label for="sdsGorseliDosya">GBF / SDS Görseli (kapak taraması)</label>
-        <input type="file" id="sdsGorseliDosya" accept="image/*">
-        <div id="sdsGorseliOnizleme" style="margin-top:6px; margin-bottom:10px;"></div>
-
-        <div class="form-bolum-baslik">Diğer</div>
-        <label for="riskDegerlendirmeBaglantisi">Risk Değerlendirme Bağlantısı <span style="color:var(--metin-soluk); font-weight:400;">(RD no/açıklama)</span></label>
-        <input type="text" id="riskDegerlendirmeBaglantisi">
-        <label for="depolamaNotu">Depolama / Acil Durum Notu</label>
-        <textarea id="depolamaNotu"></textarea>
-        <label for="notlar">Notlar</label>
-        <textarea id="notlar"></textarea>
 
         <label for="durum">Durum</label>
         <select id="durum"></select>
+
+        <div class="form-bolum-baslik katlanir kapali" data-katlanir="tanimlayici">Tanımlayıcı Bilgiler (opsiyonel: Ticari Adı, CAS/EC No, Tedarikçi)</div>
+        <div class="form-bolum-icerik kapali">
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ticariAdi">Ticari Adı</label>
+              <input type="text" id="ticariAdi">
+            </div>
+            <div>
+              <label for="tedarikci">Tedarikçi</label>
+              <input type="text" id="tedarikci">
+            </div>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="casNo">CAS No</label>
+              <input type="text" id="casNo" placeholder="ör. 7664-93-9">
+            </div>
+            <div>
+              <label for="ecNo">EC No</label>
+              <input type="text" id="ecNo">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-katlanir="tehlike">Tehlike Sınıflandırması (GHS / H / P)</div>
+        <div class="form-bolum-icerik kapali">
+          <label for="ghsPiktogramlari">GHS Piktogramları <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın)</span></label>
+          <input type="text" id="ghsPiktogramlari" list="ghsListesi" placeholder="ör. GHS05; GHS08">
+          <datalist id="ghsListesi"></datalist>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="hKodlari">H Kodları</label>
+              <input type="text" id="hKodlari" placeholder="ör. H314; H290">
+            </div>
+            <div>
+              <label for="pKodlari">P Kodları</label>
+              <input type="text" id="pKodlari" placeholder="ör. P280; P305+P351+P338">
+            </div>
+          </div>
+          <label for="riskSeviyesi">Risk Seviyesi <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa GHS/H koduna göre otomatik önerilir)</span></label>
+          <select id="riskSeviyesi"><option value="">Otomatik</option></select>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-katlanir="nfpa">NFPA 704 (Yangın Elması)</div>
+        <div class="form-bolum-icerik kapali">
+          <p style="font-size:11px; color:var(--metin-soluk); margin-top:0;">Otomatik öneri başlangıç noktasıdır; SDS Bölüm 2/16'ya göre teyit edin. <button type="button" class="tablo-buton" id="nfpaTahminBtn">H Koduna Göre Tahmin Et</button></p>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="nfpaSaglik">Sağlık (0-4)</label>
+              <input type="number" id="nfpaSaglik" min="0" max="4">
+            </div>
+            <div>
+              <label for="nfpaYanicilik">Yanıcılık (0-4)</label>
+              <input type="number" id="nfpaYanicilik" min="0" max="4">
+            </div>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="nfpaKararsizlik">Kararsızlık (0-4)</label>
+              <input type="number" id="nfpaKararsizlik" min="0" max="4">
+            </div>
+            <div>
+              <label for="nfpaOzelKod">Özel Kod <span style="color:var(--metin-soluk); font-weight:400;">(; ile ayırın: OX, W)</span></label>
+              <input type="text" id="nfpaOzelKod">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-katlanir="digerVeGorsel">Diğer (Görsel, Risk Değerlendirme Bağlantısı, Notlar)</div>
+        <div class="form-bolum-icerik kapali">
+          <label for="sdsGorseliDosya">GBF / SDS Görseli (kapak taraması)</label>
+          <input type="file" id="sdsGorseliDosya" accept="image/*">
+          <div id="sdsGorseliOnizleme" style="margin-top:6px; margin-bottom:10px;"></div>
+          <label for="riskDegerlendirmeBaglantisi">Risk Değerlendirme Bağlantısı <span style="color:var(--metin-soluk); font-weight:400;">(RD no/açıklama)</span></label>
+          <input type="text" id="riskDegerlendirmeBaglantisi">
+          <label for="depolamaNotu">Depolama / Acil Durum Notu</label>
+          <textarea id="depolamaNotu"></textarea>
+          <label for="notlar">Notlar</label>
+          <textarea id="notlar"></textarea>
+        </div>
 
         <div class="modal-eylemler">
           <button type="button" class="ikincil" id="modalIptalBtn">İptal</button>

@@ -8,6 +8,16 @@ function kimRozetSinifAdi(durum) {
 }
 
 function kimyasalSayfasiniBaslat() {
+  // Katlanabilir form bölümleri (bkz. modules/acil-durum/ui.js ile aynı genel
+  // desen) -- form kısa kalsın diye ikincil alanlar varsayılan kapalı.
+  document.querySelectorAll('.form-bolum-baslik.katlanir').forEach(baslik => {
+    baslik.addEventListener('click', () => {
+      baslik.classList.toggle('kapali');
+      const icerik = baslik.nextElementSibling;
+      if (icerik && icerik.classList.contains('form-bolum-icerik')) icerik.classList.toggle('kapali');
+    });
+  });
+
   document.getElementById('depolamaGrubuFiltre').innerHTML += KIMYASAL_DEPOLAMA_GRUPLARI.map(g => `<option>${g}</option>`).join('');
   document.getElementById('riskSeviyesiFiltre').innerHTML += KIMYASAL_RISK_SEVIYELERI.map(r => `<option>${r}</option>`).join('');
   document.getElementById('ghsListesi').innerHTML = GHS_PIKTOGRAMLARI.map(g => `<option value="${g}">`).join('');
@@ -165,24 +175,36 @@ function kimyasalOzetiVeUyarilariCiz() {
     : '';
 }
 
+// data-katlanir="X" olan katlanır bölümü açar (ör. SDS'ten alan dolan ama
+// varsayılan kapalı bir bölümdeki değeri kullanıcı görebilsin diye).
+function _kimBolumAc(anahtar) {
+  const baslik = document.querySelector(`.form-bolum-baslik[data-katlanir="${anahtar}"]`);
+  if (!baslik) return;
+  baslik.classList.remove('kapali');
+  const icerik = baslik.nextElementSibling;
+  if (icerik && icerik.classList.contains('form-bolum-icerik')) icerik.classList.remove('kapali');
+}
+
 // sdsMetnindenVeriCikar() sonucunu forma yazar; sadece PDF'ten değer
 // çıkarılabilen alanlar doldurulur (boş dönenler formdaki mevcut değere
-// dokunmaz). Doldurulan alanların Türkçe etiket listesini döner.
+// dokunmaz). Doldurulan alanların Türkçe etiket listesini döner ve, alan
+// varsayılan kapalı bir bölümdeyse, kullanıcı görebilsin diye o bölümü açar.
 function _kimSdsVerisiniFormaYaz(veri, dosyaAdi) {
   const dolanlar = [];
-  const yaz = (id, deger, etiket) => {
+  const yaz = (id, deger, etiket, bolum) => {
     if (!deger) return;
     document.getElementById(id).value = deger;
     dolanlar.push(etiket);
+    if (bolum) _kimBolumAc(bolum);
   };
   yaz('ad', veri.ad, 'Kimyasal Adı');
-  yaz('ticariAdi', veri.ticariAdi, 'Ticari Adı');
-  yaz('casNo', veri.casNo, 'CAS No');
-  yaz('ecNo', veri.ecNo, 'EC No');
-  yaz('tedarikci', veri.tedarikci, 'Tedarikçi');
-  yaz('hKodlari', (veri.hKodlari || []).join('; '), 'H Kodları');
-  yaz('pKodlari', (veri.pKodlari || []).join('; '), 'P Kodları');
-  yaz('ghsPiktogramlari', (veri.ghsPiktogramlari || []).join('; '), 'GHS Piktogramları');
+  yaz('ticariAdi', veri.ticariAdi, 'Ticari Adı', 'tanimlayici');
+  yaz('casNo', veri.casNo, 'CAS No', 'tanimlayici');
+  yaz('ecNo', veri.ecNo, 'EC No', 'tanimlayici');
+  yaz('tedarikci', veri.tedarikci, 'Tedarikçi', 'tanimlayici');
+  yaz('hKodlari', (veri.hKodlari || []).join('; '), 'H Kodları', 'tehlike');
+  yaz('pKodlari', (veri.pKodlari || []).join('; '), 'P Kodları', 'tehlike');
+  yaz('ghsPiktogramlari', (veri.ghsPiktogramlari || []).join('; '), 'GHS Piktogramları', 'tehlike');
   yaz('sdsRevizyonTarihi', veri.sdsRevizyonTarihi, 'Revizyon Tarihi');
   if (veri.fizikselHali) {
     const secim = document.getElementById('fizikselHali');
@@ -307,6 +329,17 @@ function kimyasalModalAc(kayit) {
   document.querySelectorAll('#kimyasalForm .alan-hatasi').forEach(el => el.textContent = '');
   document.getElementById('sdsPdfDosya').value = '';
   document.getElementById('sdsPdfSonucu').textContent = '';
+
+  // Katlanır bölümler her açılışta varsayılan kapalı başlar; kayıtta o
+  // bölüme ait bir veri varsa (düzenleme) kullanıcı görebilsin diye açılır.
+  document.querySelectorAll('.form-bolum-baslik.katlanir, .form-bolum-icerik').forEach(el => el.classList.add('kapali'));
+  if (kayit) {
+    if (kayit.ticariAdi || kayit.casNo || kayit.ecNo || kayit.tedarikci) _kimBolumAc('tanimlayici');
+    if ((kayit.ghsPiktogramlari || []).length || (kayit.hKodlari || []).length || (kayit.pKodlari || []).length || kayit.riskSeviyesi) _kimBolumAc('tehlike');
+    if (kayit.nfpaSaglik || kayit.nfpaYanicilik || kayit.nfpaKararsizlik || (kayit.nfpaOzelKod || []).length) _kimBolumAc('nfpa');
+    if (kayit.riskDegerlendirmeBaglantisi || kayit.depolamaNotu || kayit.notlar || kayit.sdsGorseli) _kimBolumAc('digerVeGorsel');
+  }
+
   document.getElementById('modalKatman').classList.add('acik');
 }
 
