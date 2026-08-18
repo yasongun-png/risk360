@@ -61,6 +61,12 @@ function _sdsFizikselHaliTahminEt(metin) {
 }
 
 // PDF'in tüm sayfalarındaki metni sırayla birleştirir (pdfjsLib gerektirir).
+// pdf.js metin öğelerini "satır" bilgisi olmadan tek tek döner; öğe
+// düşey konumu (transform[5]) bir öncekinden belirgin farklıysa yeni
+// satıra geçildiği kabul edilir (ayrıca pdf.js'in kendi hasEOL bayrağı da
+// yedek sinyal olarak kullanılır). Bu olmadan bir sayfadaki TÜM metin tek
+// satır haline gelir ve etiket/değer eşleştirmesi (ör. "Ürün Adı") o
+// satırdaki geri kalan tüm sayfa içeriğini yakalar.
 async function sdsPdfMetniniOku(dosya) {
   if (typeof pdfjsLib === 'undefined') throw new Error('PDF okuma kütüphanesi yüklenemedi.');
   const arrayBuffer = await dosya.arrayBuffer();
@@ -69,7 +75,17 @@ async function sdsPdfMetniniOku(dosya) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const sayfa = await pdf.getPage(i);
     const icerik = await sayfa.getTextContent();
-    metin += icerik.items.map(o => o.str).join(' ') + '\n';
+    let oncekiY = null;
+    icerik.items.forEach(o => {
+      if (typeof o.str !== 'string') return;
+      const y = Array.isArray(o.transform) && o.transform.length === 6 ? o.transform[5] : null;
+      if (oncekiY !== null && y !== null && Math.abs(y - oncekiY) > 1.5) metin += '\n';
+      else if (metin && !/\s$/.test(metin)) metin += ' ';
+      metin += o.str;
+      if (o.hasEOL) metin += '\n';
+      if (y !== null) oncekiY = y;
+    });
+    metin += '\n';
   }
   return metin;
 }
