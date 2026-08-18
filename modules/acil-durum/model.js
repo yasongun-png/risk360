@@ -40,10 +40,11 @@ const EKIPMAN_KONTROL_SORULARI = {
   'Hidrant': [
     { id: 'erisim', soru: 'Hidranta erişim kolay mı, önü açık mı?' },
     { id: 'govde', soru: 'Gövde hasarsız/paslanmamış mı?' },
-    { id: 'vana', soru: 'Vana çalışıyor mu, sızıntı var mı?' },
-    { id: 'hortumLans', soru: 'Hortum/lans takılı ve sağlam mı?' },
-    { id: 'basinc', soru: 'Basınç göstergesi uygun seviyede mi?' },
-    { id: 'isaretleme', soru: 'Konum işaretlemesi mevcut mu?' }
+    { id: 'vana', soru: 'Vana çalışıyor mu?' },
+    { id: 'sizinti', soru: 'Sızıntı var mı?' },
+    { id: 'korRekor', soru: 'Kör rekorlar takılı mı?' },
+    { id: 'rekorKirik', soru: 'Rekorlarda kırık/hasar var mı?' },
+    { id: 'vanaKollari', soru: 'Vana kolları sağlam mı?' }
   ],
   'Yangın Dolabı': [
     { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor mu, önü boş mu?' },

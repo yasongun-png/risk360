@@ -60,6 +60,10 @@ function yanginTupuGuncelleRepo(id, v) { return _genelGuncelle(_yanginTupuAnahta
 function yanginTupuGuncelleRepoVeBekle(id, v) { return _genelGuncelleVeBekle(_yanginTupuAnahtari, id, v); }
 function yanginTupuSilRepo(id) { _genelSil(_yanginTupuAnahtari, id); }
 function yanginTupuIdIleGetirRepo(id) { return yanginTupleriTumunuGetir().find(x => x.id === id) || null; }
+// Toplu silme (bkz. service.js yanginTupuToplusil) — N kayıt için N ayrı
+// oku/yaz yerine (bkz. modules/yuklenici/service.js aynı desen) tek
+// oku+filtrele+yaz.
+function yanginTupuListesiKaydetRepo(liste) { _genelListeKaydet(_yanginTupuAnahtari, liste); }
 
 function tatbikatlariTumunuGetir() { return _genelListeGetir(_tatbikatAnahtari); }
 function tatbikatEkleRepo(k) { return _genelEkle(_tatbikatAnahtari, k); }

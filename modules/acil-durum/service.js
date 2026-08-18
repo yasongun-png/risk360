@@ -229,6 +229,18 @@ function yanginTupuSil(id) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "toplu silme olması lazım" — bkz. modules/yuklenici/
+// service.js yukleniciKayitlariToplusil ile aynı desen: N ayrı silme
+// çağrısı yerine tek oku+filtrele+yaz.
+function yanginTupuToplusil(idler) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const idSeti = new Set(idler);
+  const tumu = yanginTupleriTumunuGetir();
+  const kalanlar = tumu.filter(t => !idSeti.has(t.id));
+  yanginTupuListesiKaydetRepo(kalanlar);
+  return { basarili: true, silinen: tumu.length - kalanlar.length };
+}
+
 // Etiket taramasından (bkz. etiket-ocr.js) gelen seri numarasıyla envanterde
 // zaten kayıtlı bir tüp olup olmadığını arar — ui.js bu sonuca göre "zaten
 // listede" uyarısı gösterir, tekrar kayıt oluşturmayı otomatik ENGELLEMEZ

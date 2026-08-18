@@ -71,6 +71,10 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuEtiketFotoSecBtn').addEventListener('click', () => document.getElementById('yanginTupuEtiketFotoDosya').click());
   document.getElementById('yanginTupuEtiketFotoDosya').addEventListener('change', yanginTupuEtiketFotoSecildi);
   document.getElementById('yanginTupuEtiketFormaAktarBtn').addEventListener('click', yanginTupuEtiketAktar);
+  document.getElementById('yanginTupuTumunuSecCheckbox').addEventListener('change', e => {
+    document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]').forEach(cb => { cb.checked = e.target.checked; });
+  });
+  document.getElementById('yanginTupuSeciliSilBtn').addEventListener('click', yanginTupuSeciliSil);
 
   // Tatbikat
   document.getElementById('yeniTatbikatBtn').addEventListener('click', () => tatbikatModalAc());
@@ -659,6 +663,7 @@ function yanginTupleriniCiz(aramaMetni) {
     const uygunDegilVarMi = Object.values(t.kontrolCevaplari || {}).some(c => c === 'Uygun Değil');
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td><input type="checkbox" data-yangin-tupu-sec data-id="${t.id}"></td>
       <td>${t.tupNo}</td><td>${t.seriNumarasi || '-'}</td><td>${t.tip}</td><td>${t.kapasite || '-'}</td><td>${t.lokasyon}</td>
       <td>${t.doluTarihi || '-'}</td><td>${t.sonrakiYillikBakim || '-'}</td><td>${t.sonrakiHidrostatikTest || '-'}</td>
       <td>
@@ -677,6 +682,20 @@ function yanginTupleriniCiz(aramaMetni) {
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu yangın tüpünü silmek istediğinize emin misiniz?', 'Sil')) { yanginTupuSil(btn.getAttribute('data-sil')); yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value); }
   }));
+  document.getElementById('yanginTupuTumunuSecCheckbox').checked = false;
+}
+
+// Kullanıcı isteği: "toplu silme olması lazım" — özellikle Excel'den
+// yanlış içe aktarılan büyük bir listeyi baştan temiz yüklemek için.
+async function yanginTupuSeciliSil() {
+  const secililer = Array.from(document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+  if (!secililer.length) { alert('Lütfen silmek için en az bir yangın tüpü seçin.'); return; }
+  if (!(await onayModali(`${secililer.length} yangın tüpü kaydı silinsin mi?`, 'Sil'))) return;
+
+  const sonuc = yanginTupuToplusil(secililer);
+  if (!sonuc.basarili) { alert(sonuc.hata); return; }
+  alert(`${sonuc.silinen} kayıt silindi.`);
+  yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
 }
 
 // onSablon: etiket taramasından "Forma Aktar" ile açıldıysa ön dolu alan
