@@ -506,3 +506,111 @@ function komutaYapisiStandartOlustur() {
   });
   return { basarili: true, pozisyonlar: komutaPozisyonlariTumunuGetir() };
 }
+
+// ---- Tahliye Planları ----
+
+function tahliyeAlanlariGetir() {
+  return tahliyeAlanlariTumunuGetir();
+}
+
+function tahliyeAlaniEkle(veriler) {
+  const dogrulama = tahliyeAlaniDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const tahliyeNo = sonrakiNoUret('TP', tahliyeAlanlariTumunuGetir(), 'tahliyeNo');
+  const yeni = tahliyeAlaniOlustur(Object.assign({}, veriler, { tahliyeNo }));
+  tahliyeAlaniEkleRepo(yeni);
+  return { basarili: true, tahliyeAlani: yeni };
+}
+
+function tahliyeAlaniGuncelle(id, veriler) {
+  const dogrulama = tahliyeAlaniDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = tahliyeAlaniIdIleGetirRepo(id) || {};
+  const birlesik = Object.assign({}, mevcut, veriler, { id: mevcut.id, tahliyeNo: mevcut.tahliyeNo, olusturmaTarihi: mevcut.olusturmaTarihi });
+  const guncellenen = tahliyeAlaniGuncelleRepo(id, tahliyeAlaniOlustur(birlesik));
+  return { basarili: true, tahliyeAlani: guncellenen };
+}
+
+// Harita köprüsünden gelen sadece-konum güncellemeleri için — diğer alanlara
+// dokunmadan yazımın gerçekten bitmesini bekler (bkz. repository.js
+// tahliyeAlaniGuncelleRepoVeBekle, modules/harita/ui.js HARITA_DIS_KAYNAKLAR.acilDurumTahliye).
+function tahliyeAlaniKonumGuncelle(id, tesisId, x, y) {
+  return tahliyeAlaniGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y });
+}
+
+function tahliyeAlaniSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  tahliyeAlaniSilRepo(id);
+  return { basarili: true };
+}
+
+// ---- Kimyasal Ekleri ----
+
+// kimyasalAdiOnbellek'i her okumada güncel kimyasal envanterinden tazeler —
+// kimyasal kaydı adı değişmiş/silinmişse liste anlamsız kalmasın diye
+// (bkz. model.js kimyasalEkiOlustur yorumu).
+function _kimyasalEkiZenginlestir(ek) {
+  const kimyasal = kimyasalTumunuGetir().find(k => k.id === ek.kimyasalId);
+  return Object.assign({}, ek, { kimyasalAdiOnbellek: kimyasal ? kimyasal.ad : (ek.kimyasalAdiOnbellek || '(silinmiş kimyasal)'), kimyasalBulunamadi: !kimyasal });
+}
+
+function kimyasalEkleriGetir() {
+  return kimyasalEkleriTumunuGetir().map(_kimyasalEkiZenginlestir);
+}
+
+function kimyasalEnvanteriSecenekleriGetir() {
+  return kimyasalTumunuGetir();
+}
+
+function kimyasalEkiEkle(veriler) {
+  const dogrulama = kimyasalEkiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const kimyasal = kimyasalTumunuGetir().find(k => k.id === veriler.kimyasalId);
+  const yeni = kimyasalEkiOlustur(Object.assign({}, veriler, { kimyasalAdiOnbellek: kimyasal ? kimyasal.ad : '' }));
+  kimyasalEkiEkleRepo(yeni);
+  return { basarili: true, kimyasalEki: yeni };
+}
+
+function kimyasalEkiGuncelle(id, veriler) {
+  const dogrulama = kimyasalEkiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = kimyasalEkiIdIleGetirRepo(id) || {};
+  const kimyasal = kimyasalTumunuGetir().find(k => k.id === veriler.kimyasalId);
+  const birlesik = Object.assign({}, mevcut, veriler, { id: mevcut.id, olusturmaTarihi: mevcut.olusturmaTarihi, kimyasalAdiOnbellek: kimyasal ? kimyasal.ad : mevcut.kimyasalAdiOnbellek });
+  const guncellenen = kimyasalEkiGuncelleRepo(id, kimyasalEkiOlustur(birlesik));
+  return { basarili: true, kimyasalEki: guncellenen };
+}
+
+function kimyasalEkiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  kimyasalEkiSilRepo(id);
+  return { basarili: true };
+}
+
+// ---- Kroki Kontrolü ----
+
+function krokiKontrolleriGetir() {
+  return krokiKontrolleriTumunuGetir();
+}
+
+function krokiKontrolMaddesiEkle(veriler) {
+  const dogrulama = krokiKontrolMaddesiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = krokiKontrolMaddesiOlustur(veriler);
+  krokiKontrolMaddesiEkleRepo(yeni);
+  return { basarili: true, madde: yeni };
+}
+
+function krokiKontrolMaddesiGuncelle(id, veriler) {
+  const dogrulama = krokiKontrolMaddesiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = krokiKontrolMaddesiIdIleGetirRepo(id) || {};
+  const guncellenen = krokiKontrolMaddesiGuncelleRepo(id, krokiKontrolMaddesiOlustur(Object.assign({}, mevcut, veriler, { id: mevcut.id, olusturmaTarihi: mevcut.olusturmaTarihi })));
+  return { basarili: true, madde: guncellenen };
+}
+
+function krokiKontrolMaddesiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  krokiKontrolMaddesiSilRepo(id);
+  return { basarili: true };
+}

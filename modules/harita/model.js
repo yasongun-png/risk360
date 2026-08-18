@@ -72,6 +72,14 @@ const HARITA_TIPLERI = {
     etiket: 'Acil Durum Toplanma Bölgesi', ikon: '🧭', renk: '#00838f', onek: 'TA',
     durumlar: ['Uygun', 'Engelli', 'Kullanım Dışı'], varsayilanDurum: 'Uygun'
   },
+  // Acil Durum Planı > Tahliye Planları (bina/kat bazlı) — bkz.
+  // modules/acil-durum tahliyeAlaniOlustur. 'cikis'/'toplanma' türleri zaten
+  // acilDurumEkipman kaynağına ait olduğundan (HARITA_DIS_KAYNAKLAR'da bir
+  // tür yalnızca TEK kaynağa bağlanabilir) ayrı bir tür gerekiyor.
+  tahliye_alani: {
+    etiket: 'Tahliye Planı Noktası', ikon: '🏃', renk: '#0d9488', onek: 'TP',
+    durumlar: ['Aktif', 'Gözden Geçirilecek', 'Pasif'], varsayilanDurum: 'Aktif'
+  },
   fotograf: {
     etiket: 'Fotoğraf Noktası', ikon: '📷', renk: '#757575', onek: 'FOT',
     durumlar: ['Kayıtlı'], varsayilanDurum: 'Kayıtlı'

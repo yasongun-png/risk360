@@ -46,3 +46,23 @@ function komutaPozisyonuDogrula(veriler) {
   if (!veriler.pozisyonAdi || !veriler.pozisyonAdi.trim()) hatalar.pozisyonAdi = 'Pozisyon adı zorunludur.';
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
+
+function tahliyeAlaniDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.binaAdi || !veriler.binaAdi.trim()) hatalar.binaAdi = 'Bina/alan adı zorunludur.';
+  if (!veriler.toplanmaAlani || !veriler.toplanmaAlani.trim()) hatalar.toplanmaAlani = 'Toplanma alanı zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
+function kimyasalEkiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.kimyasalId) hatalar.kimyasalId = 'Kimyasal seçimi zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
+function krokiKontrolMaddesiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.binaAlan || !veriler.binaAlan.trim()) hatalar.binaAlan = 'Bina/alan zorunludur.';
+  if (!veriler.unsurTuru) hatalar.unsurTuru = 'Unsur türü zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}

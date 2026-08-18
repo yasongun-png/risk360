@@ -34,6 +34,9 @@
       <button type="button" data-sekme="tesisBilgi">Tesis Bilgi Formu</button>
       <button type="button" data-sekme="senaryo" class="sekme-seciliDegil">Tehlike &amp; Senaryo Kartları</button>
       <button type="button" data-sekme="komuta" class="sekme-seciliDegil">Komuta Yapısı &amp; Ekip Tanımları</button>
+      <button type="button" data-sekme="tahliye" class="sekme-seciliDegil">Tahliye Planları</button>
+      <button type="button" data-sekme="kimyasal" class="sekme-seciliDegil">Kimyasal Ekleri</button>
+      <button type="button" data-sekme="kroki" class="sekme-seciliDegil">Kroki Kontrolü</button>
     </div>
 
     <!-- TESİS BİLGİ FORMU -->
@@ -129,6 +132,51 @@
         </table>
       </div>
       <div class="bos-durum" id="komutaPozisyonuBosDurum"></div>
+    </div>
+
+    <!-- TAHLİYE PLANLARI -->
+    <div id="bolum-tahliye" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0;">Bina/kat bazlı kaçış yolu, toplanma alanı ve acil müdahale noktaları.</p>
+        <button type="button" class="birincil" id="yeniTahliyeAlaniBtn" style="width:auto;">+ Tahliye Planı Ekle</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Plan No</th><th>Bina/Alan</th><th>Kat/Bölüm</th><th>Toplanma Alanı</th><th>Konum</th><th>İşlemler</th></tr></thead>
+          <tbody id="tahliyeAlaniTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="tahliyeAlaniBosDurum"></div>
+    </div>
+
+    <!-- KİMYASAL EKLERİ -->
+    <div id="bolum-kimyasal" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0;">Kimyasal envanterindeki maddeler için acil müdahale ekleri (kimyasal kaydı Kimyasal Envanteri modülünden yönetilir).</p>
+        <button type="button" class="birincil" id="yeniKimyasalEkiBtn" style="width:auto;">+ Kimyasal Eki Ekle</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Kimyasal</th><th>İlk Yardım</th><th>Yangınla Mücadele</th><th>İzolasyon Mesafesi</th><th>İşlemler</th></tr></thead>
+          <tbody id="kimyasalEkiTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="kimyasalEkiBosDurum"></div>
+    </div>
+
+    <!-- KROKİ KONTROLÜ -->
+    <div id="bolum-kroki" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0;">Kaçış planı krokisindeki unsurların sahada fiilen mevcut olup olmadığının kontrolü.</p>
+        <button type="button" class="birincil" id="yeniKrokiKontrolBtn" style="width:auto;">+ Kontrol Maddesi Ekle</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Bina/Alan</th><th>Unsur Türü</th><th>Mevcut mu</th><th>Eksiklik Notu</th><th>Sorumlu</th><th>Termin</th><th>İşlemler</th></tr></thead>
+          <tbody id="krokiKontrolTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="krokiKontrolBosDurum"></div>
     </div>
   </div>
 
@@ -333,6 +381,132 @@
     </div>
   </div>
 
+  <!-- TAHLİYE PLANI MODAL -->
+  <div class="modal-katman" id="tahliyeAlaniModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="tahliyeAlaniModalBaslik">Yeni Tahliye Planı</h3>
+      <form id="tahliyeAlaniForm">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="taBinaAdi">Bina/Alan Adı</label>
+            <input type="text" id="taBinaAdi">
+            <div class="alan-hatasi" id="taBinaAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div><label for="taKatBolum">Kat/Bölüm</label><input type="text" id="taKatBolum"></div>
+        </div>
+        <label for="taKonum">Konum Açıklaması</label>
+        <input type="text" id="taKonum">
+        <div class="form-satir-ikili">
+          <div><label for="taKacisYolu">Kaçış Yolu</label><input type="text" id="taKacisYolu"></div>
+          <div><label for="taAlternatifKacisYolu">Alternatif Kaçış Yolu</label><input type="text" id="taAlternatifKacisYolu"></div>
+        </div>
+        <div class="form-satir-ikili">
+          <div><label for="taMerdiven">Merdiven</label><input type="text" id="taMerdiven"></div>
+          <div><label for="taCikis">Çıkış</label><input type="text" id="taCikis"></div>
+        </div>
+        <label for="taToplanmaAlani">Toplanma Alanı</label>
+        <input type="text" id="taToplanmaAlani">
+        <div class="alan-hatasi" id="taToplanmaAlaniHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-bolum-baslik katlanir kapali" data-katlanir="taDetay">Acil Müdahale Noktaları</div>
+        <div class="form-bolum-icerik kapali">
+          <div class="form-satir-ikili">
+            <div><label for="taSondurucuKonumu">Söndürücü Konumu</label><input type="text" id="taSondurucuKonumu"></div>
+            <div><label for="taIlkYardimNoktasi">İlk Yardım Noktası</label><input type="text" id="taIlkYardimNoktasi"></div>
+          </div>
+          <div class="form-satir-ikili">
+            <div><label for="taAcilDusKonumu">Acil Duş Konumu</label><input type="text" id="taAcilDusKonumu"></div>
+            <div><label for="taGazElektrikKesmeNoktasi">Gaz/Elektrik Kesme Noktası</label><input type="text" id="taGazElektrikKesmeNoktasi"></div>
+          </div>
+          <div class="form-satir-ikili">
+            <div><label for="taAlarmButonuKonumu">Alarm Butonu Konumu</label><input type="text" id="taAlarmButonuKonumu"></div>
+            <div><label for="taTelefonKonumu">Telefon Konumu</label><input type="text" id="taTelefonKonumu"></div>
+          </div>
+          <label for="taSiginmaAlani">Sığınma Alanı <span style="color:var(--metin-soluk); font-weight:400;">(tahliye mümkün olmadığında)</span></label>
+          <input type="text" id="taSiginmaAlani">
+          <label for="taTehlikeliAlanNotu">Tehlikeli Alan Notu</label>
+          <textarea id="taTehlikeliAlanNotu"></textarea>
+        </div>
+
+        <div class="form-bolum-baslik" style="margin-top:18px;">Saha Dijital Haritası Konumu</div>
+        <div id="tahliyeAlaniKonumAlani" style="margin-bottom:14px;"></div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="tahliyeAlaniModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="tahliyeAlaniModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- KİMYASAL EKİ MODAL -->
+  <div class="modal-katman" id="kimyasalEkiModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="kimyasalEkiModalBaslik">Yeni Kimyasal Eki</h3>
+      <form id="kimyasalEkiForm">
+        <label for="keKimyasalId">Kimyasal</label>
+        <select id="keKimyasalId"></select>
+        <div class="alan-hatasi" id="keKimyasalIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="keIlkYardim">İlk Yardım</label>
+        <textarea id="keIlkYardim"></textarea>
+        <label for="keYanginlaMucadele">Yangınla Mücadele</label>
+        <textarea id="keYanginlaMucadele"></textarea>
+        <label for="keDokulmeSizintiMudahalesi">Dökülme/Sızıntı Müdahalesi</label>
+        <textarea id="keDokulmeSizintiMudahalesi"></textarea>
+        <div class="form-satir-ikili">
+          <div><label for="keIzolasyonMesafesi">İzolasyon Mesafesi</label><input type="text" id="keIzolasyonMesafesi"></div>
+          <div><label for="keSolunumKorumasi">Solunum Koruması</label><input type="text" id="keSolunumKorumasi"></div>
+        </div>
+        <label for="keTahliyeSiginmaKriteri">Tahliye/Sığınma Kriteri</label>
+        <textarea id="keTahliyeSiginmaKriteri"></textarea>
+        <label for="keAtikYonetimi">Atık Yönetimi</label>
+        <textarea id="keAtikYonetimi"></textarea>
+        <label for="keRuzgarYonuYayilimSenaryosu">Rüzgar Yönü / Yayılım Senaryosu</label>
+        <textarea id="keRuzgarYonuYayilimSenaryosu"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="kimyasalEkiModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="kimyasalEkiModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- KROKİ KONTROL MADDESİ MODAL -->
+  <div class="modal-katman" id="krokiKontrolModalKatman">
+    <div class="modal-kutu">
+      <h3 id="krokiKontrolModalBaslik">Yeni Kontrol Maddesi</h3>
+      <form id="krokiKontrolForm">
+        <label for="kkBinaAlan">Bina/Alan</label>
+        <input type="text" id="kkBinaAlan">
+        <div class="alan-hatasi" id="kkBinaAlanHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="kkUnsurTuru">Unsur Türü</label>
+        <select id="kkUnsurTuru"></select>
+        <div class="alan-hatasi" id="kkUnsurTuruHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+          <input type="checkbox" id="kkMevcutMu" style="width:auto;"> Sahada mevcut / kroki ile uyumlu
+        </label>
+        <label for="kkEksiklikNotu">Eksiklik Notu</label>
+        <textarea id="kkEksiklikNotu"></textarea>
+        <div class="form-satir-ikili">
+          <div><label for="kkSorumlu">Sorumlu</label><input type="text" id="kkSorumlu"></div>
+          <div><label for="kkTermin">Termin</label><input type="date" id="kkTermin"></div>
+        </div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="krokiKontrolModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="krokiKontrolModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="../../core/data.js"></script>
@@ -346,6 +520,8 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
+  <script src="../kimyasal/model.js"></script>
+  <script src="../kimyasal/repository.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
@@ -369,6 +545,24 @@
         document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — tesis bilgi formu, tehlike/senaryo envanteri, komuta yapısı';
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           planDetaySayfasiniBaslat(aktifFirma);
+
+          // Saha Dijital Haritası köprüsü — bkz. modules/acil-durum/index.html'deki
+          // aynı desen. Bu sayfada tek dış kaynak "tahliye" olduğundan hedef
+          // ayrımı yapılmaz.
+          const parametreler = new URLSearchParams(location.search);
+          const acKayitId = parametreler.get('ac');
+          if (acKayitId) {
+            const acilacakTahliye = tahliyeAlaniIdIleGetirRepo(acKayitId);
+            if (acilacakTahliye) { gorunumDegistirDetay('tahliye'); tahliyeAlaniModalAc(acilacakTahliye); }
+          } else if (parametreler.get('yeniKonum') === '1') {
+            _bekleyenHaritaKonum = {
+              tesisId: parametreler.get('tesisId') || '',
+              x: Number(parametreler.get('x')) || 0,
+              y: Number(parametreler.get('y')) || 0
+            };
+            gorunumDegistirDetay('tahliye');
+            tahliyeAlaniModalAc(null);
+          }
         });
       }
     }

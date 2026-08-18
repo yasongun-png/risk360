@@ -115,6 +115,25 @@ const HARITA_DIS_KAYNAKLAR = {
       kontrolGecmisi: [], olusturmaTarihi: k.olusturmaTarihi, guncellemeTarihi: k.olusturmaTarihi
     })
   },
+  // Acil Durum Planı > Tahliye Planları (bina/kat bazlı kaçış yolu/toplanma/
+  // sığınma noktası kaydı) — bkz. modules/acil-durum plan-detay.html.
+  acilDurumTahliye: {
+    turler: ['tahliye_alani'],
+    tumunuGetir: () => tahliyeAlanlariTumunuGetir(),
+    idIleGetir: id => tahliyeAlaniIdIleGetirRepo(id),
+    konumGuncelle: (id, tesisId, x, y) => tahliyeAlaniGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
+    yeniKayitUrl: (tesisId, x, y) => `../acil-durum/plan-detay.html?yeniKonum=1&hedef=tahliye&tesisId=${tesisId}&x=${x}&y=${y}`,
+    acUrl: id => `../acil-durum/plan-detay.html?ac=${id}&hedef=tahliye`,
+    modulAdi: 'Acil Durum Planı (Tahliye)',
+    normallestir: k => ({
+      kaynak: 'acilDurumTahliye', kaynakId: k.id, id: 'x-adt-' + k.id, tesisId: k.haritaTesisId,
+      x: Number(k.haritaX) || 0, y: Number(k.haritaY) || 0,
+      tur: 'tahliye_alani', altTur: '', no: k.tahliyeNo, baslik: (k.binaAdi || 'Tahliye Noktası') + (k.katBolum ? ' — ' + k.katBolum : ''), aciklama: k.konum,
+      kat: k.katBolum || '', bolum: '', durum: 'Aktif', fotograflar: k.krokiGorseli ? [{ url: k.krokiGorseli }] : [],
+      ek: { 'Toplanma Alanı': k.toplanmaAlani, 'Kaçış Yolu': k.kacisYolu, 'Sığınma Alanı': k.siginmaAlani },
+      kontrolGecmisi: [], olusturmaTarihi: k.olusturmaTarihi, guncellemeTarihi: k.olusturmaTarihi
+    })
+  },
   // Bakım Onarım — Ekipman Envanteri. Kullanıcı isteği: "ekipman konumu
   // haritadan seçilebilsin, nokta olarak işaretlenebilsin".
   bakimEkipman: {
@@ -207,7 +226,7 @@ async function haritaSayfasiniBaslat() {
     const disKayit = kaynak.idIleGetir(odaklanId);
     if (disKayit && disKayit.haritaTesisId && state.tesisler.some(t => t.id === disKayit.haritaTesisId)) {
       state.aktifTesisId = disKayit.haritaTesisId;
-      const _odaklanOnEkleri = { acilDurumEkipman: 'ade', acilDurumYanginTupu: 'adyt', bakimEkipman: 'be' };
+      const _odaklanOnEkleri = { acilDurumEkipman: 'ade', acilDurumYanginTupu: 'adyt', acilDurumTahliye: 'adt', bakimEkipman: 'be' };
       odaklanacakMarkerId = 'x-' + (_odaklanOnEkleri[odaklanKaynak] || odaklanKaynak) + '-' + odaklanId;
     }
   } else if (konumKaynak && konumId && HARITA_DIS_KAYNAKLAR[konumKaynak]) {

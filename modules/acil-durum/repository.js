@@ -9,6 +9,9 @@ function _planAnahtari() { return tenantAnahtar('acil_durum_plani'); }
 function _tesisBilgiAnahtari() { return tenantAnahtar('acil_durum_tesis_bilgi'); }
 function _ekipTanimiAnahtari() { return tenantAnahtar('acil_durum_ekip_tanimlari'); }
 function _komutaPozisyonuAnahtari() { return tenantAnahtar('acil_durum_komuta_pozisyonlari'); }
+function _tahliyeAlaniAnahtari() { return tenantAnahtar('acil_durum_tahliye_planlari'); }
+function _kimyasalEkiAnahtari() { return tenantAnahtar('acil_durum_kimyasal_ekleri'); }
+function _krokiKontrolAnahtari() { return tenantAnahtar('acil_durum_kroki_kontrolleri'); }
 
 function _genelListeGetir(anahtarFn) { return oku(anahtarFn(), []); }
 function _genelListeKaydet(anahtarFn, liste) { yaz(anahtarFn(), liste); }
@@ -83,3 +86,22 @@ function komutaPozisyonuEkleRepo(k) { return _genelEkle(_komutaPozisyonuAnahtari
 function komutaPozisyonuGuncelleRepo(id, v) { return _genelGuncelle(_komutaPozisyonuAnahtari, id, v); }
 function komutaPozisyonuSilRepo(id) { _genelSil(_komutaPozisyonuAnahtari, id); }
 function komutaPozisyonuIdIleGetirRepo(id) { return komutaPozisyonlariTumunuGetir().find(x => x.id === id) || null; }
+
+function tahliyeAlanlariTumunuGetir() { return _genelListeGetir(_tahliyeAlaniAnahtari); }
+function tahliyeAlaniEkleRepo(k) { return _genelEkle(_tahliyeAlaniAnahtari, k); }
+function tahliyeAlaniGuncelleRepo(id, v) { return _genelGuncelle(_tahliyeAlaniAnahtari, id, v); }
+function tahliyeAlaniGuncelleRepoVeBekle(id, v) { return _genelGuncelleVeBekle(_tahliyeAlaniAnahtari, id, v); }
+function tahliyeAlaniSilRepo(id) { _genelSil(_tahliyeAlaniAnahtari, id); }
+function tahliyeAlaniIdIleGetirRepo(id) { return tahliyeAlanlariTumunuGetir().find(x => x.id === id) || null; }
+
+function kimyasalEkleriTumunuGetir() { return _genelListeGetir(_kimyasalEkiAnahtari); }
+function kimyasalEkiEkleRepo(k) { return _genelEkle(_kimyasalEkiAnahtari, k); }
+function kimyasalEkiGuncelleRepo(id, v) { return _genelGuncelle(_kimyasalEkiAnahtari, id, v); }
+function kimyasalEkiSilRepo(id) { _genelSil(_kimyasalEkiAnahtari, id); }
+function kimyasalEkiIdIleGetirRepo(id) { return kimyasalEkleriTumunuGetir().find(x => x.id === id) || null; }
+
+function krokiKontrolleriTumunuGetir() { return _genelListeGetir(_krokiKontrolAnahtari); }
+function krokiKontrolMaddesiEkleRepo(k) { return _genelEkle(_krokiKontrolAnahtari, k); }
+function krokiKontrolMaddesiGuncelleRepo(id, v) { return _genelGuncelle(_krokiKontrolAnahtari, id, v); }
+function krokiKontrolMaddesiSilRepo(id) { _genelSil(_krokiKontrolAnahtari, id); }
+function krokiKontrolMaddesiIdIleGetirRepo(id) { return krokiKontrolleriTumunuGetir().find(x => x.id === id) || null; }

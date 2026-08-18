@@ -959,3 +959,83 @@ function komutaPozisyonuOlustur(veriler) {
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
+
+// ---- Tahliye Planları (madde 9) ----
+
+// Bina/kat bazlı tahliye planı kaydı — Saha Dijital Haritası'na
+// haritaTesisId/haritaX/haritaY ile bağlanabilir (bkz. modules/harita/ui.js
+// HARITA_DIS_KAYNAKLAR.acilDurumTahliye, aynı desen ekipman/yangın tüpünde
+// olduğu gibi).
+function tahliyeAlaniOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    tahliyeNo: veriler.tahliyeNo || '',
+    binaAdi: (veriler.binaAdi || '').trim(),
+    katBolum: (veriler.katBolum || '').trim(),
+    konum: (veriler.konum || '').trim(),
+    kacisYolu: (veriler.kacisYolu || '').trim(),
+    alternatifKacisYolu: (veriler.alternatifKacisYolu || '').trim(),
+    merdiven: (veriler.merdiven || '').trim(),
+    cikis: (veriler.cikis || '').trim(),
+    toplanmaAlani: (veriler.toplanmaAlani || '').trim(),
+    sondurucuKonumu: (veriler.sondurucuKonumu || '').trim(),
+    ilkYardimNoktasi: (veriler.ilkYardimNoktasi || '').trim(),
+    acilDusKonumu: (veriler.acilDusKonumu || '').trim(),
+    gazElektrikKesmeNoktasi: (veriler.gazElektrikKesmeNoktasi || '').trim(),
+    alarmButonuKonumu: (veriler.alarmButonuKonumu || '').trim(),
+    telefonKonumu: (veriler.telefonKonumu || '').trim(),
+    tehlikeliAlanNotu: (veriler.tehlikeliAlanNotu || '').trim(),
+    siginmaAlani: (veriler.siginmaAlani || '').trim(),
+    krokiGorseli: veriler.krokiGorseli || '',
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
+
+    // Saha Dijital Haritası köprüsü — bkz. modules/acil-durum/ui.js
+    // _ekipmanKonumAlaniCiz ile aynı desen.
+    haritaTesisId: veriler.haritaTesisId || '',
+    haritaX: veriler.haritaX !== undefined ? veriler.haritaX : '',
+    haritaY: veriler.haritaY !== undefined ? veriler.haritaY : ''
+  };
+}
+
+// ---- Kimyasal Ekleri (madde 12) ----
+
+// modules/kimyasal envanterini KOPYALAMAZ — sadece kimyasalId ile referans
+// verir (kimyasalAdiOnbellek, kimyasal kaydı silinse bile listede anlamsız
+// kalmasın diye). Acil müdahaleye özel serbest metin alanları burada tutulur.
+function kimyasalEkiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    kimyasalId: veriler.kimyasalId || '',
+    kimyasalAdiOnbellek: (veriler.kimyasalAdiOnbellek || '').trim(),
+    ilkYardim: (veriler.ilkYardim || '').trim(),
+    yanginlaMucadele: (veriler.yanginlaMucadele || '').trim(),
+    dokulmeSizintiMudahalesi: (veriler.dokulmeSizintiMudahalesi || '').trim(),
+    izolasyonMesafesi: (veriler.izolasyonMesafesi || '').trim(),
+    solunumKorumasi: (veriler.solunumKorumasi || '').trim(),
+    tahliyeSiginmaKriteri: (veriler.tahliyeSiginmaKriteri || '').trim(),
+    atikYonetimi: (veriler.atikYonetimi || '').trim(),
+    ruzgarYonuYayilimSenaryosu: (veriler.ruzgarYonuYayilimSenaryosu || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
+// ---- Kroki Kontrolü (madde 21) ----
+
+const KROKI_UNSUR_TURLERI = [
+  'Kaçış Yolu', 'Acil Çıkış', 'Yangın Merdiveni', 'Yangın Söndürücü', 'Yangın Dolabı', 'Hidrant',
+  'Yangın Alarm Butonu', 'İlk Yardım Noktası', 'Acil Duş', 'Göz Duşu', 'Gaz Dedektörü',
+  'Elektrik Panosu', 'Ana Elektrik Kesici', 'Gaz/Kimyasal Vana', 'Toplanma Alanı', 'Acil Araç Girişi'
+];
+
+function krokiKontrolMaddesiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    binaAlan: (veriler.binaAlan || '').trim(),
+    unsurTuru: KROKI_UNSUR_TURLERI.includes(veriler.unsurTuru) ? veriler.unsurTuru : KROKI_UNSUR_TURLERI[0],
+    mevcutMu: !!veriler.mevcutMu,
+    eksiklikNotu: (veriler.eksiklikNotu || '').trim(),
+    sorumlu: (veriler.sorumlu || '').trim(),
+    termin: veriler.termin || '',
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}

@@ -6,6 +6,13 @@ let _pdGorunum = 'tesisBilgi';
 let _duzenlenenSenaryoId = null;
 let _duzenlenenEkipTanimiId = null;
 let _duzenlenenKomutaPozisyonuId = null;
+let _duzenlenenTahliyeAlaniId = null;
+let _duzenlenenKimyasalEkiId = null;
+let _duzenlenenKrokiKontrolId = null;
+
+// Saha Dijital Haritası köprüsü — bkz. modules/acil-durum/ui.js _bekleyenHaritaKonum
+// ile aynı desen (harita "Nokta Ekle" ile buraya dönüşte kullanılır).
+let _bekleyenHaritaKonum = null;
 
 function _pdKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -73,6 +80,24 @@ function planDetaySayfasiniBaslat(firma) {
   document.getElementById('komutaPozisyonuForm').addEventListener('submit', komutaPozisyonuFormGonderildi);
   document.getElementById('komutaStandartBtn').addEventListener('click', komutaStandartOlusturTiklandi);
 
+  // Tahliye Planları
+  document.getElementById('yeniTahliyeAlaniBtn').addEventListener('click', () => tahliyeAlaniModalAc());
+  document.getElementById('tahliyeAlaniModalKapatBtn').addEventListener('click', tahliyeAlaniModalKapat);
+  document.getElementById('tahliyeAlaniModalIptalBtn').addEventListener('click', tahliyeAlaniModalKapat);
+  document.getElementById('tahliyeAlaniForm').addEventListener('submit', tahliyeAlaniFormGonderildi);
+
+  // Kimyasal Ekleri
+  document.getElementById('yeniKimyasalEkiBtn').addEventListener('click', () => kimyasalEkiModalAc());
+  document.getElementById('kimyasalEkiModalKapatBtn').addEventListener('click', kimyasalEkiModalKapat);
+  document.getElementById('kimyasalEkiModalIptalBtn').addEventListener('click', kimyasalEkiModalKapat);
+  document.getElementById('kimyasalEkiForm').addEventListener('submit', kimyasalEkiFormGonderildi);
+
+  // Kroki Kontrolü
+  document.getElementById('yeniKrokiKontrolBtn').addEventListener('click', () => krokiKontrolModalAc());
+  document.getElementById('krokiKontrolModalKapatBtn').addEventListener('click', krokiKontrolModalKapat);
+  document.getElementById('krokiKontrolModalIptalBtn').addEventListener('click', krokiKontrolModalKapat);
+  document.getElementById('krokiKontrolForm').addEventListener('submit', krokiKontrolFormGonderildi);
+
   gorunumDegistirDetay('tesisBilgi');
 }
 
@@ -81,12 +106,15 @@ function gorunumDegistirDetay(gorunum) {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
-  ['tesisBilgi', 'senaryo', 'komuta'].forEach(g => {
+  ['tesisBilgi', 'senaryo', 'komuta', 'tahliye', 'kimyasal', 'kroki'].forEach(g => {
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
   if (gorunum === 'senaryo') senaryolariCiz('');
   else if (gorunum === 'komuta') { ekipTanimlariniCiz(); komutaPozisyonlariniCiz(); }
+  else if (gorunum === 'tahliye') tahliyeAlanlariniCiz();
+  else if (gorunum === 'kimyasal') kimyasalEkleriniCiz();
+  else if (gorunum === 'kroki') krokiKontrolleriniCiz();
 }
 
 // ==================== TESİS BİLGİ FORMU ====================
@@ -619,4 +647,299 @@ async function komutaStandartOlusturTiklandi() {
   const sonuc = komutaYapisiStandartOlustur();
   if (!sonuc.basarili) { alert(sonuc.hata); return; }
   komutaPozisyonlariniCiz();
+}
+
+// ==================== TAHLİYE PLANLARI ====================
+
+function tahliyeAlanlariniCiz() {
+  const govde = document.getElementById('tahliyeAlaniTabloGovde');
+  const bosDurum = document.getElementById('tahliyeAlaniBosDurum');
+  const liste = tahliyeAlanlariGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz tahliye planı eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(ta => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_pdKacir(ta.tahliyeNo)}</td>
+      <td>${_pdKacir(ta.binaAdi)}</td>
+      <td>${_pdKacir(ta.katBolum) || '-'}</td>
+      <td>${_pdKacir(ta.toplanmaAlani)}</td>
+      <td>${ta.haritaTesisId ? '📍 Haritada işaretli' : '-'}</td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${ta.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${ta.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => tahliyeAlaniModalAc(tahliyeAlaniIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu tahliye planını silmek istediğinize emin misiniz?', 'Sil')) { tahliyeAlaniSil(btn.getAttribute('data-sil')); tahliyeAlanlariniCiz(); }
+  }));
+}
+
+function tahliyeAlaniModalAc(tahliyeAlani) {
+  _duzenlenenTahliyeAlaniId = tahliyeAlani ? tahliyeAlani.id : null;
+  document.getElementById('tahliyeAlaniModalBaslik').textContent = tahliyeAlani ? 'Tahliye Planını Düzenle' : 'Yeni Tahliye Planı';
+  document.getElementById('taBinaAdi').value = tahliyeAlani ? tahliyeAlani.binaAdi : '';
+  document.getElementById('taKatBolum').value = tahliyeAlani ? tahliyeAlani.katBolum : '';
+  document.getElementById('taKonum').value = tahliyeAlani ? tahliyeAlani.konum : '';
+  document.getElementById('taKacisYolu').value = tahliyeAlani ? tahliyeAlani.kacisYolu : '';
+  document.getElementById('taAlternatifKacisYolu').value = tahliyeAlani ? tahliyeAlani.alternatifKacisYolu : '';
+  document.getElementById('taMerdiven').value = tahliyeAlani ? tahliyeAlani.merdiven : '';
+  document.getElementById('taCikis').value = tahliyeAlani ? tahliyeAlani.cikis : '';
+  document.getElementById('taToplanmaAlani').value = tahliyeAlani ? tahliyeAlani.toplanmaAlani : '';
+  document.getElementById('taSondurucuKonumu').value = tahliyeAlani ? tahliyeAlani.sondurucuKonumu : '';
+  document.getElementById('taIlkYardimNoktasi').value = tahliyeAlani ? tahliyeAlani.ilkYardimNoktasi : '';
+  document.getElementById('taAcilDusKonumu').value = tahliyeAlani ? tahliyeAlani.acilDusKonumu : '';
+  document.getElementById('taGazElektrikKesmeNoktasi').value = tahliyeAlani ? tahliyeAlani.gazElektrikKesmeNoktasi : '';
+  document.getElementById('taAlarmButonuKonumu').value = tahliyeAlani ? tahliyeAlani.alarmButonuKonumu : '';
+  document.getElementById('taTelefonKonumu').value = tahliyeAlani ? tahliyeAlani.telefonKonumu : '';
+  document.getElementById('taSiginmaAlani').value = tahliyeAlani ? tahliyeAlani.siginmaAlani : '';
+  document.getElementById('taTehlikeliAlanNotu').value = tahliyeAlani ? tahliyeAlani.tehlikeliAlanNotu : '';
+  _tahliyeAlaniKonumAlaniCiz(tahliyeAlani);
+  temizleFormHatalari('tahliyeAlaniForm');
+  document.getElementById('tahliyeAlaniModalKatman').classList.add('acik');
+}
+
+// Saha Dijital Haritası köprüsü — bkz. modules/acil-durum/ui.js
+// _ekipmanKonumAlaniCiz ile aynı desen.
+function _tahliyeAlaniKonumAlaniCiz(tahliyeAlani) {
+  const kutu = document.getElementById('tahliyeAlaniKonumAlani');
+  if (!kutu) return;
+  if (_bekleyenHaritaKonum && !tahliyeAlani) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">📍 Haritadan seçilen konum bu kayda kaydedilince eklenecek.</div>';
+    return;
+  }
+  if (!tahliyeAlani) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Konum eklemek için önce kaydı oluşturup tekrar açın.</div>';
+    return;
+  }
+  const donusUrl = encodeURIComponent(location.pathname + '?ac=' + tahliyeAlani.id + '&hedef=tahliye');
+  if (tahliyeAlani.haritaTesisId) {
+    kutu.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; font-size:13px;">
+        <span>📍 Haritada işaretli</span>
+        <button type="button" class="tablo-buton" id="tahliyeAlaniKonumGorBtn">Haritada Gör</button>
+      </div>`;
+    document.getElementById('tahliyeAlaniKonumGorBtn').addEventListener('click', () => {
+      window.location.href = `../harita/index.html?odaklanKaynak=acilDurumTahliye&odaklanId=${tahliyeAlani.id}`;
+    });
+  } else {
+    kutu.innerHTML = `<button type="button" class="tablo-buton" id="tahliyeAlaniKonumEkleBtn">📍 Haritada Konum Ekle</button>`;
+    document.getElementById('tahliyeAlaniKonumEkleBtn').addEventListener('click', () => {
+      window.location.href = `../harita/index.html?konumKaynak=acilDurumTahliye&konumId=${tahliyeAlani.id}&donus=${donusUrl}`;
+    });
+  }
+}
+
+function tahliyeAlaniModalKapat() {
+  document.getElementById('tahliyeAlaniModalKatman').classList.remove('acik');
+  _duzenlenenTahliyeAlaniId = null;
+}
+
+function tahliyeAlaniFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('tahliyeAlaniForm');
+
+  const veriler = {
+    binaAdi: document.getElementById('taBinaAdi').value,
+    katBolum: document.getElementById('taKatBolum').value,
+    konum: document.getElementById('taKonum').value,
+    kacisYolu: document.getElementById('taKacisYolu').value,
+    alternatifKacisYolu: document.getElementById('taAlternatifKacisYolu').value,
+    merdiven: document.getElementById('taMerdiven').value,
+    cikis: document.getElementById('taCikis').value,
+    toplanmaAlani: document.getElementById('taToplanmaAlani').value,
+    sondurucuKonumu: document.getElementById('taSondurucuKonumu').value,
+    ilkYardimNoktasi: document.getElementById('taIlkYardimNoktasi').value,
+    acilDusKonumu: document.getElementById('taAcilDusKonumu').value,
+    gazElektrikKesmeNoktasi: document.getElementById('taGazElektrikKesmeNoktasi').value,
+    alarmButonuKonumu: document.getElementById('taAlarmButonuKonumu').value,
+    telefonKonumu: document.getElementById('taTelefonKonumu').value,
+    siginmaAlani: document.getElementById('taSiginmaAlani').value,
+    tehlikeliAlanNotu: document.getElementById('taTehlikeliAlanNotu').value
+  };
+
+  if (!_duzenlenenTahliyeAlaniId && _bekleyenHaritaKonum) {
+    veriler.haritaTesisId = _bekleyenHaritaKonum.tesisId;
+    veriler.haritaX = _bekleyenHaritaKonum.x;
+    veriler.haritaY = _bekleyenHaritaKonum.y;
+  }
+
+  const sonuc = _duzenlenenTahliyeAlaniId ? tahliyeAlaniGuncelle(_duzenlenenTahliyeAlaniId, veriler) : tahliyeAlaniEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ta'); return; }
+
+  _bekleyenHaritaKonum = null;
+  tahliyeAlaniModalKapat();
+  tahliyeAlanlariniCiz();
+}
+
+// ==================== KİMYASAL EKLERİ ====================
+
+function kimyasalEkleriniCiz() {
+  const govde = document.getElementById('kimyasalEkiTabloGovde');
+  const bosDurum = document.getElementById('kimyasalEkiBosDurum');
+  const liste = kimyasalEkleriGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz kimyasal eki eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(ke => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_pdKacir(ke.kimyasalAdiOnbellek)}${ke.kimyasalBulunamadi ? ' <span style="color:var(--hata); font-size:11px;">(envanterde bulunamadı)</span>' : ''}</td>
+      <td style="max-width:220px; white-space:normal;">${_pdKacir(ke.ilkYardim) || '-'}</td>
+      <td style="max-width:220px; white-space:normal;">${_pdKacir(ke.yanginlaMucadele) || '-'}</td>
+      <td>${_pdKacir(ke.izolasyonMesafesi) || '-'}</td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${ke.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${ke.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kimyasalEkiModalAc(kimyasalEkiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kimyasal ekini silmek istediğinize emin misiniz?', 'Sil')) { kimyasalEkiSil(btn.getAttribute('data-sil')); kimyasalEkleriniCiz(); }
+  }));
+}
+
+function kimyasalEkiModalAc(kimyasalEki) {
+  _duzenlenenKimyasalEkiId = kimyasalEki ? kimyasalEki.id : null;
+  document.getElementById('kimyasalEkiModalBaslik').textContent = kimyasalEki ? 'Kimyasal Ekini Düzenle' : 'Yeni Kimyasal Eki';
+
+  const kimyasallar = kimyasalEnvanteriSecenekleriGetir();
+  document.getElementById('keKimyasalId').innerHTML = '<option value="">— Kimyasal seçiniz —</option>' +
+    kimyasallar.map(k => `<option value="${k.id}" ${kimyasalEki && kimyasalEki.kimyasalId === k.id ? 'selected' : ''}>${_pdKacir(k.ad)}${k.kimyasalNo ? ' (' + _pdKacir(k.kimyasalNo) + ')' : ''}</option>`).join('');
+
+  document.getElementById('keIlkYardim').value = kimyasalEki ? kimyasalEki.ilkYardim : '';
+  document.getElementById('keYanginlaMucadele').value = kimyasalEki ? kimyasalEki.yanginlaMucadele : '';
+  document.getElementById('keDokulmeSizintiMudahalesi').value = kimyasalEki ? kimyasalEki.dokulmeSizintiMudahalesi : '';
+  document.getElementById('keIzolasyonMesafesi').value = kimyasalEki ? kimyasalEki.izolasyonMesafesi : '';
+  document.getElementById('keSolunumKorumasi').value = kimyasalEki ? kimyasalEki.solunumKorumasi : '';
+  document.getElementById('keTahliyeSiginmaKriteri').value = kimyasalEki ? kimyasalEki.tahliyeSiginmaKriteri : '';
+  document.getElementById('keAtikYonetimi').value = kimyasalEki ? kimyasalEki.atikYonetimi : '';
+  document.getElementById('keRuzgarYonuYayilimSenaryosu').value = kimyasalEki ? kimyasalEki.ruzgarYonuYayilimSenaryosu : '';
+
+  temizleFormHatalari('kimyasalEkiForm');
+  document.getElementById('kimyasalEkiModalKatman').classList.add('acik');
+}
+
+function kimyasalEkiModalKapat() {
+  document.getElementById('kimyasalEkiModalKatman').classList.remove('acik');
+  _duzenlenenKimyasalEkiId = null;
+}
+
+function kimyasalEkiFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('kimyasalEkiForm');
+
+  const veriler = {
+    kimyasalId: document.getElementById('keKimyasalId').value,
+    ilkYardim: document.getElementById('keIlkYardim').value,
+    yanginlaMucadele: document.getElementById('keYanginlaMucadele').value,
+    dokulmeSizintiMudahalesi: document.getElementById('keDokulmeSizintiMudahalesi').value,
+    izolasyonMesafesi: document.getElementById('keIzolasyonMesafesi').value,
+    solunumKorumasi: document.getElementById('keSolunumKorumasi').value,
+    tahliyeSiginmaKriteri: document.getElementById('keTahliyeSiginmaKriteri').value,
+    atikYonetimi: document.getElementById('keAtikYonetimi').value,
+    ruzgarYonuYayilimSenaryosu: document.getElementById('keRuzgarYonuYayilimSenaryosu').value
+  };
+
+  const sonuc = _duzenlenenKimyasalEkiId ? kimyasalEkiGuncelle(_duzenlenenKimyasalEkiId, veriler) : kimyasalEkiEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ke'); return; }
+
+  kimyasalEkiModalKapat();
+  kimyasalEkleriniCiz();
+}
+
+// ==================== KROKİ KONTROLÜ ====================
+
+function krokiKontrolleriniCiz() {
+  const govde = document.getElementById('krokiKontrolTabloGovde');
+  const bosDurum = document.getElementById('krokiKontrolBosDurum');
+  const liste = krokiKontrolleriGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz kroki kontrol maddesi eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(kk => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_pdKacir(kk.binaAlan)}</td>
+      <td>${_pdKacir(kk.unsurTuru)}</td>
+      <td><span class="genel-rozet rozet-${kk.mevcutMu ? 'uygun' : 'uygun-degil'}">${kk.mevcutMu ? 'Evet' : 'Hayır'}</span></td>
+      <td style="max-width:220px; white-space:normal;">${_pdKacir(kk.eksiklikNotu) || '-'}</td>
+      <td>${_pdKacir(kk.sorumlu) || '-'}</td>
+      <td>${kk.termin || '-'}</td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${kk.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${kk.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => krokiKontrolModalAc(krokiKontrolMaddesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu kontrol maddesini silmek istediğinize emin misiniz?', 'Sil')) { krokiKontrolMaddesiSil(btn.getAttribute('data-sil')); krokiKontrolleriniCiz(); }
+  }));
+}
+
+function krokiKontrolModalAc(madde) {
+  _duzenlenenKrokiKontrolId = madde ? madde.id : null;
+  document.getElementById('krokiKontrolModalBaslik').textContent = madde ? 'Kontrol Maddesini Düzenle' : 'Yeni Kontrol Maddesi';
+  document.getElementById('kkBinaAlan').value = madde ? madde.binaAlan : '';
+  document.getElementById('kkUnsurTuru').innerHTML = KROKI_UNSUR_TURLERI.map(t => `<option ${madde && madde.unsurTuru === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('kkMevcutMu').checked = madde ? !!madde.mevcutMu : true;
+  document.getElementById('kkEksiklikNotu').value = madde ? madde.eksiklikNotu : '';
+  document.getElementById('kkSorumlu').value = madde ? madde.sorumlu : '';
+  document.getElementById('kkTermin').value = madde ? madde.termin : '';
+  temizleFormHatalari('krokiKontrolForm');
+  document.getElementById('krokiKontrolModalKatman').classList.add('acik');
+}
+
+function krokiKontrolModalKapat() {
+  document.getElementById('krokiKontrolModalKatman').classList.remove('acik');
+  _duzenlenenKrokiKontrolId = null;
+}
+
+function krokiKontrolFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('krokiKontrolForm');
+
+  const veriler = {
+    binaAlan: document.getElementById('kkBinaAlan').value,
+    unsurTuru: document.getElementById('kkUnsurTuru').value,
+    mevcutMu: document.getElementById('kkMevcutMu').checked,
+    eksiklikNotu: document.getElementById('kkEksiklikNotu').value,
+    sorumlu: document.getElementById('kkSorumlu').value,
+    termin: document.getElementById('kkTermin').value
+  };
+
+  const sonuc = _duzenlenenKrokiKontrolId ? krokiKontrolMaddesiGuncelle(_duzenlenenKrokiKontrolId, veriler) : krokiKontrolMaddesiEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'kk'); return; }
+
+  krokiKontrolModalKapat();
+  krokiKontrolleriniCiz();
 }
