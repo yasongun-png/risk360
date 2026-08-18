@@ -230,6 +230,12 @@ function yanginTupuOlustur(veriler) {
     kapasite: (veriler.kapasite || '').trim(),
     bolum: (veriler.bolum || '').trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
+    // Üretici etiketindeki bilgiler (bkz. modules/acil-durum/etiket-ocr.js) —
+    // tüpNo'dan (bizim iç takip numaramız) farklı olarak üreticinin bastığı
+    // seri numarası; tekrarlı etiket taramasında aynı tüpü tanımak için kullanılır.
+    seriNumarasi: (veriler.seriNumarasi || '').trim(),
+    uretici: (veriler.uretici || '').trim(),
+    uretimTarihi: (veriler.uretimTarihi || '').trim(),
     doluTarihi: veriler.doluTarihi || '',
     yillikBakimTarihi,
     sonrakiYillikBakim,

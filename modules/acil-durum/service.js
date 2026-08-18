@@ -184,6 +184,9 @@ function yanginTupuGuncelle(id, veriler) {
     kapasite: (veriler.kapasite || '').trim(),
     bolum: (veriler.bolum || '').trim(),
     lokasyon: veriler.lokasyon.trim(),
+    seriNumarasi: (veriler.seriNumarasi || '').trim(),
+    uretici: (veriler.uretici || '').trim(),
+    uretimTarihi: (veriler.uretimTarihi || '').trim(),
     doluTarihi: veriler.doluTarihi || '',
     yillikBakimTarihi: veriler.yillikBakimTarihi || '',
     sonrakiYillikBakim,
@@ -201,6 +204,16 @@ function yanginTupuSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yanginTupuSilRepo(id);
   return { basarili: true };
+}
+
+// Etiket taramasından (bkz. etiket-ocr.js) gelen seri numarasıyla envanterde
+// zaten kayıtlı bir tüp olup olmadığını arar — ui.js bu sonuca göre "zaten
+// listede" uyarısı gösterir, tekrar kayıt oluşturmayı otomatik ENGELLEMEZ
+// (kullanıcı isterse yine de yeni kayıt ekleyebilir).
+function yanginTupuSeriNumarasiIleBul(seriNumarasi) {
+  const aranan = (seriNumarasi || '').trim().toLowerCase();
+  if (!aranan) return null;
+  return yanginTupleriTumunuGetir().find(t => (t.seriNumarasi || '').trim().toLowerCase() === aranan) || null;
 }
 
 // ---- Tatbikatlar ----
