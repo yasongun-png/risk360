@@ -64,11 +64,8 @@ const EKIPMAN_KONTROL_SORULARI = {
   'Göz ve Boy Duşu': [
     { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz mi?' },
     { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli mi?' },
-    { id: 'sicaklik', soru: 'Su sıcaklığı uygun mu (ılık su)?' },
-    { id: 'aktivasyon', soru: 'Aktivasyon kolu/pedalı çalışıyor mu?' },
+    { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor mu?' },
     { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız mı?' },
-    { id: 'isaretleme', soru: 'Konum işaretlemesi (tabela) mevcut mu?' },
-    { id: 'testKaydi', soru: 'Periyodik test/akış kaydı güncel mi?' },
     { id: 'etrafiAcik', soru: 'Etrafında engel/malzeme yığılması yok mu?' }
   ],
   'Monitör': [
