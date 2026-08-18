@@ -40,7 +40,7 @@ const YANGIN_TUPU_TIPLERI = ['Kuru Kimyevi Toz (KKT)', 'CO2', 'Köpük', 'Su', '
 const YANGIN_TUPU_YILLIK_BAKIM_GUN = 365;
 const YANGIN_TUPU_HIDROSTATIK_TEST_GUN = 1460;
 
-// Saha kontrol kontrol listesi (madde bazlı Uygun/Uygun Değil/İlgili Değil) —
+// Saha kontrol listesi (madde bazlı Uygun/Uygun Değil/İlgili Değil) —
 // serbest metin "Bulgular" alanının yerine kullanıcı isteğiyle eklendi.
 const YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI = ['Uygun', 'Uygun Değil', 'İlgili Değil'];
 const YANGIN_TUPU_KONTROL_SORULARI = [

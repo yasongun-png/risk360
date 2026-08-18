@@ -135,7 +135,6 @@ const YANGIN_TUPU_IMPORT_KOLONLARI = [
   { anahtar: 'sonrakiHidrostatikTest', baslik: 'Sonraki Hidrostatik Test' },
   { anahtar: 'sorumlu', baslik: 'Sorumlu' },
   { anahtar: 'durum', baslik: 'Durum' },
-  { anahtar: 'bulgular', baslik: 'Bulgular' },
   { anahtar: 'notlar', baslik: 'Notlar' }
 ];
 
@@ -559,11 +558,15 @@ function yanginTupleriniCiz(aramaMetni) {
   bosDurum.classList.remove('gorunur');
 
   liste.forEach(t => {
+    const uygunDegilVarMi = Object.values(t.kontrolCevaplari || {}).some(c => c === 'Uygun Değil');
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${t.tupNo}</td><td>${t.seriNumarasi || '-'}</td><td>${t.tip}</td><td>${t.kapasite || '-'}</td><td>${t.lokasyon}</td>
       <td>${t.doluTarihi || '-'}</td><td>${t.sonrakiYillikBakim || '-'}</td><td>${t.sonrakiHidrostatikTest || '-'}</td>
-      <td><span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span></td>
+      <td>
+        <span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span>
+        ${uygunDegilVarMi ? '<span class="yanip-sonen-uyari" title="En az bir kontrol maddesi \'Uygun Değil\' işaretli">⚠️ Kontrol Eksik</span>' : ''}
+      </td>
       <td>
         <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
