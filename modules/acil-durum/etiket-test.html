@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCR Test (Tanı Sayfası)</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 16px; max-width: 640px; margin: 0 auto; }
+  button { padding: 12px 18px; font-size: 15px; margin: 4px 4px 4px 0; }
+  img { max-width: 100%; margin-top: 10px; border: 1px solid #ccc; }
+  pre { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border-radius: 6px; font-size: 13px; }
+  #hata { color: #b91c1c; font-weight: bold; white-space: pre-wrap; }
+  #durum { color: #374151; }
+</style>
+</head>
+<body>
+  <h2>OCR Tanı Sayfası (giriş gerektirmez)</h2>
+  <p>Bu sayfa uygulamanın geri kalanından bağımsız çalışır — sadece Tesseract.js'in bu cihazda/tarayıcıda
+  gerçekten çalışıp çalışmadığını ve ham çıktısını görmek için.</p>
+
+  <button id="cekBtn">📷 Fotoğraf Çek</button>
+  <button id="secBtn">🖼️ Galeriden Seç</button>
+  <input type="file" id="cekDosya" accept="image/*" capture="environment" style="display:none;">
+  <input type="file" id="secDosya" accept="image/*" style="display:none;">
+
+  <div id="onizleme"></div>
+  <p id="durum"></p>
+  <div id="hata"></div>
+  <h3>Ham OCR Metni</h3>
+  <pre id="hamMetin">(henüz taranmadı)</pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+  <script>
+    const durumEl = document.getElementById('durum');
+    const hataEl = document.getElementById('hata');
+    const hamMetinEl = document.getElementById('hamMetin');
+    const onizlemeEl = document.getElementById('onizleme');
+
+    document.getElementById('cekBtn').addEventListener('click', () => document.getElementById('cekDosya').click());
+    document.getElementById('secBtn').addEventListener('click', () => document.getElementById('secDosya').click());
+    document.getElementById('cekDosya').addEventListener('change', dosyaSecildi);
+    document.getElementById('secDosya').addEventListener('change', dosyaSecildi);
+
+    async function dosyaSecildi(e) {
+      const dosya = e.target.files[0];
+      e.target.value = '';
+      if (!dosya) return;
+
+      hataEl.textContent = '';
+      hamMetinEl.textContent = '(taranıyor...)';
+      onizlemeEl.innerHTML = `<img src="${URL.createObjectURL(dosya)}">`;
+      durumEl.textContent = 'Tesseract kütüphanesi kontrol ediliyor...';
+
+      try {
+        if (typeof Tesseract === 'undefined') {
+          throw new Error('Tesseract kütüphanesi hiç yüklenmedi (window.Tesseract tanımsız). CDN erişimi engelleniyor olabilir.');
+        }
+        durumEl.textContent = 'Tesseract yüklü. Worker oluşturuluyor (dil paketi indiriliyor, ilk seferde uzun sürebilir)...';
+
+        const worker = await Tesseract.createWorker('tur', 1, {
+          logger: m => {
+            durumEl.textContent = `Durum: ${m.status} — %${Math.round((m.progress || 0) * 100)}`;
+          }
+        });
+
+        durumEl.textContent = 'Worker hazır. PSM ayarlanıyor...';
+        await worker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
+
+        durumEl.textContent = 'Tanıma çalışıyor...';
+        const sonuc = await worker.recognize(dosya);
+        await worker.terminate();
+
+        const metin = (sonuc && sonuc.data && sonuc.data.text) || '';
+        hamMetinEl.textContent = metin.trim() ? metin : '(BOŞ — hiç metin bulunamadı)';
+        durumEl.textContent = 'Tamamlandı. Confidence: ' + (sonuc.data.confidence != null ? sonuc.data.confidence : 'bilinmiyor');
+      } catch (hata) {
+        console.error(hata);
+        hataEl.textContent = 'HATA: ' + (hata && hata.stack ? hata.stack : (hata && hata.message ? hata.message : String(hata)));
+        durumEl.textContent = 'Hata oluştu.';
+        hamMetinEl.textContent = '(hata nedeniyle taranamadı)';
+      }
+    }
+  </script>
+</body>
+</html>
