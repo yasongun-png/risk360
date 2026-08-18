@@ -9,6 +9,80 @@ const EKIP_TURLERI = ['Koordinasyon', 'Söndürme', 'Kurtarma', 'Koruma', 'İlk 
 const EKIP_ROLLERI = ['Acil Durum Sorumlusu', 'Acil Durum Koordinatörü', 'Ekip Başı', 'Ekip Üyesi', 'Gözetmen'];
 const VARDIYALAR = ['A', 'B', 'C', 'D', 'G', '08-16', '16-24', '00-08', 'Genel'];
 
+// "Acil Durum Ekibi Görevlendirme Yazısı" belge çıktısındaki (bkz.
+// gorevlendirme-cikti.js) GÖREV TANIMI madde listesi — kullanıcının
+// kurumundan paylaştığı gerçek görevlendirme yazılarından (6331 sayılı
+// Kanun/Yönetmelik Md.11 atıflı) birebir alınmıştır. EKIP_TURLERI'ndeki 6
+// türe ek olarak, ekipTuru alanına serbestçe girilebilen 3 özel değer daha
+// tanımlı: "Ekipbaşı" (hangi ekibe bağlı olduğu kaynak organizasyon
+// şemasında belirtilmemiş ekip liderleri), "Acil Durum Koordinatörü" ve
+// "Acil Durum Sorumlusu" (kişi bazlı liderlik pozisyonları, belirli bir
+// ekip türüne bağlı değil).
+const ACIL_DURUM_GOREV_TANIMLARI = {
+  'Söndürme': [
+    'İşyerinde meydana gelebilecek yangınlara, uygun söndürücü ve ekipmanlarla derhal müdahale eder.',
+    'Yangının yayılımını önler; can güvenliğini esas alarak söndürme faaliyetlerini yürütür.',
+    'Yangın sonrası bölgenin güvenli hale getirilmesini sağlar.',
+    'Söndürme ekipmanlarının periyodik kontrollerinin yapılmasını takip eder.'
+  ],
+  'Kurtarma': [
+    'Acil durumlarda mahsur kalan veya yaralanan kişilerin güvenli şekilde kurtarılmasını sağlar.',
+    'Kapalı alan, yüksek alan ve tehlikeli bölgelerde kurtarma işlemlerini gerçekleştirir.',
+    'Gerektiğinde ilk yardım ekibiyle koordineli çalışır.',
+    'Kurtarma faaliyetlerinde uygun KKD kullanımını sağlar.'
+  ],
+  'İlk Yardım': [
+    'Yaralanan veya etkilenen kişilere olay yerinde temel ilk yardım müdahalelerini yapar.',
+    'Sağlık kuruluşuna sevk edilene kadar gerekli desteği sağlar.',
+    'Kullanılan ilk yardım malzemelerinin yenilenmesini takip eder.',
+    'İlk yardım kayıtlarını düzenler ve İSG birimine bildirir.'
+  ],
+  'Koruma': [
+    'Acil durum sırasında tesis girişlerini ve kritik noktaları kontrol altında tutar, yetkisiz girişi engeller.',
+    'Tahliye edilen alanların ve toplanma bölgesinin güvenliğini sağlar.',
+    'Tesis içindeki değerli/tehlikeli malzeme ve ekipmanların korunmasını gözetir.',
+    'Dış kurum (itfaiye, ambulans, güvenlik) ekiplerinin sahaya yönlendirilmesine yardımcı olur.'
+  ],
+  'Destek': [
+    'İhtiyaç duyulan araç, gereç, malzeme ve lojistik desteği sağlar.',
+    'Ekipler arası haberleşme ve bilgi akışının sürdürülmesine yardımcı olur.',
+    'Acil durum sonrası temizlik, toparlanma ve normale dönüş çalışmalarına katılır.',
+    'Diğer ekiplerin ihtiyaç duyduğu her türlü destek faaliyetinde görev alır.'
+  ],
+  'Koordinasyon': [
+    'Ekipler arası bilgi akışının ve koordinasyonun sağlanmasına destek olur.',
+    'Acil Durum Koordinatörü ve Sorumlularına saha bilgisi aktarır.',
+    'Talimatların ilgili ekiplere iletilmesini sağlar.',
+    'Olay kayıtlarının tutulmasına yardımcı olur.'
+  ],
+  'Ekipbaşı': [
+    'Kendi ekibinin sevk, idare ve güvenliğinden sorumludur.',
+    'Ekibin acil durum anındaki görev dağılımını ve saha uygulamalarını yönetir.',
+    'Müdahale sonrası geri bildirimleri sorumluya rapor eder.',
+    'Ekipman ve araçların kullanıma hazır bulundurulmasını sağlar.'
+  ],
+  'Acil Durum Koordinatörü': [
+    'İşyerindeki acil durum organizasyonunun genel yönetiminden ve koordinasyonundan sorumludur.',
+    'Acil durumlarda tüm ekiplerin sevk ve idaresini sağlar; müdahale faaliyetlerinin bütünlüğünü gözetir.',
+    'Kamu kurum ve kuruluşlarıyla iletişimi sağlar ve gerekli bilgilendirmeleri yapar.',
+    'Olay sonrası değerlendirme, raporlama ve iyileştirme faaliyetlerinin yürütülmesini sağlar.'
+  ],
+  'Acil Durum Sorumlusu': [
+    'Kendi sorumluluğundaki tesis veya birimde acil durum faaliyetlerinin yürütülmesinden sorumludur.',
+    'Ekip başlarına ve personele gerekli talimatları verir; koordinatör ile sürekli iletişim halindedir.',
+    'Tahliye, toplanma ve güvenli bölge düzeninin korunmasını sağlar.',
+    'Olay sonrası geri bildirimleri ve tespitleri koordinatöre rapor eder.'
+  ]
+};
+const ACIL_DURUM_GOREV_TANIMI_VARSAYILAN = [
+  'Acil durumun giderilmesi için görevlendirildiği ekibin talimatları doğrultusunda hareket eder.',
+  'Kendisine verilen görevleri acil durum planına uygun şekilde yerine getirir.'
+];
+
+function acilDurumGorevTanimiGetir(ekipTuru) {
+  return ACIL_DURUM_GOREV_TANIMLARI[ekipTuru] || ACIL_DURUM_GOREV_TANIMI_VARSAYILAN;
+}
+
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
 const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
 

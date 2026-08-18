@@ -193,6 +193,11 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Ekipleri', _adFirma ? _adFirma.ad : '', EKIP_EXPORT_KOLONLARI, ekipUyeleriniGetir(document.getElementById('ekipAramaKutusu').value));
   });
+  // Kullanıcı isteği: "bu şekilde atama yapabileyim kişi bazında" — mevcut
+  // arama/filtrede görünen HERKES için ayrı sayfalarda görevlendirme yazısı.
+  document.getElementById('ekipGorevlendirmeTopluBtn').addEventListener('click', () => {
+    ekipGorevlendirmeYazisiWordOlustur(_adFirma, ekipUyeleriniGetir(document.getElementById('ekipAramaKutusu').value));
+  });
   document.getElementById('ekipIceAktarBtn').addEventListener('click', () => document.getElementById('ekipIceAktarDosya').click());
   document.getElementById('ekipIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
@@ -319,6 +324,7 @@ function ekipleriCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${rozetSinifAdi(u.durumGoruntu)}">${_adKacir(u.durumGoruntu)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${u.id}">Düzenle</button>
+        <button class="tablo-buton" data-yazi="${u.id}">Görevlendirme Yazısı</button>
         <button class="tablo-buton sil" data-sil="${u.id}">Sil</button>
       </td>
     `;
@@ -326,6 +332,10 @@ function ekipleriCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipModalAc(ekipUyesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-yazi]').forEach(btn => btn.addEventListener('click', () => {
+    const uye = ekipUyesiIdIleGetirRepo(btn.getAttribute('data-yazi'));
+    if (uye) ekipGorevlendirmeYazisiWordOlustur(_adFirma, [uye]);
+  }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekip üyesini silmek istediğinize emin misiniz?', 'Sil')) { ekipUyesiSil(btn.getAttribute('data-sil')); ekipleriCiz(document.getElementById('ekipAramaKutusu').value); }
   }));
