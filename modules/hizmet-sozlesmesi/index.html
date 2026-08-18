@@ -52,7 +52,7 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th>Sözleşme No / Görev</th><th>Ad Soyad</th><th>Belge No / Sınıfı</th><th>Başlangıç</th><th>Bitiş</th><th>Ayrılan Süre</th><th>Belge</th><th>Durum</th><th>İşlemler</th></tr>
+            <tr><th>Sözleşme No / Görev</th><th>Ad Soyad</th><th>Belge Sınıfı</th><th>Başlangıç</th><th>Bitiş</th><th>Ayrılan Süre</th><th>Belge</th><th>Durum</th><th>İşlemler</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>
@@ -125,16 +125,8 @@
           </div>
         </div>
 
-        <div class="form-satir-ikili">
-          <div>
-            <label for="belgeNo">Belge / Sertifika No</label>
-            <input type="text" id="belgeNo">
-          </div>
-          <div>
-            <label for="belgeSinifi">Belge Sınıfı <span style="color:var(--metin-soluk); font-weight:400;">(İSG Uzmanı için A/B/C)</span></label>
-            <input type="text" id="belgeSinifi">
-          </div>
-        </div>
+        <label for="belgeSinifi">Belge Sınıfı <span style="color:var(--metin-soluk); font-weight:400;">(İSG Uzmanı için A/B/C)</span></label>
+        <input type="text" id="belgeSinifi">
 
         <label for="hizmetFirmaId">Hizmet Verilen Firma / Sicil <span style="color:var(--metin-soluk); font-weight:400;">(Sicil Özeti raporuna dahil olması için)</span></label>
         <select id="hizmetFirmaId"><option value="">— Bağlantısız —</option></select>

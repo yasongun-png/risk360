@@ -123,7 +123,6 @@ function hizmetSozlesmesiSayfasiniBaslat() {
 const HIZMET_SOZLESMESI_IMPORT_KOLONLARI = [
   { anahtar: 'gorevTuru', baslik: 'Görev Türü' },
   { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
-  { anahtar: 'belgeNo', baslik: 'Belge / Sertifika No' },
   { anahtar: 'belgeSinifi', baslik: 'Belge Sınıfı' },
   { anahtar: 'sozlesmeBaslangicTarihi', baslik: 'Sözleşme Başlangıç Tarihi' },
   { anahtar: 'sozlesmeBitisTarihi', baslik: 'Sözleşme Bitiş Tarihi' },
@@ -136,7 +135,6 @@ const HIZMET_SOZLESMESI_EXPORT_KOLONLARI = [
   { anahtar: 'sozlesmeNo', baslik: 'Sözleşme No' },
   { anahtar: 'gorevTuru', baslik: 'Görev Türü' },
   { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
-  { anahtar: 'belgeNo', baslik: 'Belge / Sertifika No' },
   { anahtar: 'belgeSinifi', baslik: 'Belge Sınıfı' },
   { anahtar: 'baslangicGoruntu', baslik: 'Başlangıç' },
   { anahtar: 'bitisGoruntu', baslik: 'Bitiş' },
@@ -158,7 +156,6 @@ async function hizmetSozlesmesiniYazdir(id) {
   raporKartiYazdir('HİZMET SÖZLEŞMESİ — ' + k.sozlesmeNo, '', [
     { etiket: 'Görev Türü', deger: k.gorevTuru },
     { etiket: 'Ad Soyad', deger: k.adSoyad },
-    { etiket: 'Belge / Sertifika No', deger: k.belgeNo },
     { etiket: 'Belge Sınıfı', deger: k.belgeSinifi },
     { etiket: 'Sözleşme Başlangıç / Bitiş', deger: [gunAyYil(k.sozlesmeBaslangicTarihi), gunAyYil(k.sozlesmeBitisTarihi)].filter(Boolean).join(' / ') },
     { etiket: 'Ayrılan Süre', deger: k.ayrilanSure },
@@ -196,7 +193,7 @@ function hsKayitlariCiz(aramaMetni) {
     satir.innerHTML = `
       <td>${_hsKacir(k.sozlesmeNo)}<br><small style="color:var(--metin-soluk);">${_hsKacir(k.gorevTuru)}</small></td>
       <td>${_hsKacir(k.adSoyad)}</td>
-      <td>${_hsKacir(k.belgeNo) || '-'}${k.belgeSinifi ? ' — ' + _hsKacir(k.belgeSinifi) : ''}</td>
+      <td>${_hsKacir(k.belgeSinifi) || '-'}</td>
       <td>${gunAyYil(k.sozlesmeBaslangicTarihi) || '-'}</td>
       <td>${gunAyYil(k.sozlesmeBitisTarihi) || '-'}</td>
       <td>${_hsKacir(k.ayrilanSure) || '-'}</td>
@@ -243,7 +240,6 @@ function hsKayitModalAc(kayit) {
 
   document.getElementById('gorevTuru').innerHTML = HIZMET_GOREV_TURLERI.map(g => `<option ${kayit && kayit.gorevTuru === g ? 'selected' : ''}>${g}</option>`).join('');
   document.getElementById('adSoyad').value = kayit ? kayit.adSoyad : '';
-  document.getElementById('belgeNo').value = kayit ? kayit.belgeNo : '';
   document.getElementById('belgeSinifi').value = kayit ? kayit.belgeSinifi : '';
   document.getElementById('sozlesmeBaslangicTarihi').value = kayit ? kayit.sozlesmeBaslangicTarihi : bugunIso();
   document.getElementById('sozlesmeBitisTarihi').value = kayit ? kayit.sozlesmeBitisTarihi : '';
@@ -279,7 +275,6 @@ function hsFormGonderildi(e) {
   const veriler = {
     gorevTuru: document.getElementById('gorevTuru').value,
     adSoyad: document.getElementById('adSoyad').value,
-    belgeNo: document.getElementById('belgeNo').value,
     belgeSinifi: document.getElementById('belgeSinifi').value,
     sozlesmeBaslangicTarihi: document.getElementById('sozlesmeBaslangicTarihi').value,
     sozlesmeBitisTarihi: document.getElementById('sozlesmeBitisTarihi').value,
