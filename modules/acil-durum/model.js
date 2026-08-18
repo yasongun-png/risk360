@@ -10,7 +10,7 @@ const EKIP_ROLLERI = ['Acil Durum Sorumlusu', 'Acil Durum Koordinatörü', 'Ekip
 const VARDIYALAR = ['A', 'B', 'C', 'D', 'G', '08-16', '16-24', '00-08', 'Genel'];
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Diğer'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -27,7 +27,6 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Alarm / Siren': 'ALS',
   'Acil Aydınlatma': 'AAY',
   'Döküntü Kiti': 'DKT',
-  'Diğer': 'DGR',
   'Yangın Tüpü': 'YSC'
 };
 
@@ -106,12 +105,6 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'icerikEksiksiz', soru: 'İçerik eksiksiz mi (emici, eldiven, gözlük, torba vb.)?' },
     { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok mu?' },
     { id: 'talimat', soru: 'Kullanım talimatı mevcut mu?' }
-  ],
-  'Diğer': [
-    { id: 'erisim', soru: 'Ekipman erişilebilir konumda mı?' },
-    { id: 'fizikselDurum', soru: 'Ekipman fiziksel olarak sağlam/hasarsız mı?' },
-    { id: 'isaretleme', soru: 'Etiket/işaretleme mevcut mu?' },
-    { id: 'kontrolKaydi', soru: 'Periyodik kontrol kaydı güncel mi?' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
