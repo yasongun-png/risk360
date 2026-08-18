@@ -131,6 +131,7 @@ const EKIPMAN_EXPORT_KOLONLARI = [
 ];
 
 const YANGIN_TUPU_IMPORT_KOLONLARI = [
+  { anahtar: 'tupNo', baslik: 'Tüp No' },
   { anahtar: 'tip', baslik: 'Tip' },
   { anahtar: 'kapasite', baslik: 'Kapasite' },
   { anahtar: 'bolum', baslik: 'Bölüm' },
@@ -140,6 +141,7 @@ const YANGIN_TUPU_IMPORT_KOLONLARI = [
   { anahtar: 'uretimTarihi', baslik: 'Üretim Tarihi' },
   { anahtar: 'doluTarihi', baslik: 'Dolum Tarihi' },
   { anahtar: 'yillikBakimTarihi', baslik: 'Yıllık Bakım Tarihi' },
+  { anahtar: 'sonrakiYillikBakim', baslik: 'Sonraki Yıllık Bakım' },
   { anahtar: 'hidrostatikTestTarihi', baslik: 'Hidrostatik Test Tarihi' },
   { anahtar: 'sonrakiHidrostatikTest', baslik: 'Sonraki Hidrostatik Test' },
   { anahtar: 'sorumlu', baslik: 'Sorumlu' },
@@ -241,6 +243,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
       satirlar.forEach(satir => {
         satir.doluTarihi = excelTarihiNormallestir(satir.doluTarihi);
         satir.yillikBakimTarihi = excelTarihiNormallestir(satir.yillikBakimTarihi);
+        satir.sonrakiYillikBakim = excelTarihiNormallestir(satir.sonrakiYillikBakim);
         satir.hidrostatikTestTarihi = excelTarihiNormallestir(satir.hidrostatikTestTarihi);
         satir.sonrakiHidrostatikTest = excelTarihiNormallestir(satir.sonrakiHidrostatikTest);
         if (!['Aktif', 'Pasif', 'İptal'].includes(satir.durum)) satir.durum = 'Aktif';
