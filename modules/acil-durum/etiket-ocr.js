@@ -137,11 +137,29 @@ function _eoGoruntuOnIsle(dosya) {
 // isteğe bağlı — tarama sırasında ilerleme çubuğu göstermek için.
 async function yanginTupuEtiketiOku(dosya, ilerlemeCallback) {
   const islenmisGorsel = await _eoGoruntuOnIsle(dosya);
-  const sonuc = await Tesseract.recognize(islenmisGorsel, 'tur', {
+
+  // Deprecated Tesseract.recognize() kısayolu sayfa segmentasyon modunu
+  // (PSM) değiştirmeye izin vermiyor ve varsayılanı PSM.SINGLE_BLOCK — yani
+  // "tüm görüntü TEK biçimli metin bloğu" varsayıyor. Bizim fotoğrafımızda
+  // ise çerçevenin büyük kısmı düz kırmızı tüp gövdesi + QR kod + ayrı
+  // biçimli üst bilgi bloğu var; bu varsayım OCR'ın hiç metin bulamamasına
+  // ya da alakasız bölgeleri birbirine karıştırmasına (ör. "2024 he 5 dl"
+  // gibi anlamsız çıktılara) yol açıyordu. worker.setParameters ile
+  // PSM.SPARSE_TEXT'e geçiyoruz — "görüntüde nerede olursa olsun bulabildiğin
+  // kadar metni bul" modu, dağınık/karışık fotoğraflar için daha uygun.
+  const worker = await Tesseract.createWorker('tur', 1, {
     logger: m => {
       if (ilerlemeCallback && m.status === 'recognizing text') ilerlemeCallback(Math.round((m.progress || 0) * 100));
     }
   });
-  const hamMetin = (sonuc && sonuc.data && sonuc.data.text) || '';
+  let hamMetin = '';
+  try {
+    await worker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
+    const sonuc = await worker.recognize(islenmisGorsel);
+    hamMetin = (sonuc && sonuc.data && sonuc.data.text) || '';
+  } finally {
+    await worker.terminate();
+  }
+
   return { hamMetin, alanlar: _eoAlanlariAyikla(hamMetin) };
 }
