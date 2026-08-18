@@ -63,6 +63,9 @@
   <div class="modal-katman" id="modalKatman">
     <div class="modal-kutu" style="max-width:700px;">
       <h3 id="modalBaslik">Yeni Kimyasal Kaydı</h3>
+      <div class="form-bolum-baslik" style="margin-top:0;">SDS / GBF PDF'inden Otomatik Doldur <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel, PDF'i seçin - alanlar otomatik doldurulsun)</span></div>
+      <input type="file" id="sdsPdfDosya" accept="application/pdf">
+      <div id="sdsPdfSonucu" style="font-size:12px; color:var(--metin-soluk); margin:6px 0 14px;"></div>
       <form id="kimyasalForm">
         <div class="form-satir-ikili">
           <div>
@@ -207,6 +210,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="../../core/data.js"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
@@ -218,6 +222,7 @@
   <script src="validation.js"></script>
   <script src="repository.js"></script>
   <script src="service.js"></script>
+  <script src="sds-oku.js"></script>
   <script src="ui.js"></script>
   <script src="cikti.js"></script>
   <script>

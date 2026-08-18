@@ -44,6 +44,24 @@ function kimyasalSayfasiniBaslat() {
     }
   });
 
+  document.getElementById('sdsPdfDosya').addEventListener('change', async e => {
+    const dosya = e.target.files[0];
+    const sonucKutu = document.getElementById('sdsPdfSonucu');
+    if (!dosya) return;
+    sonucKutu.textContent = 'PDF okunuyor...';
+    try {
+      const metin = await sdsPdfMetniniOku(dosya);
+      const veri = sdsMetnindenVeriCikar(metin);
+      const dolanAlanlar = _kimSdsVerisiniFormaYaz(veri, dosya.name);
+      sonucKutu.innerHTML = dolanAlanlar.length
+        ? `✓ Şu alanlar dolduruldu: ${dolanAlanlar.join(', ')}. Kaydetmeden önce kontrol edin (özellikle H/P kodları ve firma isimlerindeki Türkçe karakterler bazı SDS'lerde bozuk çıkabilir).`
+        : 'Bu PDF metninden alan çıkarılamadı (taranmış görsel PDF olabilir). Alanları elle doldurun.';
+    } catch (hata) {
+      console.error(hata);
+      sonucKutu.textContent = 'PDF okunamadı: ' + (hata.message || hata);
+    }
+  });
+
   document.getElementById('sablonIndirBtn').addEventListener('click', () => excelSablonIndir(KIMYASAL_IMPORT_KOLONLARI, 'kimyasal_sablonu.xlsx'));
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
     const liste = kimyasallariGetir('', {}).map(k => Object.assign({}, k, {
@@ -145,6 +163,37 @@ function kimyasalOzetiVeUyarilariCiz() {
   uyariKutu.innerHTML = uyarilar.length
     ? `<div class="kart" style="margin-bottom:14px; border-color:#fca5a5;">${uyarilar.join('')}</div>`
     : '';
+}
+
+// sdsMetnindenVeriCikar() sonucunu forma yazar; sadece PDF'ten değer
+// çıkarılabilen alanlar doldurulur (boş dönenler formdaki mevcut değere
+// dokunmaz). Doldurulan alanların Türkçe etiket listesini döner.
+function _kimSdsVerisiniFormaYaz(veri, dosyaAdi) {
+  const dolanlar = [];
+  const yaz = (id, deger, etiket) => {
+    if (!deger) return;
+    document.getElementById(id).value = deger;
+    dolanlar.push(etiket);
+  };
+  yaz('ad', veri.ad, 'Kimyasal Adı');
+  yaz('ticariAdi', veri.ticariAdi, 'Ticari Adı');
+  yaz('casNo', veri.casNo, 'CAS No');
+  yaz('ecNo', veri.ecNo, 'EC No');
+  yaz('tedarikci', veri.tedarikci, 'Tedarikçi');
+  yaz('hKodlari', (veri.hKodlari || []).join('; '), 'H Kodları');
+  yaz('pKodlari', (veri.pKodlari || []).join('; '), 'P Kodları');
+  yaz('ghsPiktogramlari', (veri.ghsPiktogramlari || []).join('; '), 'GHS Piktogramları');
+  yaz('sdsRevizyonTarihi', veri.sdsRevizyonTarihi, 'Revizyon Tarihi');
+  if (veri.fizikselHali) {
+    const secim = document.getElementById('fizikselHali');
+    Array.from(secim.options).forEach(o => { o.selected = (o.value === veri.fizikselHali); });
+    dolanlar.push('Fiziksel Hali');
+  }
+  if (dosyaAdi) {
+    document.getElementById('sdsDosyaAdi').value = dosyaAdi;
+    dolanlar.push('Dosya Adı');
+  }
+  return dolanlar;
 }
 
 function _sdsGorseliOnizlemeCiz() {
@@ -251,6 +300,8 @@ function kimyasalModalAc(kayit) {
   document.getElementById('durum').innerHTML = KIMYASAL_DURUMLARI.map(d => `<option ${kayit && kayit.durum === d ? 'selected' : ''}>${d}</option>`).join('');
 
   document.querySelectorAll('#kimyasalForm .alan-hatasi').forEach(el => el.textContent = '');
+  document.getElementById('sdsPdfDosya').value = '';
+  document.getElementById('sdsPdfSonucu').textContent = '';
   document.getElementById('modalKatman').classList.add('acik');
 }
 
