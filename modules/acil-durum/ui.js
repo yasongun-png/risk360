@@ -314,6 +314,11 @@ function ekipleriCiz(aramaMetni) {
   uyeler.forEach(u => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td>
+        <button class="tablo-buton" data-duzenle="${u.id}">Düzenle</button>
+        <button class="tablo-buton" data-yazi="${u.id}">Görevlendirme Yazısı</button>
+        <button class="tablo-buton sil" data-sil="${u.id}">Sil</button>
+      </td>
       <td>${_adKacir(u.atamaNo)}</td>
       <td>${_adKacir(u.personelAdi)}</td>
       <td>${_adKacir(u.bolum) || '-'}</td>
@@ -322,11 +327,6 @@ function ekipleriCiz(aramaMetni) {
       <td>${_adKacir(u.vardiya)}</td>
       <td>${u.gecerlilikTarihi || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(u.durumGoruntu)}">${_adKacir(u.durumGoruntu)}</span></td>
-      <td>
-        <button class="tablo-buton" data-duzenle="${u.id}">Düzenle</button>
-        <button class="tablo-buton" data-yazi="${u.id}">Görevlendirme Yazısı</button>
-        <button class="tablo-buton sil" data-sil="${u.id}">Sil</button>
-      </td>
     `;
     govde.appendChild(satir);
   });
