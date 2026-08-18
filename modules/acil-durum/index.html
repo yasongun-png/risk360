@@ -107,10 +107,10 @@
           <button type="button" class="ikincil" id="yanginTupuDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="yanginTupuYazdirBtn">Yazdır</button>
           <button type="button" class="birincil" id="yeniYanginTupuBtn" style="width:auto;">+ Yangın Tüpü Ekle</button>
-          <button type="button" class="ikincil" id="yanginTupuEtiketTaraBtn">📷 Etiketten Ekle</button>
           <button type="button" class="ikincil" id="yanginTupuSeciliSilBtn">Seçilenleri Sil</button>
         </div>
       </div>
+      <div id="yanginTupuTurOzeti" style="margin-bottom:12px;"></div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead><tr><th style="width:36px;"><input type="checkbox" id="yanginTupuTumunuSecCheckbox"></th><th>İşlemler</th><th>Tüp No</th><th>Seri No</th><th>Tip</th><th>Kapasite</th><th>Lokasyon</th><th>Dolum Tarihi</th><th>Sonraki Yıllık Bakım</th><th>Sonraki Hidrostatik Test</th><th>Durum</th></tr></thead>
@@ -379,32 +379,6 @@
     </div>
   </div>
 
-  <!-- YANGIN TÜPÜ ETİKET TARAMA MODALI -->
-  <div class="modal-katman" id="yanginTupuEtiketModalKatman">
-    <div class="modal-kutu" style="max-width:560px;">
-      <h3>Etiketten Yangın Tüpü Ekle</h3>
-      <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;">
-        Tüpün üzerindeki metal etiketin fotoğrafını çekin/seçin. <b>En iyi sonuç için etikete iyice
-        yaklaşın</b> — kadrajda tüpün gövdesi değil, mümkün olduğunca sadece etiket görünsün; dik açıdan,
-        parlama/gölge olmadan net çekin. Metin tanıma (OCR) ile alanlar otomatik okunur ve "Yeni Yangın
-        Tüpü" formuna ön dolu olarak aktarılır — kaydetmeden önce mutlaka kontrol edin, okuma hataları olabilir.
-      </p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="ikincil" id="yanginTupuEtiketFotoCekBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Çek</button>
-        <button type="button" class="ikincil" id="yanginTupuEtiketFotoSecBtn" style="width:auto; padding:9px 16px;">🖼️ Galeriden Seç</button>
-      </div>
-      <input type="file" id="yanginTupuEtiketFotoCekDosya" accept="image/*" capture="environment" style="display:none;">
-      <input type="file" id="yanginTupuEtiketFotoDosya" accept="image/*" style="display:none;">
-      <div id="yanginTupuEtiketOnizleme" style="margin:10px 0;"></div>
-      <div id="yanginTupuEtiketDurum" style="font-size:13px; color:var(--metin-soluk);"></div>
-      <div id="yanginTupuEtiketSonuc"></div>
-      <div class="modal-eylemler">
-        <button type="button" class="ikincil" id="yanginTupuEtiketModalKapatBtn">Kapat</button>
-        <button type="button" class="birincil" id="yanginTupuEtiketFormaAktarBtn" style="width:auto; display:none;">Forma Aktar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- TATBİKAT MODAL -->
   <div class="modal-katman" id="tatbikatModalKatman">
     <div class="modal-kutu" style="max-width:600px;">
@@ -478,7 +452,6 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="../../core/data.js"></script>
@@ -496,7 +469,6 @@
   <script src="validation.js"></script>
   <script src="repository.js"></script>
   <script src="service.js"></script>
-  <script src="etiket-ocr.js"></script>
   <script src="kontrol-formu-cikti.js"></script>
   <script src="ui.js"></script>
   <script>

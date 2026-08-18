@@ -64,13 +64,6 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuForm').addEventListener('submit', yanginTupuFormGonderildi);
   document.getElementById('yanginTupuAramaKutusu').addEventListener('input', e => yanginTupleriniCiz(e.target.value));
   document.getElementById('yanginTupuSeriNumarasi').addEventListener('input', _yanginTupuSeriNumarasiUyariGuncelle);
-  document.getElementById('yanginTupuEtiketTaraBtn').addEventListener('click', yanginTupuEtiketModalAc);
-  document.getElementById('yanginTupuEtiketModalKapatBtn').addEventListener('click', yanginTupuEtiketModalKapat);
-  document.getElementById('yanginTupuEtiketFotoCekBtn').addEventListener('click', () => document.getElementById('yanginTupuEtiketFotoCekDosya').click());
-  document.getElementById('yanginTupuEtiketFotoCekDosya').addEventListener('change', yanginTupuEtiketFotoSecildi);
-  document.getElementById('yanginTupuEtiketFotoSecBtn').addEventListener('click', () => document.getElementById('yanginTupuEtiketFotoDosya').click());
-  document.getElementById('yanginTupuEtiketFotoDosya').addEventListener('change', yanginTupuEtiketFotoSecildi);
-  document.getElementById('yanginTupuEtiketFormaAktarBtn').addEventListener('click', yanginTupuEtiketAktar);
   document.getElementById('yanginTupuTumunuSecCheckbox').addEventListener('change', e => {
     document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
@@ -250,7 +243,9 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     excelDisaAktar(yanginTupleriniGetir(''), YANGIN_TUPU_EXPORT_KOLONLARI, 'acil_durum_yangin_tupleri.xlsx');
   });
   document.getElementById('yanginTupuYazdirBtn').addEventListener('click', () => {
-    raporListesiYazdir('Yangın Tüpleri', _adFirma ? _adFirma.ad : '', YANGIN_TUPU_EXPORT_KOLONLARI, yanginTupleriniGetir(document.getElementById('yanginTupuAramaKutusu').value));
+    const liste = yanginTupleriniGetir(document.getElementById('yanginTupuAramaKutusu').value);
+    const altBilgi = (_adFirma ? _adFirma.ad : '') + '<br>' + _yanginTupuTurOzetiHtml(liste);
+    raporListesiYazdir('Yangın Tüpleri', altBilgi, YANGIN_TUPU_EXPORT_KOLONLARI, liste);
   });
   document.getElementById('yanginTupuIceAktarBtn').addEventListener('click', () => document.getElementById('yanginTupuIceAktarDosya').click());
   document.getElementById('yanginTupuIceAktarDosya').addEventListener('change', e => {
@@ -649,10 +644,28 @@ function ekipmanFormGonderildi(e) {
 
 // ==================== YANGIN TÜPÜ ====================
 
+// Kullanıcı isteği: "kaç adet hangi türde yangın tüpü var onları da üstte
+// yazsın hatta uygulama ekranında da görebileyim" — tip+kapasite birleşimine
+// göre gruplanmış adet özeti; hem ekranda (bkz. #yanginTupuTurOzeti) hem de
+// yazdırma çıktısının başında (bkz. yanginTupuYazdirBtn) kullanılıyor.
+function _yanginTupuTurOzetiHtml(liste) {
+  if (!liste.length) return '';
+  const gruplar = {};
+  liste.forEach(t => {
+    const anahtar = [t.kapasite, t.tip].filter(Boolean).join(' ') || t.tip || 'Belirtilmemiş';
+    gruplar[anahtar] = (gruplar[anahtar] || 0) + 1;
+  });
+  const satirlar = Object.keys(gruplar).sort((a, b) => a.localeCompare(b, 'tr'))
+    .map(k => `<span style="display:inline-block; margin:0 14px 6px 0;"><b>${_adKacir(k)}</b>: ${gruplar[k]} adet</span>`).join('');
+  return `<div style="font-size:13px;"><b>Toplam ${liste.length} yangın tüpü</b> — ${satirlar}</div>`;
+}
+
 function yanginTupleriniCiz(aramaMetni) {
   const govde = document.getElementById('yanginTupuTabloGovde');
   const bosDurum = document.getElementById('yanginTupuBosDurum');
   const liste = yanginTupleriniGetir(aramaMetni);
+  const ozetKutusu = document.getElementById('yanginTupuTurOzeti');
+  if (ozetKutusu) ozetKutusu.innerHTML = _yanginTupuTurOzetiHtml(liste);
 
   govde.innerHTML = '';
   if (liste.length === 0) {
@@ -701,28 +714,25 @@ async function yanginTupuSeciliSil() {
   yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
 }
 
-// onSablon: etiket taramasından "Forma Aktar" ile açıldıysa ön dolu alan
-// objesi (bkz. yanginTupuEtiketAktar) — sadece yeni kayıtta (tup boşken) kullanılır.
-function yanginTupuModalAc(tup, onSablon) {
+function yanginTupuModalAc(tup) {
   _duzenlenenYanginTupuId = tup ? tup.id : null;
-  const sablon = (!tup && onSablon) ? onSablon : null;
   document.getElementById('yanginTupuModalBaslik').textContent = tup ? 'Yangın Tüpünü Düzenle' : 'Yeni Yangın Tüpü';
   document.getElementById('yanginTupuNo').value = tup ? tup.tupNo : '';
-  document.getElementById('yanginTupuTip').innerHTML = YANGIN_TUPU_TIPLERI.map(t => `<option ${(tup || sablon) && (tup || sablon).tip === t ? 'selected' : ''}>${t}</option>`).join('');
-  document.getElementById('yanginTupuKapasite').value = tup ? tup.kapasite : (sablon ? sablon.kapasite || '' : '');
+  document.getElementById('yanginTupuTip').innerHTML = YANGIN_TUPU_TIPLERI.map(t => `<option ${tup && tup.tip === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('yanginTupuKapasite').value = tup ? tup.kapasite : '';
   document.getElementById('yanginTupuBolum').value = tup ? tup.bolum : '';
-  document.getElementById('yanginTupuLokasyon').value = tup ? tup.lokasyon : (sablon ? sablon.lokasyon || '' : '');
-  document.getElementById('yanginTupuSeriNumarasi').value = tup ? tup.seriNumarasi : (sablon ? sablon.seriNumarasi || '' : '');
-  document.getElementById('yanginTupuUretici').value = tup ? tup.uretici : (sablon ? sablon.uretici || '' : '');
-  document.getElementById('yanginTupuUretimTarihi').value = tup ? tup.uretimTarihi : (sablon ? sablon.uretimTarihi || '' : '');
-  document.getElementById('yanginTupuDoluTarihi').value = tup ? tup.doluTarihi : (sablon ? sablon.doluTarihi || '' : '');
+  document.getElementById('yanginTupuLokasyon').value = tup ? tup.lokasyon : '';
+  document.getElementById('yanginTupuSeriNumarasi').value = tup ? tup.seriNumarasi : '';
+  document.getElementById('yanginTupuUretici').value = tup ? tup.uretici : '';
+  document.getElementById('yanginTupuUretimTarihi').value = tup ? tup.uretimTarihi : '';
+  document.getElementById('yanginTupuDoluTarihi').value = tup ? tup.doluTarihi : '';
   document.getElementById('yanginTupuYillikBakimTarihi').value = tup ? tup.yillikBakimTarihi : '';
-  document.getElementById('yanginTupuSonrakiYillikBakim').value = tup ? tup.sonrakiYillikBakim : (sablon ? sablon.sonrakiYillikBakim || '' : '');
+  document.getElementById('yanginTupuSonrakiYillikBakim').value = tup ? tup.sonrakiYillikBakim : '';
   document.getElementById('yanginTupuHidrostatikTestTarihi').value = tup ? tup.hidrostatikTestTarihi : '';
-  document.getElementById('yanginTupuSonrakiHidrostatikTest').value = tup ? tup.sonrakiHidrostatikTest : (sablon ? sablon.sonrakiHidrostatikTest || '' : '');
+  document.getElementById('yanginTupuSonrakiHidrostatikTest').value = tup ? tup.sonrakiHidrostatikTest : '';
   document.getElementById('yanginTupuSorumlu').value = tup ? tup.sorumlu : '';
   document.getElementById('yanginTupuDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${tup && tup.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('yanginTupuNotlar').value = tup ? tup.notlar : (sablon && sablon.firmaNotu ? 'Etiketten okunan firma bilgisi: ' + sablon.firmaNotu : '');
+  document.getElementById('yanginTupuNotlar').value = tup ? tup.notlar : '';
   _yanginTupuKontrolListesiCiz(tup);
   _yanginTupuKonumAlaniCiz(tup);
   _yanginTupuSeriNumarasiUyariGuncelle();
@@ -841,107 +851,6 @@ function yanginTupuFormGonderildi(e) {
   _bekleyenHaritaKonum = null;
   yanginTupuModalKapat();
   yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
-}
-
-// ---- Etiketten Ekle (OCR) ----
-// bkz. modules/acil-durum/etiket-ocr.js — Tesseract.js ile istemci tarafı
-// metin tanıma, AI/LLM YOK. Sonuç asla otomatik kaydedilmez.
-
-let _yanginTupuEtiketSonAlanlar = null;
-
-function yanginTupuEtiketModalAc() {
-  document.getElementById('yanginTupuEtiketOnizleme').innerHTML = '';
-  document.getElementById('yanginTupuEtiketDurum').textContent = '';
-  document.getElementById('yanginTupuEtiketSonuc').innerHTML = '';
-  document.getElementById('yanginTupuEtiketFormaAktarBtn').style.display = 'none';
-  _yanginTupuEtiketSonAlanlar = null;
-  document.getElementById('yanginTupuEtiketModalKatman').classList.add('acik');
-}
-
-function yanginTupuEtiketModalKapat() {
-  document.getElementById('yanginTupuEtiketModalKatman').classList.remove('acik');
-}
-
-async function yanginTupuEtiketFotoSecildi(e) {
-  const dosya = e.target.files[0];
-  e.target.value = '';
-  if (!dosya) return;
-
-  document.getElementById('yanginTupuEtiketOnizleme').innerHTML =
-    `<img src="${URL.createObjectURL(dosya)}" style="max-width:100%; max-height:220px; border-radius:8px; border:1px solid var(--kenarlik);">`;
-  document.getElementById('yanginTupuEtiketSonuc').innerHTML = '';
-  document.getElementById('yanginTupuEtiketFormaAktarBtn').style.display = 'none';
-  _yanginTupuEtiketSonAlanlar = null;
-
-  const durumEl = document.getElementById('yanginTupuEtiketDurum');
-  durumEl.textContent = 'Etiket okunuyor… (0%)';
-
-  try {
-    const { alanlar, hamMetin } = await yanginTupuEtiketiOku(dosya, yuzde => {
-      durumEl.textContent = `Etiket okunuyor… (${yuzde}%)`;
-    });
-    durumEl.textContent = 'Okuma tamamlandı — aşağıdaki alanları kontrol edip forma aktarın.';
-    _yanginTupuEtiketSonAlanlar = alanlar;
-    _yanginTupuEtiketSonucunuCiz(alanlar, hamMetin);
-  } catch (hata) {
-    console.error(hata);
-    durumEl.textContent = 'Etiket okunamadı: ' + (hata && hata.message ? hata.message : hata) + '. Bilgileri formda elle girebilirsiniz.';
-  }
-}
-
-function _yanginTupuEtiketSonucunuCiz(alanlar, hamMetin) {
-  const kutu = document.getElementById('yanginTupuEtiketSonuc');
-  const satir = (etiket, deger) => `<tr><td style="font-weight:600; padding:3px 8px 3px 0; white-space:nowrap;">${etiket}</td><td style="padding:3px 0;">${deger || '<span style="color:var(--metin-soluk);">okunamadı</span>'}</td></tr>`;
-
-  // OCR motoru gerçekten hiç metin bulamadıysa (fotoğrafta metin dışı alan
-  // ağır bastığında, ışık/netlik yetersiz olduğunda vb.) alan tablosunu
-  // "okunamadı" satırlarıyla doldurmak yerine tek bir açık uyarı gösterip
-  // fotoğrafı tekrar denemeyi öneriyoruz.
-  if (!hamMetin || !hamMetin.trim()) {
-    kutu.innerHTML = `
-      <div style="background:#fef2f2; border:1px solid #ef4444; border-radius:8px; padding:10px 14px; font-size:13px;">
-        ⚠ Fotoğrafta hiç metin tanınamadı. Etikete daha yakından, dik açıdan, parlama/gölge olmadan ve
-        net (bulanık olmayan) bir fotoğraf çekmeyi deneyin — sadece etiket kutusunun kadraja büyük
-        şekilde girmesi okuma başarısını artırır. Bilgileri formda elle de girebilirsiniz.
-      </div>
-    `;
-    document.getElementById('yanginTupuEtiketFormaAktarBtn').style.display = 'none';
-    return;
-  }
-
-  const eslesen = alanlar.seriNumarasi ? yanginTupuSeriNumarasiIleBul(alanlar.seriNumarasi) : null;
-  const uyariHtml = eslesen
-    ? `<div style="background:#fffbeb; border:1px solid #f59e0b; border-radius:8px; padding:8px 12px; margin:10px 0; font-size:13px;">
-        ⚠ Bu seri numaralı (${_adKacir(alanlar.seriNumarasi)}) tüp zaten listede: <b>${_adKacir(eslesen.tupNo)}</b> — ${_adKacir(eslesen.lokasyon) || 'lokasyon belirtilmemiş'}.
-        Yine de yeni kayıt olarak aktarabilir ya da bu pencereyi kapatıp mevcut kaydı düzenleyebilirsiniz.
-      </div>`
-    : '';
-
-  kutu.innerHTML = `
-    ${uyariHtml}
-    <table style="font-size:13px; width:100%;">
-      ${satir('Seri Numarası', alanlar.seriNumarasi)}
-      ${satir('Üretici', alanlar.uretici)}
-      ${satir('Tip', alanlar.tip)}
-      ${satir('Kapasite', alanlar.kapasite)}
-      ${satir('Bulunduğu Yer', alanlar.lokasyon)}
-      ${satir('Üretim Tarihi', alanlar.uretimTarihi)}
-      ${satir('Dolum Tarihi', alanlar.doluTarihi)}
-      ${satir('Tekrar Dolum Tarihi', alanlar.sonrakiYillikBakim)}
-      ${satir('Test Tarihi', alanlar.sonrakiHidrostatikTest)}
-    </table>
-    <details style="margin-top:8px; font-size:12px; color:var(--metin-soluk);">
-      <summary style="cursor:pointer;">Ham OCR metnini gör</summary>
-      <pre style="white-space:pre-wrap; font-size:11px; background:#f8fafc; padding:8px; border-radius:6px; margin-top:6px;">${_adKacir(hamMetin)}</pre>
-    </details>
-  `;
-  document.getElementById('yanginTupuEtiketFormaAktarBtn').style.display = '';
-}
-
-function yanginTupuEtiketAktar() {
-  const alanlar = _yanginTupuEtiketSonAlanlar || {};
-  yanginTupuEtiketModalKapat();
-  yanginTupuModalAc(null, alanlar);
 }
 
 // ==================== TATBİKAT ====================

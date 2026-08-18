@@ -243,10 +243,9 @@ function yanginTupuToplusil(idler) {
   return { basarili: true, silinen: tumu.length - kalanlar.length };
 }
 
-// Etiket taramasından (bkz. etiket-ocr.js) gelen seri numarasıyla envanterde
-// zaten kayıtlı bir tüp olup olmadığını arar — ui.js bu sonuca göre "zaten
-// listede" uyarısı gösterir, tekrar kayıt oluşturmayı otomatik ENGELLEMEZ
-// (kullanıcı isterse yine de yeni kayıt ekleyebilir).
+// Formdaki seri numarasıyla envanterde zaten kayıtlı bir tüp olup olmadığını
+// arar — ui.js bu sonuca göre "zaten listede" uyarısı gösterir, tekrar kayıt
+// oluşturmayı otomatik ENGELLEMEZ (kullanıcı isterse yine de yeni kayıt ekleyebilir).
 function yanginTupuSeriNumarasiIleBul(seriNumarasi) {
   const aranan = (seriNumarasi || '').trim().toLowerCase();
   if (!aranan) return null;
