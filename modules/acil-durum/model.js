@@ -298,7 +298,12 @@ function ekipUyesiOlustur(veriler) {
     atamaNo: veriler.atamaNo || '',
     personelId: veriler.personelId || '',
     personelAdi: (veriler.personelAdi || '').trim(),
+    sicilNo: (veriler.sicilNo || '').trim(),
     bolum: (veriler.bolum || '').trim(),
+    // Kullanıcı isteği: "fabrikadaki görevi" — kişinin işyerindeki asıl
+    // unvanı/görevi (bkz. personel modülü personel.gorev), acil durumdaki
+    // görevinden (ekipTuru) ayrı, bilgi amaçlı bir alan.
+    gorev: (veriler.gorev || '').trim(),
     ekipTuru: veriler.ekipTuru || 'Destek',
     rol: veriler.rol || 'Ekip Üyesi',
     vardiya: veriler.vardiya || 'Genel',

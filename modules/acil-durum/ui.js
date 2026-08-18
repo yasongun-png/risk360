@@ -90,24 +90,25 @@ function acilDurumSayfasiniBaslat(firma) {
 
 // ---- Excel / Rapor ----
 
+// Kullanıcı isteği: "çalıştığı bölüm, ad soyad, acil durumdaki görevi,
+// fabrikadaki görevi — acil durum ekipleri şablonu bu olacak" — içe/dışa
+// aktarma şablonu bu 4 alanla sınırlı (ekipTuru = acil durumdaki görevi,
+// gorev = fabrikadaki görevi/unvanı).
 const EKIP_IMPORT_KOLONLARI = [
-  { anahtar: 'personelAdi', baslik: 'Personel Adı' },
-  { anahtar: 'bolum', baslik: 'Bölüm' },
-  { anahtar: 'ekipTuru', baslik: 'Ekip Türü' },
-  { anahtar: 'rol', baslik: 'Rol' },
-  { anahtar: 'vardiya', baslik: 'Vardiya' },
-  { anahtar: 'telefon', baslik: 'Telefon' },
-  { anahtar: 'egitimTarihi', baslik: 'Eğitim Tarihi' }
+  { anahtar: 'sicilNo', baslik: 'Sicil No' },
+  { anahtar: 'bolum', baslik: 'Çalıştığı Bölüm' },
+  { anahtar: 'personelAdi', baslik: 'Ad Soyad' },
+  { anahtar: 'ekipTuru', baslik: 'Acil Durumdaki Görevi' },
+  { anahtar: 'gorev', baslik: 'Fabrikadaki Görevi' }
 ];
 
 const EKIP_EXPORT_KOLONLARI = [
   { anahtar: 'atamaNo', baslik: 'Atama No' },
-  { anahtar: 'personelAdi', baslik: 'Personel' },
-  { anahtar: 'bolum', baslik: 'Bölüm' },
-  { anahtar: 'ekipTuru', baslik: 'Ekip Türü' },
-  { anahtar: 'rol', baslik: 'Rol' },
-  { anahtar: 'vardiya', baslik: 'Vardiya' },
-  { anahtar: 'gecerlilikTarihi', baslik: 'Eğitim Geçerlilik' },
+  { anahtar: 'sicilNo', baslik: 'Sicil No' },
+  { anahtar: 'bolum', baslik: 'Çalıştığı Bölüm' },
+  { anahtar: 'personelAdi', baslik: 'Ad Soyad' },
+  { anahtar: 'ekipTuru', baslik: 'Acil Durumdaki Görevi' },
+  { anahtar: 'gorev', baslik: 'Fabrikadaki Görevi' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' }
 ];
 
@@ -338,7 +339,9 @@ function ekipleriCiz(aramaMetni) {
 function ekipPersonelSecildi() {
   const secim = document.getElementById('ekipPersonelId');
   const personel = personelIdIleGetirRepo(secim.value);
+  document.getElementById('ekipSicilNo').value = personel ? personel.sicilNo : '';
   document.getElementById('ekipBolum').value = personel ? personel.bolum : '';
+  document.getElementById('ekipGorev').value = personel ? personel.gorev : '';
 }
 
 function ekipModalAc(uye) {
@@ -349,7 +352,9 @@ function ekipModalAc(uye) {
   document.getElementById('ekipPersonelId').innerHTML = '<option value="">— Personel seçiniz —</option>' +
     personeller.map(p => `<option value="${p.id}" ${uye && uye.personelId === p.id ? 'selected' : ''}>${_adKacir(p.adSoyad)} (${_adKacir(p.sicilNo)})</option>`).join('');
 
+  document.getElementById('ekipSicilNo').value = uye ? uye.sicilNo : '';
   document.getElementById('ekipBolum').value = uye ? uye.bolum : '';
+  document.getElementById('ekipGorev').value = uye ? uye.gorev : '';
   document.getElementById('ekipTuru').innerHTML = EKIP_TURLERI.map(t => `<option ${uye && uye.ekipTuru === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('ekipRol').innerHTML = EKIP_ROLLERI.map(r => `<option ${uye && uye.rol === r ? 'selected' : ''}>${r}</option>`).join('');
   document.getElementById('ekipVardiya').innerHTML = VARDIYALAR.map(v => `<option ${uye && uye.vardiya === v ? 'selected' : ''}>${v}</option>`).join('');
@@ -376,7 +381,9 @@ function ekipFormGonderildi(e) {
   const veriler = {
     personelId: document.getElementById('ekipPersonelId').value,
     personelAdi: secilenPersonel ? secilenPersonel.adSoyad : '',
+    sicilNo: document.getElementById('ekipSicilNo').value,
     bolum: document.getElementById('ekipBolum').value,
+    gorev: document.getElementById('ekipGorev').value,
     ekipTuru: document.getElementById('ekipTuru').value,
     rol: document.getElementById('ekipRol').value,
     vardiya: document.getElementById('ekipVardiya').value,
@@ -660,15 +667,15 @@ function yanginTupleriniCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" data-yangin-tupu-sec data-id="${t.id}"></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
+      </td>
       <td>${t.tupNo}</td><td>${t.seriNumarasi || '-'}</td><td>${t.tip}</td><td>${t.kapasite || '-'}</td><td>${t.lokasyon}</td>
       <td>${t.doluTarihi || '-'}</td><td>${t.sonrakiYillikBakim || '-'}</td><td>${t.sonrakiHidrostatikTest || '-'}</td>
       <td>
         <span class="genel-rozet rozet-${rozetSinifAdi(t.durumGoruntu)}">${t.durumGoruntu}</span>
         ${uygunDegilVarMi ? '<span class="yanip-sonen-uyari" title="En az bir kontrol maddesi \'Uygun Değil\' işaretli">⚠️ Kontrol Eksik</span>' : ''}
-      </td>
-      <td>
-        <button class="tablo-buton" data-duzenle="${t.id}">Düzenle</button>
-        <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
       </td>
     `;
     govde.appendChild(satir);

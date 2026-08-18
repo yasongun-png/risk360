@@ -38,7 +38,9 @@ function ekipUyesiGuncelle(id, veriler) {
   const guncellenen = ekipUyesiGuncelleRepo(id, {
     personelId: veriler.personelId || '',
     personelAdi: veriler.personelAdi.trim(),
+    sicilNo: (veriler.sicilNo || '').trim(),
     bolum: (veriler.bolum || '').trim(),
+    gorev: (veriler.gorev || '').trim(),
     ekipTuru: veriler.ekipTuru,
     rol: veriler.rol || 'Ekip Üyesi',
     vardiya: veriler.vardiya || 'Genel',

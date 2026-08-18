@@ -113,7 +113,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th style="width:36px;"><input type="checkbox" id="yanginTupuTumunuSecCheckbox"></th><th>Tüp No</th><th>Seri No</th><th>Tip</th><th>Kapasite</th><th>Lokasyon</th><th>Dolum Tarihi</th><th>Sonraki Yıllık Bakım</th><th>Sonraki Hidrostatik Test</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th style="width:36px;"><input type="checkbox" id="yanginTupuTumunuSecCheckbox"></th><th>İşlemler</th><th>Tüp No</th><th>Seri No</th><th>Tip</th><th>Kapasite</th><th>Lokasyon</th><th>Dolum Tarihi</th><th>Sonraki Yıllık Bakım</th><th>Sonraki Hidrostatik Test</th><th>Durum</th></tr></thead>
           <tbody id="yanginTupuTabloGovde"></tbody>
         </table>
       </div>
@@ -151,12 +151,18 @@
         <select id="ekipPersonelId"></select>
         <div class="alan-hatasi" id="ekipPersonelAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
-        <label for="ekipBolum">Bölüm</label>
+        <label for="ekipSicilNo">Sicil No</label>
+        <input type="text" id="ekipSicilNo" readonly>
+
+        <label for="ekipBolum">Çalıştığı Bölüm</label>
         <input type="text" id="ekipBolum" readonly>
+
+        <label for="ekipGorev">Fabrikadaki Görevi</label>
+        <input type="text" id="ekipGorev" readonly>
 
         <div class="form-satir-ikili">
           <div>
-            <label for="ekipTuru">Ekip Türü</label>
+            <label for="ekipTuru">Ekip Türü <span style="color:var(--metin-soluk); font-weight:400;">(acil durumdaki görevi)</span></label>
             <select id="ekipTuru"></select>
             <div class="alan-hatasi" id="ekipEkipTuruHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
