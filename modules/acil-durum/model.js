@@ -59,13 +59,15 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'erisim', soru: 'Göz duşuna erişim engelsiz mi?' },
     { id: 'akisBasinc', soru: 'Su akışı ve basıncı yeterli mi?' },
     { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor mu?' },
-    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde mi?' }
+    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde mi?' },
+    { id: 'sariKapak', soru: 'Sarı kapakları var mı?' }
   ],
   'Göz ve Boy Duşu': [
     { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz mi?' },
     { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli mi?' },
     { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor mu?' },
     { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız mı?' },
+    { id: 'sariKapak', soru: 'Sarı kapakları var mı?' },
     { id: 'etrafiAcik', soru: 'Etrafında engel/malzeme yığılması yok mu?' }
   ],
   'Monitör': [
