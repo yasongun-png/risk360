@@ -37,6 +37,8 @@
       <button type="button" data-sekme="tahliye" class="sekme-seciliDegil">Tahliye Planları</button>
       <button type="button" data-sekme="kimyasal" class="sekme-seciliDegil">Kimyasal Ekleri</button>
       <button type="button" data-sekme="kroki" class="sekme-seciliDegil">Kroki Kontrolü</button>
+      <button type="button" data-sekme="disKurumlar" class="sekme-seciliDegil">Dış Kurumlar</button>
+      <button type="button" data-sekme="ozDenetim" class="sekme-seciliDegil">Öz Denetim &amp; Eylem Planı</button>
     </div>
 
     <!-- TESİS BİLGİ FORMU -->
@@ -177,6 +179,45 @@
         </table>
       </div>
       <div class="bos-durum" id="krokiKontrolBosDurum"></div>
+    </div>
+
+    <!-- DIŞ KURUMLAR -->
+    <div id="bolum-disKurumlar" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0;">İtfaiye, 112, AFAD, komşu tesis vb. dış kurumların iletişim ve koordinasyon bilgileri.</p>
+        <button type="button" class="birincil" id="yeniDisKurumBtn" style="width:auto;">+ Dış Kurum Ekle</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Tür</th><th>Kurum Adı</th><th>Telefon</th><th>Yetkili Kişi</th><th>İşlemler</th></tr></thead>
+          <tbody id="disKurumTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="disKurumBosDurum"></div>
+    </div>
+
+    <!-- ÖZ DENETİM & EYLEM PLANI -->
+    <div id="bolum-ozDenetim" style="display:none;">
+      <div class="form-bolum-baslik">Öz Denetim Kontrol Listesi</div>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-4px;">Her soruyu değerlendirin; "Hayır"/"Kısmen" cevapları eylem planına otomatik aktarılabilir.</p>
+      <div id="ozDenetimListesi"></div>
+      <div class="arac-cubugu" style="margin-top:10px;">
+        <div></div>
+        <button type="button" class="ikincil" id="ozDenetimindenEylemOlusturBtn">Eksiklerden Eylem Planı Oluştur</button>
+      </div>
+
+      <div class="form-bolum-baslik" style="margin-top:28px;">Eylem Planı</div>
+      <div class="arac-cubugu">
+        <div></div>
+        <button type="button" class="birincil" id="yeniEylemBtn" style="width:auto;">+ Eylem Ekle</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Eylem No</th><th>Kaynak</th><th>Eksiklik</th><th>Sorumlu</th><th>Termin</th><th>Öncelik</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="eylemTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="eylemBosDurum"></div>
     </div>
   </div>
 
@@ -504,6 +545,72 @@
         </div>
       </form>
       <button type="button" class="tablo-buton" id="krokiKontrolModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- DIŞ KURUM MODAL -->
+  <div class="modal-katman" id="disKurumModalKatman">
+    <div class="modal-kutu">
+      <h3 id="disKurumModalBaslik">Yeni Dış Kurum</h3>
+      <form id="disKurumForm">
+        <label for="dkTur">Tür</label>
+        <select id="dkTur"></select>
+        <label for="dkAd">Kurum Adı</label>
+        <input type="text" id="dkAd">
+        <div class="alan-hatasi" id="dkAdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="dkTelefon">Telefon</label>
+            <input type="text" id="dkTelefon">
+            <div class="alan-hatasi" id="dkTelefonHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div><label for="dkYetkiliKisi">Yetkili Kişi</label><input type="text" id="dkYetkiliKisi"></div>
+        </div>
+        <label for="dkKoordinasyonNotu">Koordinasyon Notu</label>
+        <textarea id="dkKoordinasyonNotu"></textarea>
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="disKurumModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="disKurumModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- EYLEM MODAL -->
+  <div class="modal-katman" id="eylemModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="eylemModalBaslik">Yeni Eylem</h3>
+      <form id="eylemForm">
+        <div class="form-satir-ikili">
+          <div><label for="eyKaynak">Kaynak</label><select id="eyKaynak"></select></div>
+          <div><label for="eyReferans">Referans</label><input type="text" id="eyReferans"></div>
+        </div>
+        <label for="eyEksiklik">Eksiklik</label>
+        <textarea id="eyEksiklik"></textarea>
+        <div class="alan-hatasi" id="eyEksiklikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <label for="eyRisk">Risk</label>
+        <textarea id="eyRisk"></textarea>
+        <label for="eyDuzelticiFaaliyet">Düzeltici Faaliyet</label>
+        <textarea id="eyDuzelticiFaaliyet"></textarea>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="eySorumlu">Sorumlu</label>
+            <input type="text" id="eySorumlu">
+            <div class="alan-hatasi" id="eySorumluHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div><label for="eyTermin">Termin</label><input type="date" id="eyTermin"></div>
+        </div>
+        <div class="form-satir-ikili">
+          <div><label for="eyOncelik">Öncelik</label><select id="eyOncelik"></select></div>
+          <div><label for="eyDurum">Durum</label><select id="eyDurum"></select></div>
+        </div>
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="eylemModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="eylemModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 

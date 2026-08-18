@@ -28,6 +28,16 @@ function acilDurumSayfasiniBaslat(firma) {
     btn.addEventListener('click', () => gorunumDegistir(btn.getAttribute('data-sekme')));
   });
 
+  // Katlanabilir form bölümleri (bkz. plan-detay-ui.js planDetaySayfasiniBaslat
+  // ile aynı genel desen — bu sayfada şimdilik yalnızca tatbikat KPI bölümü kullanıyor).
+  document.querySelectorAll('.form-bolum-baslik.katlanir').forEach(baslik => {
+    baslik.addEventListener('click', () => {
+      baslik.classList.toggle('kapali');
+      const icerik = baslik.nextElementSibling;
+      if (icerik && icerik.classList.contains('form-bolum-icerik')) icerik.classList.toggle('kapali');
+    });
+  });
+
   // Ekipler
   document.getElementById('yeniEkipBtn').addEventListener('click', () => ekipModalAc());
   document.getElementById('ekipModalKapatBtn').addEventListener('click', ekipModalKapat);
@@ -694,6 +704,15 @@ function tatbikatModalAc(tatbikat) {
   document.getElementById('tatbikatDurum').innerHTML = ['Planlandı', 'Tamamlandı', 'Ertelendi', 'İptal'].map(d => `<option ${tatbikat && tatbikat.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('tatbikatBulgular').value = tatbikat ? tatbikat.bulgular : '';
   document.getElementById('tatbikatAksiyonlar').value = tatbikat ? tatbikat.aksiyonlar : '';
+  document.getElementById('tatbikatAlarmVerilmeSuresi').value = tatbikat ? tatbikat.alarmVerilmeSuresi : '';
+  document.getElementById('tatbikatIlkMudahaleSuresi').value = tatbikat ? tatbikat.ilkMudahaleSuresi : '';
+  document.getElementById('tatbikatTahliyeSuresi').value = tatbikat ? tatbikat.tahliyeSuresi : '';
+  document.getElementById('tatbikatToplanmaSuresi').value = tatbikat ? tatbikat.toplanmaSuresi : '';
+  document.getElementById('tatbikatSayimSuresi').value = tatbikat ? tatbikat.sayimSuresi : '';
+  document.getElementById('tatbikatEksikPersonelTespitSuresi').value = tatbikat ? tatbikat.eksikPersonelTespitSuresi : '';
+  document.getElementById('tatbikatItfaiyeErisimSuresi').value = tatbikat ? tatbikat.itfaiyeErisimSuresi : '';
+  document.getElementById('tatbikatHaberlesmeSuresi').value = tatbikat ? tatbikat.haberlesmeSuresi : '';
+  document.getElementById('tatbikatEkipUlasmaSuresi').value = tatbikat ? tatbikat.ekipUlasmaSuresi : '';
   temizleFormHatalari('tatbikatForm');
   document.getElementById('tatbikatModalKatman').classList.add('acik');
 }
@@ -716,7 +735,16 @@ function tatbikatFormGonderildi(e) {
     katilimciSayisi: document.getElementById('tatbikatKatilimciSayisi').value,
     durum: document.getElementById('tatbikatDurum').value,
     bulgular: document.getElementById('tatbikatBulgular').value,
-    aksiyonlar: document.getElementById('tatbikatAksiyonlar').value
+    aksiyonlar: document.getElementById('tatbikatAksiyonlar').value,
+    alarmVerilmeSuresi: document.getElementById('tatbikatAlarmVerilmeSuresi').value,
+    ilkMudahaleSuresi: document.getElementById('tatbikatIlkMudahaleSuresi').value,
+    tahliyeSuresi: document.getElementById('tatbikatTahliyeSuresi').value,
+    toplanmaSuresi: document.getElementById('tatbikatToplanmaSuresi').value,
+    sayimSuresi: document.getElementById('tatbikatSayimSuresi').value,
+    eksikPersonelTespitSuresi: document.getElementById('tatbikatEksikPersonelTespitSuresi').value,
+    itfaiyeErisimSuresi: document.getElementById('tatbikatItfaiyeErisimSuresi').value,
+    haberlesmeSuresi: document.getElementById('tatbikatHaberlesmeSuresi').value,
+    ekipUlasmaSuresi: document.getElementById('tatbikatEkipUlasmaSuresi').value
   };
 
   const sonuc = _duzenlenenTatbikatId ? tatbikatGuncelle(_duzenlenenTatbikatId, veriler) : tatbikatEkle(veriler);

@@ -66,3 +66,17 @@ function krokiKontrolMaddesiDogrula(veriler) {
   if (!veriler.unsurTuru) hatalar.unsurTuru = 'Unsur türü zorunludur.';
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
+
+function disKurumDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.ad || !veriler.ad.trim()) hatalar.ad = 'Kurum adı zorunludur.';
+  if (!veriler.telefon || !veriler.telefon.trim()) hatalar.telefon = 'Telefon zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
+function eylemPlaniMaddesiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.eksiklik || !veriler.eksiklik.trim()) hatalar.eksiklik = 'Eksiklik açıklaması zorunludur.';
+  if (!veriler.sorumlu || !veriler.sorumlu.trim()) hatalar.sorumlu = 'Sorumlu zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}

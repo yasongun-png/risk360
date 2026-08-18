@@ -134,6 +134,25 @@ function _maAcilDurumdanTopla() {
     }));
 }
 
+// Acil Durum Planı — Planlama Merkezi'nin Öz Denetim & Eylem Planı sekmesinde
+// tutulan eylem planı maddeleri (bkz. modules/acil-durum/model.js
+// eylemPlaniMaddesiOlustur, service.js eylemPlaniGetir).
+function _maAcilDurumEylemPlanindanTopla() {
+  const kapali = ['Tamamlandı', 'İptal'];
+  return oku(tenantAnahtar('acil_durum_eylem_plani'), [])
+    .filter(e => !kapali.includes(e.durum) && e.termin)
+    .map(e => _maSatirOlustur({
+      kaynakModul: 'Acil Durum',
+      kaynakNo: e.eylemNo,
+      baslik: e.eksiklik,
+      sorumlu: e.sorumlu,
+      termin: e.termin,
+      durum: e.durum,
+      kapaliDurumlar: kapali,
+      baglanti: '../acil-durum/plan-detay.html'
+    }));
+}
+
 function _maKkdZimmettenTopla() {
   const terminal = ['İade Edildi', 'Kayıp', 'Hasarlı', 'İptal'];
   return oku(tenantAnahtar('kkd_zimmetler'), [])
@@ -176,6 +195,7 @@ function merkeziAksiyonlariGetir(aramaMetni, filtreler) {
     _maRisktenTopla(),
     _maOlayKazadanTopla(),
     _maAcilDurumdanTopla(),
+    _maAcilDurumEylemPlanindanTopla(),
     _maKkdZimmettenTopla(),
     _maBakimTaleptenTopla()
   );

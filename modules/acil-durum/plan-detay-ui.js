@@ -9,6 +9,8 @@ let _duzenlenenKomutaPozisyonuId = null;
 let _duzenlenenTahliyeAlaniId = null;
 let _duzenlenenKimyasalEkiId = null;
 let _duzenlenenKrokiKontrolId = null;
+let _duzenlenenDisKurumId = null;
+let _duzenlenenEylemId = null;
 
 // Saha Dijital Haritası köprüsü — bkz. modules/acil-durum/ui.js _bekleyenHaritaKonum
 // ile aynı desen (harita "Nokta Ekle" ile buraya dönüşte kullanılır).
@@ -98,6 +100,19 @@ function planDetaySayfasiniBaslat(firma) {
   document.getElementById('krokiKontrolModalIptalBtn').addEventListener('click', krokiKontrolModalKapat);
   document.getElementById('krokiKontrolForm').addEventListener('submit', krokiKontrolFormGonderildi);
 
+  // Dış Kurumlar
+  document.getElementById('yeniDisKurumBtn').addEventListener('click', () => disKurumModalAc());
+  document.getElementById('disKurumModalKapatBtn').addEventListener('click', disKurumModalKapat);
+  document.getElementById('disKurumModalIptalBtn').addEventListener('click', disKurumModalKapat);
+  document.getElementById('disKurumForm').addEventListener('submit', disKurumFormGonderildi);
+
+  // Öz Denetim & Eylem Planı
+  document.getElementById('ozDenetimindenEylemOlusturBtn').addEventListener('click', ozDenetimindenEylemOlusturTiklandi);
+  document.getElementById('yeniEylemBtn').addEventListener('click', () => eylemModalAc());
+  document.getElementById('eylemModalKapatBtn').addEventListener('click', eylemModalKapat);
+  document.getElementById('eylemModalIptalBtn').addEventListener('click', eylemModalKapat);
+  document.getElementById('eylemForm').addEventListener('submit', eylemFormGonderildi);
+
   gorunumDegistirDetay('tesisBilgi');
 }
 
@@ -106,7 +121,7 @@ function gorunumDegistirDetay(gorunum) {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
-  ['tesisBilgi', 'senaryo', 'komuta', 'tahliye', 'kimyasal', 'kroki'].forEach(g => {
+  ['tesisBilgi', 'senaryo', 'komuta', 'tahliye', 'kimyasal', 'kroki', 'disKurumlar', 'ozDenetim'].forEach(g => {
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
@@ -115,6 +130,8 @@ function gorunumDegistirDetay(gorunum) {
   else if (gorunum === 'tahliye') tahliyeAlanlariniCiz();
   else if (gorunum === 'kimyasal') kimyasalEkleriniCiz();
   else if (gorunum === 'kroki') krokiKontrolleriniCiz();
+  else if (gorunum === 'disKurumlar') disKurumlariniCiz();
+  else if (gorunum === 'ozDenetim') { ozDenetimListesiniCiz(); eylemleriCiz(); }
 }
 
 // ==================== TESİS BİLGİ FORMU ====================
@@ -942,4 +959,201 @@ function krokiKontrolFormGonderildi(e) {
 
   krokiKontrolModalKapat();
   krokiKontrolleriniCiz();
+}
+
+// ==================== DIŞ KURUMLAR ====================
+
+function disKurumlariniCiz() {
+  const govde = document.getElementById('disKurumTabloGovde');
+  const bosDurum = document.getElementById('disKurumBosDurum');
+  const liste = disKurumlariGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz dış kurum eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(dk => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_pdKacir(dk.tur)}</td>
+      <td>${_pdKacir(dk.ad)}</td>
+      <td>${_pdKacir(dk.telefon)}</td>
+      <td>${_pdKacir(dk.yetkiliKisi) || '-'}</td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${dk.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${dk.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => disKurumModalAc(disKurumIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu dış kurum kaydını silmek istediğinize emin misiniz?', 'Sil')) { disKurumSil(btn.getAttribute('data-sil')); disKurumlariniCiz(); }
+  }));
+}
+
+function disKurumModalAc(disKurum) {
+  _duzenlenenDisKurumId = disKurum ? disKurum.id : null;
+  document.getElementById('disKurumModalBaslik').textContent = disKurum ? 'Dış Kurumu Düzenle' : 'Yeni Dış Kurum';
+  document.getElementById('dkTur').innerHTML = DIS_KURUM_TURLERI.map(t => `<option ${disKurum && disKurum.tur === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('dkAd').value = disKurum ? disKurum.ad : '';
+  document.getElementById('dkTelefon').value = disKurum ? disKurum.telefon : '';
+  document.getElementById('dkYetkiliKisi').value = disKurum ? disKurum.yetkiliKisi : '';
+  document.getElementById('dkKoordinasyonNotu').value = disKurum ? disKurum.koordinasyonNotu : '';
+  temizleFormHatalari('disKurumForm');
+  document.getElementById('disKurumModalKatman').classList.add('acik');
+}
+
+function disKurumModalKapat() {
+  document.getElementById('disKurumModalKatman').classList.remove('acik');
+  _duzenlenenDisKurumId = null;
+}
+
+function disKurumFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('disKurumForm');
+
+  const veriler = {
+    tur: document.getElementById('dkTur').value,
+    ad: document.getElementById('dkAd').value,
+    telefon: document.getElementById('dkTelefon').value,
+    yetkiliKisi: document.getElementById('dkYetkiliKisi').value,
+    koordinasyonNotu: document.getElementById('dkKoordinasyonNotu').value
+  };
+
+  const sonuc = _duzenlenenDisKurumId ? disKurumGuncelle(_duzenlenenDisKurumId, veriler) : disKurumEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'dk'); return; }
+
+  disKurumModalKapat();
+  disKurumlariniCiz();
+}
+
+// ==================== ÖZ DENETİM & EYLEM PLANI ====================
+
+function ozDenetimListesiniCiz() {
+  const kutu = document.getElementById('ozDenetimListesi');
+  const ozDenetim = ozDenetimGetirVeyaOlustur();
+
+  kutu.innerHTML = ACIL_DURUM_OZ_DENETIM_SORULARI.map(s => {
+    const cevap = ozDenetim.cevaplar[s.id] || { cevap: '', not: '' };
+    return `
+      <div style="border:1px solid var(--kenarlik); border-radius:8px; padding:12px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">${_pdKacir(s.soru)}</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <select data-oz-soru="${s.id}" style="width:auto;">
+            <option value="">— Seçiniz —</option>
+            ${OZ_DENETIM_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${cevap.cevap === o ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+          <input type="text" data-oz-not="${s.id}" placeholder="Not (opsiyonel)" value="${_pdKacir(cevap.not)}" style="flex:1; min-width:180px;">
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  kutu.querySelectorAll('[data-oz-soru]').forEach(sel => sel.addEventListener('change', () => _ozDenetimSoruKaydet(sel.getAttribute('data-oz-soru'))));
+  kutu.querySelectorAll('[data-oz-not]').forEach(inp => inp.addEventListener('change', () => _ozDenetimSoruKaydet(inp.getAttribute('data-oz-not'))));
+}
+
+function _ozDenetimSoruKaydet(soruId) {
+  const cevap = kutuElemaniGetir('oz-soru', soruId).value;
+  const not = kutuElemaniGetir('oz-not', soruId).value;
+  ozDenetimCevabiGuncelle(soruId, cevap, not);
+}
+
+function kutuElemaniGetir(dataAdi, deger) {
+  return document.querySelector(`[data-${dataAdi}="${deger}"]`);
+}
+
+async function ozDenetimindenEylemOlusturTiklandi() {
+  if (!(await onayModali('"Hayır" veya "Kısmen" cevaplanan sorular için otomatik eylem planı maddesi oluşturulsun mu? Zaten oluşturulmuş maddeler tekrar eklenmez.', 'Oluştur'))) return;
+  const sonuc = ozDenetimindenEylemleriOlustur();
+  if (sonuc.olusturulan === 0) { alert('Yeni eylem maddesi oluşturulmadı — ya tüm cevaplar uygun ya da eylemler zaten mevcut.'); return; }
+  alert(sonuc.olusturulan + ' yeni eylem planı maddesi oluşturuldu.');
+  eylemleriCiz();
+}
+
+function eylemleriCiz() {
+  const govde = document.getElementById('eylemTabloGovde');
+  const bosDurum = document.getElementById('eylemBosDurum');
+  const liste = eylemPlaniGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz eylem planı maddesi eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(ey => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_pdKacir(ey.eylemNo)}</td>
+      <td>${_pdKacir(ey.kaynak)}</td>
+      <td style="max-width:260px; white-space:normal;">${_pdKacir(ey.eksiklik)}</td>
+      <td>${_pdKacir(ey.sorumlu) || '-'}</td>
+      <td>${ey.termin || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(ey.oncelik)}">${_pdKacir(ey.oncelik)}</span></td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(ey.durum)}">${_pdKacir(ey.durum)}</span></td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${ey.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${ey.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => eylemModalAc(eylemPlaniMaddesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu eylem planı maddesini silmek istediğinize emin misiniz?', 'Sil')) { eylemPlaniMaddesiSil(btn.getAttribute('data-sil')); eylemleriCiz(); }
+  }));
+}
+
+function eylemModalAc(eylem) {
+  _duzenlenenEylemId = eylem ? eylem.id : null;
+  document.getElementById('eylemModalBaslik').textContent = eylem ? 'Eylemi Düzenle' : 'Yeni Eylem';
+  document.getElementById('eyKaynak').innerHTML = EYLEM_KAYNAK_TURLERI.map(k => `<option ${eylem && eylem.kaynak === k ? 'selected' : ''}>${k}</option>`).join('');
+  document.getElementById('eyReferans').value = eylem ? eylem.referans : '';
+  document.getElementById('eyEksiklik').value = eylem ? eylem.eksiklik : '';
+  document.getElementById('eyRisk').value = eylem ? eylem.risk : '';
+  document.getElementById('eyDuzelticiFaaliyet').value = eylem ? eylem.duzelticiFaaliyet : '';
+  document.getElementById('eySorumlu').value = eylem ? eylem.sorumlu : '';
+  document.getElementById('eyTermin').value = eylem ? eylem.termin : '';
+  document.getElementById('eyOncelik').innerHTML = EYLEM_ONCELIK_SEVIYELERI.map(o => `<option ${eylem && eylem.oncelik === o ? 'selected' : ''}>${o}</option>`).join('');
+  document.getElementById('eyDurum').innerHTML = EYLEM_DURUMLARI.map(d => `<option ${eylem && eylem.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  temizleFormHatalari('eylemForm');
+  document.getElementById('eylemModalKatman').classList.add('acik');
+}
+
+function eylemModalKapat() {
+  document.getElementById('eylemModalKatman').classList.remove('acik');
+  _duzenlenenEylemId = null;
+}
+
+function eylemFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('eylemForm');
+
+  const veriler = {
+    kaynak: document.getElementById('eyKaynak').value,
+    referans: document.getElementById('eyReferans').value,
+    eksiklik: document.getElementById('eyEksiklik').value,
+    risk: document.getElementById('eyRisk').value,
+    duzelticiFaaliyet: document.getElementById('eyDuzelticiFaaliyet').value,
+    sorumlu: document.getElementById('eySorumlu').value,
+    termin: document.getElementById('eyTermin').value,
+    oncelik: document.getElementById('eyOncelik').value,
+    durum: document.getElementById('eyDurum').value
+  };
+
+  const sonuc = _duzenlenenEylemId ? eylemPlaniMaddesiGuncelle(_duzenlenenEylemId, veriler) : eylemPlaniMaddesiEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ey'); return; }
+
+  eylemModalKapat();
+  eylemleriCiz();
 }

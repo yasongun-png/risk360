@@ -261,6 +261,19 @@ function tatbikatOlustur(veriler) {
     bulgular: (veriler.bulgular || '').trim(),
     aksiyonlar: (veriler.aksiyonlar || '').trim(),
     durum: veriler.durum || (veriler.gerceklesmeTarihi ? 'Tamamlandı' : 'Planlandı'),
+
+    // Performans göstergeleri (madde 17) — tatbikat gerçekleştikten sonra
+    // dakika cinsinden ölçülen süreler; boşsa henüz ölçülmemiş demektir.
+    alarmVerilmeSuresi: (veriler.alarmVerilmeSuresi || '').trim(),
+    ilkMudahaleSuresi: (veriler.ilkMudahaleSuresi || '').trim(),
+    tahliyeSuresi: (veriler.tahliyeSuresi || '').trim(),
+    toplanmaSuresi: (veriler.toplanmaSuresi || '').trim(),
+    sayimSuresi: (veriler.sayimSuresi || '').trim(),
+    eksikPersonelTespitSuresi: (veriler.eksikPersonelTespitSuresi || '').trim(),
+    itfaiyeErisimSuresi: (veriler.itfaiyeErisimSuresi || '').trim(),
+    haberlesmeSuresi: (veriler.haberlesmeSuresi || '').trim(),
+    ekipUlasmaSuresi: (veriler.ekipUlasmaSuresi || '').trim(),
+
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
@@ -1036,6 +1049,90 @@ function krokiKontrolMaddesiOlustur(veriler) {
     eksiklikNotu: (veriler.eksiklikNotu || '').trim(),
     sorumlu: (veriler.sorumlu || '').trim(),
     termin: veriler.termin || '',
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
+// ---- Dış Kurumlar (madde 15) ----
+
+const DIS_KURUM_TURLERI = [
+  'İtfaiye', 'Sağlık (112/Ambulans)', 'Polis/Jandarma', 'AFAD',
+  'Çevre ve Şehircilik İl Müdürlüğü', 'Gaz/Elektrik/Su Dağıtım Şirketi', 'Komşu Tesis', 'Diğer'
+];
+
+function disKurumOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    tur: DIS_KURUM_TURLERI.includes(veriler.tur) ? veriler.tur : DIS_KURUM_TURLERI[0],
+    ad: (veriler.ad || '').trim(),
+    telefon: (veriler.telefon || '').trim(),
+    yetkiliKisi: (veriler.yetkiliKisi || '').trim(),
+    koordinasyonNotu: (veriler.koordinasyonNotu || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
+// ---- Öz Denetim (madde 23) ----
+
+const OZ_DENETIM_CEVAP_SECENEKLERI = ['Evet', 'Hayır', 'Kısmen', 'Uygulanamaz'];
+
+const ACIL_DURUM_OZ_DENETIM_SORULARI = [
+  { id: 'plan_guncel', soru: 'Acil durum planı güncel mi ve son 1 yıl içinde gözden geçirildi mi?' },
+  { id: 'ekip_atandi', soru: 'Arama-kurtarma, yangınla mücadele, ilk yardım ve tahliye ekipleri yazılı olarak atandı mı?' },
+  { id: 'ekip_egitimli', soru: 'Ekip üyeleri görevleriyle ilgili eğitim aldı mı?' },
+  { id: 'tatbikat_yapildi', soru: 'Son 12 ay içinde en az bir tatbikat gerçekleştirildi mi?' },
+  { id: 'tatbikat_bulgulari_kapatildi', soru: 'Önceki tatbikat bulguları için düzeltici faaliyet tamamlandı mı?' },
+  { id: 'kacis_yollari_acik', soru: 'Kaçış yolları ve acil çıkışlar her zaman açık ve işaretli mi?' },
+  { id: 'toplanma_alanlari_belirli', soru: 'Toplanma alanları belirlenmiş, işaretlenmiş ve krokide gösterilmiş mi?' },
+  { id: 'kroki_asili', soru: 'Kaçış planı krokileri tüm bölümlerde görünür şekilde asılı mı?' },
+  { id: 'alarm_sistemi_calisir', soru: 'Yangın algılama/alarm sistemi periyodik olarak test ediliyor mu?' },
+  { id: 'sondurme_ekipmani_kontrollu', soru: 'Yangın söndürme cihazları/dolapları periyodik kontrolden geçiriliyor mu?' },
+  { id: 'acil_aydinlatma_calisir', soru: 'Acil aydınlatma ve yönlendirme sistemleri çalışır durumda mı?' },
+  { id: 'ilkyardim_malzemesi_yeterli', soru: 'İlk yardım malzemeleri (dolap/çanta) yeterli ve son kullanma tarihi geçmemiş mi?' },
+  { id: 'kkd_temin_edildi', soru: 'Acil durum müdahalesi için gerekli KKD ekiplere temin edildi mi?' },
+  { id: 'dis_kurum_iletisimi_guncel', soru: 'Dış kurum (itfaiye, 112, AFAD vb.) iletişim bilgileri güncel mi?' },
+  { id: 'kimyasal_sds_guncel', soru: 'Kimyasal madde SDS/Güvenlik Bilgi Formları güncel ve erişilebilir mi?' },
+  { id: 'ozel_ihtiyac_plani_var', soru: 'Engelli/hareket kısıtlı/tek başına çalışan personel için özel tahliye düzenlemesi var mı?' },
+  { id: 'gece_vardiyasi_duzenlemesi', soru: 'Gece vardiyası/az personelli saatler için ayrı acil durum düzenlemesi yapıldı mı?' },
+  { id: 'elektrik_periyodik_kontrol', soru: 'Elektrik tesisatı ve topraklama periyodik kontrolleri güncel mi?' },
+  { id: 'plan_calisanlara_duyuruldu', soru: 'Acil durum planı tüm çalışanlara ve alt işverenlere duyuruldu/eğitimi verildi mi?' },
+  { id: 'eylem_plani_takip_ediliyor', soru: 'Önceki öz denetim/mevzuat uygunluk eksiklikleri için eylem planı takip ediliyor mu?' }
+];
+
+function ozDenetimOlustur(veriler) {
+  const cevaplar = {};
+  ACIL_DURUM_OZ_DENETIM_SORULARI.forEach(s => {
+    const mevcut = (veriler.cevaplar || {})[s.id] || {};
+    cevaplar[s.id] = {
+      cevap: OZ_DENETIM_CEVAP_SECENEKLERI.includes(mevcut.cevap) ? mevcut.cevap : '',
+      not: (mevcut.not || '').trim()
+    };
+  });
+  return {
+    cevaplar,
+    guncellemeTarihi: veriler.guncellemeTarihi || new Date().toISOString()
+  };
+}
+
+// ---- Eylem Planı (madde 24) ----
+
+const EYLEM_KAYNAK_TURLERI = ['Öz Denetim', 'Tatbikat', 'Mevzuat Uygunluk', 'Kroki Kontrolü', 'Manuel'];
+const EYLEM_ONCELIK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Kritik'];
+const EYLEM_DURUMLARI = ['Açık', 'Devam Ediyor', 'Tamamlandı', 'İptal'];
+
+function eylemPlaniMaddesiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    eylemNo: veriler.eylemNo || '',
+    kaynak: EYLEM_KAYNAK_TURLERI.includes(veriler.kaynak) ? veriler.kaynak : 'Manuel',
+    referans: (veriler.referans || '').trim(),
+    eksiklik: (veriler.eksiklik || '').trim(),
+    risk: (veriler.risk || '').trim(),
+    duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
+    sorumlu: (veriler.sorumlu || '').trim(),
+    termin: veriler.termin || '',
+    oncelik: EYLEM_ONCELIK_SEVIYELERI.includes(veriler.oncelik) ? veriler.oncelik : 'Orta',
+    durum: EYLEM_DURUMLARI.includes(veriler.durum) ? veriler.durum : 'Açık',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

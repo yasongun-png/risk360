@@ -240,7 +240,16 @@ function tatbikatGuncelle(id, veriler) {
     katilimciSayisi: Number(veriler.katilimciSayisi || 0),
     bulgular: (veriler.bulgular || '').trim(),
     aksiyonlar: (veriler.aksiyonlar || '').trim(),
-    durum: veriler.durum || (veriler.gerceklesmeTarihi ? 'Tamamlandı' : 'Planlandı')
+    durum: veriler.durum || (veriler.gerceklesmeTarihi ? 'Tamamlandı' : 'Planlandı'),
+    alarmVerilmeSuresi: (veriler.alarmVerilmeSuresi || '').trim(),
+    ilkMudahaleSuresi: (veriler.ilkMudahaleSuresi || '').trim(),
+    tahliyeSuresi: (veriler.tahliyeSuresi || '').trim(),
+    toplanmaSuresi: (veriler.toplanmaSuresi || '').trim(),
+    sayimSuresi: (veriler.sayimSuresi || '').trim(),
+    eksikPersonelTespitSuresi: (veriler.eksikPersonelTespitSuresi || '').trim(),
+    itfaiyeErisimSuresi: (veriler.itfaiyeErisimSuresi || '').trim(),
+    haberlesmeSuresi: (veriler.haberlesmeSuresi || '').trim(),
+    ekipUlasmaSuresi: (veriler.ekipUlasmaSuresi || '').trim()
   });
   return { basarili: true, tatbikat: guncellenen };
 }
@@ -613,4 +622,106 @@ function krokiKontrolMaddesiSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   krokiKontrolMaddesiSilRepo(id);
   return { basarili: true };
+}
+
+// ---- Dış Kurumlar ----
+
+function disKurumlariGetir() {
+  return disKurumlariTumunuGetir();
+}
+
+function disKurumEkle(veriler) {
+  const dogrulama = disKurumDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = disKurumOlustur(veriler);
+  disKurumEkleRepo(yeni);
+  return { basarili: true, disKurum: yeni };
+}
+
+function disKurumGuncelle(id, veriler) {
+  const dogrulama = disKurumDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = disKurumIdIleGetirRepo(id) || {};
+  const guncellenen = disKurumGuncelleRepo(id, disKurumOlustur(Object.assign({}, mevcut, veriler, { id: mevcut.id, olusturmaTarihi: mevcut.olusturmaTarihi })));
+  return { basarili: true, disKurum: guncellenen };
+}
+
+function disKurumSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  disKurumSilRepo(id);
+  return { basarili: true };
+}
+
+// ---- Öz Denetim ----
+
+function ozDenetimGetirVeyaOlustur() {
+  const mevcut = ozDenetimGetirRepo();
+  if (mevcut) return ozDenetimOlustur(mevcut);
+  const yeni = ozDenetimOlustur({});
+  ozDenetimKaydetRepo(yeni);
+  return yeni;
+}
+
+// Tek bir soruyu günceller (cevap + not), diğerlerine dokunmaz.
+function ozDenetimCevabiGuncelle(soruId, cevap, not) {
+  const mevcut = ozDenetimGetirVeyaOlustur();
+  mevcut.cevaplar[soruId] = { cevap: cevap || '', not: (not || '').trim() };
+  mevcut.guncellemeTarihi = new Date().toISOString();
+  ozDenetimKaydetRepo(mevcut);
+  return { basarili: true, ozDenetim: mevcut };
+}
+
+// ---- Eylem Planı ----
+
+function eylemPlaniGetir() {
+  return eylemPlaniTumunuGetir();
+}
+
+function eylemPlaniMaddesiEkle(veriler) {
+  const dogrulama = eylemPlaniMaddesiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const eylemNo = sonrakiNoUret('EYL', eylemPlaniTumunuGetir(), 'eylemNo');
+  const yeni = eylemPlaniMaddesiOlustur(Object.assign({}, veriler, { eylemNo }));
+  eylemPlaniMaddesiEkleRepo(yeni);
+  return { basarili: true, eylem: yeni };
+}
+
+function eylemPlaniMaddesiGuncelle(id, veriler) {
+  const dogrulama = eylemPlaniMaddesiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = eylemPlaniMaddesiIdIleGetirRepo(id) || {};
+  const guncellenen = eylemPlaniMaddesiGuncelleRepo(id, eylemPlaniMaddesiOlustur(Object.assign({}, mevcut, veriler, { id: mevcut.id, eylemNo: mevcut.eylemNo, olusturmaTarihi: mevcut.olusturmaTarihi })));
+  return { basarili: true, eylem: guncellenen };
+}
+
+function eylemPlaniMaddesiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  eylemPlaniMaddesiSilRepo(id);
+  return { basarili: true };
+}
+
+// Öz denetimde "Hayır"/"Kısmen" cevaplanan sorular için otomatik eylem
+// maddesi oluşturur. Aynı soru için zaten açık bir eylem varsa (referans
+// eşleşmesiyle) tekrar oluşturmaz — tekrar tıklansa bile kayıt çoğalmaz.
+function ozDenetimindenEylemleriOlustur() {
+  const ozDenetim = ozDenetimGetirVeyaOlustur();
+  const mevcutEylemler = eylemPlaniTumunuGetir();
+  let olusturulan = 0;
+  ACIL_DURUM_OZ_DENETIM_SORULARI.forEach(soru => {
+    const cevap = ozDenetim.cevaplar[soru.id];
+    if (!cevap || (cevap.cevap !== 'Hayır' && cevap.cevap !== 'Kısmen')) return;
+    const zatenVar = mevcutEylemler.some(e => e.kaynak === 'Öz Denetim' && e.referans === soru.id);
+    if (zatenVar) return;
+    const eylemNo = sonrakiNoUret('EYL', eylemPlaniTumunuGetir(), 'eylemNo');
+    const yeni = eylemPlaniMaddesiOlustur({
+      eylemNo,
+      kaynak: 'Öz Denetim',
+      referans: soru.id,
+      eksiklik: soru.soru + (cevap.not ? ' — ' + cevap.not : ''),
+      oncelik: cevap.cevap === 'Hayır' ? 'Yüksek' : 'Orta'
+    });
+    eylemPlaniMaddesiEkleRepo(yeni);
+    olusturulan++;
+  });
+  return { basarili: true, olusturulan };
 }

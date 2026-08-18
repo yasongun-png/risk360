@@ -12,6 +12,9 @@ function _komutaPozisyonuAnahtari() { return tenantAnahtar('acil_durum_komuta_po
 function _tahliyeAlaniAnahtari() { return tenantAnahtar('acil_durum_tahliye_planlari'); }
 function _kimyasalEkiAnahtari() { return tenantAnahtar('acil_durum_kimyasal_ekleri'); }
 function _krokiKontrolAnahtari() { return tenantAnahtar('acil_durum_kroki_kontrolleri'); }
+function _disKurumAnahtari() { return tenantAnahtar('acil_durum_dis_kurumlar'); }
+function _ozDenetimAnahtari() { return tenantAnahtar('acil_durum_oz_denetim'); }
+function _eylemPlaniAnahtari() { return tenantAnahtar('acil_durum_eylem_plani'); }
 
 function _genelListeGetir(anahtarFn) { return oku(anahtarFn(), []); }
 function _genelListeKaydet(anahtarFn, liste) { yaz(anahtarFn(), liste); }
@@ -105,3 +108,18 @@ function krokiKontrolMaddesiEkleRepo(k) { return _genelEkle(_krokiKontrolAnahtar
 function krokiKontrolMaddesiGuncelleRepo(id, v) { return _genelGuncelle(_krokiKontrolAnahtari, id, v); }
 function krokiKontrolMaddesiSilRepo(id) { _genelSil(_krokiKontrolAnahtari, id); }
 function krokiKontrolMaddesiIdIleGetirRepo(id) { return krokiKontrolleriTumunuGetir().find(x => x.id === id) || null; }
+
+function disKurumlariTumunuGetir() { return _genelListeGetir(_disKurumAnahtari); }
+function disKurumEkleRepo(k) { return _genelEkle(_disKurumAnahtari, k); }
+function disKurumGuncelleRepo(id, v) { return _genelGuncelle(_disKurumAnahtari, id, v); }
+function disKurumSilRepo(id) { _genelSil(_disKurumAnahtari, id); }
+function disKurumIdIleGetirRepo(id) { return disKurumlariTumunuGetir().find(x => x.id === id) || null; }
+
+function ozDenetimGetirRepo() { return oku(_ozDenetimAnahtari(), null); }
+function ozDenetimKaydetRepo(ozDenetim) { yaz(_ozDenetimAnahtari(), ozDenetim); return ozDenetim; }
+
+function eylemPlaniTumunuGetir() { return _genelListeGetir(_eylemPlaniAnahtari); }
+function eylemPlaniMaddesiEkleRepo(k) { return _genelEkle(_eylemPlaniAnahtari, k); }
+function eylemPlaniMaddesiGuncelleRepo(id, v) { return _genelGuncelle(_eylemPlaniAnahtari, id, v); }
+function eylemPlaniMaddesiSilRepo(id) { _genelSil(_eylemPlaniAnahtari, id); }
+function eylemPlaniMaddesiIdIleGetirRepo(id) { return eylemPlaniTumunuGetir().find(x => x.id === id) || null; }
