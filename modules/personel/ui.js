@@ -15,7 +15,7 @@ function _prsKacir(v) {
 const PERSONEL_EXCEL_KOLONLARI = [
   { anahtar: 'sicilNo', baslik: 'Sicil No', esanlamlar: ['SICIL NO', 'SİCİL NO', 'Personel No'] },
   { anahtar: 'adSoyad', baslik: 'Ad Soyad', esanlamlar: ['ADI SOYADI', 'İsim Soyisim'] },
-  { anahtar: 'isveren', baslik: 'İşveren', esanlamlar: ['Sicil Firma', 'İşyeri', 'İşyeri Ünvanı'] },
+  { anahtar: 'isveren', baslik: 'İşyeri Sicili', esanlamlar: ['İşveren', 'Sicil Firma', 'İşyeri', 'İşyeri Ünvanı'] },
   { anahtar: 'bolum', baslik: 'Bölüm', esanlamlar: ['Departman', 'Birim', 'BÖLÜMÜ'] },
   { anahtar: 'gorev', baslik: 'Görev', esanlamlar: ['Unvan', 'Pozisyon', 'GÖREVİ'] },
   { anahtar: 'iseGirisTarihi', baslik: 'İşe Giriş Tarihi', esanlamlar: ['İşe Başlama Tarihi', 'İşbaşı Tarihi'] },

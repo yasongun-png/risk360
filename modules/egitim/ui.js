@@ -55,6 +55,7 @@ const EGITIM_IMPORT_KOLONLARI = [
 
 const EGITIM_EXPORT_KOLONLARI = [
   { anahtar: 'personelAdi', baslik: 'Ad Soyad' },
+  { anahtar: 'personelIsveren', baslik: 'İşyeri Sicili' },
   { anahtar: 'turAdi', baslik: 'Eğitim/Sertifika Türü' },
   { anahtar: 'tarih', baslik: 'Tarih' },
   { anahtar: 'saat', baslik: 'Süre (Saat)' },
@@ -190,7 +191,7 @@ async function _eskiEgitimMatrisiIceAktar(dosya) {
       isverenModu = await onayModali(
         `Dosyada ${gruplar.length} farklı "Grup" değeri var:\n${gruplar.join(', ')}\n\n` +
         `Bunlar aynı firmanın farklı işverenleri/sicilleri ise (ör. BAĞFAŞ'ın 3 sicili) "Tamam" deyin: ` +
-        `TÜM satırlar aktif firma "${_aktifFirma ? _aktifFirma.ad : '?'}" içine aktarılır, Grup değeri her personelin İşveren alanına yazılır.\n\n` +
+        `TÜM satırlar aktif firma "${_aktifFirma ? _aktifFirma.ad : '?'}" içine aktarılır, Grup değeri her personelin İşyeri Sicili alanına yazılır.\n\n` +
         `Bunun yerine SADECE BİR grubu (farklı bir OSGB müşterisi gibi) aktarmak isterseniz "İptal" deyin.`,
         'Tamam'
       );
@@ -211,7 +212,7 @@ async function _eskiEgitimMatrisiIceAktar(dosya) {
     }
     if (!satirlar.length) { alert('Seçili grup için satır bulunamadı.'); return; }
 
-    const ozetBaslik = isverenModu ? `${gruplar.length} grup (İşveren etiketi olarak)` : (seciliGrup || 'Tüm satırlar');
+    const ozetBaslik = isverenModu ? `${gruplar.length} grup (İşyeri Sicili etiketi olarak)` : (seciliGrup || 'Tüm satırlar');
     if (!(await onayModali(`"${ozetBaslik}" için ${satirlar.length} personel satırı, aktif firma "${_aktifFirma ? _aktifFirma.ad : '?'}" içine aktarılacak. Devam edilsin mi?`, 'Devam Et'))) return;
 
     const dugme = document.getElementById('eskiMatrisIceAktarBtn');

@@ -143,8 +143,8 @@
 
   <div class="modal-katman" id="isverenlerModalKatman">
     <div class="modal-kutu">
-      <h3 id="isverenlerModalBaslik">İşverenler</h3>
-      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Aynı sahada birden fazla sicil/tüzel işveren varsa (ör. aynı yerde çalışan ama farklı sicilli birden fazla şirket) her satıra bir işveren adı yazın. Bu liste, Personel kaydındaki "İşveren" alanında seçenek olarak gösterilir.</p>
+      <h3 id="isverenlerModalBaslik">İşyeri Sicilleri</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Aynı sahada birden fazla sicil/tüzel işyeri varsa (ör. aynı yerde çalışan ama farklı sicilli birden fazla şirket) her satıra bir işyeri sicili adı yazın. Bu liste, Personel kaydındaki "İşyeri Sicili" alanında seçenek olarak gösterilir.</p>
       <textarea id="isverenlerTextarea" rows="8" placeholder="Bağfaş Bandırma Gübre Fabrikaları&#10;Bağfaş Servis Pazarlama&#10;Bağfaş Teknik Müteahhitlik"></textarea>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="isverenlerModalIptalBtn">İptal</button>
@@ -351,7 +351,7 @@
             <button class="mini-buton" data-logo="${firma.id}">Logo</button>
             <input type="file" accept="image/*" data-logo-dosya="${firma.id}" style="display:none;">
             <button class="mini-buton" data-bolumler="${firma.id}">Bölümler</button>
-            <button class="mini-buton" data-isverenler="${firma.id}">İşverenler</button>
+            <button class="mini-buton" data-isverenler="${firma.id}">İşyeri Sicilleri</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ramak-kala">📷 Ramak Kala Barkodu</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu (Sorumlu Bölüm)</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-isg">🧾 İş İzni Barkodu (İSG)</button>
@@ -456,7 +456,7 @@
         btn.addEventListener('click', () => {
           _duzenlenenIsverenlerFirmaId = btn.getAttribute('data-isverenler');
           const firma = getFirmaById(_duzenlenenIsverenlerFirmaId);
-          document.getElementById('isverenlerModalBaslik').textContent = `${firma.ad} — İşverenler`;
+          document.getElementById('isverenlerModalBaslik').textContent = `${firma.ad} — İşyeri Sicilleri`;
           document.getElementById('isverenlerTextarea').value = (Array.isArray(firma.isverenler) ? firma.isverenler : []).join('\n');
           document.getElementById('isverenlerModalKatman').classList.add('acik');
         });
