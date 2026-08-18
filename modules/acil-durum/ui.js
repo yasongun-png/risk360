@@ -62,6 +62,8 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuSeriNumarasi').addEventListener('input', _yanginTupuSeriNumarasiUyariGuncelle);
   document.getElementById('yanginTupuEtiketTaraBtn').addEventListener('click', yanginTupuEtiketModalAc);
   document.getElementById('yanginTupuEtiketModalKapatBtn').addEventListener('click', yanginTupuEtiketModalKapat);
+  document.getElementById('yanginTupuEtiketFotoCekBtn').addEventListener('click', () => document.getElementById('yanginTupuEtiketFotoCekDosya').click());
+  document.getElementById('yanginTupuEtiketFotoCekDosya').addEventListener('change', yanginTupuEtiketFotoSecildi);
   document.getElementById('yanginTupuEtiketFotoSecBtn').addEventListener('click', () => document.getElementById('yanginTupuEtiketFotoDosya').click());
   document.getElementById('yanginTupuEtiketFotoDosya').addEventListener('change', yanginTupuEtiketFotoSecildi);
   document.getElementById('yanginTupuEtiketFormaAktarBtn').addEventListener('click', yanginTupuEtiketAktar);
@@ -770,6 +772,22 @@ async function yanginTupuEtiketFotoSecildi(e) {
 function _yanginTupuEtiketSonucunuCiz(alanlar, hamMetin) {
   const kutu = document.getElementById('yanginTupuEtiketSonuc');
   const satir = (etiket, deger) => `<tr><td style="font-weight:600; padding:3px 8px 3px 0; white-space:nowrap;">${etiket}</td><td style="padding:3px 0;">${deger || '<span style="color:var(--metin-soluk);">okunamadı</span>'}</td></tr>`;
+
+  // OCR motoru gerçekten hiç metin bulamadıysa (fotoğrafta metin dışı alan
+  // ağır bastığında, ışık/netlik yetersiz olduğunda vb.) alan tablosunu
+  // "okunamadı" satırlarıyla doldurmak yerine tek bir açık uyarı gösterip
+  // fotoğrafı tekrar denemeyi öneriyoruz.
+  if (!hamMetin || !hamMetin.trim()) {
+    kutu.innerHTML = `
+      <div style="background:#fef2f2; border:1px solid #ef4444; border-radius:8px; padding:10px 14px; font-size:13px;">
+        ⚠ Fotoğrafta hiç metin tanınamadı. Etikete daha yakından, dik açıdan, parlama/gölge olmadan ve
+        net (bulanık olmayan) bir fotoğraf çekmeyi deneyin — sadece etiket kutusunun kadraja büyük
+        şekilde girmesi okuma başarısını artırır. Bilgileri formda elle de girebilirsiniz.
+      </div>
+    `;
+    document.getElementById('yanginTupuEtiketFormaAktarBtn').style.display = 'none';
+    return;
+  }
 
   const eslesen = alanlar.seriNumarasi ? yanginTupuSeriNumarasiIleBul(alanlar.seriNumarasi) : null;
   const uyariHtml = eslesen

@@ -79,10 +79,62 @@ function _eoAlanlariAyikla(hamMetin) {
   return alanlar;
 }
 
+// Fotoğrafın çoğu genelde tüpün kırmızı gövdesi/arka plan — etiketin kendisi
+// karenin küçük bir bölümü. Tesseract'ın sayfa segmentasyonu böyle "az metin,
+// çok metin-dışı alan" içeren fotoğraflarda hiç metin bulamayıp boş sonuç
+// dönebiliyor (hata fırlatmadan). Bunu iyileştirmek için fotoğrafı OCR'a
+// vermeden önce gri tonlamaya çevirip kontrastı güçlendiriyoruz — metal
+// etiket üzerindeki siyah yazı/beyaz zemin ayrımını netleştirir.
+function _eoGoruntuOnIsle(dosya) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(dosya);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      // Uzun kenarı ~1800px'e getiriyoruz: çok küçük fotoğrafları büyütüp
+      // karakterleri okunur hale getiriyor, telefon kameralarının ürettiği
+      // çok büyük fotoğrafları da (yavaş piksel işleme) makul boyuta indiriyor.
+      const uzunKenar = Math.max(img.naturalWidth, img.naturalHeight);
+      const olcek = Math.min(2, Math.max(0.5, 1800 / uzunKenar));
+      const genislik = Math.round(img.naturalWidth * olcek);
+      const yukseklik = Math.round(img.naturalHeight * olcek);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = genislik;
+      canvas.height = yukseklik;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, genislik, yukseklik);
+
+      const veri = ctx.getImageData(0, 0, genislik, yukseklik);
+      const p = veri.data;
+      // Gri tonlama + basit kontrast germe (min-max normalizasyonu).
+      let enKucuk = 255;
+      let enBuyuk = 0;
+      const griler = new Uint8ClampedArray(p.length / 4);
+      for (let i = 0; i < p.length; i += 4) {
+        const gri = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+        griler[i / 4] = gri;
+        if (gri < enKucuk) enKucuk = gri;
+        if (gri > enBuyuk) enBuyuk = gri;
+      }
+      const aralik = Math.max(1, enBuyuk - enKucuk);
+      for (let i = 0; i < p.length; i += 4) {
+        const g = Math.round(((griler[i / 4] - enKucuk) / aralik) * 255);
+        p[i] = g; p[i + 1] = g; p[i + 2] = g;
+      }
+      ctx.putImageData(veri, 0, 0);
+      resolve(canvas);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Fotoğraf yüklenemedi.')); };
+    img.src = url;
+  });
+}
+
 // dosya: <input type="file"> seçilen File nesnesi. ilerlemeCallback(yuzde)
 // isteğe bağlı — tarama sırasında ilerleme çubuğu göstermek için.
 async function yanginTupuEtiketiOku(dosya, ilerlemeCallback) {
-  const sonuc = await Tesseract.recognize(dosya, 'tur', {
+  const islenmisGorsel = await _eoGoruntuOnIsle(dosya);
+  const sonuc = await Tesseract.recognize(islenmisGorsel, 'tur', {
     logger: m => {
       if (ilerlemeCallback && m.status === 'recognizing text') ilerlemeCallback(Math.round((m.progress || 0) * 100));
     }
