@@ -363,7 +363,21 @@ function bosPlanOlustur() {
     disKurumIletisim: '',
     uyariSistemleri: '',
     ozelRiskBolgeleri: [],
-    notlar: ''
+    notlar: '',
+    revizyonGecmisi: []
+  };
+}
+
+// ---- Doküman Kontrol / Revizyon Geçmişi (madde 2) ----
+
+function revizyonKaydiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    revizyonNo: veriler.revizyonNo || '',
+    tarih: veriler.tarih || bugunIso(),
+    degisiklikOzeti: (veriler.degisiklikOzeti || '').trim(),
+    hazirlayan: (veriler.hazirlayan || '').trim(),
+    onaylayan: (veriler.onaylayan || '').trim()
   };
 }
 
@@ -1133,6 +1147,45 @@ function eylemPlaniMaddesiOlustur(veriler) {
     termin: veriler.termin || '',
     oncelik: EYLEM_ONCELIK_SEVIYELERI.includes(veriler.oncelik) ? veriler.oncelik : 'Orta',
     durum: EYLEM_DURUMLARI.includes(veriler.durum) ? veriler.durum : 'Açık',
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
+// ---- Mevzuat Uygunluk (madde 22) ----
+
+const MEVZUAT_UYGUNLUK_DURUMLARI = ['Değerlendirilmedi', 'Uygun', 'Kısmen Uygun', 'Uygun Değil'];
+
+// İlk açılışta otomatik yüklenen standart set (bkz. service.js
+// mevzuatUygunlukGetirVeyaOlustur) — 6331 sayılı Kanun ve ilgili temel
+// yönetmeliklerden acil durum yönetimiyle doğrudan ilgili maddeler.
+const ACIL_DURUM_MEVZUAT_REFERANSLARI = [
+  { id: 'md_6331_11', gereklilik: 'İşveren, ciddi ve yakın tehlike durumunda çalışanların işi bırakıp derhal güvenli bir yere gidebilmesini sağlar.', mevzuatStandart: '6331 s. Kanun m.11' },
+  { id: 'md_6331_12', gereklilik: 'Acil durum planları hazırlanır, tahliye tatbikatları yapılır, arama-kurtarma/yangınla mücadele/ilk yardım ekipleri görevlendirilir.', mevzuatStandart: '6331 s. Kanun m.12' },
+  { id: 'ady_ekip', gereklilik: 'Arama-kurtarma, yangınla mücadele ve ilk yardım ekipleri işyeri tehlike sınıfı ve çalışan sayısına uygun şekilde oluşturulur.', mevzuatStandart: 'İşyerlerinde Acil Durumlar Hakkında Yönetmelik m.11' },
+  { id: 'ady_plan', gereklilik: 'Acil durum planı; tehlikelerin tanımlanması, olası etkilerin belirlenmesi, önleyici/sınırlandırıcı tedbirlerin belirlenmesiyle hazırlanır ve gerektiğinde yeniden gözden geçirilir.', mevzuatStandart: 'İşyerlerinde Acil Durumlar Hakkında Yönetmelik m.11-12' },
+  { id: 'ady_tatbikat', gereklilik: 'Hazırlanan acil durum planı doğrultusunda yılda en az bir defa tatbikat yapılır, plan gözden geçirilerek gerekli düzeltmeler yapılır.', mevzuatStandart: 'İşyerlerinde Acil Durumlar Hakkında Yönetmelik m.11' },
+  { id: 'ady_egitim', gereklilik: 'Ekip üyelerine görevlerine ilişkin özel eğitim verilir.', mevzuatStandart: 'İşyerlerinde Acil Durumlar Hakkında Yönetmelik m.11, Ek-2' },
+  { id: 'byky_kacis', gereklilik: 'Kaçış yolları ve çıkışlar her zaman kullanıma hazır tutulur, engellenmez.', mevzuatStandart: 'Binaların Yangından Korunması Hakkında Yönetmelik' },
+  { id: 'byky_sondurme', gereklilik: 'Bina/tesiste yangın algılama, alarm, sprinkler, hidrant vb. söndürme sistemleri mevzuata uygun tesis edilir ve periyodik bakımı yapılır.', mevzuatStandart: 'Binaların Yangından Korunması Hakkında Yönetmelik' },
+  { id: 'risk_yon', gereklilik: 'Acil durumlar risk değerlendirmesinde ayrı bir tehlike/risk unsuru olarak değerlendirilir.', mevzuatStandart: 'İş Sağlığı ve Güvenliği Risk Değerlendirmesi Yönetmeliği' },
+  { id: 'ilkyardim_yon', gereklilik: 'Yeterli sayıda ilkyardımcı bulundurulur; ilkyardım malzeme ve ekipmanı işyerinde hazır tutulur.', mevzuatStandart: 'İlkyardım Yönetmeliği' },
+  { id: 'bina_eklenti', gereklilik: 'İşyeri bina ve eklentilerinde acil çıkış kapıları, yönlendirme işaretleri ve acil aydınlatma mevzuata uygun şekilde bulundurulur.', mevzuatStandart: 'İşyeri Bina ve Eklentilerinde Alınacak S.G. Önlemlerine İlişkin Yön. Ek-1' },
+  { id: 'kimyasal_yon', gereklilik: 'Tehlikeli kimyasallar için acil durum/kaza önleme tedbirleri belirlenir; SDS bilgileri erişilebilir tutulur.', mevzuatStandart: 'Kimyasal Maddelerle Çalışmalarda S.G. Önlemleri Hakkında Yönetmelik' },
+  { id: 'kkd_yon', gereklilik: 'Acil durum müdahalesinde görev alan ekiplere uygun kişisel koruyucu donanım temin edilir.', mevzuatStandart: 'Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik' },
+  { id: 'is_ekipmani_yon', gereklilik: 'Acil durdurma ve tehlike anında enerji kesme düzenekleri iş ekipmanlarında bulundurulur.', mevzuatStandart: 'İş Ekipmanlarının Kullanımında S.G. Şartları Yönetmeliği' },
+  { id: 'osha_1910_38', gereklilik: 'Acil durum eylem planı; tahliye prosedürleri, kritik operasyon sorumluları, alarm sistemleri ve eğitim gereksinimlerini kapsar (uluslararası referans).', mevzuatStandart: 'OSHA 29 CFR 1910.38' }
+];
+
+function mevzuatUygunlukMaddesiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    gereklilik: (veriler.gereklilik || '').trim(),
+    mevzuatStandart: (veriler.mevzuatStandart || '').trim(),
+    mevcutDurum: (veriler.mevcutDurum || '').trim(),
+    uygunluk: MEVZUAT_UYGUNLUK_DURUMLARI.includes(veriler.uygunluk) ? veriler.uygunluk : 'Değerlendirilmedi',
+    eksiklik: (veriler.eksiklik || '').trim(),
+    aksiyonReferansi: (veriler.aksiyonReferansi || '').trim(),
+    standartMi: !!veriler.standartMi,
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

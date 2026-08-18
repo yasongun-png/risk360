@@ -11,6 +11,7 @@ let _duzenlenenKimyasalEkiId = null;
 let _duzenlenenKrokiKontrolId = null;
 let _duzenlenenDisKurumId = null;
 let _duzenlenenEylemId = null;
+let _duzenlenenMevzuatId = null;
 
 // Saha Dijital Haritası köprüsü — bkz. modules/acil-durum/ui.js _bekleyenHaritaKonum
 // ile aynı desen (harita "Nokta Ekle" ile buraya dönüşte kullanılır).
@@ -113,6 +114,13 @@ function planDetaySayfasiniBaslat(firma) {
   document.getElementById('eylemModalIptalBtn').addEventListener('click', eylemModalKapat);
   document.getElementById('eylemForm').addEventListener('submit', eylemFormGonderildi);
 
+  // Mevzuat Uygunluk
+  document.getElementById('mevzuatEksiklerdenEylemOlusturBtn').addEventListener('click', mevzuatEksiklerdenEylemOlusturTiklandi);
+  document.getElementById('yeniMevzuatMaddesiBtn').addEventListener('click', () => mevzuatModalAc());
+  document.getElementById('mevzuatModalKapatBtn').addEventListener('click', mevzuatModalKapat);
+  document.getElementById('mevzuatModalIptalBtn').addEventListener('click', mevzuatModalKapat);
+  document.getElementById('mevzuatForm').addEventListener('submit', mevzuatFormGonderildi);
+
   gorunumDegistirDetay('tesisBilgi');
 }
 
@@ -121,7 +129,7 @@ function gorunumDegistirDetay(gorunum) {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
-  ['tesisBilgi', 'senaryo', 'komuta', 'tahliye', 'kimyasal', 'kroki', 'disKurumlar', 'ozDenetim'].forEach(g => {
+  ['tesisBilgi', 'senaryo', 'komuta', 'tahliye', 'kimyasal', 'kroki', 'disKurumlar', 'ozDenetim', 'mevzuat'].forEach(g => {
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
@@ -132,6 +140,7 @@ function gorunumDegistirDetay(gorunum) {
   else if (gorunum === 'kroki') krokiKontrolleriniCiz();
   else if (gorunum === 'disKurumlar') disKurumlariniCiz();
   else if (gorunum === 'ozDenetim') { ozDenetimListesiniCiz(); eylemleriCiz(); }
+  else if (gorunum === 'mevzuat') mevzuatListesiniCiz();
 }
 
 // ==================== TESİS BİLGİ FORMU ====================
@@ -1155,5 +1164,88 @@ function eylemFormGonderildi(e) {
   if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ey'); return; }
 
   eylemModalKapat();
+  eylemleriCiz();
+}
+
+// ==================== MEVZUAT UYGUNLUK ====================
+
+function mevzuatListesiniCiz() {
+  const govde = document.getElementById('mevzuatTabloGovde');
+  const bosDurum = document.getElementById('mevzuatBosDurum');
+  const liste = mevzuatUygunlukGetirVeyaOlustur();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Mevzuat uygunluk listesi boş.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(mv => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td style="max-width:260px; white-space:normal;">${_pdKacir(mv.gereklilik)}</td>
+      <td style="max-width:160px; white-space:normal;">${_pdKacir(mv.mevzuatStandart)}</td>
+      <td style="max-width:180px; white-space:normal;">${_pdKacir(mv.mevcutDurum) || '-'}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(mv.uygunluk)}">${_pdKacir(mv.uygunluk)}</span></td>
+      <td style="max-width:180px; white-space:normal;">${_pdKacir(mv.eksiklik) || '-'}</td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${mv.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${mv.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => mevzuatModalAc(mevzuatUygunlukMaddesiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu mevzuat uygunluk maddesini silmek istediğinize emin misiniz?', 'Sil')) { mevzuatUygunlukMaddesiSil(btn.getAttribute('data-sil')); mevzuatListesiniCiz(); }
+  }));
+}
+
+function mevzuatModalAc(madde) {
+  _duzenlenenMevzuatId = madde ? madde.id : null;
+  document.getElementById('mevzuatModalBaslik').textContent = madde ? 'Maddeyi Düzenle' : 'Yeni Mevzuat Uygunluk Maddesi';
+  document.getElementById('mvGereklilik').value = madde ? madde.gereklilik : '';
+  document.getElementById('mvMevzuatStandart').value = madde ? madde.mevzuatStandart : '';
+  document.getElementById('mvMevcutDurum').value = madde ? madde.mevcutDurum : '';
+  document.getElementById('mvUygunluk').innerHTML = MEVZUAT_UYGUNLUK_DURUMLARI.map(u => `<option ${madde && madde.uygunluk === u ? 'selected' : ''}>${u}</option>`).join('');
+  document.getElementById('mvAksiyonReferansi').value = madde ? madde.aksiyonReferansi : '';
+  document.getElementById('mvEksiklik').value = madde ? madde.eksiklik : '';
+  temizleFormHatalari('mevzuatForm');
+  document.getElementById('mevzuatModalKatman').classList.add('acik');
+}
+
+function mevzuatModalKapat() {
+  document.getElementById('mevzuatModalKatman').classList.remove('acik');
+  _duzenlenenMevzuatId = null;
+}
+
+function mevzuatFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('mevzuatForm');
+
+  const veriler = {
+    gereklilik: document.getElementById('mvGereklilik').value,
+    mevzuatStandart: document.getElementById('mvMevzuatStandart').value,
+    mevcutDurum: document.getElementById('mvMevcutDurum').value,
+    uygunluk: document.getElementById('mvUygunluk').value,
+    aksiyonReferansi: document.getElementById('mvAksiyonReferansi').value,
+    eksiklik: document.getElementById('mvEksiklik').value
+  };
+
+  const sonuc = _duzenlenenMevzuatId ? mevzuatUygunlukMaddesiGuncelle(_duzenlenenMevzuatId, veriler) : mevzuatUygunlukMaddesiEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'mv'); return; }
+
+  mevzuatModalKapat();
+  mevzuatListesiniCiz();
+}
+
+async function mevzuatEksiklerdenEylemOlusturTiklandi() {
+  if (!(await onayModali('"Uygun Değil" veya "Kısmen Uygun" işaretlenen maddeler için otomatik eylem planı maddesi oluşturulsun mu? Zaten oluşturulmuş maddeler tekrar eklenmez.', 'Oluştur'))) return;
+  const sonuc = mevzuatUygunlugundanEylemleriOlustur();
+  if (sonuc.olusturulan === 0) { alert('Yeni eylem maddesi oluşturulmadı — ya tüm maddeler uygun ya da eylemler zaten mevcut.'); return; }
+  alert(sonuc.olusturulan + ' yeni eylem planı maddesi oluşturuldu.');
   eylemleriCiz();
 }

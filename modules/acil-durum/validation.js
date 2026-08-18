@@ -80,3 +80,17 @@ function eylemPlaniMaddesiDogrula(veriler) {
   if (!veriler.sorumlu || !veriler.sorumlu.trim()) hatalar.sorumlu = 'Sorumlu zorunludur.';
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
+
+function mevzuatUygunlukMaddesiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.gereklilik || !veriler.gereklilik.trim()) hatalar.gereklilik = 'Gereklilik açıklaması zorunludur.';
+  if (!veriler.mevzuatStandart || !veriler.mevzuatStandart.trim()) hatalar.mevzuatStandart = 'Mevzuat/standart referansı zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
+function revizyonKaydiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.degisiklikOzeti || !veriler.degisiklikOzeti.trim()) hatalar.degisiklikOzeti = 'Değişiklik özeti zorunludur.';
+  if (!veriler.hazirlayan || !veriler.hazirlayan.trim()) hatalar.hazirlayan = 'Hazırlayan zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}

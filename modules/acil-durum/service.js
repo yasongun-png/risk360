@@ -725,3 +725,94 @@ function ozDenetimindenEylemleriOlustur() {
   });
   return { basarili: true, olusturulan };
 }
+
+// ---- Mevzuat Uygunluk ----
+
+// İlk açılışta standart referans seti otomatik yüklenir (bkz. model.js
+// ACIL_DURUM_MEVZUAT_REFERANSLARI) — modules/risk/sablon-repository.js'teki
+// hazır kütüphane deseninden farklı olarak burada firma bazlı (tenantAnahtar)
+// bir kopyaya yazılır, çünkü her firma kendi "mevcut durum/uygunluk"
+// değerlendirmesini bu kayıt üzerinde tutar.
+function mevzuatUygunlukGetirVeyaOlustur() {
+  let liste = mevzuatUygunlukTumunuGetir();
+  if (!liste.length) {
+    liste = ACIL_DURUM_MEVZUAT_REFERANSLARI.map(r => mevzuatUygunlukMaddesiOlustur(Object.assign({}, r, { standartMi: true })));
+    mevzuatUygunlukListesiKaydetRepo(liste);
+  }
+  return liste;
+}
+
+function mevzuatUygunlukMaddesiEkle(veriler) {
+  const dogrulama = mevzuatUygunlukMaddesiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = mevzuatUygunlukMaddesiOlustur(veriler);
+  mevzuatUygunlukMaddesiEkleRepo(yeni);
+  return { basarili: true, madde: yeni };
+}
+
+function mevzuatUygunlukMaddesiGuncelle(id, veriler) {
+  const dogrulama = mevzuatUygunlukMaddesiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const mevcut = mevzuatUygunlukMaddesiIdIleGetirRepo(id) || {};
+  const guncellenen = mevzuatUygunlukMaddesiGuncelleRepo(id, mevzuatUygunlukMaddesiOlustur(Object.assign({}, mevcut, veriler, { id: mevcut.id, standartMi: mevcut.standartMi, olusturmaTarihi: mevcut.olusturmaTarihi })));
+  return { basarili: true, madde: guncellenen };
+}
+
+function mevzuatUygunlukMaddesiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  mevzuatUygunlukMaddesiSilRepo(id);
+  return { basarili: true };
+}
+
+// Öz denetimindenEylemleriOlustur ile aynı desen — mevzuat uygunluk
+// listesinde "Uygun Değil"/"Kısmen Uygun" işaretlenen maddeler için eylem
+// planına otomatik madde ekler, aynı maddeden zaten açık eylem varsa tekrar eklemez.
+function mevzuatUygunlugundanEylemleriOlustur() {
+  const liste = mevzuatUygunlukGetirVeyaOlustur();
+  const mevcutEylemler = eylemPlaniTumunuGetir();
+  let olusturulan = 0;
+  liste.forEach(madde => {
+    if (madde.uygunluk !== 'Uygun Değil' && madde.uygunluk !== 'Kısmen Uygun') return;
+    const zatenVar = mevcutEylemler.some(e => e.kaynak === 'Mevzuat Uygunluk' && e.referans === madde.id);
+    if (zatenVar) return;
+    const eylemNo = sonrakiNoUret('EYL', eylemPlaniTumunuGetir(), 'eylemNo');
+    const yeni = eylemPlaniMaddesiOlustur({
+      eylemNo,
+      kaynak: 'Mevzuat Uygunluk',
+      referans: madde.id,
+      eksiklik: madde.gereklilik + (madde.eksiklik ? ' — ' + madde.eksiklik : ''),
+      risk: madde.mevzuatStandart,
+      oncelik: madde.uygunluk === 'Uygun Değil' ? 'Yüksek' : 'Orta'
+    });
+    eylemPlaniMaddesiEkleRepo(yeni);
+    olusturulan++;
+  });
+  return { basarili: true, olusturulan };
+}
+
+// ---- Doküman Kontrol / Revizyon Geçmişi ----
+
+function revizyonleriGetir() {
+  const plan = planGetirRepo() || bosPlanOlustur();
+  return (plan.revizyonGecmisi || []).slice().sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+}
+
+function revizyonEkle(veriler) {
+  const dogrulama = revizyonKaydiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const plan = planGetirRepo() || bosPlanOlustur();
+  const gecmis = plan.revizyonGecmisi || [];
+  const revizyonNo = 'R' + String(gecmis.length + 1).padStart(2, '0');
+  const yeni = revizyonKaydiOlustur(Object.assign({}, veriler, { revizyonNo }));
+  plan.revizyonGecmisi = gecmis.concat([yeni]);
+  planKaydetRepo(plan);
+  return { basarili: true, revizyon: yeni };
+}
+
+function revizyonSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const plan = planGetirRepo() || bosPlanOlustur();
+  plan.revizyonGecmisi = (plan.revizyonGecmisi || []).filter(r => r.id !== id);
+  planKaydetRepo(plan);
+  return { basarili: true };
+}

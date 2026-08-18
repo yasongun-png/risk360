@@ -15,6 +15,7 @@ function _krokiKontrolAnahtari() { return tenantAnahtar('acil_durum_kroki_kontro
 function _disKurumAnahtari() { return tenantAnahtar('acil_durum_dis_kurumlar'); }
 function _ozDenetimAnahtari() { return tenantAnahtar('acil_durum_oz_denetim'); }
 function _eylemPlaniAnahtari() { return tenantAnahtar('acil_durum_eylem_plani'); }
+function _mevzuatUygunlukAnahtari() { return tenantAnahtar('acil_durum_mevzuat_uygunluk'); }
 
 function _genelListeGetir(anahtarFn) { return oku(anahtarFn(), []); }
 function _genelListeKaydet(anahtarFn, liste) { yaz(anahtarFn(), liste); }
@@ -123,3 +124,10 @@ function eylemPlaniMaddesiEkleRepo(k) { return _genelEkle(_eylemPlaniAnahtari, k
 function eylemPlaniMaddesiGuncelleRepo(id, v) { return _genelGuncelle(_eylemPlaniAnahtari, id, v); }
 function eylemPlaniMaddesiSilRepo(id) { _genelSil(_eylemPlaniAnahtari, id); }
 function eylemPlaniMaddesiIdIleGetirRepo(id) { return eylemPlaniTumunuGetir().find(x => x.id === id) || null; }
+
+function mevzuatUygunlukTumunuGetir() { return _genelListeGetir(_mevzuatUygunlukAnahtari); }
+function mevzuatUygunlukListesiKaydetRepo(liste) { _genelListeKaydet(_mevzuatUygunlukAnahtari, liste); }
+function mevzuatUygunlukMaddesiEkleRepo(k) { return _genelEkle(_mevzuatUygunlukAnahtari, k); }
+function mevzuatUygunlukMaddesiGuncelleRepo(id, v) { return _genelGuncelle(_mevzuatUygunlukAnahtari, id, v); }
+function mevzuatUygunlukMaddesiSilRepo(id) { _genelSil(_mevzuatUygunlukAnahtari, id); }
+function mevzuatUygunlukMaddesiIdIleGetirRepo(id) { return mevzuatUygunlukTumunuGetir().find(x => x.id === id) || null; }

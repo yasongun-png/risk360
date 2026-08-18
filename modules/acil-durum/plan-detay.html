@@ -39,6 +39,7 @@
       <button type="button" data-sekme="kroki" class="sekme-seciliDegil">Kroki Kontrolü</button>
       <button type="button" data-sekme="disKurumlar" class="sekme-seciliDegil">Dış Kurumlar</button>
       <button type="button" data-sekme="ozDenetim" class="sekme-seciliDegil">Öz Denetim &amp; Eylem Planı</button>
+      <button type="button" data-sekme="mevzuat" class="sekme-seciliDegil">Mevzuat Uygunluk</button>
     </div>
 
     <!-- TESİS BİLGİ FORMU -->
@@ -218,6 +219,24 @@
         </table>
       </div>
       <div class="bos-durum" id="eylemBosDurum"></div>
+    </div>
+
+    <!-- MEVZUAT UYGUNLUK -->
+    <div id="bolum-mevzuat" style="display:none;">
+      <div class="arac-cubugu">
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0;">İlk açılışta 6331 sayılı Kanun ve ilgili yönetmeliklerden standart bir referans seti otomatik yüklenir; işyerinize özgü ek madde de girebilirsiniz.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="mevzuatEksiklerdenEylemOlusturBtn">Eksiklerden Eylem Planı Oluştur</button>
+          <button type="button" class="birincil" id="yeniMevzuatMaddesiBtn" style="width:auto;">+ Madde Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Gereklilik</th><th>Mevzuat/Standart</th><th>Mevcut Durum</th><th>Uygunluk</th><th>Eksiklik</th><th>İşlemler</th></tr></thead>
+          <tbody id="mevzuatTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="mevzuatBosDurum"></div>
     </div>
   </div>
 
@@ -611,6 +630,39 @@
         </div>
       </form>
       <button type="button" class="tablo-buton" id="eylemModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MEVZUAT UYGUNLUK MADDESİ MODAL -->
+  <div class="modal-katman" id="mevzuatModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="mevzuatModalBaslik">Yeni Mevzuat Uygunluk Maddesi</h3>
+      <form id="mevzuatForm">
+        <label for="mvGereklilik">Gereklilik</label>
+        <textarea id="mvGereklilik"></textarea>
+        <div class="alan-hatasi" id="mvGereklilikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="mvMevzuatStandart">Mevzuat / Standart</label>
+        <input type="text" id="mvMevzuatStandart">
+        <div class="alan-hatasi" id="mvMevzuatStandartHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="mvMevcutDurum">Mevcut Durum</label>
+        <textarea id="mvMevcutDurum"></textarea>
+
+        <div class="form-satir-ikili">
+          <div><label for="mvUygunluk">Uygunluk</label><select id="mvUygunluk"></select></div>
+          <div><label for="mvAksiyonReferansi">Aksiyon Referansı</label><input type="text" id="mvAksiyonReferansi"></div>
+        </div>
+
+        <label for="mvEksiklik">Eksiklik</label>
+        <textarea id="mvEksiklik"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="mevzuatModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="mevzuatModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
