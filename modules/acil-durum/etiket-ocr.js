@@ -60,7 +60,10 @@ function _eoAlanlariAyikla(hamMetin) {
     const deger = esleme[2].trim();
     if (!deger) return;
 
-    if (/SERI/.test(anahtar) && /NO/.test(anahtar)) alanlar.seriNumarasi = deger;
+    // "SERİ NUMARASI" normalize edilince "SERI NUMARASI" olur — "NUMARASI"
+    // içinde "NO" alt dizisi YOKTUR (N-U-M-A-R-A-S-I), bu yüzden yalnızca
+    // "SERI" aranır (etikette bu anahtarla başlayan başka alan yok).
+    if (/SERI/.test(anahtar)) alanlar.seriNumarasi = deger;
     else if (/URETICI/.test(anahtar)) alanlar.uretici = deger;
     else if (/^FIRMA/.test(anahtar)) ham.firma = deger;
     else if (/YSC/.test(anahtar) || /CINSI/.test(anahtar)) Object.assign(alanlar, _eoYscCinsiAyikla(deger));
