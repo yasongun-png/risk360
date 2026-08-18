@@ -768,7 +768,8 @@ function kayitTablosunuCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" class="satir-secim" data-secim="${k.id}" ${_seciliKayitIdleri.has(k.id) ? 'checked' : ''}></td>
-      <td>${_egKacir(k.personelAdi)}${k.personelIsveren ? ` <span style="font-size:11px; color:var(--metin-soluk);">(${_egKacir(k.personelIsveren)})</span>` : ''}</td>
+      <td>${_egKacir(k.personelAdi)}</td>
+      <td>${_egKacir(k.personelIsveren) || '-'}</td>
       <td>${_egKacir(k.turAdi)}${k.aciklama ? ' — ' + _egKacir(k.aciklama) : ''}</td>
       <td>${k.tarih2 ? _egitimTarihGoruntu(k.tarih) + ' - ' + _egitimTarihGoruntu(k.tarih2) : _egitimTarihGoruntu(k.tarih)}</td>
       <td>${_egKacir(k.saat) || '-'}</td>
@@ -852,7 +853,8 @@ function durumTablosunuCiz() {
   const basliklar = egitimTurleriTumu().map(t => `<th>${_egKacir(t.ad)}</th>`).join('');
   const govde = satirlar.map(satir => `
     <tr>
-      <td>${_egKacir(satir.personelAdi)}${satir.personelIsveren ? ` <span style="font-size:11px; color:var(--metin-soluk);">(${_egKacir(satir.personelIsveren)})</span>` : ''}</td>
+      <td>${_egKacir(satir.personelAdi)}</td>
+      <td>${_egKacir(satir.personelIsveren) || '-'}</td>
       ${satir.hucreler.map(h => `
         <td>
           <span class="durum-rozet durum-${h.durum}" title="${h.sonTarih ? 'Son: ' + _egitimTarihGoruntu(h.sonTarih) : ''}">${DURUM_METIN[h.durum]}</span>
@@ -864,7 +866,7 @@ function durumTablosunuCiz() {
   kutu.innerHTML = `
     <div class="tablo-scroll">
       <table class="veri-tablosu">
-        <thead><tr><th>Personel</th>${basliklar}</tr></thead>
+        <thead><tr><th>Personel</th><th>İşyeri Sicili</th>${basliklar}</tr></thead>
         <tbody>${govde}</tbody>
       </table>
     </div>
