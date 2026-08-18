@@ -328,6 +328,17 @@ function ekipGereksinimiHesapla(tehlikeSinifi, calisanSayisi) {
   };
 }
 
+// Kullanıcı isteği: "ekipleri yüklediğim halde uygunluk değerlendirmesinde
+// görünmüyor" — Excel'den içe aktarılan kayıtlarda ekipTuru "Söndürme
+// Ekibi", "söndürme", baştaki/sondaki boşluklu vb. küçük farklarla
+// gelebiliyor; aşağıdaki uygunluk hesapları eskiden TAM eşleşme (===)
+// arıyordu, bu farklar sayımı sıfırda bırakıyordu. Artık büyük/küçük
+// harf, baştaki/sondaki boşluk ve sondaki "Ekibi" ekinden bağımsız
+// karşılaştırılıyor.
+function _ekipTuruNormallestir(tur) {
+  return String(tur || '').trim().toLocaleUpperCase('tr').replace(/\s+EKİBİ$/, '').replace(/\s+/g, ' ').trim();
+}
+
 function ekipUygunlugunuDegerlendir(gereksinim, atananSayilar) {
   const turler = ['Söndürme', 'Kurtarma', 'Koruma', 'İlk Yardım'];
   const satirlar = turler.map(tur => {
@@ -353,7 +364,7 @@ function vardiyaUygunlugunuDegerlendir(gereksinim, ekipUyeleri) {
   const satirlar = turler.map(tur => {
     const gerekli = gereksinim.gereksinimler[tur] || 0;
     const vardiyaDurumu = kullanilanVardiyalar.map(vardiya => {
-      const atanan = aktifUyeler.filter(u => u.ekipTuru === tur && (u.vardiya || 'Genel') === vardiya).length;
+      const atanan = aktifUyeler.filter(u => _ekipTuruNormallestir(u.ekipTuru) === _ekipTuruNormallestir(tur) && (u.vardiya || 'Genel') === vardiya).length;
       return { vardiya, atanan, uygun: gerekli === 0 ? true : atanan >= 1 };
     });
     return { tur, gerekli, vardiyaDurumu, uygun: gerekli === 0 ? true : vardiyaDurumu.every(v => v.uygun) };

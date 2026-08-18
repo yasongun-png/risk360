@@ -226,7 +226,7 @@ function ekipTablosunuCiz() {
         <thead><tr><th>Ekip Türü</th><th>Asgari Gerekli</th><th>Mevcut Görevli</th></tr></thead>
         <tbody>
           ${['Söndürme', 'Kurtarma', 'Koruma', 'İlk Yardım'].map(tur => `
-            <tr><td>${tur}</td><td>${gereksinim.gereksinimler[tur]}</td><td>${uyeler.filter(u => u.ekipTuru === tur).length}</td></tr>
+            <tr><td>${tur}</td><td>${gereksinim.gereksinimler[tur]}</td><td>${uyeler.filter(u => _ekipTuruNormallestir(u.ekipTuru) === _ekipTuruNormallestir(tur)).length}</td></tr>
           `).join('')}
         </tbody>
       </table>
@@ -270,7 +270,7 @@ function planYazdir(e) {
     <h3>Mevzuata Göre Asgari / Mevcut Ekip Sayıları</h3>
     <table>
       <tr><th>Ekip Türü</th><th>Asgari Gerekli</th><th>Mevcut Görevli</th></tr>
-      ${['Söndürme', 'Kurtarma', 'Koruma', 'İlk Yardım'].map(tur => `<tr><td>${tur}</td><td>${gereksinim.gereksinimler[tur]}</td><td>${uyeler.filter(u => u.ekipTuru === tur).length}</td></tr>`).join('')}
+      ${['Söndürme', 'Kurtarma', 'Koruma', 'İlk Yardım'].map(tur => `<tr><td>${tur}</td><td>${gereksinim.gereksinimler[tur]}</td><td>${uyeler.filter(u => _ekipTuruNormallestir(u.ekipTuru) === _ekipTuruNormallestir(tur)).length}</td></tr>`).join('')}
     </table>
     <h3>Görevli Ekip Üyeleri</h3>
     <table>

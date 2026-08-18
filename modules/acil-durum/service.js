@@ -69,7 +69,7 @@ function uygunlukDegerlendirmesiHesapla(firma) {
   const aktifUyeler = ekipUyeleriTumunuGetir().filter(u => u.durum !== 'İptal');
   const atananSayilar = {};
   ['Söndürme', 'Kurtarma', 'Koruma', 'İlk Yardım'].forEach(tur => {
-    atananSayilar[tur] = aktifUyeler.filter(u => u.ekipTuru === tur).length;
+    atananSayilar[tur] = aktifUyeler.filter(u => _ekipTuruNormallestir(u.ekipTuru) === _ekipTuruNormallestir(tur)).length;
   });
 
   const genelDegerlendirme = ekipUygunlugunuDegerlendir(gereksinim, atananSayilar);
