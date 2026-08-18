@@ -200,6 +200,13 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, ekipmanlariGetir(document.getElementById('ekipmanAramaKutusu').value));
   });
+  // Kullanıcı isteği: "yangın ekipmanı türlerine göre ayrı ayrı kontrol
+  // formu hazırlayıp word çıktısı alabileyim" — tür filtresi seçiliyse
+  // yalnız o türün, seçili değilse kaydı olan HER türün ayrı bölüm/sayfa
+  // olarak basıldığı tek bir Word belgesi üretilir.
+  document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
+    ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value);
+  });
   document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
   document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];

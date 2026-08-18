@@ -82,6 +82,7 @@
           <input type="file" id="ekipmanIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="ekipmanDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="ekipmanYazdirBtn">Yazdır</button>
+          <button type="button" class="ikincil" id="ekipmanKontrolFormuWordBtn">📄 Kontrol Formu (Word)</button>
           <button type="button" class="birincil" id="yeniEkipmanBtn" style="width:auto;">+ Ekipman Ekle</button>
         </div>
       </div>
@@ -478,6 +479,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="../../core/data.js"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
@@ -494,6 +497,7 @@
   <script src="repository.js"></script>
   <script src="service.js"></script>
   <script src="etiket-ocr.js"></script>
+  <script src="kontrol-formu-cikti.js"></script>
   <script src="ui.js"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
