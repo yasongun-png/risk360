@@ -195,6 +195,11 @@ function yanginTupuGuncelle(id, veriler) {
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
     bulgular: (veriler.bulgular || '').trim(),
+    kontrolCevaplari: YANGIN_TUPU_KONTROL_SORULARI.reduce((acc, s) => {
+      const cevap = (veriler.kontrolCevaplari || {})[s.id];
+      acc[s.id] = YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
+      return acc;
+    }, {}),
     notlar: (veriler.notlar || '').trim()
   });
   return { basarili: true, tup: guncellenen };

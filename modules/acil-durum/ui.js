@@ -598,12 +598,38 @@ function yanginTupuModalAc(tup, onSablon) {
   document.getElementById('yanginTupuSonrakiHidrostatikTest').value = tup ? tup.sonrakiHidrostatikTest : (sablon ? sablon.sonrakiHidrostatikTest || '' : '');
   document.getElementById('yanginTupuSorumlu').value = tup ? tup.sorumlu : '';
   document.getElementById('yanginTupuDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${tup && tup.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('yanginTupuBulgular').value = tup ? tup.bulgular : '';
   document.getElementById('yanginTupuNotlar').value = tup ? tup.notlar : (sablon && sablon.firmaNotu ? 'Etiketten okunan firma bilgisi: ' + sablon.firmaNotu : '');
+  _yanginTupuKontrolListesiCiz(tup);
   _yanginTupuKonumAlaniCiz(tup);
   _yanginTupuSeriNumarasiUyariGuncelle();
   temizleFormHatalari('yanginTupuForm');
   document.getElementById('yanginTupuModalKatman').classList.add('acik');
+}
+
+// "Bulgular" serbest metninin yerine geçen madde bazlı kontrol listesi —
+// bkz. model.js YANGIN_TUPU_KONTROL_SORULARI. Her madde Uygun/Uygun Değil/
+// İlgili Değil olarak işaretlenir; cevaplar yanginTupuFormGonderildi'de
+// data-kontrol-soru niteliğiyle toplanır.
+function _yanginTupuKontrolListesiCiz(tup) {
+  const kutu = document.getElementById('yanginTupuKontrolListesi');
+  const cevaplar = tup ? tup.kontrolCevaplari || {} : {};
+  kutu.innerHTML = YANGIN_TUPU_KONTROL_SORULARI.map(s => `
+    <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
+      <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
+      <select data-kontrol-soru="${s.id}" style="width:auto; min-width:150px;">
+        <option value="">— Seçilmedi —</option>
+        ${YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${cevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+function _yanginTupuKontrolListesiTopla() {
+  const cevaplar = {};
+  document.querySelectorAll('#yanginTupuKontrolListesi [data-kontrol-soru]').forEach(sel => {
+    cevaplar[sel.getAttribute('data-kontrol-soru')] = sel.value;
+  });
+  return cevaplar;
 }
 
 // Formdaki seri numarası alanı, o sırada düzenlenmekte olan kayıt HARİÇ,
@@ -674,7 +700,7 @@ function yanginTupuFormGonderildi(e) {
     sonrakiHidrostatikTest: document.getElementById('yanginTupuSonrakiHidrostatikTest').value,
     sorumlu: document.getElementById('yanginTupuSorumlu').value,
     durum: document.getElementById('yanginTupuDurum').value,
-    bulgular: document.getElementById('yanginTupuBulgular').value,
+    kontrolCevaplari: _yanginTupuKontrolListesiTopla(),
     notlar: document.getElementById('yanginTupuNotlar').value
   };
 

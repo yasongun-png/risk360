@@ -40,6 +40,28 @@ const YANGIN_TUPU_TIPLERI = ['Kuru Kimyevi Toz (KKT)', 'CO2', 'Köpük', 'Su', '
 const YANGIN_TUPU_YILLIK_BAKIM_GUN = 365;
 const YANGIN_TUPU_HIDROSTATIK_TEST_GUN = 1460;
 
+// Saha kontrol kontrol listesi (madde bazlı Uygun/Uygun Değil/İlgili Değil) —
+// serbest metin "Bulgular" alanının yerine kullanıcı isteğiyle eklendi.
+const YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI = ['Uygun', 'Uygun Değil', 'İlgili Değil'];
+const YANGIN_TUPU_KONTROL_SORULARI = [
+  { id: 'ulasim', soru: 'Yangın tüpüne kolayca ulaşılabiliyor mu?' },
+  { id: 'onEngel', soru: 'Önünde herhangi bir engel var mı?' },
+  { id: 'sabitleme', soru: 'Yangın tüpü uygun şekilde sabitlenmiş mi?' },
+  { id: 'fizikselDurum', soru: 'Yangın tüpünün fiziksel durumu iyi mi?' },
+  { id: 'paslanmaHasar', soru: 'Tüp üzerinde paslanma veya ciddi hasar var mı?' },
+  { id: 'hortumNozul', soru: 'Hortum ve nozul sağlam mı?' },
+  { id: 'emniyetPimi', soru: 'Emniyet pimi mevcut mu?' },
+  { id: 'muhurPlomba', soru: 'Mühür/plomba sağlam mı?' },
+  { id: 'manometre', soru: 'Manometre mevcut ve okunabilir durumda mı?' },
+  { id: 'basincGostergesi', soru: 'Basınç göstergesi uygun seviyede mi?' },
+  { id: 'kullanimTalimati', soru: 'Kullanım talimatı okunabilir durumda mı?' },
+  { id: 'etiketlerMevcut', soru: 'Yangın tüpü üzerindeki etiketler mevcut mu?' },
+  { id: 'bakimEtiketi', soru: 'Bakım etiketi mevcut mu?' },
+  { id: 'bakimTarihiUygun', soru: 'Bakım tarihi uygun mu?' },
+  { id: 'yerIsaretleme', soru: 'Yangın tüpünün bulunduğu yer uygun şekilde işaretlenmiş mi?' },
+  { id: 'ortamUygunlugu', soru: 'Tüpün bulunduğu ortam açısından uygun durumda mı?' }
+];
+
 // Md.11: Söndürme/Kurtarma/Koruma ekiplerinin her biri için tehlike sınıfına göre bu sayıya
 // kadar her çalışan grubunda en az 1 destek elemanı.
 const MUDAHALE_EKIP_ORANI = { 'Çok Tehlikeli': 30, 'Tehlikeli': 40, 'Az Tehlikeli': 50 };
@@ -243,7 +265,15 @@ function yanginTupuOlustur(veriler) {
     sonrakiHidrostatikTest,
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
+    // "Bulgular" serbest metni yerine madde bazlı kontrol listesi kullanılıyor
+    // (bkz. YANGIN_TUPU_KONTROL_SORULARI) — alan eski kayıtlarla geriye dönük
+    // uyumluluk için korunuyor, formda artık gösterilmiyor.
     bulgular: (veriler.bulgular || '').trim(),
+    kontrolCevaplari: YANGIN_TUPU_KONTROL_SORULARI.reduce((acc, s) => {
+      const cevap = (veriler.kontrolCevaplari || {})[s.id];
+      acc[s.id] = YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
+      return acc;
+    }, {}),
     notlar: (veriler.notlar || '').trim(),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
 
