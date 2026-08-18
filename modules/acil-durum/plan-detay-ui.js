@@ -1,5 +1,5 @@
 // Acil Durum Planı — Planlama Merkezi (Tesis Bilgi Formu / Tehlike & Senaryo
-// Kartları / Komuta Yapısı & Ekip Tanımları) sayfasının DOM işlemleri.
+// Kartları / Acil Durum Yönetim Yapısı & Ekip Tanımları) sayfasının DOM işlemleri.
 
 let _pdFirma = null;
 let _pdGorunum = 'tesisBilgi';
@@ -76,7 +76,7 @@ function planDetaySayfasiniBaslat(firma) {
   document.getElementById('ekipTanimiModalIptalBtn').addEventListener('click', ekipTanimiModalKapat);
   document.getElementById('ekipTanimiForm').addEventListener('submit', ekipTanimiFormGonderildi);
 
-  // Komuta Yapısı
+  // Acil Durum Yönetim Yapısı
   document.getElementById('yeniKomutaPozisyonuBtn').addEventListener('click', () => komutaPozisyonuModalAc());
   document.getElementById('komutaPozisyonuModalKapatBtn').addEventListener('click', komutaPozisyonuModalKapat);
   document.getElementById('komutaPozisyonuModalIptalBtn').addEventListener('click', komutaPozisyonuModalKapat);
@@ -669,7 +669,7 @@ function komutaPozisyonuFormGonderildi(e) {
 }
 
 async function komutaStandartOlusturTiklandi() {
-  if (!(await onayModali('Standart komuta yapısı (Acil Durum Yöneticisi → Olay Komutanı → 7 sorumlu pozisyon) oluşturulsun mu? Bu, mevcut pozisyon yoksa çalışır.', 'Oluştur'))) return;
+  if (!(await onayModali('Standart acil durum yönetim yapısı (Acil Durum Yöneticisi → Olay Komutanı → 7 sorumlu pozisyon) oluşturulsun mu? Bu, mevcut pozisyon yoksa çalışır.', 'Oluştur'))) return;
   const sonuc = komutaYapisiStandartOlustur();
   if (!sonuc.basarili) { alert(sonuc.hata); return; }
   komutaPozisyonlariniCiz();

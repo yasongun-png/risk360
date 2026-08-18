@@ -73,7 +73,7 @@ async function acilDurumPlaniPdfOlustur(firma) {
       veri.ekipTanimlari.map(e => [e.ekipTuru, e.mudahaleSiniri, e.gorevTanimi])
     ))}
 
-    ${bolum('4. Komuta Yapısı', tablo(
+    ${bolum('4. Acil Durum Yönetim Yapısı', tablo(
       ['Pozisyon', 'Personel', 'Yedek Personel', 'Vardiya', 'Telefon'],
       veri.komutaPozisyonlari.map(p => [p.pozisyonAdi, p.personelAdi, p.yedekPersonelAdi, p.vardiya, p.telefon])
     ))}
@@ -242,7 +242,7 @@ async function acilDurumPlaniWordOlustur(firma) {
         _wcTablo(['Ekip Türü', 'Müdahale Sınırı', 'Görev Tanımı'],
           veri.ekipTanimlari.map(e => [e.ekipTuru, e.mudahaleSiniri, e.gorevTanimi])),
 
-        _wcBaslik('4. Komuta Yapısı'),
+        _wcBaslik('4. Acil Durum Yönetim Yapısı'),
         _wcTablo(['Pozisyon', 'Personel', 'Yedek Personel', 'Vardiya', 'Telefon'],
           veri.komutaPozisyonlari.map(p => [p.pozisyonAdi, p.personelAdi, p.yedekPersonelAdi, p.vardiya, p.telefon])),
 

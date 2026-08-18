@@ -1,6 +1,6 @@
 // Acil Durum Yönetimi ana sayfa DOM işlemleri (Ekipler / Uygunluk / Ekipman /
 // Yangın Tüpü / Tatbikat). Tehlike & Senaryo Kartları, Tesis Bilgi Formu ve
-// Komuta Yapısı plan-detay.html/plan-detay-ui.js'e taşındı.
+// Acil Durum Yönetim Yapısı plan-detay.html/plan-detay-ui.js'e taşındı.
 
 let _adGorunum = 'ekipler';
 let _adFirma = null;

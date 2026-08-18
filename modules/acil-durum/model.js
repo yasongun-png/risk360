@@ -936,7 +936,7 @@ const HAZIR_ACIL_DURUM_SENARYOLARI = [
     mudahaleSiniri: 'Gaz kokusu alan hiç kimse elektrikli anahtar/zil kullanmaz veya açık ateş yakmaz; müdahale doğalgaz şirketi ve itfaiyeye bırakılır.', disKurumBildirimi: 'Doğalgaz Acil (187), itfaiye.' }
 ].map(s => acilDurumSenaryoSablonuOlustur(Object.assign({ kaynak: 'hazir', sahipId: null }, s)));
 
-// ---- Ekip Tanımları ve Komuta Yapısı ----
+// ---- Ekip Tanımları ve Acil Durum Yönetim Yapısı ----
 
 // Madde 10: her EKIP_TURLERI için bir "tanım" kaydı (ekipman/müdahale sınırı/
 // haberleşme/görev/eğitim) — kişi ataması değil, ekip TÜRÜNÜN tanımıdır.

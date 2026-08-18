@@ -469,7 +469,7 @@ function ekipTanimiSil(id) {
   return { basarili: true };
 }
 
-// ---- Komuta Yapısı ----
+// ---- Acil Durum Yönetim Yapısı ----
 
 function komutaPozisyonlariGetir() {
   return komutaPozisyonlariTumunuGetir();
@@ -503,7 +503,7 @@ function komutaPozisyonuSil(id) {
 // tıkla oluşturur — hiç pozisyon yoksa çalışır, mevcut pozisyonlara dokunmaz.
 function komutaYapisiStandartOlustur() {
   const mevcut = komutaPozisyonlariTumunuGetir();
-  if (mevcut.length) return { basarili: false, hata: 'Komuta yapısında zaten pozisyon var. Önce mevcutları silin veya manuel ekleyin.' };
+  if (mevcut.length) return { basarili: false, hata: 'Acil durum yönetim yapısında zaten pozisyon var. Önce mevcutları silin veya manuel ekleyin.' };
   const adIdEslesmesi = {};
   KOMUTA_POZISYON_SABLONU.forEach(p => {
     const yeni = komutaPozisyonuOlustur({
@@ -852,7 +852,7 @@ function acilDurumEksikVerileriTespitEt(veri) {
   if (!veri.tesisBilgi.tesisTurleri.length) eksikler.push('Tesis Bilgi Formu — Tesis Sınıflandırması');
   if (!veri.senaryolar.length) eksikler.push('Tehlike & Senaryo Kartları — hiç senaryo eklenmemiş');
   if (!veri.ekipTanimlari.length) eksikler.push('Ekip Tanımları — hiç ekip tanımı eklenmemiş');
-  if (!veri.komutaPozisyonlari.length) eksikler.push('Komuta Yapısı — hiç pozisyon eklenmemiş');
+  if (!veri.komutaPozisyonlari.length) eksikler.push('Acil Durum Yönetim Yapısı — hiç pozisyon eklenmemiş');
   if (!veri.tahliyeAlanlari.length) eksikler.push('Tahliye Planları — hiç tahliye planı eklenmemiş');
   if (!veri.disKurumlar.length) eksikler.push('Dış Kurumlar — hiç kayıt eklenmemiş');
   const ozDenetimBos = Object.values(veri.ozDenetim.cevaplar).every(c => !c.cevap);
