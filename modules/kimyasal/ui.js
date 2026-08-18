@@ -275,9 +275,22 @@ function _kimKisalt(metin, uzunluk) {
   return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
 }
 
+// Kayıtta Depolama Grubu elle seçilmemiş/'Genel' bırakılmışsa (kullanıcı
+// henüz "Öner" ile kaydetmediyse) matris her şeyi "Uyumlu" gösterip
+// anlamsızlaşmasın diye ada göre CANLI bir tahminle doldurulur -- kayda
+// YAZILMAZ, sadece bu görünüm için kullanılır ve tahmini olduğu
+// (depolamaGrubuTahminiMi) ayrıca işaretlenir ki kullanıcı yanıltılmasın.
 function _kimDepolamaMatrisiKayitlariGetir() {
   return kimyasallariGetir('', {})
     .filter(k => k.durum !== 'İptal')
+    .map(k => {
+      const belirsiz = !k.depolamaGrubu || k.depolamaGrubu === 'Genel';
+      const tahmin = belirsiz ? kimyasalDepolamaGrubuTahminEt(k.ad, k.hKodlari) : '';
+      return Object.assign({}, k, {
+        depolamaGrubuEfektif: tahmin || k.depolamaGrubu || 'Genel',
+        depolamaGrubuTahminiMi: !!tahmin
+      });
+    })
     .sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
 }
 
@@ -297,17 +310,21 @@ function _kimDepolamaMatrisiniEkranaCiz() {
   }
   bosDurum.classList.remove('gorunur');
 
+  const tahminUyarisi = kayitlar.some(k => k.depolamaGrubuTahminiMi)
+    ? '<p style="font-size:12px; color:#b45309; margin:0 0 10px;">⚠ "*" ile işaretli kimyasallarda Depolama Grubu kayıtta seçilmemiş; kimyasal adından canlı tahmin edilmiştir (kayda yazılmadı). Kalıcı ve kesin olması için kaydı açıp Depolama Grubu\'nu "Öner" ile seçip kaydedin.</p>'
+    : '';
   const basliklar = kayitlar.map(k => `<th>${_kimKacir(k.kimyasalNo)}</th>`).join('');
   const govde = kayitlar.map((satirK, i) => {
     const hucreler = kayitlar.map((sutunK, j) => {
       if (i === j) return '<td style="text-align:center; background:#f1f5f9;">—</td>';
-      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubu, sutunK.depolamaGrubu);
+      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubuEfektif, sutunK.depolamaGrubuEfektif);
       return `<td style="text-align:center;"><span class="genel-rozet rozet-${uyumluMu ? 'dusuk' : 'kritik'}">${uyumluMu ? '✓ Uyumlu' : '✕ Uyumsuz'}</span></td>`;
     }).join('');
-    return `<tr><td style="font-weight:700; white-space:nowrap;">${_kimKacir(satirK.kimyasalNo)} — ${_kimKacir(_kimKisalt(satirK.ad, 30))} <span style="font-weight:400; color:var(--metin-soluk);">(${_kimKacir(satirK.depolamaGrubu)})</span></td>${hucreler}</tr>`;
+    const yildiz = satirK.depolamaGrubuTahminiMi ? '*' : '';
+    return `<tr><td style="font-weight:700; white-space:nowrap;">${_kimKacir(satirK.kimyasalNo)} — ${_kimKacir(_kimKisalt(satirK.ad, 30))} <span style="font-weight:400; color:var(--metin-soluk);">(${_kimKacir(satirK.depolamaGrubuEfektif)}${yildiz})</span></td>${hucreler}</tr>`;
   }).join('');
 
-  icerik.innerHTML = `<table class="veri-tablosu"><thead><tr><th>Kimyasal</th>${basliklar}</tr></thead><tbody>${govde}</tbody></table>`;
+  icerik.innerHTML = `${tahminUyarisi}<table class="veri-tablosu"><thead><tr><th>Kimyasal</th>${basliklar}</tr></thead><tbody>${govde}</tbody></table>`;
 }
 
 // Depolama Grubu bazlı ikili uyumluluk kontrolü (kimyasalGruplarUyumluMu)
@@ -319,17 +336,21 @@ function _kimDepolamaMatrisiHtml(kayitlar) {
   const govde = kayitlar.map((satirK, i) => {
     const hucreler = kayitlar.map((sutunK, j) => {
       if (i === j) return '<td style="background:#f1f5f9; text-align:center;">—</td>';
-      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubu, sutunK.depolamaGrubu);
+      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubuEfektif, sutunK.depolamaGrubuEfektif);
       return uyumluMu
         ? '<td style="text-align:center; color:#15803d;">Uyumlu</td>'
         : '<td style="text-align:center; color:#b91c1c; font-weight:700; background:#fee2e2;">✕ UYUMSUZ</td>';
     }).join('');
-    return `<tr><td style="font-weight:700; white-space:nowrap;">${_raporKacir(satirK.kimyasalNo)} — ${_raporKacir(satirK.ad)} <span style="font-weight:400; color:#555;">(${_raporKacir(satirK.depolamaGrubu)})</span></td>${hucreler}</tr>`;
+    const yildiz = satirK.depolamaGrubuTahminiMi ? '*' : '';
+    return `<tr><td style="font-weight:700; white-space:nowrap;">${_raporKacir(satirK.kimyasalNo)} — ${_raporKacir(satirK.ad)} <span style="font-weight:400; color:#555;">(${_raporKacir(satirK.depolamaGrubuEfektif)}${yildiz})</span></td>${hucreler}</tr>`;
   }).join('');
+  const tahminNotu = kayitlar.some(k => k.depolamaGrubuTahminiMi)
+    ? ' "*" işaretli kimyasallarda Depolama Grubu kayıtta seçilmemiş, addan tahmin edilmiştir; kesinleştirmek için kaydı açıp seçin.'
+    : '';
 
   return `
     <div class="doc-title">Kimyasal Depolama Uyumluluk Matrisi</div>
-    <div class="doc-meta">Depolama Grubu bazlı, KIMYASAL_UYUMSUZLUK_KURALLARI referans alınarak oluşturulmuştur. Toplam ${kayitlar.length} kimyasal. Sütun başlıkları Kimyasal No'dur, tam ad ve depolama grubu satır etiketinde yer alır.</div>
+    <div class="doc-meta">Depolama Grubu bazlı, KIMYASAL_UYUMSUZLUK_KURALLARI referans alınarak oluşturulmuştur. Toplam ${kayitlar.length} kimyasal. Sütun başlıkları Kimyasal No'dur, tam ad ve depolama grubu satır etiketinde yer alır.${tahminNotu}</div>
     <table><tr><th>Kimyasal</th>${basliklar}</tr>${govde}</table>
   `;
 }
