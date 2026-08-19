@@ -320,6 +320,15 @@ function _rpGecerliEgitimliPersonelSayisi(turId, firma) {
   return sayac;
 }
 
+// acil-durum/model.js'deki _ekipTuruNormallestir ile birebir aynı --
+// gerçek dünyadaki içe aktarılmış verilerde ekipTuru büyük/küçük harf,
+// baştaki/sondaki boşluk veya "... Ekibi" son ekiyle farklı yazılabiliyor;
+// bu dosya diğer modüllerin service.js'ini yüklemediğinden (bkz. dosya başı
+// açıklama) aynı fonksiyon burada da kendi önekiyle tekrarlanır.
+function _rpEkipTuruNormallestir(tur) {
+  return String(tur || '').trim().toLocaleUpperCase('tr').replace(/\s+EKİBİ$/, '').replace(/\s+/g, ' ').trim();
+}
+
 function raporAcilDurumYeterlilikOzeti(firma, calisanSayisi) {
   const tehlikeSinifi = (firma && firma.tehlikeSinifi) || 'Az Tehlikeli';
   const mudahale = _rpGerekliMudahaleEkibiSayisi(tehlikeSinifi, calisanSayisi);
@@ -330,12 +339,12 @@ function raporAcilDurumYeterlilikOzeti(firma, calisanSayisi) {
 
   const uyeler = oku(tenantAnahtar('acil_durum_ekipleri'), []);
   const bugun = _rpBugun();
-  const aktifMudahaleUyeleri = uyeler.filter(u => u.durum !== 'İptal' && u.ekipTuru !== 'İlk Yardım');
+  const aktifMudahaleUyeleri = uyeler.filter(u => u.durum !== 'İptal' && _rpEkipTuruNormallestir(u.ekipTuru) !== _rpEkipTuruNormallestir('İlk Yardım'));
 
   const atananSayilar = {
-    'Söndürme': aktifMudahaleUyeleri.filter(u => u.ekipTuru === 'Söndürme').length,
-    'Kurtarma': aktifMudahaleUyeleri.filter(u => u.ekipTuru === 'Kurtarma').length,
-    'Koruma': aktifMudahaleUyeleri.filter(u => u.ekipTuru === 'Koruma').length,
+    'Söndürme': aktifMudahaleUyeleri.filter(u => _rpEkipTuruNormallestir(u.ekipTuru) === _rpEkipTuruNormallestir('Söndürme')).length,
+    'Kurtarma': aktifMudahaleUyeleri.filter(u => _rpEkipTuruNormallestir(u.ekipTuru) === _rpEkipTuruNormallestir('Kurtarma')).length,
+    'Koruma': aktifMudahaleUyeleri.filter(u => _rpEkipTuruNormallestir(u.ekipTuru) === _rpEkipTuruNormallestir('Koruma')).length,
     'İlk Yardım': _rpGecerliEgitimliPersonelSayisi('ilkyardim', firma)
   };
 
