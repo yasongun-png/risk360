@@ -143,7 +143,8 @@ function ekipmanGuncelle(id, veriler) {
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
       return acc;
     }, {}),
-    notlar: (veriler.notlar || '').trim()
+    notlar: (veriler.notlar || '').trim(),
+    fotoUrl: veriler.fotoUrl || ''
   });
   return { basarili: true, ekipman: guncellenen };
 }

@@ -428,6 +428,8 @@ function ekipmanOlustur(veriler) {
       return acc;
     }, {}),
     notlar: (veriler.notlar || '').trim(),
+    // Kontrol sırasında çekilen kanıt/bulgu fotoğrafı (opsiyonel).
+    fotoUrl: veriler.fotoUrl || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
 
     // Saha Dijital Haritası köprüsü — bkz. modules/harita.

@@ -12,6 +12,7 @@ let _duzenlenenYanginTupuId = null;
 // eklenir. Düzenlemede kullanılmaz.
 let _bekleyenHaritaKonum = null;
 let _duzenlenenTatbikatId = null;
+let _ekipmanFotoUrl = '';
 
 function _adKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -51,6 +52,18 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('ekipmanModalKapatBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanModalIptalBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanForm').addEventListener('submit', ekipmanFormGonderildi);
+  document.getElementById('ekipmanFotoDosya').addEventListener('change', async e => {
+    const dosya = e.target.files[0];
+    e.target.value = '';
+    if (!dosya) return;
+    try {
+      const sonuc = await fotoYukle(dosya, 'acil-durum/ekipman/' + (_duzenlenenEkipmanId || 'gecici'));
+      _ekipmanFotoUrl = sonuc.url;
+      _ekipmanFotoOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Fotoğraf yüklenemedi.');
+    }
+  });
   document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
   const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
   ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -548,6 +561,9 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
+  _ekipmanFotoUrl = ekipman ? (ekipman.fotoUrl || '') : '';
+  document.getElementById('ekipmanFotoDosya').value = '';
+  _ekipmanFotoOnizlemeCiz();
   _ekipmanKontrolListesiCiz(ekipman);
   document.getElementById('ekipmanTur').onchange = () => _ekipmanKontrolListesiCiz(ekipman);
   _ekipmanKonumAlaniCiz(ekipman);
@@ -583,6 +599,26 @@ function _ekipmanKonumAlaniCiz(ekipman) {
     document.getElementById('ekipmanKonumEkleBtn').addEventListener('click', () => {
       window.location.href = `../harita/index.html?konumKaynak=acilDurumEkipman&konumId=${ekipman.id}&donus=${donusUrl}`;
     });
+  }
+}
+
+// Kontrol/bulgu fotoğrafı önizlemesi -- modules/kimyasal/ui.js
+// _sdsGorseliOnizlemeCiz ile aynı desen (fotoYukle + fotoReferanslariCoz).
+function _ekipmanFotoOnizlemeCiz() {
+  const kutu = document.getElementById('ekipmanFotoOnizleme');
+  if (!kutu) return;
+  kutu.innerHTML = _ekipmanFotoUrl
+    ? `<div style="display:flex; align-items:center; gap:10px;">
+         <img data-foto-ref="${_ekipmanFotoUrl}" style="width:72px; height:72px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+         <div>
+           <div style="font-size:12px; color:#16a34a; font-weight:600;">✓ Fotoğraf eklendi</div>
+           <button type="button" class="tablo-buton sil" style="margin-top:4px;">Fotoğrafı Kaldır</button>
+         </div>
+       </div>`
+    : '<div style="font-size:12px; color:var(--metin-soluk);">Henüz fotoğraf eklenmedi.</div>';
+  if (_ekipmanFotoUrl) {
+    kutu.querySelector('button').addEventListener('click', () => { _ekipmanFotoUrl = ''; _ekipmanFotoOnizlemeCiz(); });
+    fotoReferanslariCoz(kutu);
   }
 }
 
@@ -635,7 +671,8 @@ function ekipmanFormGonderildi(e) {
     durum: document.getElementById('ekipmanDurum').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     kontrolCevaplari: _ekipmanKontrolListesiTopla(),
-    notlar: document.getElementById('ekipmanNotlar').value
+    notlar: document.getElementById('ekipmanNotlar').value,
+    fotoUrl: _ekipmanFotoUrl
   };
 
   if (!_duzenlenenEkipmanId && _bekleyenHaritaKonum) {
