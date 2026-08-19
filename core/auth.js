@@ -88,6 +88,25 @@ async function kendiSifresiniDegistir(mevcutSifre, yeniSifre) {
   return { basarili: true };
 }
 
+// Oturumdaki kullanıcının kendi görünen adını (adSoyad) değiştirmesi --
+// kendiSifresiniDegistir ile aynı desen. Kullanıcı isteği: "Yönetici
+// kullanıcı yerine admin diyelim" -- önceden bu sadece ilkYuklemeyiHazirla
+// içindeki ilk kurulum verisiydi ve hiçbir ekrandan düzenlenemiyordu.
+function kendiAdimiDegistir(yeniAd) {
+  const kullanici = oturumdakiKullanici();
+  if (!kullanici) return { basarili: false, hata: 'Oturum bulunamadı.' };
+  const temizAd = (yeniAd || '').trim();
+  if (!temizAd) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
+
+  const kullanicilar = oku('isg_kullanicilar', []);
+  const kayit = kullanicilar.find(k => k.id === kullanici.id);
+  if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
+
+  kayit.adSoyad = temizAd;
+  yaz('isg_kullanicilar', kullanicilar);
+  return { basarili: true };
+}
+
 function oturumdakiKullanici() {
   const oturum = oku('isg_oturum', null);
   if (!oturum) return null;
