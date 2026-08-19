@@ -251,13 +251,25 @@ function _ucAlanSatiri(etiket1, deger1, etiket2, deger2) {
   </tr>`;
 }
 
-function _ucOnayKutusu(baslik, adSoyad) {
+// imzaKaydi: {ad, tarih} (modules/uygunsuzluk/model.js uygunsuzlukImzaVeriUret),
+// imzaGorselUrl: fotoBuyukCoz ile çözülmüş data URL (varsa). Dijital imza
+// atılmışsa çizilmiş imza görseli + tarih basılır; atılmamışsa kağıda elle
+// imzalamak için boş bir alan bırakılır (bkz. is-izni/cikti.js _izImzaHucre
+// ile aynı ilke — dijital varsa göster, yoksa boş kutu).
+function _ucOnayKutusu(baslik, adSoyad, imzaKaydi, imzaGorselUrl) {
+  const gosterilecekAd = (imzaKaydi && imzaKaydi.ad) || adSoyad;
+  const imzaIcerik = imzaGorselUrl
+    ? `<img src="${imzaGorselUrl}" style="max-width:100%; max-height:12mm; margin-top:1mm;">`
+    : '';
+  const tarihSatiri = (imzaKaydi && imzaKaydi.tarih)
+    ? `<div style="font-size:7pt; color:#64748b; margin-top:0.5mm;">${_ucKacir(gunAyYil((imzaKaydi.tarih || '').slice(0, 10)))}</div>`
+    : '';
   return `
     <div class="uc-onay-kutu">
       <div class="uc-onay-etiket">${_ucKacir(baslik)}</div>
-      <div class="uc-onay-ad">${_ucKacir(adSoyad) || '&nbsp;'}</div>
-      <div class="uc-onay-imza-alani"></div>
-      <div class="uc-onay-imza-baslik">İmza</div>
+      <div class="uc-onay-ad">${_ucKacir(gosterilecekAd) || '&nbsp;'}</div>
+      <div class="uc-onay-imza-alani">${imzaIcerik}</div>
+      <div class="uc-onay-imza-baslik">İmza${tarihSatiri}</div>
       <div class="uc-onay-kase">Kaşe</div>
     </div>
   `;
@@ -387,7 +399,8 @@ async function uygunsuzlukKayitPdfOlustur(id) {
   const logo = firma ? firmaLogoGetir(firma.id) : '';
   const acikMi = k.durum !== 'Kapalı';
   const tanim = [k.baslik, k.aciklama].filter(Boolean).join(' — ');
-  const [fotoOncesiUrl, fotoSonrasiUrl, kroki, ekFotoUrlleri] = await Promise.all([
+  const imzalar = k.imzalar || {};
+  const [fotoOncesiUrl, fotoSonrasiUrl, kroki, ekFotoUrlleri, bildirenImzaUrl, sorumluImzaUrl] = await Promise.all([
     fotoBuyukCoz(k.fotoOncesi),
     fotoBuyukCoz(k.fotoSonrasi),
     _ucKrokiGorseliniHazirla(k),
@@ -395,7 +408,9 @@ async function uygunsuzlukKayitPdfOlustur(id) {
       no: n,
       oncesi: await fotoBuyukCoz(k['fotoOncesi' + n]),
       sonrasi: await fotoBuyukCoz(k['fotoSonrasi' + n])
-    })))
+    }))),
+    fotoBuyukCoz(imzalar.bildiren && imzalar.bildiren.imzaUrl),
+    fotoBuyukCoz(imzalar.sorumlu && imzalar.sorumlu.imzaUrl)
   ]);
   // Boş kalan çiftler tabloya hiç girmez.
   const ekFotoSatirlari = ekFotoUrlleri.filter(f => f.oncesi || f.sonrasi);
@@ -506,8 +521,8 @@ async function uygunsuzlukKayitPdfOlustur(id) {
       <h2>${_ucSayfa2BolumNo + 1}. Onay</h2>
       <div style="padding:3mm;">
         <div class="uc-onay-satir">
-          ${_ucOnayKutusu('Bildiren / Tespit Eden', k.atayan)}
-          ${_ucOnayKutusu('Sorumlu (Kapatan)', k.sorumlu)}
+          ${_ucOnayKutusu('Bildiren / Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
+          ${_ucOnayKutusu('Sorumlu (Kapatan)', k.sorumlu, imzalar.sorumlu, sorumluImzaUrl)}
         </div>
       </div>
     </div>

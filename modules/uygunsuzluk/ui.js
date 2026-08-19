@@ -180,6 +180,11 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniKaydetBtn').addEventListener('click', raporMetniKaydet);
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('uygunsuzluk', 'Uygunsuzluk'));
+  document.getElementById('imzaKatmaniKapatBtn').addEventListener('click', imzaModalKapat);
+  document.getElementById('imzaKatmaniIptalBtn').addEventListener('click', imzaModalKapat);
+  document.getElementById('imzaVazgecBtn').addEventListener('click', () => imzaModalAc(_imzaKayitId));
+  document.getElementById('imzaTemizleBtn').addEventListener('click', () => { if (_imzaPad) _imzaPad.temizle(); });
+  document.getElementById('imzaKaydetBtn').addEventListener('click', _imzaKaydet);
   document.getElementById('konuTasiKapatBtn').addEventListener('click', konuTasiModalKapat);
   document.getElementById('konuTasiIptalBtn').addEventListener('click', konuTasiModalKapat);
   document.getElementById('konuTasiKaydetBtn').addEventListener('click', () => {
@@ -487,6 +492,7 @@ function _islemButonlariUret(k) {
   const butonlar = [
     `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`,
     `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`,
+    `<button class="tablo-buton" data-imza="${k.id}">✍️ Kaşe/İmza</button>`,
     `<a class="tablo-buton${k.haritaTesisId ? ' sil' : ''}" href="${_islemHaritaUrlUret(k)}" style="text-decoration:none;" title="${k.haritaTesisId ? 'Haritada Gör' : 'Haritada Konum Ekle'}">🗺️ Harita</a>`,
     // Konusu olmayan ("Tüm Konular" seçiliyken oluşturulmuş, sahipsiz)
     // kayıtları fark etmek kolay olsun diye turuncu renkte gösterilir.
@@ -553,6 +559,7 @@ function kayitlariCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', () => uygunsuzlukFormunuYazdir(btn.getAttribute('data-form'))));
+  govde.querySelectorAll('[data-imza]').forEach(btn => btn.addEventListener('click', () => imzaModalAc(btn.getAttribute('data-imza'))));
   govde.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', async () => {
     try { await uygunsuzlukKayitPdfOlustur(btn.getAttribute('data-pdf')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
@@ -592,6 +599,142 @@ function konuTasiModalAc(kayit) {
 function konuTasiModalKapat() {
   document.getElementById('konuTasiKatmani').classList.remove('acik');
   _konuTasiKayitId = null;
+}
+
+// ==================== KAŞE / DİJİTAL İMZA ====================
+// modules/is-izni/ui.js _izImzaPaduBagla ile birebir aynı canvas imza pad'i
+// -- bu modül diğer modüllerin ui.js'ini yüklemediğinden kendi önekiyle
+// (_uc) tekrarlanır (bkz. cikti.js dosya başı açıklaması, aynı ilke).
+function _ucImzaPaduBagla(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+
+  function boyutlandir() {
+    const oran = window.devicePixelRatio || 1;
+    const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 120;
+    canvas.width = genislik * oran;
+    canvas.height = yukseklik * oran;
+    ctx.scale(oran, oran);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a';
+  }
+  boyutlandir();
+
+  function konum(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const y = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+    return { x: x - r.left, y: y - r.top };
+  }
+  function basla(e) { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; }
+  function ciz(e) {
+    if (!ciziliyor) return;
+    e.preventDefault();
+    const p = konum(e);
+    ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    sonX = p.x; sonY = p.y;
+  }
+  function bitir() { ciziliyor = false; }
+
+  canvas.addEventListener('pointerdown', basla);
+  canvas.addEventListener('pointermove', ciz);
+  window.addEventListener('pointerup', bitir);
+
+  return {
+    temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+    doluMu: () => dolu,
+    canvasElemani: canvas
+  };
+}
+
+// Storage yerine fotoBuyukKaydet ile "fotoref:<id>" -- is-izni/ui.js
+// _izImzaYukle ile aynı gerekçe: Storage'ın gerçek http(s) URL'i PDF
+// üretiminde (html2canvas) CORS'a takılıp sessizce boş çıkabiliyordu.
+async function _ucImzaYukle(canvas) {
+  const firma = aktifFirmaGetir();
+  const dataUrl = canvas.toDataURL('image/png');
+  return fotoBuyukKaydet(dataUrl, firma ? firma.slug : '');
+}
+
+let _imzaKayitId = null;
+let _imzaAktifRol = null;
+let _imzaPad = null;
+
+const _UC_IMZA_ROL_ETIKETLERI = { bildiren: 'Bildiren / Tespit Eden', sorumlu: 'Sorumlu (Kapatan)' };
+
+function _imzaDurumGosterimiCiz(kayit) {
+  const kutu = document.getElementById('imzaDurumGosterimi');
+  const imzalar = kayit.imzalar || {};
+  kutu.innerHTML = ['bildiren', 'sorumlu'].map(rol => {
+    const imza = imzalar[rol];
+    const durum = imza && imza.imzaUrl
+      ? `<span style="color:#15803d; font-weight:600;">✓ İmzalandı</span> — ${_usKacir(imza.ad)} (${gunAyYil((imza.tarih || '').slice(0, 10)) || '-'})`
+      : '<span style="color:var(--metin-soluk);">Henüz imzalanmadı</span>';
+    return `
+      <div class="uc-imza-rol-satir">
+        <div><b>${_UC_IMZA_ROL_ETIKETLERI[rol]}</b><br><span style="font-size:12px;">${durum}</span></div>
+        <button type="button" class="tablo-buton" data-imza-rol="${rol}">${imza && imza.imzaUrl ? 'Yeniden İmzala' : 'İmza At'}</button>
+      </div>
+    `;
+  }).join('');
+  kutu.querySelectorAll('[data-imza-rol]').forEach(btn => btn.addEventListener('click', () => _imzaCizimBasla(btn.getAttribute('data-imza-rol'))));
+}
+
+function imzaModalAc(id) {
+  const kayit = uygunsuzlukIdIleGetirRepo(id);
+  if (!kayit) return;
+  _imzaKayitId = id;
+  _imzaAktifRol = null;
+  document.getElementById('imzaKayitEtiketi').textContent = `${kayit.aksiyonNo} — ${kayit.baslik}`;
+  document.getElementById('imzaCizimAlani').style.display = 'none';
+  document.getElementById('imzaDurumGosterimi').style.display = '';
+  document.getElementById('imzaKapatEylemi').style.display = '';
+  _imzaDurumGosterimiCiz(kayit);
+  document.getElementById('imzaKatmani').classList.add('acik');
+}
+
+function _imzaCizimBasla(rol) {
+  _imzaAktifRol = rol;
+  document.getElementById('imzaDurumGosterimi').style.display = 'none';
+  document.getElementById('imzaKapatEylemi').style.display = 'none';
+  document.getElementById('imzaCizimAlani').style.display = '';
+  document.getElementById('imzaAdSoyad').value = (oturumdakiKullanici() || {}).adSoyad || '';
+  document.getElementById('imzaHata').textContent = '';
+  requestAnimationFrame(() => {
+    if (!_imzaPad) _imzaPad = _ucImzaPaduBagla('imzaCanvas');
+    if (_imzaPad) _imzaPad.temizle();
+  });
+}
+
+async function _imzaKaydet() {
+  const hataEl = document.getElementById('imzaHata');
+  const ad = document.getElementById('imzaAdSoyad').value.trim();
+  if (!ad) { hataEl.textContent = 'Lütfen ad soyad girin.'; return; }
+  if (!_imzaPad || !_imzaPad.doluMu()) { hataEl.textContent = 'Lütfen imza alanına imzanızı atın.'; return; }
+
+  const btn = document.getElementById('imzaKaydetBtn');
+  btn.disabled = true;
+  btn.textContent = 'Kaydediliyor…';
+  try {
+    const imzaUrl = await _ucImzaYukle(_imzaPad.canvasElemani);
+    const sonuc = uygunsuzlukImzaVer(_imzaKayitId, _imzaAktifRol, ad, imzaUrl);
+    if (!sonuc.basarili) { hataEl.textContent = sonuc.hata; return; }
+    imzaModalAc(_imzaKayitId);
+  } catch (hata) {
+    console.error('İmza yüklenemedi:', hata);
+    hataEl.textContent = 'İmza kaydedilemedi: ' + (hata.message || hata);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kaydet';
+  }
+}
+
+function imzaModalKapat() {
+  document.getElementById('imzaKatmani').classList.remove('acik');
+  _imzaKayitId = null;
+  _imzaAktifRol = null;
 }
 
 function ozetiCiz() {

@@ -172,6 +172,19 @@ function uygunsuzlukKonuTasi(id, konuId) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// Bildirim Formu'ndaki "Onay" bölümü (kaşe/imza kutuları) için dijital imza
+// kaydeder -- rol 'bildiren' ya da 'sorumlu' olabilir. imzalar nesnesinin
+// tamamı değil sadece ilgili rol güncellenir (bkz. is-izni/service.js
+// izinOnayVer ile aynı desen).
+function uygunsuzlukImzaVer(id, rol, ad, imzaUrl) {
+  if (!['bildiren', 'sorumlu'].includes(rol)) return { basarili: false, hata: 'Geçersiz imza rolü.' };
+  const kayit = uygunsuzlukIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Kayıt bulunamadı.' };
+  const imzalar = Object.assign({}, kayit.imzalar, { [rol]: uygunsuzlukImzaVeriUret(ad, imzaUrl) });
+  const guncellenen = uygunsuzlukGuncelleRepo(id, { imzalar });
+  return { basarili: true, kayit: guncellenen };
+}
+
 function uygunsuzlukOnayla(id, onaylayan) {
   const guncellenen = uygunsuzlukGuncelleRepo(id, {
     durum: 'Kapalı',

@@ -125,6 +125,14 @@ function uygunsuzlukGecikmisMi(kayit, bugunStr) {
 // Uygunsuzluk Konusu / Defteri: eski üretim uygulamasındaki gibi kayıtları
 // isimli gruplara (ör. "Çsgb Seveso Denetimi") ayırmaya yarar. Silme yok —
 // eski uygulamada da sadece oluşturma/yeniden adlandırma vardı.
+// Bildirim Formu PDF'indeki "Onay" bölümünde (kaşe/imza kutuları) gösterilen
+// dijital imza kaydı -- is-izni/model.js izinImzaVeriUret ile aynı şekil
+// (ad/imzaUrl/tarih), bu modülün kendi kaydına ('bildiren'/'sorumlu' rolü
+// altında) yazılır.
+function uygunsuzlukImzaVeriUret(ad, imzaUrl) {
+  return { ad: (ad || '').trim(), imzaUrl: imzaUrl || '', tarih: new Date().toISOString() };
+}
+
 function uygunsuzlukKonuOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
@@ -186,6 +194,10 @@ function uygunsuzlukKaydiOlustur(veriler) {
     // (x/y). Boşsa kayıt haritada henüz işaretlenmemiş demektir.
     haritaTesisId: veriler.haritaTesisId || '',
     haritaX: veriler.haritaX !== undefined ? veriler.haritaX : '',
-    haritaY: veriler.haritaY !== undefined ? veriler.haritaY : ''
+    haritaY: veriler.haritaY !== undefined ? veriler.haritaY : '',
+
+    // Bildirim Formu'ndaki Onay bölümü için dijital imzalar --
+    // { bildiren: {ad, imzaUrl, tarih}, sorumlu: {ad, imzaUrl, tarih} }.
+    imzalar: veriler.imzalar || {}
   };
 }
