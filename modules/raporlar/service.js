@@ -358,6 +358,35 @@ function raporAcilDurumYeterlilikOzeti(firma, calisanSayisi) {
   };
 }
 
+// ---- Engelli Çalışan Kotası (İş Kanunu Md.30) ----
+// Özel sektör işyerlerinde, aynı il sınırları içinde 50 ve üzerinde işçi
+// çalıştırılıyorsa toplam işçi sayısının en az %3'ü engelli olmalıdır (4857
+// sayılı İş Kanunu Md.30, Engelli ve Eski Hükümlü Çalıştırma Yönetmeliği).
+// 50'nin altındaki işyerlerinde bu zorunluluk yoktur; oran yine de
+// bilgilendirme amaçlı hesaplanır. Gerekli sayı hesabında yönetmeliğin
+// kesir kuralına uyulur: 0,5 ve üzeri yukarı, altı aşağı yuvarlanır
+// (Math.round ile aynı davranış).
+const _RP_ENGELLI_KOTA_ORANI = 0.03;
+const _RP_ENGELLI_KOTA_ESIK_CALISAN = 50;
+
+function raporEngelliCalisanOzeti() {
+  const personeller = oku(tenantAnahtar('personel'), []).filter(p => !p.istenCikisTarihi);
+  const toplam = personeller.length;
+  const engelliSayisi = personeller.filter(p => p.engelliMi === 'EVET').length;
+  const zorunlulukKapsaminda = toplam >= _RP_ENGELLI_KOTA_ESIK_CALISAN;
+  const gerekliSayi = zorunlulukKapsaminda ? Math.round(toplam * _RP_ENGELLI_KOTA_ORANI) : 0;
+
+  return {
+    toplamCalisan: toplam,
+    engelliSayisi,
+    oranYuzde: toplam ? Math.round((engelliSayisi / toplam) * 1000) / 10 : 0,
+    zorunlulukKapsaminda,
+    gerekliSayi,
+    eksik: Math.max(0, gerekliSayi - engelliSayisi),
+    uygun: !zorunlulukKapsaminda || engelliSayisi >= gerekliSayi
+  };
+}
+
 // ---- İSG Malzeme Talep ----
 
 function raporMalzemeTalepOzeti() {
@@ -381,6 +410,7 @@ function raporGenelOzetiHesapla(firma) {
     isIzni: raporIsIzniOzeti(),
     malzemeTalep: raporMalzemeTalepOzeti(),
     acilDurum: raporAcilDurumYeterlilikOzeti(firma, personelEgitim.personelSayisi),
+    engelliKotasi: raporEngelliCalisanOzeti(),
     merkeziAksiyon: merkeziAksiyonOzetiHesapla()
   };
 }

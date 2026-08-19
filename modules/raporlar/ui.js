@@ -47,7 +47,7 @@ function _rpYeterlilikTablosu(satirlar) {
 function raporlarSayfasiniCiz(ozet) {
   const pe = ozet.personelEgitim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
-    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, ma = ozet.merkeziAksiyon;
+    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi, ma = ozet.merkeziAksiyon;
 
   document.getElementById('rpIcerik').innerHTML = `
     ${_rpBolumBasligi('Genel Bakış')}
@@ -59,6 +59,7 @@ function raporlarSayfasiniCiz(ozet) {
       ${_rpKart('Açık Uygunsuzluk', u.acikSayisi, u.gecikmis > 0)}
       ${_rpKart('Açık İş İzni', izin.acikSayisi)}
       ${_rpKart('Acil Durum Ekip Yeterliliği', ad.uygun ? 'Uygun' : ad.toplamEksik + ' Eksik', !ad.uygun)}
+      ${_rpKart('Engelli Çalışan Kotası (%3)', eng.zorunlulukKapsaminda ? (eng.uygun ? 'Uygun' : eng.eksik + ' Eksik') : 'Kapsam Dışı', eng.zorunlulukKapsaminda && !eng.uygun)}
       ${_rpKart('Toplam Açık Aksiyon', ma.toplamAcik)}
     </div>
 
@@ -145,6 +146,17 @@ function raporlarSayfasiniCiz(ozet) {
     ${_rpYeterlilikTablosu(ad.satirlar)}
     <p style="margin-top:10px;"><a class="geri-link" href="../acil-durum/index.html">Vardiya bazlı uygunluk değerlendirmesini incele →</a></p>
 
+    ${_rpBolumBasligi('Engelli Çalışan Kotası (İş Kanunu Md.30)')}
+    <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Özel sektörde aynı il sınırları içinde 50 ve üzeri işçi çalıştıran işyerlerinde toplam işçi sayısının en az %3'ü engelli olmalıdır (4857 sayılı İş Kanunu Md.30, Engelli ve Eski Hükümlü Çalıştırma Yönetmeliği). 50'nin altındaki işyerleri bu zorunluluk kapsamı dışındadır.</p>
+    <div class="istatistik-grid">
+      ${_rpKart('Toplam Aktif Çalışan', eng.toplamCalisan)}
+      ${_rpKart('Engelli Çalışan Sayısı', eng.engelliSayisi)}
+      ${_rpKart('Oran', eng.oranYuzde + '%', eng.zorunlulukKapsaminda && eng.oranYuzde < 3)}
+      ${_rpKart('Kanuni Kapsam (50+)', eng.zorunlulukKapsaminda ? 'Kapsamda' : 'Kapsam Dışı')}
+      ${_rpKart('Gerekli Sayı (%3)', eng.gerekliSayi)}
+      ${_rpKart('Eksik', eng.eksik, eng.zorunlulukKapsaminda && eng.eksik > 0)}
+    </div>
+
     ${_rpBolumBasligi('Merkezi Aksiyon Takibi')}
     <div class="istatistik-grid">
       ${_rpKart('Toplam Açık Aksiyon', ma.toplamAcik)}
@@ -160,7 +172,7 @@ function raporlarSayfasiniCiz(ozet) {
 function raporOzetiYazdir(ozet, firmaAdi) {
   const pe = ozet.personelEgitim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
-    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, ma = ozet.merkeziAksiyon;
+    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi, ma = ozet.merkeziAksiyon;
 
   const satir = (etiket, deger) => `<tr><td style="font-weight:700; width:280px;">${_raporKacir(etiket)}</td><td>${_raporKacir(deger)}</td></tr>`;
 
@@ -179,6 +191,7 @@ function raporOzetiYazdir(ozet, firmaAdi) {
       ${satir('Açık İş İzni / Onay Bekleyen', izin.acikSayisi + ' / ' + izin.onayBekleyen)}
       ${satir('Açık İSG Malzeme Talebi', mlz.acikSayisi)}
       ${satir('Acil Durum Ekip / İlkyardımcı Yeterliliği', (ad.uygun ? 'Uygun' : ad.toplamEksik + ' kişi eksik'))}
+      ${satir('Engelli Çalışan Kotası (%3, İş Kanunu Md.30)', eng.zorunlulukKapsaminda ? (eng.engelliSayisi + ' / ' + eng.toplamCalisan + ' (%' + eng.oranYuzde + ') — ' + (eng.uygun ? 'Uygun' : eng.eksik + ' kişi eksik')) : 'Kapsam dışı (< 50 çalışan)')}
       ${satir('Toplam Açık Aksiyon / Gecikmiş', ma.toplamAcik + ' / ' + ma.gecikmis)}
     </table>
   `;
