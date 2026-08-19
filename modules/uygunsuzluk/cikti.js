@@ -270,7 +270,6 @@ function _ucOnayKutusu(baslik, adSoyad, imzaKaydi, imzaGorselUrl) {
       <div class="uc-onay-ad">${_ucKacir(gosterilecekAd) || '&nbsp;'}</div>
       <div class="uc-onay-imza-alani">${imzaIcerik}</div>
       <div class="uc-onay-imza-baslik">İmza${tarihSatiri}</div>
-      <div class="uc-onay-kase">Kaşe</div>
     </div>
   `;
 }
@@ -379,7 +378,6 @@ const _UC_KAYIT_STIL = `
       #ucKayitPdf .uc-onay-ad{ font-size:9pt; margin-top:1.5mm; min-height:4mm; }
       #ucKayitPdf .uc-onay-imza-alani{ height:12mm; border-bottom:1px solid #111827; margin-top:4mm; }
       #ucKayitPdf .uc-onay-imza-baslik{ font-size:7.5pt; color:#64748b; margin-top:1mm; }
-      #ucKayitPdf .uc-onay-kase{ width:30mm; height:18mm; border:1px dashed #94a3b8; margin:4mm auto 0; display:flex; align-items:center; justify-content:center; font-size:7.5pt; color:#94a3b8; }
 
       #ucKayitPdf table.uc-ek-foto-tablo{ width:100%; border-collapse:collapse; table-layout:fixed; }
       #ucKayitPdf table.uc-ek-foto-tablo th{ background:#e5e7eb; color:#111827; font-size:8pt; padding:3px 4px; border:1px solid #94a3b8; text-transform:uppercase; }
@@ -521,8 +519,8 @@ async function uygunsuzlukKayitPdfOlustur(id) {
       <h2>${_ucSayfa2BolumNo + 1}. Onay</h2>
       <div style="padding:3mm;">
         <div class="uc-onay-satir">
-          ${_ucOnayKutusu('Bildiren / Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
-          ${_ucOnayKutusu('Sorumlu (Kapatan)', k.sorumlu, imzalar.sorumlu, sorumluImzaUrl)}
+          ${_ucOnayKutusu('Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
+          ${_ucOnayKutusu('Bölüm Sorumlusu', k.sorumlu, imzalar.sorumlu, sorumluImzaUrl)}
         </div>
       </div>
     </div>

@@ -649,12 +649,47 @@ function _ucImzaPaduBagla(canvasId) {
   };
 }
 
+// Ham canvas geniş/boş bir tuval (pad'in tam boyutu) olduğundan, imza
+// sadece sol tarafa küçük çizilmişse PDF'te "sola yaslanmış" görünüyordu
+// (kullanıcı bildirdi) -- kaydetmeden önce gerçekte boyanmış (alpha>0)
+// piksellerin sınırlayıcı kutusuna kırpılır ki görüntü kendi kutusunda
+// ortalansın.
+function _ucImzaKirp(canvas) {
+  const ctx = canvas.getContext('2d');
+  const genislik = canvas.width, yukseklik = canvas.height;
+  const veri = ctx.getImageData(0, 0, genislik, yukseklik).data;
+  let minX = genislik, minY = yukseklik, maxX = 0, maxY = 0, doluVarMi = false;
+  for (let y = 0; y < yukseklik; y++) {
+    for (let x = 0; x < genislik; x++) {
+      if (veri[(y * genislik + x) * 4 + 3] > 10) {
+        doluVarMi = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!doluVarMi) return canvas;
+  const bosluk = Math.round(genislik * 0.02);
+  minX = Math.max(0, minX - bosluk);
+  minY = Math.max(0, minY - bosluk);
+  maxX = Math.min(genislik, maxX + bosluk);
+  maxY = Math.min(yukseklik, maxY + bosluk);
+
+  const kirpilmis = document.createElement('canvas');
+  kirpilmis.width = maxX - minX;
+  kirpilmis.height = maxY - minY;
+  kirpilmis.getContext('2d').drawImage(canvas, minX, minY, kirpilmis.width, kirpilmis.height, 0, 0, kirpilmis.width, kirpilmis.height);
+  return kirpilmis;
+}
+
 // Storage yerine fotoBuyukKaydet ile "fotoref:<id>" -- is-izni/ui.js
 // _izImzaYukle ile aynı gerekçe: Storage'ın gerçek http(s) URL'i PDF
 // üretiminde (html2canvas) CORS'a takılıp sessizce boş çıkabiliyordu.
 async function _ucImzaYukle(canvas) {
   const firma = aktifFirmaGetir();
-  const dataUrl = canvas.toDataURL('image/png');
+  const dataUrl = _ucImzaKirp(canvas).toDataURL('image/png');
   return fotoBuyukKaydet(dataUrl, firma ? firma.slug : '');
 }
 
@@ -662,7 +697,7 @@ let _imzaKayitId = null;
 let _imzaAktifRol = null;
 let _imzaPad = null;
 
-const _UC_IMZA_ROL_ETIKETLERI = { bildiren: 'Bildiren / Tespit Eden', sorumlu: 'Sorumlu (Kapatan)' };
+const _UC_IMZA_ROL_ETIKETLERI = { bildiren: 'Tespit Eden', sorumlu: 'Bölüm Sorumlusu' };
 
 function _imzaDurumGosterimiCiz(kayit) {
   const kutu = document.getElementById('imzaDurumGosterimi');
