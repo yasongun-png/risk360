@@ -531,6 +531,7 @@ function ekipmanlariCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
       <td>${_adKacir(e.bulgular) || '-'}</td>
       <td>
+        <button class="tablo-buton" data-yeni-kontrol="${e.id}">Yeni Kontrol Başlat</button>
         <button class="tablo-buton" data-duzenle="${e.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${e.id}">Sil</button>
       </td>
@@ -539,6 +540,7 @@ function ekipmanlariCiz(aramaMetni) {
   });
 
   fotoReferanslariCoz(govde);
+  govde.querySelectorAll('[data-yeni-kontrol]').forEach(btn => btn.addEventListener('click', () => ekipmanYeniKontrolBaslat(ekipmanIdIleGetirRepo(btn.getAttribute('data-yeni-kontrol')))));
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
@@ -576,6 +578,26 @@ function ekipmanModalAc(ekipman) {
   _ekipmanKonumAlaniCiz(ekipman);
   temizleFormHatalari('ekipmanForm');
   document.getElementById('ekipmanModalKatman').classList.add('acik');
+}
+
+// Kullanıcı isteği: "yeni checklist başlat vb buton olsun ekipman kontrolü
+// için, kontrol tarihi oraya girilsin" -- Düzenle modalı bir önceki
+// kontrolün cevaplarını/bulgularını/fotoğrafını dolu gösterip üzerine
+// yazdırıyordu; bu düğme aynı modalı AÇAR ama kontrol listesini/bulguları/
+// fotoğrafı temizler ve Son Kontrol tarihine bugünü yazar -- ekipman
+// kimlik bilgileri (No/Tür/Bölüm/Lokasyon/Sorumlu/Periyot) korunur.
+function ekipmanYeniKontrolBaslat(ekipman) {
+  if (!ekipman) return;
+  ekipmanModalAc(ekipman);
+  document.getElementById('ekipmanModalBaslik').textContent = `${ekipman.ekipmanNo || 'Ekipman'} — Yeni Kontrol`;
+  document.getElementById('ekipmanSonKontrol').value = bugunIso();
+  document.getElementById('ekipmanSonrakiKontrol').value = '';
+  document.getElementById('ekipmanBulgular').value = '';
+  document.querySelectorAll('#ekipmanKontrolListesi [data-kontrol-soru]').forEach(sel => { sel.value = ''; });
+  _ekipmanFotoUrl = '';
+  document.getElementById('ekipmanFotoCekDosya').value = '';
+  document.getElementById('ekipmanFotoSecDosya').value = '';
+  _ekipmanFotoOnizlemeCiz();
 }
 
 // Saha Dijital Haritası köprüsü — bkz. modules/uygunsuzluk/ui.js'teki
