@@ -190,3 +190,38 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre) {
   const bolumAdi = bolumFiltre ? '_' + bolumFiltre.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
   saveAs(blob, `Ekipman_Kontrol_Formu_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
+
+// "Yeni Kontrol Başlat" ile bölüm bazlı toplu kontrol tamamlandığında (bkz.
+// modules/acil-durum/ui.js topluKontrolKaydet) o oturumda kaydedilen
+// ekipmanların GEÇMİŞE DÖNÜK KAYDI olarak üretilir — kullanıcı isteği:
+// "Yapılan kontrolüğn tarihi, kontrolü kim yaptı bunların girilmesi lazım
+// ve geçmişe dönük kaydedelip yazdırılabilmeli word olarak". Boş bir
+// kontrol formu şablonu değil, o an gerçekten girilmiş cevap/bulgu/fotoğrafı
+// içeren bir kayıt belgesidir; bu yüzden ekipmanKontrolFormuWordOlustur'dan
+// ayrı, kendi başlığı ve dosya adıyla üretilir.
+async function ekipmanKontrolKaydiWordOlustur(firma, bolum, kontrolTarihi, kontrolEden, ekipmanlar) {
+  const cocuklar = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMANLARI KONTROL KAYDI', bold: true, size: 32 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 80 }, children: [new docx.TextRun({ text: `${firma.ad || ''}${bolum ? ' — ' + bolum + ' Bölümü' : ''}`, size: 20 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 300 }, children: [new docx.TextRun({ text: `Kontrol Tarihi: ${gunAyYil(kontrolTarihi)}   |   Kontrolü Yapan: ${kontrolEden}`, size: 20, bold: true })] })
+  ];
+
+  const turlereGore = {};
+  ekipmanlar.forEach(e => { (turlereGore[e.tur] = turlereGore[e.tur] || []).push(e); });
+  const turler = Object.keys(turlereGore).sort((a, b) => a.localeCompare(b, 'tr'));
+  for (const tur of turler) {
+    const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
+    cocuklar.push(_kfBaslik(tur, docx.HeadingLevel.HEADING_1, false));
+    for (const ekipman of turlereGore[tur]) {
+      cocuklar.push(...(await _kfEkipmanBlogu(ekipman, sorular)));
+    }
+  }
+
+  cocuklar.push(_kfBaslik('Kontrol Onayı', docx.HeadingLevel.HEADING_1, true));
+  cocuklar.push(_kfImzaTablosu(['Kontrolü Yapan', 'Bölüm Sorumlusu']));
+
+  const dokuman = new docx.Document({ sections: [{ properties: {}, children: cocuklar }] });
+  const blob = await docx.Packer.toBlob(dokuman);
+  const bolumAdi = bolum ? bolum.replace(/[^\p{L}\p{N}]+/gu, '_') : 'Genel';
+  saveAs(blob, `Ekipman_Kontrol_Kaydi_${bolumAdi}_${kontrolTarihi}.docx`);
+}

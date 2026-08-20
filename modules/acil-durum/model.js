@@ -423,6 +423,9 @@ function ekipmanOlustur(veriler) {
     // "Bulgular" serbest metni korunuyor — üzerine türe özgü madde bazlı
     // kontrol listesi eklendi (bkz. EKIPMAN_KONTROL_SORULARI), ikisi bir arada.
     bulgular: (veriler.bulgular || '').trim(),
+    // Son kontrolü fiilen kimin yaptığı (kullanıcı isteği: "kontrolü kim
+    // yaptı bunların girilmesi lazım").
+    kontrolEden: (veriler.kontrolEden || '').trim(),
     kontrolCevaplari: sorular.reduce((acc, s) => {
       const cevap = (veriler.kontrolCevaplari || {})[s.id];
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';

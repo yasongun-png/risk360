@@ -671,6 +671,11 @@ function topluKontrolModalAc() {
   document.getElementById('topluKontrolBolum').innerHTML = bolumler.length
     ? bolumler.map(b => `<option>${_adKacir(b)}</option>`).join('')
     : '<option value="">— Bölüm bulunamadı —</option>';
+  // Kullanıcı isteği: "yapılan kontrolün tarihi, kontrolü kim yaptı bunların
+  // girilmesi lazım ve geçmişe dönük kaydedilebilmeli" -- tarih varsayılan
+  // bugün ama elle geçmiş bir tarihe de değiştirilebilir (date input serbest).
+  document.getElementById('topluKontrolTarihi').value = bugunIso();
+  document.getElementById('topluKontrolYapan').value = '';
   document.getElementById('topluKontrolListesi').innerHTML = '';
   document.getElementById('topluKontrolEylemler').style.display = 'none';
   _tkFotoUrller = {};
@@ -768,14 +773,26 @@ function _tkFotoOnizlemeCiz(ekipmanId) {
 
 // Her kart için mevcut ekipman kaydının ÜZERİNE (Object.assign) sadece
 // kontrol alanları (Son Kontrol/Sonraki Kontrol/kontrolCevaplari/bulgular/
-// fotoUrl) yazılır -- ekipmanGuncelle'nin ürettiği nesne veriler'deki TÜM
-// alanları (bolum, sorumlu, periyotGun, ekipmanNo...) okuduğundan, sadece
-// değişenleri geçmek onları boşaltırdı.
-function topluKontrolKaydet() {
+// fotoUrl/kontrolEden) yazılır -- ekipmanGuncelle'nin ürettiği nesne
+// veriler'deki TÜM alanları (bolum, sorumlu, periyotGun, ekipmanNo...)
+// okuduğundan, sadece değişenleri geçmek onları boşaltırdı.
+//
+// Kullanıcı isteği: "Yapılan kontrolün tarihi, kontrolü kim yaptı bunların
+// girilmesi lazım ve geçmişe dönük kaydedilip yazdırılabilmeli word olarak"
+// -- Kontrol Tarihi/Kontrolü Yapan modalda zorunlu (geçmiş bir tarih de
+// girilebilir), kaydettikten sonra o oturumun Word kaydı otomatik indirilir.
+async function topluKontrolKaydet() {
+  const tarih = document.getElementById('topluKontrolTarihi').value;
+  const kontrolEden = document.getElementById('topluKontrolYapan').value.trim();
+  if (!tarih) { alert('Lütfen kontrol tarihini girin.'); return; }
+  if (!kontrolEden) { alert('Lütfen kontrolü yapan kişinin adını girin.'); return; }
+
+  const bolum = document.getElementById('topluKontrolBolum').value;
   const kartlar = document.querySelectorAll('#topluKontrolListesi [data-tk-kart]');
   if (!kartlar.length) { topluKontrolModalKapat(); return; }
 
   let basarili = 0;
+  const kaydedilenler = [];
   kartlar.forEach(kart => {
     const id = kart.getAttribute('data-tk-kart');
     const ekipman = ekipmanIdIleGetirRepo(id);
@@ -784,19 +801,29 @@ function topluKontrolKaydet() {
     kart.querySelectorAll('[data-tk-soru]').forEach(sel => { cevaplar[sel.getAttribute('data-tk-soru')] = sel.value; });
     const bulgular = kart.querySelector('[data-tk-bulgular]').value;
     const veriler = Object.assign({}, ekipman, {
-      sonKontrol: bugunIso(),
+      sonKontrol: tarih,
       sonrakiKontrol: '',
       kontrolCevaplari: cevaplar,
       bulgular,
-      fotoUrl: _tkFotoUrller[id] || ekipman.fotoUrl || ''
+      fotoUrl: _tkFotoUrller[id] || ekipman.fotoUrl || '',
+      kontrolEden
     });
     const sonuc = ekipmanGuncelle(id, veriler);
-    if (sonuc.basarili) basarili++;
+    if (sonuc.basarili) { basarili++; kaydedilenler.push(sonuc.ekipman); }
   });
 
   topluKontrolModalKapat();
   _ekipmanBolumFiltreDoldur();
   ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+
+  if (kaydedilenler.length) {
+    try {
+      await ekipmanKontrolKaydiWordOlustur(_adFirma, bolum, tarih, kontrolEden, kaydedilenler);
+    } catch (hata) {
+      console.error(hata);
+      alert('Kontrol kaydı Word belgesi üretilemedi: ' + (hata.message || hata));
+    }
+  }
   alert(`${basarili} ekipmanın kontrolü kaydedildi.`);
 }
 
