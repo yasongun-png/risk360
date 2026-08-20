@@ -60,18 +60,15 @@ function acilDurumSayfasiniBaslat(firma) {
   // dönebiliyor. Bunun yerine doğrudan fotoSikistir + fotoBuyukKaydet
   // kullanılır -- Storage'a hiç uğranmaz, Firestore'a "fotoref:<id>" olarak
   // yazılır, CORS devreye girmez.
-  document.getElementById('ekipmanFotoDosya').addEventListener('change', async e => {
-    const dosya = e.target.files[0];
-    e.target.value = '';
-    if (!dosya) return;
-    try {
-      const dataUrl = await fotoSikistir(dosya, 900, 0.6);
-      _ekipmanFotoUrl = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
-      _ekipmanFotoOnizlemeCiz();
-    } catch (hata) {
-      alert(hata.message || 'Fotoğraf yüklenemedi.');
-    }
-  });
+  // Kullanıcı isteği: "direk çekip atabileyim" (kamera) VE "resim olarak da
+  // ekleyebilmek istiyorum" (galeriden/dosyadan mevcut bir görsel) -- bazı
+  // mobil tarayıcılarda capture="environment" olan bir input SADECE kamerayı
+  // açıp galeri seçimini gizleyebiliyor, bu yüzden tek input yerine iki ayrı
+  // düğme/gizli input kullanılır; ikisi de aynı yükleme mantığına bağlanır.
+  document.getElementById('ekipmanFotoCekBtn').addEventListener('click', () => document.getElementById('ekipmanFotoCekDosya').click());
+  document.getElementById('ekipmanFotoSecBtn').addEventListener('click', () => document.getElementById('ekipmanFotoSecDosya').click());
+  document.getElementById('ekipmanFotoCekDosya').addEventListener('change', _ekipmanFotoSecildi);
+  document.getElementById('ekipmanFotoSecDosya').addEventListener('change', _ekipmanFotoSecildi);
   document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
   const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
   ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -570,7 +567,8 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
   _ekipmanFotoUrl = ekipman ? (ekipman.fotoUrl || '') : '';
-  document.getElementById('ekipmanFotoDosya').value = '';
+  document.getElementById('ekipmanFotoCekDosya').value = '';
+  document.getElementById('ekipmanFotoSecDosya').value = '';
   _ekipmanFotoOnizlemeCiz();
   _ekipmanKontrolListesiCiz(ekipman);
   document.getElementById('ekipmanTur').onchange = () => _ekipmanKontrolListesiCiz(ekipman);
@@ -607,6 +605,23 @@ function _ekipmanKonumAlaniCiz(ekipman) {
     document.getElementById('ekipmanKonumEkleBtn').addEventListener('click', () => {
       window.location.href = `../harita/index.html?konumKaynak=acilDurumEkipman&konumId=${ekipman.id}&donus=${donusUrl}`;
     });
+  }
+}
+
+// "Fotoğraf Çek" (kamera) ve "Galeriden/Dosyadan Seç" düğmelerinin ortak
+// yükleme mantığı -- Storage/CORS sorunundan kaçınmak için doğrudan
+// fotoSikistir + fotoBuyukKaydet kullanılır (bkz. yukarıdaki wiring
+// yorumu ve is-izni/ui.js _izImzaYukle ile aynı gerekçe).
+async function _ekipmanFotoSecildi(e) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  try {
+    const dataUrl = await fotoSikistir(dosya, 900, 0.6);
+    _ekipmanFotoUrl = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
+    _ekipmanFotoOnizlemeCiz();
+  } catch (hata) {
+    alert(hata.message || 'Fotoğraf yüklenemedi.');
   }
 }
 
