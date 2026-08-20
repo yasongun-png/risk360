@@ -52,13 +52,21 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('ekipmanModalKapatBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanModalIptalBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanForm').addEventListener('submit', ekipmanFormGonderildi);
+  // Kullanıcı bildirdi: Kontrol Formu (Word) çıktısında fotoğraf hâlâ
+  // görünmüyordu. Kök neden is-izni/ui.js'teki imza sorunuyla birebir aynı
+  // (bkz. _izImzaYukle yorumu): fotoYukle önce Firebase Storage'ı dener ve
+  // başarılı olursa gerçek https:// Storage adresini döner; bu adres
+  // Word/PDF üretiminde (fetch/canvas) CORS engeline takılıp sessizce boş
+  // dönebiliyor. Bunun yerine doğrudan fotoSikistir + fotoBuyukKaydet
+  // kullanılır -- Storage'a hiç uğranmaz, Firestore'a "fotoref:<id>" olarak
+  // yazılır, CORS devreye girmez.
   document.getElementById('ekipmanFotoDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
     e.target.value = '';
     if (!dosya) return;
     try {
-      const sonuc = await fotoYukle(dosya, 'acil-durum/ekipman/' + (_duzenlenenEkipmanId || 'gecici'));
-      _ekipmanFotoUrl = sonuc.url;
+      const dataUrl = await fotoSikistir(dosya, 900, 0.6);
+      _ekipmanFotoUrl = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
       _ekipmanFotoOnizlemeCiz();
     } catch (hata) {
       alert(hata.message || 'Fotoğraf yüklenemedi.');
