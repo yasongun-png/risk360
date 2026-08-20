@@ -66,10 +66,45 @@ function _kfImzaTablosu(basliklar) {
   });
 }
 
-// Tek bir ekipman kaydının başlığı + kontrol tablosu + bulgular. İmza kutusu
-// her ekipmanın altında DEĞİL, kullanıcı isteğiyle yalnızca belgenin en
-// altında tek sefer basılıyor (bkz. ekipmanKontrolFormuWordOlustur sonu).
-function _kfEkipmanBlogu(ekipman, sorular) {
+// Kayıttaki fotoUrl'i (Storage https URL ya da fotoBuyukKaydet'in
+// "fotoref:<id>" referansı olabilir -- bkz. modules/acil-durum/ui.js
+// ekipmanFotoDosya, modules/kimyasal/ui.js sdsGorseli ile aynı fotoYukle
+// deseni) docx.js ImageRun'ın kabul ettiği ham byte dizisine + gerçek
+// en/boy oranını koruyan ölçülere çevirir. Fotoğraf yoksa/çözülemezse
+// null döner, çağıran taraf o durumda görsel eklemeden devam eder.
+async function _kfFotoVerisiGetir(url) {
+  if (!url) return null;
+  try {
+    const cozulmus = await fotoBuyukCoz(url);
+    if (!cozulmus) return null;
+    const yanit = await fetch(cozulmus);
+    const blob = await yanit.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const olcu = await new Promise((coz, red) => {
+      const img = new Image();
+      img.onload = () => coz({ genislik: img.naturalWidth, yukseklik: img.naturalHeight });
+      img.onerror = red;
+      img.src = URL.createObjectURL(blob);
+    });
+    const MAKS_GENISLIK = 320;
+    const oran = olcu.genislik > MAKS_GENISLIK ? MAKS_GENISLIK / olcu.genislik : 1;
+    return {
+      veri: new Uint8Array(arrayBuffer),
+      genislik: Math.round(olcu.genislik * oran),
+      yukseklik: Math.round(olcu.yukseklik * oran)
+    };
+  } catch (e) {
+    console.error('Ekipman fotoğrafı Word belgesine eklenemedi:', e);
+    return null;
+  }
+}
+
+// Tek bir ekipman kaydının başlığı + kontrol tablosu + bulgular (+ varsa
+// fotoğrafı). İmza kutusu her ekipmanın altında DEĞİL, kullanıcı isteğiyle
+// yalnızca belgenin en altında tek sefer basılıyor (bkz.
+// ekipmanKontrolFormuWordOlustur sonu).
+async function _kfEkipmanBlogu(ekipman, sorular) {
+  const foto = await _kfFotoVerisiGetir(ekipman.fotoUrl);
   return [
     new docx.Paragraph({
       spacing: { before: 200, after: 80 },
@@ -85,7 +120,11 @@ function _kfEkipmanBlogu(ekipman, sorular) {
       { spacing: { after: 120 } }
     ),
     _kfKontrolTablosu(sorular, ekipman.kontrolCevaplari || {}),
-    _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: 200 } })
+    _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: foto ? 80 : 200 } }),
+    ...(foto ? [new docx.Paragraph({
+      spacing: { after: 200 },
+      children: [new docx.ImageRun({ data: foto.veri, transformation: { width: foto.genislik, height: foto.yukseklik } })]
+    })] : [])
   ];
 }
 
@@ -124,19 +163,21 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre) {
   ];
 
   let uretilenBolumSayisi = 0;
-  turler.forEach(tur => {
+  for (const tur of turler) {
     const kayitlar = tumEkipman.filter(e => e.tur === tur).sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr'));
-    if (kayitlar.length === 0) return;
+    if (kayitlar.length === 0) continue;
     const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
     cocuklar.push(_kfBaslik(`Kontrol Formu — ${tur}`, docx.HeadingLevel.HEADING_1, uretilenBolumSayisi > 0));
     uretilenBolumSayisi++;
     cocuklar.push(_kfParagraf(`Bu form, ${tur} türündeki ${kayitlar.length} ekipmanın periyodik kontrolü için düzenlenmiştir.`, { spacing: { after: 160 } }));
 
-    _kfBolumleraGrupla(kayitlar).forEach(grup => {
+    for (const grup of _kfBolumleraGrupla(kayitlar)) {
       cocuklar.push(_kfBaslik(`Bölüm: ${grup.bolum}`, docx.HeadingLevel.HEADING_2));
-      grup.kayitlar.forEach(ekipman => cocuklar.push(..._kfEkipmanBlogu(ekipman, sorular)));
-    });
-  });
+      for (const ekipman of grup.kayitlar) {
+        cocuklar.push(...(await _kfEkipmanBlogu(ekipman, sorular)));
+      }
+    }
+  }
 
   // İmza kutusu her ekipmanın altında değil, kullanıcı isteğiyle yalnızca
   // belgenin en sonunda TEK sefer basılıyor.
