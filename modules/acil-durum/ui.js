@@ -562,7 +562,7 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanBolum').innerHTML = '<option value="">— Bölüm seçiniz —</option>' +
     mevcutBolumler.map(b => `<option ${ekipmanBolumu === b ? 'selected' : ''}>${_adKacir(b)}</option>`).join('');
   document.getElementById('ekipmanLokasyon').value = ekipman ? ekipman.lokasyon : '';
-  document.getElementById('ekipmanPeriyot').value = ekipman ? ekipman.periyotGun : 30;
+  document.getElementById('ekipmanPeriyot').value = ekipman ? ekipman.periyotGun : 90;
   document.getElementById('ekipmanSonKontrol').value = ekipman ? ekipman.sonKontrol : '';
   document.getElementById('ekipmanSonrakiKontrol').value = ekipman ? ekipman.sonrakiKontrol : '';
   document.getElementById('ekipmanSorumlu').value = ekipman ? ekipman.sorumlu : '';

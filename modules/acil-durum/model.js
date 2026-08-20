@@ -402,7 +402,8 @@ function ekipUyesiOlustur(veriler) {
 }
 
 function ekipmanOlustur(veriler) {
-  const periyotGun = Number(veriler.periyotGun || 30);
+  // Kullanıcı isteği: "kontroller 3 aylık olsun" -- varsayılan periyot 90 gün.
+  const periyotGun = Number(veriler.periyotGun || 90);
   const sonKontrol = veriler.sonKontrol || '';
   const sonrakiKontrol = veriler.sonrakiKontrol || (sonKontrol ? gunEkle(sonKontrol, periyotGun) : '');
   const tur = veriler.tur || 'Diğer';

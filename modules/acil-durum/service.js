@@ -120,7 +120,8 @@ function ekipmanGuncelle(id, veriler) {
   const dogrulama = ekipmanDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  const periyotGun = Number(veriler.periyotGun || 30);
+  // Kullanıcı isteği: "kontroller 3 aylık olsun" -- varsayılan periyot 90 gün.
+  const periyotGun = Number(veriler.periyotGun || 90);
   const sonrakiKontrol = veriler.sonrakiKontrol || (veriler.sonKontrol ? gunEkle(veriler.sonKontrol, periyotGun) : '');
   const mevcut = ekipmanIdIleGetirRepo(id) || {};
   const sorular = EKIPMAN_KONTROL_SORULARI[veriler.tur] || [];
