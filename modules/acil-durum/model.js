@@ -126,6 +126,7 @@ const EKIPMAN_KONTROL_SORULARI = {
   ],
   'Yangın Dolabı': [
     { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor' },
+    { id: 'onundeEngelYok', soru: 'Önünde engel yok' },
     { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli' },
     { id: 'dolapKapagi', soru: 'Dolap kapağı var' },
     { id: 'dolapSaglam', soru: 'Dolap sağlam' },
