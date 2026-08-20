@@ -232,6 +232,17 @@ function uygunsuzlukSayfasiniBaslat() {
   });
 
   _konuSecimDoldur();
+  // Kullanıcı isteği: "uygunsuzlukta da saha kontrolü uygunsuzlukları seçili
+  // gelsin ilk açtığımda" -- sayfa ilk açıldığında (henüz hiçbir konu
+  // seçilmemişken) "Saha Kontrolü Uygunsuzlukları" adlı konu varsa
+  // varsayılan olarak o seçili gelir; yoksa eskisi gibi "Tüm Konular" kalır.
+  if (!_secilenKonuId) {
+    const varsayilanKonu = uygunsuzlukKonulariniGetir().find(k => (k.ad || '').trim().toLocaleUpperCase('tr') === 'SAHA KONTROLÜ UYGUNSUZLUKLARI');
+    if (varsayilanKonu) {
+      document.getElementById('konuSecim').value = varsayilanKonu.id;
+      _secilenKonuId = varsayilanKonu.id;
+    }
+  }
   _usBolumFiltreDoldur();
   _yasalSartlariDoldur();
   gorunumDegistir('kayitlar');
