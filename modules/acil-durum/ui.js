@@ -688,6 +688,7 @@ function topluKontrolModalKapat() {
 
 function _tkKartHtml(ekipman) {
   const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
+  const oncekiCevaplar = ekipman.kontrolCevaplari || {};
   return `
     <div class="kart" style="margin-bottom:14px; padding:14px;" data-tk-kart="${ekipman.id}">
       <div style="font-weight:700; margin-bottom:8px;">${_adKacir(ekipman.ekipmanNo)} — ${_adKacir(ekipman.tur)} — ${_adKacir(ekipman.lokasyon)}</div>
@@ -695,13 +696,13 @@ function _tkKartHtml(ekipman) {
         <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
           <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
           <select data-tk-soru="${s.id}" style="width:auto; min-width:150px;">
-            <option value="">— Seçilmedi —</option>
-            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}">${o}</option>`).join('')}
+            <option value="" ${oncekiCevaplar[s.id] ? '' : 'selected'}>— Seçilmedi —</option>
+            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${oncekiCevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
           </select>
         </div>
       `).join('')}
       <label style="margin-top:10px; display:block; font-size:12px; font-weight:600;">Bulgular</label>
-      <textarea data-tk-bulgular rows="2" style="width:100%;"></textarea>
+      <textarea data-tk-bulgular rows="2" style="width:100%;">${_adKacir(ekipman.bulgular || '')}</textarea>
       <div style="display:flex; gap:8px; margin-top:8px;">
         <button type="button" class="tablo-buton" data-tk-foto-cek-btn="${ekipman.id}">📷 Fotoğraf Çek</button>
         <button type="button" class="tablo-buton" data-tk-foto-sec-btn="${ekipman.id}">🖼️ Galeriden Seç</button>
