@@ -29,14 +29,20 @@ function _faKacir(v) {
 // sinifAdi: PDF'in kendi <style> bloğunda tanımladığı CSS sınıfı (isteğe bağlı).
 // dokumanNoGizle: true verilirse "Doküman No" satırı atlanır (ör. kurul raporu
 // bu numarayı hiç göstermek istemiyor; diğer modülleri etkilemez).
-function formAyarlariKutusuHtml(modulAdi, sinifAdi, dokumanNoGizle) {
+// sayfaSayisiGoruntu (opsiyonel): verilirse Form Ayarları'ndaki sabit
+// sayfaSayisi metni yerine bu kullanılır -- birden çok sayfalı bir PDF'in
+// HER sayfası aynı kutuyu bastığından (kullanıcı bildirdi: "1. sayfa 1/1,
+// 2. sayfada da 1/1" -- ikisi de aynı sabit değeri gösteriyordu), çağıran
+// taraf gerçek "mevcut sayfa/toplam sayfa" değerini (ör. "1/2", "2/2")
+// buradan geçebilir.
+function formAyarlariKutusuHtml(modulAdi, sinifAdi, dokumanNoGizle, sayfaSayisiGoruntu) {
   const a = formAyarlariGetir(modulAdi);
   return `
     <table class="${sinifAdi || 'fa-kutu'}">
       ${dokumanNoGizle ? '' : `<tr><td>Doküman No</td><td>: ${_faKacir(a.dokumanNo) || '-'}</td></tr>`}
       <tr><td>Sürüm Tarihi</td><td>: ${_faKacir(a.surumTarihi) || '-'}</td></tr>
       <tr><td>Sürüm No</td><td>: ${_faKacir(a.surumNo) || '-'}</td></tr>
-      <tr><td>Sayfa Sayısı</td><td>: ${_faKacir(a.sayfaSayisi) || '-'}</td></tr>
+      <tr><td>Sayfa Sayısı</td><td>: ${_faKacir(sayfaSayisiGoruntu || a.sayfaSayisi) || '-'}</td></tr>
     </table>
   `;
 }

@@ -413,6 +413,14 @@ async function uygunsuzlukKayitPdfOlustur(id) {
   // Boş kalan çiftler tabloya hiç girmez.
   const ekFotoSatirlari = ekFotoUrlleri.filter(f => f.oncesi || f.sonrasi);
 
+  // Form Ayarları kutusundaki "Sayfa Sayısı" satırı varsayılan olarak sabit
+  // bir metin (ör. "1/1") -- bu form her zaman TAM 2 sayfa ürettiğinden
+  // (aşağıdaki sayfalar dizisi), her sayfaya kendi gerçek "mevcut/toplam"
+  // değeri (bkz. formAyarlariKutusuHtml'in 4. parametresi) geçilir; aksi
+  // halde her iki sayfa da aynı sabit değeri (ör. "1/1") gösteriyordu
+  // (kullanıcı bildirdi).
+  const UC_TOPLAM_SAYFA = 2;
+
   const html = `
   <div id="ucKayitPdf">
     <style>${_UC_KAYIT_STIL}</style>
@@ -420,7 +428,7 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     <div class="uc-form-ustbilgi">
       <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
       <div class="uc-form-baslik">UYGUNSUZLUK FORMU</div>
-      <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk')}</div>
+      <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, `1/${UC_TOPLAM_SAYFA}`)}</div>
     </div>
 
     <div class="uc-form-bolum">
@@ -478,7 +486,7 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     <div class="uc-form-ustbilgi">
       <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
       <div class="uc-form-baslik">UYGUNSUZLUK FORMU</div>
-      <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk')}</div>
+      <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, `2/${UC_TOPLAM_SAYFA}`)}</div>
     </div>
 
     ${ekFotoSatirlari.length ? `
