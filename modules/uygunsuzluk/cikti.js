@@ -466,25 +466,20 @@ async function uygunsuzlukKayitPdfOlustur(id) {
       </table>
     </div>
 
-    <div class="uc-form-bolum">
-      <h2>4. Görsel Kanıtlar (Öncesi / Sonrası)</h2>
-      <div style="padding:3mm;">
-        <div class="uc-form-fotograflar">
-          ${_ucFormFotoKutusu(fotoOncesiUrl, 'Uygunsuzluk Anı (Öncesi)')}
-          ${_ucFormFotoKutusu(fotoSonrasiUrl, 'Düzeltici Faaliyet (Sonrası)')}
-        </div>
-      </div>
-    </div>
-
     <div class="uc-form-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
   </div>
   `;
 
-  // Konum krokisi sayfa 1'e eklenince (fotoğraflarla birlikte) tek A4 sayfasına
-  // sığmıyordu (kullanıcı bildirdi) — bu yüzden ayrı, kendi başlık şeridini
-  // tekrar eden İKİNCİ bir sayfa olarak eklenir (kapak/liste sayfalarında
-  // kullanılan "her sayfa ayrı yakalanır" yöntemiyle aynı mantık).
-  const _ucSayfa2BolumNo = ekFotoSatirlari.length ? 6 : 5;
+  // Kullanıcı bildirdi: "yukarıya biraz fazla yazı yazınca görsel kanıtlar
+  // sayfa arasında bölündü, bir fotoğrafın böyle ikiye bölünmemesi lazım"
+  // -- 1-3. bölümlerin metin uzunluğu kayıttan kayda değiştiğinden, Görsel
+  // Kanıtlar (sabit ~56mm yükseklikte foto kutuları) sayfa 1'in altında
+  // kalırsa canvas'ın A4 sayfasına sığdırılması sırasında görünmeden
+  // kırpılıyordu (sayfa 2'ye "devam" da etmiyordu, tamamen kayboluyordu).
+  // Bu yüzden Görsel Kanıtlar artık sayfa 1'de DEĞİL, kendi başlık şeridini
+  // tekrar eden sayfa 2'nin EN BAŞINDA sabit konumda basılıyor (Konum
+  // Krokisi/Onay ile aynı mantık — bkz. aşağıdaki yorum).
+  let _ucSayfa2BolumNo = 5;
   const sayfa2Html = `
   <div id="ucKayitPdf">
     <style>${_UC_KAYIT_STIL}</style>
@@ -495,9 +490,19 @@ async function uygunsuzlukKayitPdfOlustur(id) {
       <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, `2/${UC_TOPLAM_SAYFA}`)}</div>
     </div>
 
+    <div class="uc-form-bolum">
+      <h2>4. Görsel Kanıtlar (Öncesi / Sonrası)</h2>
+      <div style="padding:3mm;">
+        <div class="uc-form-fotograflar">
+          ${_ucFormFotoKutusu(fotoOncesiUrl, 'Uygunsuzluk Anı (Öncesi)')}
+          ${_ucFormFotoKutusu(fotoSonrasiUrl, 'Düzeltici Faaliyet (Sonrası)')}
+        </div>
+      </div>
+    </div>
+
     ${ekFotoSatirlari.length ? `
       <div class="uc-form-bolum">
-        <h2>5. Ek Fotoğraflar</h2>
+        <h2>${_ucSayfa2BolumNo++}. Ek Fotoğraflar</h2>
         <table class="uc-ek-foto-tablo">
           <thead><tr><th>#</th><th>Öncesi</th><th>Sonrası</th></tr></thead>
           <tbody>
@@ -514,7 +519,7 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     ` : ''}
 
     <div class="uc-form-bolum">
-      <h2>${_ucSayfa2BolumNo}. Konum Krokisi</h2>
+      <h2>${_ucSayfa2BolumNo++}. Konum Krokisi</h2>
       <div style="padding:3mm;">
         ${kroki ? `
           <div class="uc-kroki-kutu uc-kroki-kutu-buyuk">
@@ -530,7 +535,7 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     </div>
 
     <div class="uc-form-bolum">
-      <h2>${_ucSayfa2BolumNo + 1}. Onay</h2>
+      <h2>${_ucSayfa2BolumNo}. Onay</h2>
       <div style="padding:3mm;">
         <div class="uc-onay-satir">
           ${_ucOnayKutusu('Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
