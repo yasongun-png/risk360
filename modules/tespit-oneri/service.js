@@ -15,6 +15,9 @@ function tespitOneriKayitlariniGetir(aramaMetni, filtreler) {
   // Kullanıcı isteği: "tespit ve öneri defterinde sicil no ya göre
   // filtreleme yapılsın".
   if (f.isyeriSicili) liste = liste.filter(k => (k.isyeriSicili || '') === f.isyeriSicili);
+  // Kullanıcı isteği: "iş güvenliği uzmanı filtesi de olsun" -- kaydı
+  // tespit eden (Tespiti Yapan) kişiye göre filtreler.
+  if (f.tespitEden) liste = liste.filter(k => (k.tespitEden || '') === f.tespitEden);
 
   if (aramaMetni) {
     const kucuk = aramaMetni.trim().toLowerCase();

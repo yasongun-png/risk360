@@ -499,11 +499,20 @@ function _islemHaritaUrlUret(k) {
     : `../harita/index.html?konumKaynak=uygunsuzluk&konumId=${k.id}&donus=${encodeURIComponent(location.pathname + '?ac=' + k.id)}`;
 }
 
+// Kullanıcı isteği: "kaşe imza yapıldıysa farklı bir renk olsun kaşe imza
+// yazısı" -- Bildiren/Sorumlu rollerinden en az biri imzalanmışsa düğme
+// metni yeşile döner (diğer "tamamlandı" göstergeleriyle aynı renk).
+function _ucImzaliMi(k) {
+  const imzalar = k.imzalar || {};
+  return !!((imzalar.bildiren && imzalar.bildiren.imzaUrl) || (imzalar.sorumlu && imzalar.sorumlu.imzaUrl));
+}
+
 function _islemButonlariUret(k) {
+  const imzaStili = _ucImzaliMi(k) ? ' style="color:#16a34a; font-weight:700; border-color:#86efac;"' : '';
   const butonlar = [
     `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`,
     `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`,
-    `<button class="tablo-buton" data-imza="${k.id}">✍️ Kaşe/İmza</button>`,
+    `<button class="tablo-buton" data-imza="${k.id}"${imzaStili}>✍️ Kaşe/İmza</button>`,
     `<a class="tablo-buton${k.haritaTesisId ? ' sil' : ''}" href="${_islemHaritaUrlUret(k)}" style="text-decoration:none;" title="${k.haritaTesisId ? 'Haritada Gör' : 'Haritada Konum Ekle'}">🗺️ Harita</a>`,
     // Konusu olmayan ("Tüm Konular" seçiliyken oluşturulmuş, sahipsiz)
     // kayıtları fark etmek kolay olsun diye turuncu renkte gösterilir.

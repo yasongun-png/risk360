@@ -264,7 +264,7 @@ function _ucAlanSatiri(etiket1, deger1, etiket2, deger2) {
 function _ucOnayKutusu(baslik, adSoyad, imzaKaydi, imzaGorselUrl) {
   const gosterilecekAd = (imzaKaydi && imzaKaydi.ad) || adSoyad;
   const imzaIcerik = imzaGorselUrl
-    ? `<img src="${imzaGorselUrl}" style="max-width:100%; max-height:12mm; margin-top:1mm;">`
+    ? `<img src="${imzaGorselUrl}" style="max-width:100%; max-height:12mm;">`
     : '';
   const tarihSatiri = (imzaKaydi && imzaKaydi.tarih)
     ? `<div style="font-size:7pt; color:#64748b; margin-top:0.5mm;">${_ucKacir(gunAyYil((imzaKaydi.tarih || '').slice(0, 10)))}</div>`
@@ -381,7 +381,8 @@ const _UC_KAYIT_STIL = `
       #ucKayitPdf .uc-onay-kutu{ flex:1; border:1px solid #111827; padding:3mm; text-align:center; background:#fff; }
       #ucKayitPdf .uc-onay-etiket{ font-size:8pt; font-weight:700; color:#111827; text-transform:uppercase; }
       #ucKayitPdf .uc-onay-ad{ font-size:9pt; margin-top:1.5mm; min-height:4mm; }
-      #ucKayitPdf .uc-onay-imza-alani{ height:12mm; border-bottom:1px solid #111827; margin-top:4mm; }
+      #ucKayitPdf .uc-onay-imza-alani{ height:12mm; border-bottom:1px solid #111827; margin-top:4mm; display:flex; align-items:flex-end; justify-content:center; }
+      #ucKayitPdf .uc-onay-imza-alani img{ display:block; margin:0 auto; }
       #ucKayitPdf .uc-onay-imza-baslik{ font-size:7.5pt; color:#64748b; margin-top:1mm; }
 
       #ucKayitPdf table.uc-ek-foto-tablo{ width:100%; border-collapse:collapse; table-layout:fixed; }
