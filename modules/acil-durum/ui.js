@@ -96,7 +96,9 @@ function acilDurumSayfasiniBaslat(firma) {
 
   _acilDurumExcelRaporBaglantilariniKur();
 
-  gorunumDegistir('ekipler');
+  // Kullanıcı isteği: "acil durum yönetimini açtığımda ekipman sekmesi
+  // seçili gelsin" -- varsayılan açılış sekmesi Ekipler yerine Ekipman.
+  gorunumDegistir('ekipman');
 }
 
 // ---- Excel / Rapor ----
