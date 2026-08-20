@@ -31,12 +31,25 @@ function tespitOneriDurumuHesapla(veriler) {
   return 'Açık';
 }
 
+// Tespit ve Öneri Formu PDF'indeki "Onay" bölümünde (kaşe/imza kutuları)
+// gösterilen dijital imza kaydı -- modules/uygunsuzluk/model.js
+// uygunsuzlukImzaVeriUret ile aynı şekil (ad/imzaUrl/tarih), bu modülün
+// kendi kaydına ('tespitEden'/'tebligEdilen' rolü altında) yazılır.
+function tespitOneriImzaVeriUret(ad, imzaUrl) {
+  return { ad: (ad || '').trim(), imzaUrl: imzaUrl || '', tarih: new Date().toISOString() };
+}
+
 function tespitOneriKaydiOlustur(veriler) {
   const kayit = {
     id: veriler.id || rastgeleId(),
     kayitNo: veriler.kayitNo || '',
     tespitTarihi: veriler.tespitTarihi || bugunIso(),
     tespitEden: (veriler.tespitEden || '').trim(),
+    // Kullanıcı isteği: "tespit öneri defteri modülüne işyeri sicili ekle"
+    // -- aynı sahada birden fazla sicil/tüzel işveren olabileceğinden
+    // (bkz. modules/personel "İşyeri Sicili" alanı ile aynı ilke) serbest
+    // metin olarak, kayıt bazında tutulur.
+    isyeriSicili: (veriler.isyeriSicili || '').trim(),
     bolum: (veriler.bolum || '').trim(),
     tespit: (veriler.tespit || '').trim(),
     oneri: (veriler.oneri || '').trim(),
@@ -47,7 +60,14 @@ function tespitOneriKaydiOlustur(veriler) {
     kapanisTarihi: veriler.kapanisTarihi || '',
     defterSayfasiFotografi: veriler.defterSayfasiFotografi || '',
     notlar: (veriler.notlar || '').trim(),
-    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
+    // Tespit ve Öneri Formu'ndaki Onay bölümü için dijital imzalar --
+    // { tespitEden: {ad, imzaUrl, tarih}, tebligEdilen: {ad, imzaUrl, tarih} }.
+    imzalar: veriler.imzalar || {},
+    // Kullanıcı isteği: "bunu işlemlerde bir buton ile uygunsuzluklara
+    // aktarabileyim" -- bu kayıttan oluşturulan Uygunsuzluk kaydının id'si
+    // (bkz. service.js tespitOneriUygunsuzlugaAktar); boşsa henüz aktarılmamış.
+    aktarilanUygunsuzlukId: veriler.aktarilanUygunsuzlukId || ''
   };
   kayit.durum = tespitOneriDurumuHesapla(veriler);
   return kayit;

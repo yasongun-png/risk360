@@ -4,6 +4,10 @@ let _toGorunum = 'kayitlar';
 let _toDuzenlenenKayitId = null;
 let _toDefterFotografi = '';
 
+function _toKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
 function _toFotoOnizlemeCiz(url) {
   const kutu = document.getElementById('defterFotografiOnizleme');
   kutu.innerHTML = url
@@ -79,12 +83,41 @@ function tespitOneriSayfasiniBaslat() {
     });
   });
 
+  document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('tespit-oneri', 'Tespit ve Öneri Defteri'));
+
+  // Kullanıcı isteği: "tespit önerileri yönetici kullanıc toplu da
+  // silebilsin" -- bkz. modules/acil-durum/ui.js yanginTupuSeciliSil ile
+  // aynı desen.
+  document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
+    document.querySelectorAll('#tabloGovde [data-sec]').forEach(cb => { cb.checked = e.target.checked; });
+  });
+  document.getElementById('topluSilBtn').addEventListener('click', toSeciliSil);
+
+  document.getElementById('imzaKatmaniKapatBtn').addEventListener('click', imzaModalKapat);
+  document.getElementById('imzaKatmaniIptalBtn').addEventListener('click', imzaModalKapat);
+  document.getElementById('imzaVazgecBtn').addEventListener('click', () => imzaModalAc(_imzaKayitId));
+  document.getElementById('imzaTemizleBtn').addEventListener('click', () => { if (_imzaPad) _imzaPad.temizle(); });
+  document.getElementById('imzaKaydetBtn').addEventListener('click', _imzaKaydet);
+
   toGorunumDegistir('kayitlar');
+}
+
+async function toSeciliSil() {
+  const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+  if (!secililer.length) { alert('Lütfen silmek için en az bir kayıt seçin.'); return; }
+  if (!(await onayModali(`${secililer.length} tespit/öneri kaydı silinsin mi?`, 'Sil'))) return;
+
+  const sonuc = tespitOneriToplusil(secililer);
+  if (!sonuc.basarili) { alert(sonuc.hata); return; }
+  alert(`${sonuc.silinen} kayıt silindi.`);
+  document.getElementById('tumunuSecCheckbox').checked = false;
+  toKayitlariCiz(document.getElementById('aramaKutusu').value);
 }
 
 const TESPIT_ONERI_IMPORT_KOLONLARI = [
   { anahtar: 'tespitTarihi', baslik: 'Tespit Tarihi' },
   { anahtar: 'tespitEden', baslik: 'Tespiti Yapan' },
+  { anahtar: 'isyeriSicili', baslik: 'İşyeri Sicili' },
   { anahtar: 'bolum', baslik: 'Bölüm / Yer' },
   { anahtar: 'tespit', baslik: 'Tespit (Bulgu)' },
   { anahtar: 'oneri', baslik: 'Öneri' },
@@ -98,6 +131,7 @@ const TESPIT_ONERI_EXPORT_KOLONLARI = [
   { anahtar: 'tespitTarihiGoruntu', baslik: 'Tespit Tarihi' },
   { anahtar: 'bolum', baslik: 'Bölüm / Yer' },
   { anahtar: 'tespitEden', baslik: 'Tespiti Yapan' },
+  { anahtar: 'isyeriSicili', baslik: 'İşyeri Sicili' },
   { anahtar: 'tespit', baslik: 'Tespit (Bulgu)' },
   { anahtar: 'oneri', baslik: 'Öneri' },
   { anahtar: 'oncelik', baslik: 'Öncelik' },
@@ -115,27 +149,6 @@ function _tespitOneriExcelSatirlariniHazirla(kayitlar) {
   }));
 }
 
-async function tespitOneriKaydiniYazdir(id) {
-  const k = tespitOneriIdIleGetirRepo(id);
-  if (!k) return;
-  const defterSayfasiUrl = await fotoBuyukCoz(k.defterSayfasiFotografi);
-  raporKartiYazdir('TESPİT VE ÖNERİ KAYDI — ' + k.kayitNo, '', [
-    { etiket: 'Tespit Tarihi', deger: gunAyYil(k.tespitTarihi) },
-    { etiket: 'Tespiti Yapan', deger: k.tespitEden },
-    { etiket: 'Bölüm / Yer', deger: k.bolum },
-    { etiket: 'Tespit (Bulgu)', deger: k.tespit },
-    { etiket: 'Öneri', deger: k.oneri },
-    { etiket: 'Öncelik', deger: k.oncelik },
-    { etiket: 'Tebliğ Edilen / Tarih', deger: [k.tebligEdilen, gunAyYil(k.tebligTarihi)].filter(Boolean).join(' / ') },
-    { etiket: 'Yapılan İşlem', deger: k.yapilanIslem },
-    { etiket: 'Kapanış Tarihi', deger: gunAyYil(k.kapanisTarihi) },
-    { etiket: 'Durum', deger: k.durum },
-    { etiket: 'Not', deger: k.notlar }
-  ], [
-    { etiket: 'Defter Sayfası', url: defterSayfasiUrl }
-  ]);
-}
-
 function toGorunumDegistir(gorunum) {
   _toGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
@@ -150,10 +163,16 @@ function toGorunumDegistir(gorunum) {
 function _toIslemButonlariUret(k) {
   const butonlar = [
     `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`,
-    `<button class="tablo-buton" data-yazdir="${k.id}">Yazdır</button>`
+    `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`,
+    `<button class="tablo-buton" data-imza="${k.id}">✍️ Kaşe/İmza</button>`
   ];
   if (k.durum === 'Açık') butonlar.push(`<button class="tablo-buton" data-tebligEt="${k.id}">Tebliğ Et</button>`);
   if (!TESPIT_KAPALI_DURUMLAR.includes(k.durum)) butonlar.push(`<button class="tablo-buton" data-kapat="${k.id}">Kapat</button>`);
+  // Kullanıcı isteği: "bunu işlemlerde bir buton ile uygunsuzluklara
+  // aktarabileyim" -- zaten aktarılmışsa tekrar aktarılamaz, bilgi rozeti gösterilir.
+  butonlar.push(k.aktarilanUygunsuzlukId
+    ? '<span style="font-size:11px; color:#16a34a; font-weight:600;">✓ Uygunsuzluğa Aktarıldı</span>'
+    : `<button class="tablo-buton" data-aktar="${k.id}">→ Uygunsuzluğa Aktar</button>`);
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return butonlar.join(' ');
 }
@@ -182,8 +201,9 @@ function toKayitlariCiz(aramaMetni) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td><input type="checkbox" data-sec data-id="${k.id}"></td>
       <td>${k.kayitNo}<br><small style="color:var(--metin-soluk);">${gunAyYil(k.tespitTarihi) || '-'}</small></td>
-      <td>${k.bolum}<br><small style="color:var(--metin-soluk);">${k.tespitEden}</small></td>
+      <td>${k.bolum}<br><small style="color:var(--metin-soluk);">${k.tespitEden}${k.isyeriSicili ? ' — Sicil: ' + k.isyeriSicili : ''}</small></td>
       <td>${k.tespit}</td>
       <td>${k.oneri}</td>
       <td><span class="genel-rozet rozet-${toRozetSinifAdi(k.oncelik)}">${k.oncelik}</span></td>
@@ -197,7 +217,20 @@ function toKayitlariCiz(aramaMetni) {
   fotoReferanslariCoz(govde);
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => toKayitModalAc(tespitOneriIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-yazdir]').forEach(btn => btn.addEventListener('click', () => tespitOneriKaydiniYazdir(btn.getAttribute('data-yazdir'))));
+  govde.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', async () => {
+    try { await tespitOneriKaydiPdfOlustur(btn.getAttribute('data-pdf')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
+  }));
+  govde.querySelectorAll('[data-imza]').forEach(btn => btn.addEventListener('click', () => imzaModalAc(btn.getAttribute('data-imza'))));
+  govde.querySelectorAll('[data-aktar]').forEach(btn => btn.addEventListener('click', async () => {
+    const id = btn.getAttribute('data-aktar');
+    const k = tespitOneriIdIleGetirRepo(id);
+    if (!k) return;
+    if (!(await onayModali(`"${k.tespit}" kaydı Uygunsuzluk/DÖF modülüne aktarılsın mı?`, 'Aktar'))) return;
+    const sonuc = tespitOneriUygunsuzlugaAktar(id);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    alert(`Uygunsuzluk kaydı oluşturuldu: ${sonuc.kayit.aksiyonNo}`);
+    toKayitlariCiz(document.getElementById('aramaKutusu').value);
+  }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
@@ -257,6 +290,7 @@ function toKayitModalAc(kayit) {
   document.getElementById('tespitTarihi').value = kayit ? kayit.tespitTarihi : bugunIso();
   document.getElementById('oncelik').innerHTML = TESPIT_ONCELIKLERI.map(o => `<option ${kayit && kayit.oncelik === o ? 'selected' : ''}>${o}</option>`).join('');
   document.getElementById('tespitEden').value = kayit ? kayit.tespitEden : '';
+  document.getElementById('isyeriSicili').value = kayit ? (kayit.isyeriSicili || '') : '';
   document.getElementById('bolum').value = kayit ? kayit.bolum : '';
   document.getElementById('tespit').value = kayit ? kayit.tespit : '';
   document.getElementById('oneri').value = kayit ? kayit.oneri : '';
@@ -292,6 +326,7 @@ function toFormGonderildi(e) {
     tespitTarihi: document.getElementById('tespitTarihi').value,
     oncelik: document.getElementById('oncelik').value,
     tespitEden: document.getElementById('tespitEden').value,
+    isyeriSicili: document.getElementById('isyeriSicili').value,
     bolum: document.getElementById('bolum').value,
     tespit: document.getElementById('tespit').value,
     oneri: document.getElementById('oneri').value,
@@ -315,4 +350,175 @@ function toFormGonderildi(e) {
 
   toKayitModalKapat();
   toKayitlariCiz(document.getElementById('aramaKutusu').value);
+}
+
+// ==================== KAŞE / DİJİTAL İMZA ====================
+// modules/uygunsuzluk/ui.js _ucImzaPaduBagla ile birebir aynı canvas imza
+// pad'i -- bu modül diğer modüllerin ui.js'ini yüklemediğinden kendi
+// önekiyle (_to) tekrarlanır (bkz. modules/uygunsuzluk/cikti.js dosya başı
+// açıklaması, aynı ilke).
+function _toImzaPaduBagla(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+
+  function boyutlandir() {
+    const oran = window.devicePixelRatio || 1;
+    const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 120;
+    canvas.width = genislik * oran;
+    canvas.height = yukseklik * oran;
+    ctx.scale(oran, oran);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a';
+  }
+  boyutlandir();
+
+  function konum(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const y = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+    return { x: x - r.left, y: y - r.top };
+  }
+  function basla(e) { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; }
+  function ciz(e) {
+    if (!ciziliyor) return;
+    e.preventDefault();
+    const p = konum(e);
+    ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    sonX = p.x; sonY = p.y;
+  }
+  function bitir() { ciziliyor = false; }
+
+  canvas.addEventListener('pointerdown', basla);
+  canvas.addEventListener('pointermove', ciz);
+  window.addEventListener('pointerup', bitir);
+
+  return {
+    temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+    doluMu: () => dolu,
+    canvasElemani: canvas
+  };
+}
+
+// Ham canvas geniş/boş bir tuval (pad'in tam boyutu) olduğundan, imza sadece
+// sol tarafa küçük çizilmişse PDF'te "sola yaslanmış" görünüyordu -- bkz.
+// modules/uygunsuzluk/ui.js _ucImzaKirp ile aynı çözüm: kaydetmeden önce
+// gerçekte boyanmış (alpha>0) piksellerin sınırlayıcı kutusuna kırpılır.
+function _toImzaKirp(canvas) {
+  const ctx = canvas.getContext('2d');
+  const genislik = canvas.width, yukseklik = canvas.height;
+  const veri = ctx.getImageData(0, 0, genislik, yukseklik).data;
+  let minX = genislik, minY = yukseklik, maxX = 0, maxY = 0, doluVarMi = false;
+  for (let y = 0; y < yukseklik; y++) {
+    for (let x = 0; x < genislik; x++) {
+      if (veri[(y * genislik + x) * 4 + 3] > 10) {
+        doluVarMi = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!doluVarMi) return canvas;
+  const bosluk = Math.round(genislik * 0.02);
+  minX = Math.max(0, minX - bosluk);
+  minY = Math.max(0, minY - bosluk);
+  maxX = Math.min(genislik, maxX + bosluk);
+  maxY = Math.min(yukseklik, maxY + bosluk);
+
+  const kirpilmis = document.createElement('canvas');
+  kirpilmis.width = maxX - minX;
+  kirpilmis.height = maxY - minY;
+  kirpilmis.getContext('2d').drawImage(canvas, minX, minY, kirpilmis.width, kirpilmis.height, 0, 0, kirpilmis.width, kirpilmis.height);
+  return kirpilmis;
+}
+
+// Storage yerine fotoBuyukKaydet ile "fotoref:<id>" -- modules/uygunsuzluk
+// _ucImzaYukle ile aynı gerekçe: Storage'ın gerçek http(s) URL'i PDF
+// üretiminde (html2canvas) CORS'a takılıp sessizce boş çıkabiliyordu.
+async function _toImzaYukle(canvas) {
+  const firma = aktifFirmaGetir();
+  const dataUrl = _toImzaKirp(canvas).toDataURL('image/png');
+  return fotoBuyukKaydet(dataUrl, firma ? firma.slug : '');
+}
+
+let _imzaKayitId = null;
+let _imzaAktifRol = null;
+let _imzaPad = null;
+
+const _TO_IMZA_ROL_ETIKETLERI = { tespitEden: 'Tespit Eden', tebligEdilen: 'Tebliğ Edilen' };
+
+function _imzaDurumGosterimiCiz(kayit) {
+  const kutu = document.getElementById('imzaDurumGosterimi');
+  const imzalar = kayit.imzalar || {};
+  kutu.innerHTML = ['tespitEden', 'tebligEdilen'].map(rol => {
+    const imza = imzalar[rol];
+    const durum = imza && imza.imzaUrl
+      ? `<span style="color:#15803d; font-weight:600;">✓ İmzalandı</span> — ${_toKacir(imza.ad)} (${gunAyYil((imza.tarih || '').slice(0, 10)) || '-'})`
+      : '<span style="color:var(--metin-soluk);">Henüz imzalanmadı</span>';
+    return `
+      <div class="uc-imza-rol-satir">
+        <div><b>${_TO_IMZA_ROL_ETIKETLERI[rol]}</b><br><span style="font-size:12px;">${durum}</span></div>
+        <button type="button" class="tablo-buton" data-imza-rol="${rol}">${imza && imza.imzaUrl ? 'Yeniden İmzala' : 'İmza At'}</button>
+      </div>
+    `;
+  }).join('');
+  kutu.querySelectorAll('[data-imza-rol]').forEach(btn => btn.addEventListener('click', () => _imzaCizimBasla(btn.getAttribute('data-imza-rol'))));
+}
+
+function imzaModalAc(id) {
+  const kayit = tespitOneriIdIleGetirRepo(id);
+  if (!kayit) return;
+  _imzaKayitId = id;
+  _imzaAktifRol = null;
+  document.getElementById('imzaKayitEtiketi').textContent = `${kayit.kayitNo} — ${kayit.tespit}`;
+  document.getElementById('imzaCizimAlani').style.display = 'none';
+  document.getElementById('imzaDurumGosterimi').style.display = '';
+  document.getElementById('imzaKapatEylemi').style.display = '';
+  _imzaDurumGosterimiCiz(kayit);
+  document.getElementById('imzaKatmani').classList.add('acik');
+}
+
+function _imzaCizimBasla(rol) {
+  _imzaAktifRol = rol;
+  document.getElementById('imzaDurumGosterimi').style.display = 'none';
+  document.getElementById('imzaKapatEylemi').style.display = 'none';
+  document.getElementById('imzaCizimAlani').style.display = '';
+  document.getElementById('imzaAdSoyad').value = (oturumdakiKullanici() || {}).adSoyad || '';
+  document.getElementById('imzaHata').textContent = '';
+  requestAnimationFrame(() => {
+    if (!_imzaPad) _imzaPad = _toImzaPaduBagla('imzaCanvas');
+    if (_imzaPad) _imzaPad.temizle();
+  });
+}
+
+async function _imzaKaydet() {
+  const hataEl = document.getElementById('imzaHata');
+  const ad = document.getElementById('imzaAdSoyad').value.trim();
+  if (!ad) { hataEl.textContent = 'Lütfen ad soyad girin.'; return; }
+  if (!_imzaPad || !_imzaPad.doluMu()) { hataEl.textContent = 'Lütfen imza alanına imzanızı atın.'; return; }
+
+  const btn = document.getElementById('imzaKaydetBtn');
+  btn.disabled = true;
+  btn.textContent = 'Kaydediliyor…';
+  try {
+    const imzaUrl = await _toImzaYukle(_imzaPad.canvasElemani);
+    const sonuc = tespitOneriImzaVer(_imzaKayitId, _imzaAktifRol, ad, imzaUrl);
+    if (!sonuc.basarili) { hataEl.textContent = sonuc.hata; return; }
+    imzaModalAc(_imzaKayitId);
+  } catch (hata) {
+    console.error('İmza yüklenemedi:', hata);
+    hataEl.textContent = 'İmza kaydedilemedi: ' + (hata.message || hata);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kaydet';
+  }
+}
+
+function imzaModalKapat() {
+  document.getElementById('imzaKatmani').classList.remove('acik');
+  _imzaKayitId = null;
+  _imzaAktifRol = null;
 }

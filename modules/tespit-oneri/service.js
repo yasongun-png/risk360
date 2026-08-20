@@ -53,6 +53,67 @@ function tespitOneriSil(id) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "tespit önerileri yönetici kullanıcı toplu da
+// silebilsin" -- bkz. modules/acil-durum/service.js yanginTupuToplusil ile
+// aynı desen (silme yetkisi kontrolü + kaç kayıt silindiği bilgisi).
+function tespitOneriToplusil(idler) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const idSeti = new Set(idler);
+  const oncekiSayi = tespitOneriTumunuGetir().length;
+  idSeti.forEach(id => tespitOneriSilRepo(id));
+  const sonrakiSayi = tespitOneriTumunuGetir().length;
+  return { basarili: true, silinen: oncekiSayi - sonrakiSayi };
+}
+
+// Tespit ve Öneri Formu'ndaki "Onay" bölümü (kaşe/imza kutuları) için
+// dijital imza kaydeder -- rol 'tespitEden' ya da 'tebligEdilen' olabilir
+// (bkz. modules/uygunsuzluk/service.js uygunsuzlukImzaVer ile aynı desen).
+function tespitOneriImzaVer(id, rol, ad, imzaUrl) {
+  if (!['tespitEden', 'tebligEdilen'].includes(rol)) return { basarili: false, hata: 'Geçersiz imza rolü.' };
+  const kayit = tespitOneriIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Kayıt bulunamadı.' };
+  const imzalar = Object.assign({}, kayit.imzalar, { [rol]: tespitOneriImzaVeriUret(ad, imzaUrl) });
+  const guncellenen = tespitOneriGuncelleRepo(id, { imzalar });
+  return { basarili: true, kayit: guncellenen };
+}
+
+// Kullanıcı isteği: "bunu işlemlerde bir buton ile uygunsuzluklara
+// aktarabileyim" -- kaydı, uygunsuzluk modülünün kendi kaydına dönüştürüp
+// "Tespit ve Öneri Defterinden Aktarılanlar" konusuna ekler. Aynı kayıt
+// tekrar aktarılamaz (aktarilanUygunsuzlukId doluysa engellenir); bu
+// modülün sayfası uygunsuzluk/model.js, /validation.js, /repository.js ve
+// /service.js dosyalarını da yükler (bkz. modules/acil-durum
+// plan-detay.html'in kimyasal modülünü dahil etmesiyle aynı ilke).
+const _TO_ONCELIK_RISK_ESLESME = { 'Düşük': 'Düşük', 'Orta': 'Orta', 'Yüksek': 'Yüksek', 'Acil': 'Çok Yüksek' };
+const _TO_DURUM_UYGUNSUZLUK_ESLESME = { 'Açık': 'Açık', 'Tebliğ Edildi': 'Devam Ediyor', 'Uygulamada': 'Devam Ediyor', 'Kapandı': 'Kapalı', 'Reddedildi': 'İptal' };
+
+function tespitOneriUygunsuzlugaAktar(id) {
+  const k = tespitOneriIdIleGetirRepo(id);
+  if (!k) return { basarili: false, hata: 'Kayıt bulunamadı.' };
+  if (k.aktarilanUygunsuzlukId) return { basarili: false, hata: 'Bu kayıt daha önce Uygunsuzluk\'a aktarılmış.' };
+
+  const konu = uygunsuzlukKonuBulYaDaOlustur('Tespit ve Öneri Defterinden Aktarılanlar');
+  const sonuc = uygunsuzlukEkle({
+    konuId: konu ? konu.id : '',
+    konuAdi: konu ? konu.ad : '',
+    baslik: k.tespit,
+    aciklama: [(k.oneri ? 'Öneri: ' + k.oneri : ''), `(Tespit ve Öneri Defteri No: ${k.kayitNo})`].filter(Boolean).join(' '),
+    bolum: k.bolum,
+    atayan: k.tespitEden,
+    sorumlu: k.tebligEdilen,
+    riskSeviyesi: _TO_ONCELIK_RISK_ESLESME[k.oncelik] || 'Orta',
+    bildirimTarihi: k.tespitTarihi,
+    kapanisTarihi: k.kapanisTarihi,
+    kanitAciklamasi: k.yapilanIslem,
+    fotoOncesi: k.defterSayfasiFotografi,
+    durum: _TO_DURUM_UYGUNSUZLUK_ESLESME[k.durum] || 'Açık'
+  });
+  if (!sonuc.basarili) return sonuc;
+
+  tespitOneriGuncelleRepo(id, { aktarilanUygunsuzlukId: sonuc.kayit.id });
+  return { basarili: true, kayit: sonuc.kayit };
+}
+
 // Hızlı işlem: tebliğ edildi olarak işaretler (tarih bugün, birim/kişi verilir).
 function tespitOneriTebligEt(id, tebligEdilen) {
   const guncellenen = tespitOneriGuncelleRepo(id, {
