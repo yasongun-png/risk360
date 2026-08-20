@@ -224,9 +224,14 @@ async function uygunsuzlukRaporuPdfOlustur() {
   const pdf = new jspdf.jsPDF('l', 'mm', 'a4');
   for (let i = 0; i < sayfalar.length; i++) {
     mount.innerHTML = `<div id="ucPdfSayfa"><style>${_UC_RAPOR_STIL}</style>${sayfalar[i]}</div>`;
-    const canvas = await html2canvas(document.getElementById('ucPdfSayfa'), { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    // Kullanıcı isteği: "uygunsuzluk pdf raporunun mb'ı büyük düşürmek
+    // mümkün mü" -- her sayfa zaten tablo/metin ağırlıklı olduğundan
+    // scale:2 + kalite 0.95 (neredeyse kayıpsız) gereğinden büyük dosya
+    // üretiyordu; scale:1.5 + kalite 0.75 baskı/okuma kalitesini gözle
+    // fark edilir şekilde düşürmeden dosya boyutunu ciddi oranda küçültür.
+    const canvas = await html2canvas(document.getElementById('ucPdfSayfa'), { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
     if (i > 0) pdf.addPage('a4', 'l');
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 297, 210);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, 297, 210);
     pdf.setFontSize(8);
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 297 / 2, 210 - 5, { align: 'center' });
@@ -562,11 +567,13 @@ async function uygunsuzlukKayitPdfOlustur(id) {
         img.addEventListener('error', resolve, { once: true });
       });
     }));
-    const canvas = await html2canvas(document.getElementById('ucKayitPdf'), { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    // Kullanıcı isteği: "uygunsuzluk pdf raporunun mb'ı büyük düşürmek
+    // mümkün mü" -- bkz. yukarıdaki genel rapor fonksiyonundaki aynı not.
+    const canvas = await html2canvas(document.getElementById('ucKayitPdf'), { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
     if (i > 0) pdf.addPage('a4', 'p');
     const genislikMm = 210;
     const yukseklikMm = canvas.height * (genislikMm / canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, genislikMm, yukseklikMm);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, genislikMm, yukseklikMm);
     pdf.setFontSize(8);
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 210 / 2, 297 - 5, { align: 'center' });
