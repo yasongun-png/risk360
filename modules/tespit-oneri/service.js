@@ -157,6 +157,9 @@ function tespitOneriOzetiHesapla() {
     kapanan: liste.filter(k => k.durum === 'Kapandı').length,
     bolumeGore: grupla(k => k.bolum),
     durumaGore: grupla(k => k.durum),
+    // Kullanıcı isteği: "hangi sicile kaç adet tespit öneri yapıldı gibi
+    // istatistikler olsun".
+    sicileGore: grupla(k => k.isyeriSicili),
     oncelikliAcikKayitlar: liste
       .filter(k => !TESPIT_KAPALI_DURUMLAR.includes(k.durum))
       .sort((a, b) => {

@@ -25,6 +25,26 @@ function _toSicilFiltreDoldur() {
   secim.value = siciller.includes(oncekiSecim) ? oncekiSecim : '';
 }
 
+// Kullanıcı isteği: "tespit öneri ana sayfa üstünde hangi sicile kaç adet
+// tespit öneri yapıldı gibi istatistikler olsun" -- sekmeden bağımsız,
+// sayfanın en üstünde her zaman görünen kısa dağılım kutusu (bkz.
+// service.js tespitOneriOzetiHesapla().sicileGore).
+function _toSicilIstatistikleriCiz() {
+  const kutu = document.getElementById('sicilIstatistikKutusu');
+  const sicileGore = tespitOneriOzetiHesapla().sicileGore;
+  if (!sicileGore.length) { kutu.style.display = 'none'; return; }
+
+  kutu.style.display = '';
+  kutu.innerHTML = `
+    <div style="font-size:12px; font-weight:700; color:var(--metin-soluk); text-transform:uppercase; margin-bottom:8px;">İşyeri Siciline Göre Tespit/Öneri Sayısı</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      ${sicileGore.map(([sicil, adet]) => `
+        <span class="genel-rozet rozet-orta" title="${_toKacir(sicil)}">${_toKacir(sicil)}: ${adet}</span>
+      `).join('')}
+    </div>
+  `;
+}
+
 function _toFotoOnizlemeCiz(url) {
   const kutu = document.getElementById('defterFotografiOnizleme');
   kutu.innerHTML = url
@@ -98,6 +118,7 @@ function tespitOneriSayfasiniBaslat() {
       const sonuc = excelToplulIceAktarSonucOzetle(satirlar, tespitOneriEkle);
       alert(excelIceAktarOzetMesaji(sonuc));
       _toSicilFiltreDoldur();
+  _toSicilIstatistikleriCiz();
       toKayitlariCiz(document.getElementById('aramaKutusu').value);
     });
   });
@@ -119,6 +140,7 @@ function tespitOneriSayfasiniBaslat() {
   document.getElementById('imzaKaydetBtn').addEventListener('click', _imzaKaydet);
 
   _toSicilFiltreDoldur();
+  _toSicilIstatistikleriCiz();
   toGorunumDegistir('kayitlar');
 }
 
@@ -132,6 +154,7 @@ async function toSeciliSil() {
   alert(`${sonuc.silinen} kayıt silindi.`);
   document.getElementById('tumunuSecCheckbox').checked = false;
   _toSicilFiltreDoldur();
+  _toSicilIstatistikleriCiz();
   toKayitlariCiz(document.getElementById('aramaKutusu').value);
 }
 
@@ -254,7 +277,7 @@ function toKayitlariCiz(aramaMetni) {
     toKayitlariCiz(document.getElementById('aramaKutusu').value);
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
-    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); _toSicilFiltreDoldur(); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
+    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); _toSicilFiltreDoldur(); _toSicilIstatistikleriCiz(); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
   govde.querySelectorAll('[data-tebligEt]').forEach(btn => btn.addEventListener('click', async () => {
     const tebligEdilen = await metinIstemModali('Tebliğ edilen birim/kişi:', '', '');
@@ -291,6 +314,7 @@ function toOzetiCiz() {
     <div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px,1fr));">
       <div>${dagilimHtml('Bölüme Göre', ozet.bolumeGore)}</div>
       <div>${dagilimHtml('Duruma Göre', ozet.durumaGore)}</div>
+      <div>${dagilimHtml('İşyeri Siciline Göre', ozet.sicileGore)}</div>
     </div>
 
     <div class="card-title" style="margin:20px 0 8px;"><h3 style="margin:0; font-size:14px;">Önceliğe Göre Açık Kayıtlar</h3></div>
@@ -372,6 +396,7 @@ function toFormGonderildi(e) {
 
   toKayitModalKapat();
   _toSicilFiltreDoldur();
+  _toSicilIstatistikleriCiz();
   toKayitlariCiz(document.getElementById('aramaKutusu').value);
 }
 
