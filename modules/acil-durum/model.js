@@ -145,8 +145,7 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli' },
     { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor' },
     { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız' },
-    { id: 'sariKapak', soru: 'Sarı kapakları var' },
-    { id: 'etrafiAcik', soru: 'Etrafında engel/malzeme yığılması yok' }
+    { id: 'gozPuskurtmeBasligi', soru: 'Göz duşunda püskürtme başlığı var' }
   ],
   'Monitör': [
     { id: 'erisim', soru: 'Monitöre erişim engelsiz' },
