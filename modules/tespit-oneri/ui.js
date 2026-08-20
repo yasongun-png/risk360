@@ -8,6 +8,23 @@ function _toKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// Kullanıcı isteği: "tespit ve öneri defterinde sicil no ya göre filtreleme
+// yapılsın" -- İşyeri Sicili dropdown'ını, kayıtlarda geçen benzersiz
+// sicil değerlerinden doldurur (bkz. modules/uygunsuzluk/ui.js
+// _usBolumFiltreDoldur ile aynı desen).
+function _toSicilFiltreDoldur() {
+  const secim = document.getElementById('sicilFiltre');
+  const oncekiSecim = secim.value;
+  const siciller = Array.from(new Set(
+    tespitOneriKayitlariniGetir('', {}).map(k => (k.isyeriSicili || '').trim()).filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b, 'tr'));
+
+  secim.innerHTML = '<option value="">Tüm İşyeri Sicilleri</option>' +
+    siciller.map(s => `<option value="${_toKacir(s)}">${_toKacir(s)}</option>`).join('');
+
+  secim.value = siciller.includes(oncekiSecim) ? oncekiSecim : '';
+}
+
 function _toFotoOnizlemeCiz(url) {
   const kutu = document.getElementById('defterFotografiOnizleme');
   kutu.innerHTML = url
@@ -40,6 +57,7 @@ function tespitOneriSayfasiniBaslat() {
   document.getElementById('aramaKutusu').addEventListener('input', e => toKayitlariCiz(e.target.value));
   document.getElementById('durumFiltre').addEventListener('change', () => toKayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('oncelikFiltre').addEventListener('change', () => toKayitlariCiz(document.getElementById('aramaKutusu').value));
+  document.getElementById('sicilFiltre').addEventListener('change', () => toKayitlariCiz(document.getElementById('aramaKutusu').value));
 
   document.getElementById('defterFotografiDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
@@ -61,7 +79,7 @@ function tespitOneriSayfasiniBaslat() {
     excelDisaAktar(_tespitOneriExcelSatirlariniHazirla(tespitOneriKayitlariniGetir('', {})), TESPIT_ONERI_EXPORT_KOLONLARI, 'tespit_oneri_defteri.xlsx');
   });
   document.getElementById('listeYazdirBtn').addEventListener('click', () => {
-    const filtreler = { durum: document.getElementById('durumFiltre').value, oncelik: document.getElementById('oncelikFiltre').value };
+    const filtreler = { durum: document.getElementById('durumFiltre').value, oncelik: document.getElementById('oncelikFiltre').value, isyeriSicili: document.getElementById('sicilFiltre').value };
     const kayitlar = tespitOneriKayitlariniGetir(document.getElementById('aramaKutusu').value, filtreler);
     raporListesiYazdir('Tespit ve Öneri Defteri', '', TESPIT_ONERI_EXPORT_KOLONLARI, _tespitOneriExcelSatirlariniHazirla(kayitlar));
   });
@@ -79,6 +97,7 @@ function tespitOneriSayfasiniBaslat() {
       });
       const sonuc = excelToplulIceAktarSonucOzetle(satirlar, tespitOneriEkle);
       alert(excelIceAktarOzetMesaji(sonuc));
+      _toSicilFiltreDoldur();
       toKayitlariCiz(document.getElementById('aramaKutusu').value);
     });
   });
@@ -99,6 +118,7 @@ function tespitOneriSayfasiniBaslat() {
   document.getElementById('imzaTemizleBtn').addEventListener('click', () => { if (_imzaPad) _imzaPad.temizle(); });
   document.getElementById('imzaKaydetBtn').addEventListener('click', _imzaKaydet);
 
+  _toSicilFiltreDoldur();
   toGorunumDegistir('kayitlar');
 }
 
@@ -111,6 +131,7 @@ async function toSeciliSil() {
   if (!sonuc.basarili) { alert(sonuc.hata); return; }
   alert(`${sonuc.silinen} kayıt silindi.`);
   document.getElementById('tumunuSecCheckbox').checked = false;
+  _toSicilFiltreDoldur();
   toKayitlariCiz(document.getElementById('aramaKutusu').value);
 }
 
@@ -186,7 +207,8 @@ function toKayitlariCiz(aramaMetni) {
   const bosDurum = document.getElementById('bosDurum');
   const filtreler = {
     durum: document.getElementById('durumFiltre').value,
-    oncelik: document.getElementById('oncelikFiltre').value
+    oncelik: document.getElementById('oncelikFiltre').value,
+    isyeriSicili: document.getElementById('sicilFiltre').value
   };
   const kayitlar = tespitOneriKayitlariniGetir(aramaMetni, filtreler);
 
@@ -202,6 +224,7 @@ function toKayitlariCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" data-sec data-id="${k.id}"></td>
+      <td>${_toIslemButonlariUret(k)}</td>
       <td>${k.kayitNo}<br><small style="color:var(--metin-soluk);">${gunAyYil(k.tespitTarihi) || '-'}</small></td>
       <td>${k.bolum}<br><small style="color:var(--metin-soluk);">${k.tespitEden}${k.isyeriSicili ? ' — Sicil: ' + k.isyeriSicili : ''}</small></td>
       <td>${k.tespit}</td>
@@ -210,7 +233,6 @@ function toKayitlariCiz(aramaMetni) {
       <td>${k.tebligEdilen || '-'}<br><small style="color:var(--metin-soluk);">${gunAyYil(k.tebligTarihi) || ''}</small></td>
       <td>${_toFotoHucresiUret(k.defterSayfasiFotografi)}</td>
       <td><span class="genel-rozet rozet-${toRozetSinifAdi(k.durum)}">${k.durum}</span></td>
-      <td>${_toIslemButonlariUret(k)}</td>
     `;
     govde.appendChild(satir);
   });
@@ -232,7 +254,7 @@ function toKayitlariCiz(aramaMetni) {
     toKayitlariCiz(document.getElementById('aramaKutusu').value);
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
-    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
+    if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); _toSicilFiltreDoldur(); toKayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
   govde.querySelectorAll('[data-tebligEt]').forEach(btn => btn.addEventListener('click', async () => {
     const tebligEdilen = await metinIstemModali('Tebliğ edilen birim/kişi:', '', '');
@@ -349,6 +371,7 @@ function toFormGonderildi(e) {
   }
 
   toKayitModalKapat();
+  _toSicilFiltreDoldur();
   toKayitlariCiz(document.getElementById('aramaKutusu').value);
 }
 

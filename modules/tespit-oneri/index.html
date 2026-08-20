@@ -52,6 +52,9 @@
           <select id="oncelikFiltre" style="width:auto; margin:0;">
             <option value="">Tüm Öncelikler</option>
           </select>
+          <select id="sicilFiltre" style="width:auto; margin:0;">
+            <option value="">Tüm İşyeri Sicilleri</option>
+          </select>
           <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
           <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
@@ -68,7 +71,7 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th><th>No / Tarih</th><th>Bölüm / Tespit Eden</th><th>Tespit</th><th>Öneri</th><th>Öncelik</th><th>Tebliğ</th><th>Fotoğraf</th><th>Durum</th><th>İşlemler</th></tr>
+            <tr><th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th><th>İşlemler</th><th>No / Tarih</th><th>Bölüm / Tespit Eden</th><th>Tespit</th><th>Öneri</th><th>Öncelik</th><th>Tebliğ</th><th>Fotoğraf</th><th>Durum</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>

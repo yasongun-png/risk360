@@ -12,6 +12,9 @@ function tespitOneriKayitlariniGetir(aramaMetni, filtreler) {
   if (f.durum) liste = liste.filter(k => k.durum === f.durum);
   if (f.oncelik) liste = liste.filter(k => k.oncelik === f.oncelik);
   if (f.bolum) liste = liste.filter(k => k.bolum === f.bolum);
+  // Kullanıcı isteği: "tespit ve öneri defterinde sicil no ya göre
+  // filtreleme yapılsın".
+  if (f.isyeriSicili) liste = liste.filter(k => (k.isyeriSicili || '') === f.isyeriSicili);
 
   if (aramaMetni) {
     const kucuk = aramaMetni.trim().toLowerCase();
