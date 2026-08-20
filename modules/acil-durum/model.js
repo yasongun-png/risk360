@@ -84,7 +84,7 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -96,6 +96,7 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Göz Duşu': 'GD',
   'Göz ve Boy Duşu': 'GVB',
   'Monitör': 'MNT',
+  'Sprinkler Hattı': 'SPK',
   'Kaçış Yolu': 'KY',
   'Toplanma Alanı': 'TA',
   'Alarm / Siren': 'ALS',
@@ -148,6 +149,15 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'donme', soru: 'Döner/yönlendirme mekanizması çalışıyor mu?' },
     { id: 'besleme', soru: 'Su/köpük beslemesi yeterli mi?' },
     { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız mı?' }
+  ],
+  'Sprinkler Hattı': [
+    { id: 'vanaAcik', soru: 'Ana kontrol vanası açık ve mühürlü/kilitli mi?' },
+    { id: 'basincGostergesi', soru: 'Basınç göstergesi normal aralıkta mı?' },
+    { id: 'borularSizinti', soru: 'Borularda sızıntı/korozyon yok mu?' },
+    { id: 'baslikEngelsiz', soru: 'Sprinkler başlıklarının altı/çevresi engelsiz mi (min. 45-50 cm boşluk)?' },
+    { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız, boyanmamış/örtülmemiş mi?' },
+    { id: 'alarmVanasi', soru: 'Alarm vanası/akış şalteri çalışıyor mu?' },
+    { id: 'askiDestek', soru: 'Boru askı ve destekleri sağlam mı?' }
   ],
   'Kaçış Yolu': [
     { id: 'engelsiz', soru: 'Kaçış yolu engelsiz mi?' },
