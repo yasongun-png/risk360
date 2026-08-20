@@ -112,7 +112,7 @@ const EKIPMAN_TUR_ONEKLERI = {
 const EKIPMAN_KONTROL_CEVAP_SECENEKLERI = ['Uygun', 'Uygun Değil', 'İlgili Değil'];
 const EKIPMAN_KONTROL_SORULARI = {
   'Hidrant': [
-    { id: 'erisim', soru: 'Hidranta erişim kolay mı, önü açık mı?' },
+    { id: 'erisim', soru: 'Hidranta erişim kolay mı?' },
     { id: 'govde', soru: 'Gövde hasarsız/paslanmamış mı?' },
     { id: 'vana', soru: 'Vana çalışıyor mu?' },
     { id: 'sizinti', soru: 'Sızıntı yok mu?' },
@@ -121,7 +121,7 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'vanaKollari', soru: 'Vana kolları sağlam mı?' }
   ],
   'Yangın Dolabı': [
-    { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor mu, önü boş mu?' },
+    { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor mu?' },
     { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli mi?' },
     { id: 'dolapKapagi', soru: 'Dolap kapağı var mı?' },
     { id: 'dolapSaglam', soru: 'Dolap sağlam mı?' },
