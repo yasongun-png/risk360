@@ -110,85 +110,89 @@ const EKIPMAN_TUR_ONEKLERI = {
 // kalacak" (serbest metin "Bulgular" alanı KALDIRILMIYOR, üzerine eklenen
 // yapılandırılmış bir kontrol listesi).
 const EKIPMAN_KONTROL_CEVAP_SECENEKLERI = ['Uygun', 'Uygun Değil', 'İlgili Değil'];
+// Kullanıcı isteği: "soru olmasın" -- kontrol kriterleri "mı/mi/mu/mü?"
+// sorusu yerine düz kriter ifadesi (etiket) olarak yazılır; Uygun/Uygun
+// Değil/İlgili Değil seçimiyle zaten değerlendirildiğinden ayrıca soru
+// işareti gerekmiyor.
 const EKIPMAN_KONTROL_SORULARI = {
   'Hidrant': [
-    { id: 'erisim', soru: 'Hidranta erişim kolay mı?' },
-    { id: 'govde', soru: 'Gövde hasarsız/paslanmamış mı?' },
-    { id: 'vana', soru: 'Vana çalışıyor mu?' },
-    { id: 'sizinti', soru: 'Sızıntı yok mu?' },
-    { id: 'korRekor', soru: 'Kör rekorlar takılı mı?' },
-    { id: 'rekorKirik', soru: 'Rekorlarda kırık/hasar yok mu?' },
-    { id: 'vanaKollari', soru: 'Vana kolları sağlam mı?' }
+    { id: 'erisim', soru: 'Hidranta erişim kolay' },
+    { id: 'govde', soru: 'Gövde hasarsız/paslanmamış' },
+    { id: 'vana', soru: 'Vana çalışıyor' },
+    { id: 'sizinti', soru: 'Sızıntı yok' },
+    { id: 'korRekor', soru: 'Kör rekorlar takılı' },
+    { id: 'rekorKirik', soru: 'Rekorlarda kırık/hasar yok' },
+    { id: 'vanaKollari', soru: 'Vana kolları sağlam' }
   ],
   'Yangın Dolabı': [
-    { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor mu?' },
-    { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli mi?' },
-    { id: 'dolapKapagi', soru: 'Dolap kapağı var mı?' },
-    { id: 'dolapSaglam', soru: 'Dolap sağlam mı?' },
-    { id: 'dolapBoyasi', soru: 'Dolap boyası iyi mi?' },
-    { id: 'lansMevcut', soru: 'Lans mevcut mu?' },
-    { id: 'lansSaglam', soru: 'Lans sağlam ve çalışır durumda mı?' }
+    { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor' },
+    { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli' },
+    { id: 'dolapKapagi', soru: 'Dolap kapağı var' },
+    { id: 'dolapSaglam', soru: 'Dolap sağlam' },
+    { id: 'dolapBoyasi', soru: 'Dolap boyası iyi' },
+    { id: 'lansMevcut', soru: 'Lans mevcut' },
+    { id: 'lansSaglam', soru: 'Lans sağlam ve çalışır durumda' }
   ],
   'Göz Duşu': [
-    { id: 'erisim', soru: 'Göz duşuna erişim engelsiz mi?' },
-    { id: 'akisBasinc', soru: 'Su akışı ve basıncı yeterli mi?' },
-    { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor mu?' },
-    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde mi?' },
-    { id: 'sariKapak', soru: 'Sarı kapakları var mı?' }
+    { id: 'erisim', soru: 'Göz duşuna erişim engelsiz' },
+    { id: 'akisBasinc', soru: 'Su akışı ve basıncı yeterli' },
+    { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor' },
+    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde' },
+    { id: 'sariKapak', soru: 'Sarı kapakları var' }
   ],
   'Göz ve Boy Duşu': [
-    { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz mi?' },
-    { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli mi?' },
-    { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor mu?' },
-    { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız mı?' },
-    { id: 'sariKapak', soru: 'Sarı kapakları var mı?' },
-    { id: 'etrafiAcik', soru: 'Etrafında engel/malzeme yığılması yok mu?' }
+    { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz' },
+    { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli' },
+    { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor' },
+    { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız' },
+    { id: 'sariKapak', soru: 'Sarı kapakları var' },
+    { id: 'etrafiAcik', soru: 'Etrafında engel/malzeme yığılması yok' }
   ],
   'Monitör': [
-    { id: 'erisim', soru: 'Monitöre erişim engelsiz mi?' },
-    { id: 'donme', soru: 'Döner/yönlendirme mekanizması çalışıyor mu?' },
-    { id: 'besleme', soru: 'Su/köpük beslemesi yeterli mi?' },
-    { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız mı?' }
+    { id: 'erisim', soru: 'Monitöre erişim engelsiz' },
+    { id: 'donme', soru: 'Döner/yönlendirme mekanizması çalışıyor' },
+    { id: 'besleme', soru: 'Su/köpük beslemesi yeterli' },
+    { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız' }
   ],
   'Sprinkler Hattı': [
-    { id: 'vanaAcik', soru: 'Ana kontrol vanası açık ve mühürlü/kilitli mi?' },
-    { id: 'basincGostergesi', soru: 'Basınç göstergesi normal aralıkta mı?' },
-    { id: 'borularSizinti', soru: 'Borularda sızıntı/korozyon yok mu?' },
-    { id: 'baslikEngelsiz', soru: 'Sprinkler başlıklarının altı/çevresi engelsiz mi (min. 45-50 cm boşluk)?' },
-    { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız, boyanmamış/örtülmemiş mi?' },
-    { id: 'alarmVanasi', soru: 'Alarm vanası/akış şalteri çalışıyor mu?' },
-    { id: 'askiDestek', soru: 'Boru askı ve destekleri sağlam mı?' }
+    { id: 'vanaAcik', soru: 'Ana kontrol vanası açık ve mühürlü/kilitli' },
+    { id: 'basincGostergesi', soru: 'Basınç göstergesi normal aralıkta' },
+    { id: 'borularSizinti', soru: 'Borularda sızıntı/korozyon yok' },
+    { id: 'baslikEngelsiz', soru: 'Sprinkler başlıklarının altı/çevresi engelsiz (min. 45-50 cm boşluk)' },
+    { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız, boyanmamış/örtülmemiş' },
+    { id: 'alarmVanasi', soru: 'Alarm vanası/akış şalteri çalışıyor' },
+    { id: 'askiDestek', soru: 'Boru askı ve destekleri sağlam' }
   ],
   'Kaçış Yolu': [
-    { id: 'engelsiz', soru: 'Kaçış yolu engelsiz mi?' },
-    { id: 'tabela', soru: 'Yönlendirme/tabela levhaları görünür ve sağlam mı?' },
-    { id: 'aydinlatma', soru: 'Acil aydınlatma çalışıyor mu?' },
-    { id: 'zemin', soru: 'Zemin kayma riski taşımıyor mu?' },
-    { id: 'kapilar', soru: 'Kapılar kilitli/engelli değil mi?' }
+    { id: 'engelsiz', soru: 'Kaçış yolu engelsiz' },
+    { id: 'tabela', soru: 'Yönlendirme/tabela levhaları görünür ve sağlam' },
+    { id: 'aydinlatma', soru: 'Acil aydınlatma çalışıyor' },
+    { id: 'zemin', soru: 'Zemin kayma riski taşımıyor' },
+    { id: 'kapilar', soru: 'Kapılar kilitli/engelli değil' }
   ],
   'Toplanma Alanı': [
-    { id: 'isaretleme', soru: 'Toplanma alanı işaretlemesi görünür mü?' },
-    { id: 'erisim', soru: 'Alan engelsiz ve erişilebilir mi?' },
-    { id: 'kapasite', soru: 'Alan kapasiteye yeterli mi?' },
-    { id: 'guvenliMesafe', soru: 'Tehlikeli alanlardan güvenli mesafede mi?' }
+    { id: 'isaretleme', soru: 'Toplanma alanı işaretlemesi görünür' },
+    { id: 'erisim', soru: 'Alan engelsiz ve erişilebilir' },
+    { id: 'kapasite', soru: 'Alan kapasiteye yeterli' },
+    { id: 'guvenliMesafe', soru: 'Tehlikeli alanlardan güvenli mesafede' }
   ],
   'Alarm / Siren': [
-    { id: 'erisim', soru: 'Alarm butonu/siren erişilebilir ve görünür mü?' },
-    { id: 'testCalisir', soru: 'Test edildiğinde çalışıyor mu?' },
-    { id: 'sesIsik', soru: 'Ses/ışık seviyesi yeterli mi?' },
-    { id: 'govde', soru: 'Gövde hasarsız mı?' }
+    { id: 'erisim', soru: 'Alarm butonu/siren erişilebilir ve görünür' },
+    { id: 'testCalisir', soru: 'Test edildiğinde çalışıyor' },
+    { id: 'sesIsik', soru: 'Ses/ışık seviyesi yeterli' },
+    { id: 'govde', soru: 'Gövde hasarsız' }
   ],
   'Acil Aydınlatma': [
-    { id: 'calisir', soru: 'Armatür çalışıyor mu?' },
-    { id: 'batarya', soru: 'Batarya/şarj durumu yeterli mi?' },
-    { id: 'aydinlatmaSeviyesi', soru: 'Aydınlatma seviyesi kaçış yolunu yeterince aydınlatıyor mu?' },
-    { id: 'govdeLens', soru: 'Gövde/lens hasarsız mı?' }
+    { id: 'calisir', soru: 'Armatür çalışıyor' },
+    { id: 'batarya', soru: 'Batarya/şarj durumu yeterli' },
+    { id: 'aydinlatmaSeviyesi', soru: 'Aydınlatma seviyesi kaçış yolunu yeterince aydınlatıyor' },
+    { id: 'govdeLens', soru: 'Gövde/lens hasarsız' }
   ],
   'Döküntü Kiti': [
-    { id: 'erisim', soru: 'Kit erişilebilir konumda mı?' },
-    { id: 'icerikEksiksiz', soru: 'İçerik eksiksiz mi (emici, eldiven, gözlük, torba vb.)?' },
-    { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok mu?' },
-    { id: 'talimat', soru: 'Kullanım talimatı mevcut mu?' }
+    { id: 'erisim', soru: 'Kit erişilebilir konumda' },
+    { id: 'icerikEksiksiz', soru: 'İçerik eksiksiz (emici, eldiven, gözlük, torba vb.)' },
+    { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok' },
+    { id: 'talimat', soru: 'Kullanım talimatı mevcut' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
