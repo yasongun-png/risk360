@@ -526,7 +526,7 @@ function ekipmanlariCiz(aramaMetni) {
   liste.forEach(e => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${_adKacir(e.ekipmanNo)}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
+      <td>${_adKacir(e.ekipmanNo)}${e.fotoUrl ? ` <a data-foto-ref-href="${e.fotoUrl}" target="_blank" rel="noopener" title="Fotoğrafı büyüt"><img data-foto-ref="${e.fotoUrl}" style="width:22px; height:22px; object-fit:cover; border-radius:4px; vertical-align:middle; border:1px solid var(--kenarlik);"></a>` : ''}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
       <td>${_adKacir(e.bulgular) || '-'}</td>
@@ -538,6 +538,7 @@ function ekipmanlariCiz(aramaMetni) {
     govde.appendChild(satir);
   });
 
+  fotoReferanslariCoz(govde);
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
