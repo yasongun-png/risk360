@@ -245,6 +245,11 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
     ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
   });
+  document.getElementById('topluKontrolBtn').addEventListener('click', topluKontrolModalAc);
+  document.getElementById('topluKontrolKapatBtn').addEventListener('click', topluKontrolModalKapat);
+  document.getElementById('topluKontrolIptalBtn').addEventListener('click', topluKontrolModalKapat);
+  document.getElementById('topluKontrolListeleBtn').addEventListener('click', topluKontrolListele);
+  document.getElementById('topluKontrolKaydetBtn').addEventListener('click', topluKontrolKaydet);
   document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
   document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
@@ -531,7 +536,6 @@ function ekipmanlariCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
       <td>${_adKacir(e.bulgular) || '-'}</td>
       <td>
-        <button class="tablo-buton" data-yeni-kontrol="${e.id}">Yeni Kontrol Başlat</button>
         <button class="tablo-buton" data-duzenle="${e.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${e.id}">Sil</button>
       </td>
@@ -540,7 +544,6 @@ function ekipmanlariCiz(aramaMetni) {
   });
 
   fotoReferanslariCoz(govde);
-  govde.querySelectorAll('[data-yeni-kontrol]').forEach(btn => btn.addEventListener('click', () => ekipmanYeniKontrolBaslat(ekipmanIdIleGetirRepo(btn.getAttribute('data-yeni-kontrol')))));
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
@@ -578,26 +581,6 @@ function ekipmanModalAc(ekipman) {
   _ekipmanKonumAlaniCiz(ekipman);
   temizleFormHatalari('ekipmanForm');
   document.getElementById('ekipmanModalKatman').classList.add('acik');
-}
-
-// Kullanıcı isteği: "yeni checklist başlat vb buton olsun ekipman kontrolü
-// için, kontrol tarihi oraya girilsin" -- Düzenle modalı bir önceki
-// kontrolün cevaplarını/bulgularını/fotoğrafını dolu gösterip üzerine
-// yazdırıyordu; bu düğme aynı modalı AÇAR ama kontrol listesini/bulguları/
-// fotoğrafı temizler ve Son Kontrol tarihine bugünü yazar -- ekipman
-// kimlik bilgileri (No/Tür/Bölüm/Lokasyon/Sorumlu/Periyot) korunur.
-function ekipmanYeniKontrolBaslat(ekipman) {
-  if (!ekipman) return;
-  ekipmanModalAc(ekipman);
-  document.getElementById('ekipmanModalBaslik').textContent = `${ekipman.ekipmanNo || 'Ekipman'} — Yeni Kontrol`;
-  document.getElementById('ekipmanSonKontrol').value = bugunIso();
-  document.getElementById('ekipmanSonrakiKontrol').value = '';
-  document.getElementById('ekipmanBulgular').value = '';
-  document.querySelectorAll('#ekipmanKontrolListesi [data-kontrol-soru]').forEach(sel => { sel.value = ''; });
-  _ekipmanFotoUrl = '';
-  document.getElementById('ekipmanFotoCekDosya').value = '';
-  document.getElementById('ekipmanFotoSecDosya').value = '';
-  _ekipmanFotoOnizlemeCiz();
 }
 
 // Saha Dijital Haritası köprüsü — bkz. modules/uygunsuzluk/ui.js'teki
@@ -671,6 +654,150 @@ function _ekipmanFotoOnizlemeCiz() {
 function ekipmanModalKapat() {
   document.getElementById('ekipmanModalKatman').classList.remove('acik');
   _duzenlenenEkipmanId = null;
+}
+
+// ==================== TOPLU KONTROL (bölüm bazında) ====================
+// Kullanıcı isteği: "yeni kontrol başlat tek şey olup seçtiğim bölümün tüm
+// ekipmanları çıkacak altında ben kontrollerini yapacağım" -- tek bir düğme,
+// önce bölüm seçtirir, sonra o bölümdeki TÜM ekipmanları alt alta kendi
+// kontrol listesiyle gösterir; hepsi "Tüm Kontrolleri Kaydet" ile tek
+// seferde kaydedilir (her biri kendi Son Kontrol=bugün, temiz kontrol
+// cevapları/bulgular/fotoğrafla, kimlik alanları -No/Tür/Lokasyon/Sorumlu/
+// Periyot- korunarak).
+let _tkFotoUrller = {};
+
+function topluKontrolModalAc() {
+  const bolumler = Array.from(new Set(ekipmanlariTumunuGetir().map(e => (e.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
+  document.getElementById('topluKontrolBolum').innerHTML = bolumler.length
+    ? bolumler.map(b => `<option>${_adKacir(b)}</option>`).join('')
+    : '<option value="">— Bölüm bulunamadı —</option>';
+  document.getElementById('topluKontrolListesi').innerHTML = '';
+  document.getElementById('topluKontrolEylemler').style.display = 'none';
+  _tkFotoUrller = {};
+  document.getElementById('topluKontrolKatman').classList.add('acik');
+}
+
+function topluKontrolModalKapat() {
+  document.getElementById('topluKontrolKatman').classList.remove('acik');
+}
+
+function _tkKartHtml(ekipman) {
+  const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
+  return `
+    <div class="kart" style="margin-bottom:14px; padding:14px;" data-tk-kart="${ekipman.id}">
+      <div style="font-weight:700; margin-bottom:8px;">${_adKacir(ekipman.ekipmanNo)} — ${_adKacir(ekipman.tur)} — ${_adKacir(ekipman.lokasyon)}</div>
+      ${sorular.map(s => `
+        <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
+          <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
+          <select data-tk-soru="${s.id}" style="width:auto; min-width:150px;">
+            <option value="">— Seçilmedi —</option>
+            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}">${o}</option>`).join('')}
+          </select>
+        </div>
+      `).join('')}
+      <label style="margin-top:10px; display:block; font-size:12px; font-weight:600;">Bulgular</label>
+      <textarea data-tk-bulgular rows="2" style="width:100%;"></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button type="button" class="tablo-buton" data-tk-foto-cek-btn="${ekipman.id}">📷 Fotoğraf Çek</button>
+        <button type="button" class="tablo-buton" data-tk-foto-sec-btn="${ekipman.id}">🖼️ Galeriden Seç</button>
+      </div>
+      <input type="file" accept="image/*" capture="environment" style="display:none;" data-tk-foto-cek-input="${ekipman.id}">
+      <input type="file" accept="image/*" style="display:none;" data-tk-foto-sec-input="${ekipman.id}">
+      <div data-tk-foto-onizleme="${ekipman.id}" style="margin-top:6px;"></div>
+    </div>
+  `;
+}
+
+function topluKontrolListele() {
+  const bolum = document.getElementById('topluKontrolBolum').value;
+  const kutu = document.getElementById('topluKontrolListesi');
+  const eylemler = document.getElementById('topluKontrolEylemler');
+  if (!bolum) {
+    kutu.innerHTML = '<p style="color:var(--metin-soluk); font-size:13px;">Önce bir bölüm seçin.</p>';
+    eylemler.style.display = 'none';
+    return;
+  }
+  const kayitlar = ekipmanlariTumunuGetir()
+    .filter(e => (e.bolum || '').trim() === bolum && e.durum !== 'İptal')
+    .sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr'));
+  if (!kayitlar.length) {
+    kutu.innerHTML = '<p style="color:var(--metin-soluk); font-size:13px;">Bu bölümde ekipman bulunamadı.</p>';
+    eylemler.style.display = 'none';
+    return;
+  }
+
+  _tkFotoUrller = {};
+  kutu.innerHTML = kayitlar.map(_tkKartHtml).join('');
+  fotoReferanslariCoz(kutu);
+
+  kutu.querySelectorAll('[data-tk-foto-cek-btn]').forEach(btn => btn.addEventListener('click', () =>
+    kutu.querySelector(`[data-tk-foto-cek-input="${btn.getAttribute('data-tk-foto-cek-btn')}"]`).click()));
+  kutu.querySelectorAll('[data-tk-foto-sec-btn]').forEach(btn => btn.addEventListener('click', () =>
+    kutu.querySelector(`[data-tk-foto-sec-input="${btn.getAttribute('data-tk-foto-sec-btn')}"]`).click()));
+  kutu.querySelectorAll('[data-tk-foto-cek-input]').forEach(inp => inp.addEventListener('change', e => _tkFotoSecildi(e, inp.getAttribute('data-tk-foto-cek-input'))));
+  kutu.querySelectorAll('[data-tk-foto-sec-input]').forEach(inp => inp.addEventListener('change', e => _tkFotoSecildi(e, inp.getAttribute('data-tk-foto-sec-input'))));
+
+  eylemler.style.display = 'flex';
+}
+
+// Kamera/galeri yükleme mantığı _ekipmanFotoSecildi ile aynı (Storage/CORS'a
+// uğramadan doğrudan fotoSikistir + fotoBuyukKaydet) ama sonucu tek bir
+// _ekipmanFotoUrl yerine ekipmanId'ye göre bir haritada (_tkFotoUrller) tutar.
+async function _tkFotoSecildi(e, ekipmanId) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  try {
+    const dataUrl = await fotoSikistir(dosya, 900, 0.6);
+    _tkFotoUrller[ekipmanId] = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
+    _tkFotoOnizlemeCiz(ekipmanId);
+  } catch (hata) {
+    alert(hata.message || 'Fotoğraf yüklenemedi.');
+  }
+}
+
+function _tkFotoOnizlemeCiz(ekipmanId) {
+  const kutu = document.querySelector(`[data-tk-foto-onizleme="${ekipmanId}"]`);
+  if (!kutu) return;
+  const url = _tkFotoUrller[ekipmanId];
+  kutu.innerHTML = url
+    ? `<div style="display:flex; align-items:center; gap:8px;"><img data-foto-ref="${url}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);"><span style="font-size:12px; color:#16a34a; font-weight:600;">✓ Fotoğraf eklendi</span></div>`
+    : '';
+  if (url) fotoReferanslariCoz(kutu);
+}
+
+// Her kart için mevcut ekipman kaydının ÜZERİNE (Object.assign) sadece
+// kontrol alanları (Son Kontrol/Sonraki Kontrol/kontrolCevaplari/bulgular/
+// fotoUrl) yazılır -- ekipmanGuncelle'nin ürettiği nesne veriler'deki TÜM
+// alanları (bolum, sorumlu, periyotGun, ekipmanNo...) okuduğundan, sadece
+// değişenleri geçmek onları boşaltırdı.
+function topluKontrolKaydet() {
+  const kartlar = document.querySelectorAll('#topluKontrolListesi [data-tk-kart]');
+  if (!kartlar.length) { topluKontrolModalKapat(); return; }
+
+  let basarili = 0;
+  kartlar.forEach(kart => {
+    const id = kart.getAttribute('data-tk-kart');
+    const ekipman = ekipmanIdIleGetirRepo(id);
+    if (!ekipman) return;
+    const cevaplar = {};
+    kart.querySelectorAll('[data-tk-soru]').forEach(sel => { cevaplar[sel.getAttribute('data-tk-soru')] = sel.value; });
+    const bulgular = kart.querySelector('[data-tk-bulgular]').value;
+    const veriler = Object.assign({}, ekipman, {
+      sonKontrol: bugunIso(),
+      sonrakiKontrol: '',
+      kontrolCevaplari: cevaplar,
+      bulgular,
+      fotoUrl: _tkFotoUrller[id] || ekipman.fotoUrl || ''
+    });
+    const sonuc = ekipmanGuncelle(id, veriler);
+    if (sonuc.basarili) basarili++;
+  });
+
+  topluKontrolModalKapat();
+  _ekipmanBolumFiltreDoldur();
+  ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+  alert(`${basarili} ekipmanın kontrolü kaydedildi.`);
 }
 
 // "Bulgular" serbest metninin yanına, seçilen ekipman türüne uygun madde
