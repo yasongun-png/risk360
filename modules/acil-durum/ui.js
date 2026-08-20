@@ -731,9 +731,16 @@ function topluKontrolListele() {
     return;
   }
 
+  // Ekipmanın kayıtlı fotoğrafı varsa (bkz. modules/acil-durum/model.js
+  // fotoUrl alanı) otomatik olarak öniz olarak gösterilir -- kullanıcı
+  // isteği: "değşimde o ekşpmaın fotorafı otomatik gelsin şstersem
+  // değiştrieyim" -- kullanıcı isterse Fotoğraf Çek/Galeriden Seç ile
+  // üzerine yeni bir fotoğraf yükleyip değiştirebilir.
   _tkFotoUrller = {};
+  kayitlar.forEach(e => { if (e.fotoUrl) _tkFotoUrller[e.id] = e.fotoUrl; });
   kutu.innerHTML = kayitlar.map(_tkKartHtml).join('');
   fotoReferanslariCoz(kutu);
+  kayitlar.forEach(e => _tkFotoOnizlemeCiz(e.id));
 
   kutu.querySelectorAll('[data-tk-foto-cek-btn]').forEach(btn => btn.addEventListener('click', () =>
     kutu.querySelector(`[data-tk-foto-cek-input="${btn.getAttribute('data-tk-foto-cek-btn')}"]`).click()));
