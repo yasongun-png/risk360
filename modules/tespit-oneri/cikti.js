@@ -46,15 +46,6 @@ function _toOnayKutusu(baslik, adSoyad, imzaKaydi, imzaGorselUrl) {
   `;
 }
 
-function _toFormFotoKutusu(url, etiket) {
-  return `
-    <div class="uc-form-foto-kutu">
-      <div class="uc-form-foto-govde">${url ? `<img src="${url}">` : ''}</div>
-      <div class="uc-form-foto-etiket">${_toPdfKacir(etiket)}</div>
-    </div>
-  `;
-}
-
 const _TO_KAYIT_STIL = `
       #toKayitPdf{ font-family: Arial, Helvetica, sans-serif; color:#111827; background:#fff; width:210mm; min-height:297mm; padding:8mm; font-size:9pt; }
       #toKayitPdf *{ box-sizing:border-box; }
@@ -85,12 +76,6 @@ const _TO_KAYIT_STIL = `
       #toKayitPdf .uc-rozet-oncelik.yuksek{ background:#ffedd5; color:#c2410c; }
       #toKayitPdf .uc-rozet-oncelik.acil{ background:#fee2e2; color:#b91c1c; }
 
-      #toKayitPdf .uc-form-fotograflar{ display:flex; gap:4mm; }
-      #toKayitPdf .uc-form-foto-kutu{ flex:1; border:1px solid #111827; background:#fff; }
-      #toKayitPdf .uc-form-foto-govde{ height:56mm; display:flex; align-items:center; justify-content:center; background:#fff; overflow:hidden; }
-      #toKayitPdf .uc-form-foto-govde img{ max-width:100%; max-height:100%; object-fit:contain; }
-      #toKayitPdf .uc-form-foto-etiket{ text-align:center; font-weight:700; font-size:8pt; padding:2mm; border-top:1px solid #111827; text-transform:uppercase; }
-
       #toKayitPdf .uc-form-altbilgi{ text-align:center; font-size:7.5pt; color:#64748b; margin-top:5mm; }
 
       #toKayitPdf .uc-onay-satir{ display:flex; gap:6mm; }
@@ -108,12 +93,15 @@ async function tespitOneriKaydiPdfOlustur(id) {
   const firma = aktifFirmaGetir();
   const logo = firma ? firmaLogoGetir(firma.id) : '';
   const imzalar = k.imzalar || {};
-  const [defterSayfasiUrl, tespitEdenImzaUrl, tebligEdilenImzaUrl] = await Promise.all([
-    fotoBuyukCoz(k.defterSayfasiFotografi),
+  const [tespitEdenImzaUrl, tebligEdilenImzaUrl] = await Promise.all([
     fotoBuyukCoz(imzalar.tespitEden && imzalar.tespitEden.imzaUrl),
     fotoBuyukCoz(imzalar.tebligEdilen && imzalar.tebligEdilen.imzaUrl)
   ]);
 
+  // Kullanıcı isteği: "defter sayfası fotosu olmasın" -- form artık kayıttaki
+  // defterSayfasiFotografi'ni göstermiyor (kayıt/form/tablo/Excel'de foto
+  // yükleme özelliği aynen duruyor, sadece bu PDF'te basılmıyor).
+  //
   // Bu form her zaman TEK sayfa üretir (öncesi/sonrası foto çifti veya
   // konum krokisi yok) -- yine de formAyarlariKutusuHtml'in 4. parametresi
   // aynı mekanizmayla ("mevcut/toplam") geçilir, bkz. modules/uygunsuzluk
@@ -158,16 +146,7 @@ async function tespitOneriKaydiPdfOlustur(id) {
     </div>
 
     <div class="uc-form-bolum">
-      <h2>4. Defter Sayfası Fotoğrafı</h2>
-      <div style="padding:3mm;">
-        <div class="uc-form-fotograflar">
-          ${_toFormFotoKutusu(defterSayfasiUrl, 'Defter Sayfası')}
-        </div>
-      </div>
-    </div>
-
-    <div class="uc-form-bolum">
-      <h2>5. Onay</h2>
+      <h2>4. Onay</h2>
       <div style="padding:3mm;">
         <div class="uc-onay-satir">
           ${_toOnayKutusu('Tespit Eden', k.tespitEden, imzalar.tespitEden, tespitEdenImzaUrl)}
