@@ -184,7 +184,7 @@ const EKIPMAN_KONTROL_SORULARI = {
   'Alarm / Siren': [
     { id: 'erisim', soru: 'Alarm butonu/siren erişilebilir' },
     { id: 'gorunur', soru: 'Alarm butonu/siren görünür' },
-    { id: 'testCalisir', soru: 'Test edildiğinde çalışıyor' },
+    { id: 'testCalisir', soru: 'Alarm çalışıyor' },
     { id: 'sesIsik', soru: 'Ses/ışık seviyesi yeterli' },
     { id: 'govde', soru: 'Gövde hasarsız' }
   ],
