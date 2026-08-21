@@ -120,7 +120,6 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'govde', soru: 'Gövde hasarsız/paslanmamış' },
     { id: 'vana', soru: 'Vana çalışıyor' },
     { id: 'sizinti', soru: 'Sızıntı yok' },
-    { id: 'korRekor', soru: 'Kör rekorlar takılı' },
     { id: 'rekorKirik', soru: 'Rekorlarda kırık/hasar yok' },
     { id: 'vanaKollari', soru: 'Vana kolları sağlam' }
   ],
