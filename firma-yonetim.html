@@ -316,6 +316,17 @@
         posterBaslik: 'EKİPMAN BAKIM KARTI',
         posterMetin: 'Ekipmanda yapılan bakım/onarım işlemini kaydetmek için barkodu telefonunuzla okutup ekipman kodunu girin.',
         posterAlt: 'Ekipman envanterde yoksa otomatik olarak yeni kayıt açılır.'
+      },
+      // Kullanıcı isteği: "barkodu okuttuğumda o ekipmanın kontrol formunu
+      // doldurabileyim tarih otomatik o gün olsun" -- ekipman-bakim ile aynı
+      // iskelet, ama Acil Durum ekipman envanterindeki (Hidrant/Yangın
+      // Dolabı/Sprinkler vb.) periyodik kontrol checklist'ini doldurur.
+      'ekipman-kontrol': {
+        sayfa: 'ekipman-kontrol-bildir.html',
+        baslik: 'Acil Durum Ekipman Kontrol Barkodu',
+        posterBaslik: 'EKİPMAN KONTROL FORMU',
+        posterMetin: 'Acil durum ekipmanının (hidrant, yangın dolabı, göz duşu vb.) periyodik kontrolünü doldurmak için barkodu telefonunuzla okutup ekipman üzerindeki barkod/ekipman no\'yu girin.',
+        posterAlt: 'Kontrol tarihi otomatik o güne, checklist bir önceki kontrolün cevaplarına göre önceden doldurulur.'
       }
     };
 
@@ -357,6 +368,7 @@
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-isg">🧾 İş İzni Barkodu (İSG)</button>
             <button class="mini-buton" data-is-izni-sifre="${firma.id}">🔒 İş İzni Şifreleri</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-kontrol">🧯 Ekipman Kontrol Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
             <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>
           </div>

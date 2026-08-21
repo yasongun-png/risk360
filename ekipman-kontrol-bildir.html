@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>Ekipman Kontrol Formu</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* ekipman-bakim-bildir.html ile aynı tek-ekran kart deseni — kullanıcı
+     isteği: "barkodu okuttuğumda o ekipmanın kontrol formunu
+     doldurabileyim tarih otomatik o gün olsun". */
+  body { background: var(--arka-plan, #f3f4f6); }
+  .ek-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
+  .ek-kart { width: 100%; max-width: 520px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
+  .ek-baslik { text-align: center; margin-bottom: 4px; font-size: 19px; font-weight: 800; }
+  .ek-firma { text-align: center; color: var(--celik-mavi-koyu, #1d4ed8); font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+  .ek-not { font-size: 12px; color: var(--metin-soluk, #6b7280); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+  .ek-alan { margin-bottom: 14px; }
+  .ek-alan label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--metin-soluk, #6b7280); }
+  .ek-gonder-btn { width: 100%; padding: 15px; font-size: 15px; margin-top: 6px; }
+  .ek-durum { text-align: center; padding: 30px 6px; }
+  .ek-durum .ikon { font-size: 46px; margin-bottom: 10px; }
+  .ek-durum h2 { margin: 0 0 8px; font-size: 18px; }
+  .ek-durum p { color: var(--metin-soluk, #6b7280); font-size: 13px; margin: 0 0 20px; }
+  .ek-bilgi-kutu { background: var(--arka-plan, #f3f4f6); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 13px; }
+  .ek-bilgi-kutu b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .ek-soru-satir { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--kenarlik, #e5e7eb); }
+  .ek-soru-satir span { flex: 1; font-size: 13px; }
+  .ek-soru-satir select { width: auto; min-width: 140px; margin: 0; }
+  .gizli { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="ek-sahne">
+    <div class="ek-kart">
+
+      <div id="ekYukleniyor">
+        <div class="ek-baslik">🛡️ Yükleniyor…</div>
+      </div>
+
+      <div id="ekHataDurumu" class="ek-durum gizli">
+        <div class="ikon">⚠️</div>
+        <h2>Bağlantı Geçersiz</h2>
+        <p>Bu barkod/link geçerli bir işyerine ait değil. Lütfen İSG ekibinizle iletişime geçin.</p>
+      </div>
+
+      <div id="ekKodAlani" class="gizli">
+        <div class="ek-baslik">🧯 Ekipman Kontrol Formu</div>
+        <div class="ek-firma" id="ekFirmaAdi"></div>
+        <div class="ek-not">
+          Ekipmanın üzerindeki barkodu okutun veya Ekipman No'yu girin —
+          bulunursa o ekipmanın kontrol formu açılacak.
+        </div>
+        <form id="ekKodForm">
+          <div class="ek-alan">
+            <label for="ekKod">Ekipman No *</label>
+            <input type="text" id="ekKod" required autofocus autocomplete="off">
+          </div>
+          <div class="hata-mesaji" id="ekKodHata"></div>
+          <button type="submit" class="birincil ek-gonder-btn">Bul</button>
+        </form>
+      </div>
+
+      <div id="ekKontrolAlani" class="gizli">
+        <div class="ek-baslik">🧯 Ekipman Kontrol Formu</div>
+        <div class="ek-firma" id="ekKontrolFirmaAdi"></div>
+        <div class="ek-bilgi-kutu">
+          <b id="ekKontrolEkipmanNo"></b>
+          <span id="ekKontrolEkipmanDetay"></span>
+        </div>
+
+        <form id="ekKontrolForm">
+          <div class="ek-alan">
+            <label for="ekKontrolTarihi">Kontrol Tarihi *</label>
+            <input type="date" id="ekKontrolTarihi" required>
+          </div>
+          <div class="ek-alan">
+            <label for="ekKontrolEden">Kontrolü Yapan *</label>
+            <input type="text" id="ekKontrolEden" required placeholder="Ad Soyad">
+          </div>
+
+          <div id="ekSorularAlani"></div>
+
+          <div class="ek-alan" style="margin-top:14px;">
+            <label for="ekBulgular">Bulgular</label>
+            <textarea id="ekBulgular" rows="3"></textarea>
+          </div>
+
+          <div class="hata-mesaji" id="ekKontrolHata"></div>
+          <button type="submit" class="birincil ek-gonder-btn" id="ekKontrolGonderBtn">Kontrolü Kaydet</button>
+          <button type="button" class="ikincil" id="ekBaskaKodBtn" style="width:100%; margin-top:8px;">← Başka Ekipman</button>
+        </form>
+      </div>
+
+      <div id="ekBasariDurumu" class="ek-durum gizli">
+        <div class="ikon">✅</div>
+        <h2>Kontrol Kaydedildi</h2>
+        <p id="ekBasariMetin">Teşekkürler — kontrol kaydı ekipmana işlendi.</p>
+        <button type="button" class="birincil" id="ekYeniKontrolBtn" style="width:auto; padding:10px 22px;">Başka Ekipman Kontrol Et</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="modules/acil-durum/model.js"></script>
+  <script>
+    function _ekKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    const _ekParams = new URLSearchParams(window.location.search);
+    const _ekSlug = (_ekParams.get('firma') || '').trim();
+    let _ekFirma = null;
+    let _ekBulunanEkipman = null;
+
+    function _ekEnvanterAnahtari() {
+      return 'isg_' + _ekFirma.slug + '_acil_durum_ekipmanlari';
+    }
+
+    // Kullanıcı isteği: "barkodu okuttuğumda o ekipmanın kontrol formunu
+    // doldurabileyim tarih otomatik o gün olsun" -- Ekipman No girilip
+    // bulunduğunda tür bazlı kontrol soruları (bkz. modules/acil-durum/
+    // model.js EKIPMAN_KONTROL_SORULARI), bir önceki kontrolün cevap ve
+    // bulgularıyla ÖNCEDEN DOLU olarak, tarih bugüne varsayılı açılır.
+    function _ekSorulariCiz(ekipman) {
+      const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
+      const oncekiCevaplar = ekipman.kontrolCevaplari || {};
+      document.getElementById('ekSorularAlani').innerHTML = sorular.map(s => `
+        <div class="ek-soru-satir">
+          <span>${_ekKacir(s.soru)}</span>
+          <select data-ek-soru="${s.id}">
+            <option value="" ${oncekiCevaplar[s.id] ? '' : 'selected'}>— Seçilmedi —</option>
+            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${oncekiCevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+        </div>
+      `).join('');
+    }
+
+    function _ekKontrolFormunuAc(ekipman) {
+      _ekBulunanEkipman = ekipman;
+      document.getElementById('ekKodAlani').classList.add('gizli');
+      document.getElementById('ekKontrolAlani').classList.remove('gizli');
+      document.getElementById('ekKontrolFirmaAdi').textContent = _ekFirma.ad;
+      document.getElementById('ekKontrolEkipmanNo').textContent = `${ekipman.ekipmanNo} — ${ekipman.tur}`;
+      document.getElementById('ekKontrolEkipmanDetay').textContent = [ekipman.bolum, ekipman.lokasyon].filter(Boolean).join(' — ') || 'Lokasyon belirtilmemiş';
+      document.getElementById('ekKontrolTarihi').value = bugunIso();
+      document.getElementById('ekKontrolEden').value = '';
+      document.getElementById('ekBulgular').value = ekipman.bulgular || '';
+      const kontrolHataEl = document.getElementById('ekKontrolHata');
+      kontrolHataEl.textContent = '';
+      kontrolHataEl.classList.remove('gorunur');
+      _ekSorulariCiz(ekipman);
+    }
+
+    function _ekKodFormunaDon() {
+      _ekBulunanEkipman = null;
+      document.getElementById('ekKontrolAlani').classList.add('gizli');
+      document.getElementById('ekBasariDurumu').classList.add('gizli');
+      document.getElementById('ekKodAlani').classList.remove('gizli');
+      const kodHataEl = document.getElementById('ekKodHata');
+      kodHataEl.textContent = '';
+      kodHataEl.classList.remove('gorunur');
+      const kodAlani = document.getElementById('ekKod');
+      kodAlani.value = '';
+      kodAlani.focus();
+    }
+
+    function _ekFormuBaslat() {
+      document.getElementById('ekYukleniyor').classList.add('gizli');
+      document.getElementById('ekKodAlani').classList.remove('gizli');
+      document.getElementById('ekFirmaAdi').textContent = _ekFirma.ad;
+
+      document.getElementById('ekKodForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const hataEl = document.getElementById('ekKodHata');
+        hataEl.textContent = '';
+        hataEl.classList.remove('gorunur');
+        const kod = document.getElementById('ekKod').value.trim();
+        if (!kod) return;
+
+        const liste = oku(_ekEnvanterAnahtari(), []);
+        const ekipman = liste.find(x => (x.ekipmanNo || '').toLowerCase() === kod.toLowerCase());
+        if (!ekipman) {
+          hataEl.textContent = 'Bu koda ait bir ekipman bulunamadı. Ekipman No\'yu kontrol edin.';
+          hataEl.classList.add('gorunur');
+          return;
+        }
+        _ekKontrolFormunuAc(ekipman);
+      });
+
+      document.getElementById('ekBaskaKodBtn').addEventListener('click', _ekKodFormunaDon);
+      document.getElementById('ekYeniKontrolBtn').addEventListener('click', _ekKodFormunaDon);
+
+      document.getElementById('ekKontrolForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const hataEl = document.getElementById('ekKontrolHata');
+        hataEl.textContent = '';
+        hataEl.classList.remove('gorunur');
+
+        const tarih = document.getElementById('ekKontrolTarihi').value;
+        const kontrolEden = document.getElementById('ekKontrolEden').value.trim();
+        if (!tarih || !kontrolEden) {
+          hataEl.textContent = 'Lütfen kontrol tarihini ve kontrolü yapan kişinin adını girin.';
+          hataEl.classList.add('gorunur');
+          return;
+        }
+
+        const gonderBtn = document.getElementById('ekKontrolGonderBtn');
+        gonderBtn.disabled = true;
+        gonderBtn.textContent = 'Kaydediliyor…';
+
+        try {
+          const sorular = EKIPMAN_KONTROL_SORULARI[_ekBulunanEkipman.tur] || [];
+          const cevaplar = {};
+          document.querySelectorAll('[data-ek-soru]').forEach(sel => { cevaplar[sel.getAttribute('data-ek-soru')] = sel.value; });
+          const bulgular = document.getElementById('ekBulgular').value;
+
+          const anahtar = _ekEnvanterAnahtari();
+          const liste = oku(anahtar, []);
+          const index = liste.findIndex(x => x.id === _ekBulunanEkipman.id);
+          if (index === -1) throw new Error('Ekipman artık envanterde bulunamadı.');
+
+          const periyotGun = Number(liste[index].periyotGun || 90);
+          liste[index] = Object.assign({}, liste[index], {
+            sonKontrol: tarih,
+            sonrakiKontrol: gunEkle(tarih, periyotGun),
+            kontrolCevaplari: sorular.reduce((acc, s) => {
+              acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevaplar[s.id]) ? cevaplar[s.id] : '';
+              return acc;
+            }, {}),
+            bulgular: bulgular.trim(),
+            kontrolEden: kontrolEden
+          });
+
+          const sonuc = await yazVeSonucuGetir(anahtar, liste);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
+
+          document.getElementById('ekBasariMetin').textContent = `${liste[index].ekipmanNo} — ${tarih} tarihli kontrol kaydedildi.`;
+          document.getElementById('ekKontrolAlani').classList.add('gizli');
+          document.getElementById('ekBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('Ekipman kontrol kaydı kaydedilemedi:', hata);
+          hataEl.textContent = 'Bir hata oluştu, kaydedilemedi. Lütfen tekrar deneyin.';
+          hataEl.classList.add('gorunur');
+        } finally {
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'Kontrolü Kaydet';
+        }
+      });
+    }
+
+    if (!_ekSlug) {
+      document.getElementById('ekYukleniyor').classList.add('gizli');
+      document.getElementById('ekHataDurumu').classList.remove('gizli');
+    } else {
+      bulutHazirOlduğunda(() => {
+        const firmalar = oku('isg_firmalar', []);
+        _ekFirma = firmalar.find(f => f.slug === _ekSlug) || null;
+        if (!_ekFirma) {
+          document.getElementById('ekYukleniyor').classList.add('gizli');
+          document.getElementById('ekHataDurumu').classList.remove('gizli');
+          return;
+        }
+        bulutFirmaHazirOlduğunda(_ekFirma.slug, _ekFormuBaslat);
+      });
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
+</body>
+</html>
