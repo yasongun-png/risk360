@@ -227,9 +227,27 @@ function _yaziEklemeEngelleMi(anahtar, yeniDeger) {
 // bitmeden bir sonraki başlamaz, böylece en son çağrılan yazım her zaman en
 // son ağa gider ve sunucuda kazanır.
 const _bulutYaziKuyruklari = {};
+// Bir anahtar için kaç yazımın hâlâ ağda "beklemede" (sunucudan onay
+// gelmemiş) olduğunu sayar. onSnapshot dinleyicileri (aşağıda) bir anahtar
+// için BİZİM HÂLÂ BEKLEYEN bir yazımımız varken sunucudan gelen (henüz
+// bizim yazımımızı yansıtmayan/eski) bir snapshot'ı _bulutOnbellek'e
+// UYGULAMAMALI -- aksi halde kullanıcı bir kaydı sildiğinde/eklediğinde,
+// F5 YAPMADAN, ekranda hâlâ o işlemin ağ isteği sürerken araya giren bir
+// snapshot olayı sildiği/eklediği kaydı GERİ GETİREBİLİR (kullanıcı raporu:
+// "silerkende şuan siliyorum ... F5 yapmadan da geliyor" -- tespit-öneri
+// modülü). Yazım tamamlanınca (başarılı ya da başarısız) sayaç düşer; o
+// andan sonra gelen snapshot'lar yine normal şekilde uygulanır.
+const _bulutYaziBeklemedeSayaci = {};
+function _anahtarIcinYaziBeklemedeMi(anahtar) {
+  return !!_bulutYaziBeklemedeSayaci[anahtar];
+}
 function _bulutYaziSiraya(anahtar, yazFn) {
+  _bulutYaziBeklemedeSayaci[anahtar] = (_bulutYaziBeklemedeSayaci[anahtar] || 0) + 1;
   const oncekiSira = (_bulutYaziKuyruklari[anahtar] || Promise.resolve()).catch(() => {});
-  const buSira = oncekiSira.then(yazFn);
+  const buSira = oncekiSira.then(yazFn).finally(() => {
+    _bulutYaziBeklemedeSayaci[anahtar]--;
+    if (_bulutYaziBeklemedeSayaci[anahtar] <= 0) delete _bulutYaziBeklemedeSayaci[anahtar];
+  });
   _bulutYaziKuyruklari[anahtar] = buSira;
   return buSira;
 }
@@ -472,6 +490,11 @@ function _bulutBaslat() {
 
     snapshot.docChanges().forEach(change => {
       if (change.type === 'removed') return;
+      // Bu anahtar için hâlâ beklemede bir yazımımız varsa, bu snapshot'ı
+      // ATLA (bkz. _bulutYaziBeklemedeSayaci yorumu) -- aksi halde kendi
+      // yazımımız sunucuya ulaşmadan araya giren bir snapshot eski veriyi
+      // geri getirebilir.
+      if (_anahtarIcinYaziBeklemedeMi(change.doc.id)) return;
       // _yerelYazDene KULLANILMALI (ham localStorage.setItem değil) — kota
       // dolduğunda (bkz. yukarıdaki yorum, satır ~62) uncaught hata fırlatıp bu
       // forEach'i ve dolayısıyla sonraki tüm docChanges güncellemelerini
@@ -538,6 +561,12 @@ function bulutFirmaHazirOlduğunda(firmaSlug, callback) {
     .where('firma', '==', firmaSlug)
     .onSnapshot(snapshot => {
       snapshot.docChanges().forEach(change => {
+        // Bu anahtar için hâlâ beklemede bir yazımımız varsa, bu snapshot'ı
+        // ATLA -- kendi yazımımız (ör. bir kaydı silme) sunucuya ulaşmadan
+        // araya giren bir snapshot, F5 YAPMADAN dahi sildiğimiz/eklediğimiz
+        // kaydı ekranda geri getirebilir (bkz. _bulutYaziBeklemedeSayaci
+        // yorumu, kullanıcı raporu: tespit-öneri modülünde silme).
+        if (_anahtarIcinYaziBeklemedeMi(change.doc.id)) return;
         if (change.type === 'removed') {
           delete _bulutOnbellek[change.doc.id];
         } else {
