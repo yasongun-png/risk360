@@ -106,10 +106,14 @@ async function _kfFotoVerisiGetir(url) {
 // fotoğrafı). İmza kutusu her ekipmanın altında DEĞİL, kullanıcı isteğiyle
 // yalnızca belgenin en altında tek sefer basılıyor (bkz.
 // ekipmanKontrolFormuWordOlustur sonu).
-async function _kfEkipmanBlogu(ekipman, sorular) {
+// Kullanıcı isteği: "her bir ekipman word raporunda ayrı sayfada
+// gösterilsin" -- sayfaSonuOncesi true ise (belgenin en başındaki ekipman
+// hariç) bu blok yeni bir sayfada başlar.
+async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
   const foto = await _kfFotoVerisiGetir(ekipman.fotoUrl);
   return [
     new docx.Paragraph({
+      pageBreakBefore: !!sayfaSonuOncesi,
       spacing: { before: 200, after: 80 },
       shading: { fill: 'F3F4F6' },
       children: [new docx.TextRun({ text: `${ekipman.ekipmanNo || '-'} — ${ekipman.lokasyon || ''}`, bold: true, size: 22 })]
@@ -174,10 +178,16 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre) {
     uretilenBolumSayisi++;
     cocuklar.push(_kfParagraf(`Bu form, ${tur} türündeki ${kayitlar.length} ekipmanın periyodik kontrolü için düzenlenmiştir.`, { spacing: { after: 160 } }));
 
+    // Kullanıcı isteği: "her bir ekipman word raporunda ayrı sayfada
+    // gösterilsin" -- tür başlığından hemen sonraki İLK ekipman aynı
+    // sayfada kalır (başlık zaten kendi sayfasını açtı), ondan SONRAKİ her
+    // ekipman (bölüm alt başlıkları arasında dahil) kendi sayfasında başlar.
+    let ilkEkipmanBuTurde = true;
     for (const grup of _kfBolumleraGrupla(kayitlar)) {
       cocuklar.push(_kfBaslik(`Bölüm: ${grup.bolum}`, docx.HeadingLevel.HEADING_2));
       for (const ekipman of grup.kayitlar) {
-        cocuklar.push(...(await _kfEkipmanBlogu(ekipman, sorular)));
+        cocuklar.push(...(await _kfEkipmanBlogu(ekipman, sorular, !ilkEkipmanBuTurde)));
+        ilkEkipmanBuTurde = false;
       }
     }
   }
