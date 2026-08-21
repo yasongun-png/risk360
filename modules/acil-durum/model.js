@@ -158,9 +158,8 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız' }
   ],
   'Sprinkler Hattı': [
-    { id: 'vanaAcik', soru: 'Ana kontrol vanası açık' },
-    { id: 'vanaMuhurlu', soru: 'Ana kontrol vanası mühürlü/kilitli' },
-    { id: 'basincGostergesi', soru: 'Basınç göstergesi normal aralıkta' },
+    { id: 'vanaDisarida', soru: 'Ana kontrol vanası dışarıda' },
+    { id: 'vanaKolayAcilir', soru: 'Ana kontrol vanası kolay açılıp kapanıyor' },
     { id: 'borularSizinti', soru: 'Borularda sızıntı/korozyon yok' },
     { id: 'tumNozullardanSu', soru: 'Tüm nozullardan yeterli su geliyor' },
     { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız' },
