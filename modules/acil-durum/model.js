@@ -140,8 +140,6 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'akis', soru: 'Su akışı yeterli' },
     { id: 'basinc', soru: 'Su basıncı yeterli' },
     { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor' },
-    { id: 'nozulTemiz', soru: 'Nozullar temiz' },
-    { id: 'korumaKapaklari', soru: 'Koruma kapakları yerinde' },
     { id: 'sariKapak', soru: 'Sarı kapakları var' }
   ],
   'Göz ve Boy Duşu': [
