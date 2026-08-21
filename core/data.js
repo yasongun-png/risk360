@@ -209,6 +209,31 @@ function _yaziEklemeEngelleMi(anahtar, yeniDeger) {
   return !kullaniciEklemeYapabilirMi(kullanici, modulAdi);
 }
 
+// Aynı Firestore belgesine (anahtar) art arda birden çok yazım yapıldığında
+// (ör. Excel toplu içe aktarma sırasında satır satır çağrılan xEkle(), veya
+// kullanıcının art arda hızlıca birkaç kayıt eklemesi) her çağrı kendi
+// .set() isteğini bir ÖNCEKİNİ HİÇ BEKLEMEDEN ağa gönderiyordu. Firestore,
+// aynı belgeye yapılan çakışan .set() isteklerinin sunucuya HANGİ SIRAYLA
+// ULAŞACAĞINI garanti etmez -- ağ gecikmesi isteklerin varış sırasını
+// bozarsa, ÖNCEKİ (daha küçük/eski) bir yazım SONRAKİ (daha güncel) yazımın
+// üzerine yazıp kalıcı olarak "kazanabilir". Sonuç: ekranda her şey doğru
+// görünür (yerel _bulutOnbellek zaten senkron güncellenmiş) ama sayfa
+// yenilendiğinde (F5) Firestore'un gerçekte sakladığı eski/eksik veri geri
+// yüklenir. Kullanıcı raporları: "242 amddelik ... F5 yaptığımda siliniyor",
+// "teknik müteahitliktede eklediğim maddelerde azalma oluyor F5 yapınca".
+// Çözüm: aynı anahtara yapılan tüm yazımlar (yaz/yazVeSonucuGetir/
+// kucukVeriYazVeSonucuGetir/buyukVeriFirmayaYaz -- hepsi bu ortak kuyruğu
+// kullanır) bir kuyrukta SIRAYLA gönderilir; bir öncekinin ağ isteği
+// bitmeden bir sonraki başlamaz, böylece en son çağrılan yazım her zaman en
+// son ağa gider ve sunucuda kazanır.
+const _bulutYaziKuyruklari = {};
+function _bulutYaziSiraya(anahtar, yazFn) {
+  const oncekiSira = (_bulutYaziKuyruklari[anahtar] || Promise.resolve()).catch(() => {});
+  const buSira = oncekiSira.then(yazFn);
+  _bulutYaziKuyruklari[anahtar] = buSira;
+  return buSira;
+}
+
 function yaz(anahtar, deger) {
   if (_yaziEklemeEngelleMi(anahtar, deger)) {
     alert('Bu modülde yeni kayıt ekleme yetkiniz yok. Sadece Personel ve Eğitim modüllerine kayıt ekleyebilirsiniz.');
@@ -218,12 +243,12 @@ function yaz(anahtar, deger) {
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar)) {
     if (_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
       _yerelYazDene(anahtar, JSON.stringify(deger));
-      _bulutDb.collection('kucuk_veri').doc(anahtar).set({ deger })
+      _bulutYaziSiraya(anahtar, () => _bulutDb.collection('kucuk_veri').doc(anahtar).set({ deger }))
         .catch(e => console.error('Firestore yazma hatasi:', e));
       return;
     }
     _bulutOnbellek[anahtar] = deger;
-    _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' })
+    _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' }))
       .catch(e => console.error('Firestore yazma hatasi:', e));
     return;
   }
@@ -239,7 +264,7 @@ function yaz(anahtar, deger) {
 function yazVeSonucuGetir(anahtar, deger) {
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar) && !_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
     _bulutOnbellek[anahtar] = deger;
-    return _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' })
+    return _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' }))
       .then(() => ({ basarili: true }))
       .catch(e => { console.error('Firestore yazma hatasi:', e); return { basarili: false, hata: e }; });
   }
@@ -288,7 +313,7 @@ async function genelIpAdresiGetir() {
 function kucukVeriYazVeSonucuGetir(anahtar, deger) {
   if (_bulutAktif && _KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
     _yerelYazDene(anahtar, JSON.stringify(deger));
-    return _bulutDb.collection('kucuk_veri').doc(anahtar).set({ deger })
+    return _bulutYaziSiraya(anahtar, () => _bulutDb.collection('kucuk_veri').doc(anahtar).set({ deger }))
       .then(() => ({ basarili: true }))
       .catch(e => { console.error('Firestore yazma hatasi:', e); return { basarili: false, hata: e }; });
   }
@@ -303,7 +328,7 @@ function kucukVeriYazVeSonucuGetir(anahtar, deger) {
 function buyukVeriFirmayaYaz(anahtar, deger, firmaSlug) {
   if (_bulutAktif) {
     _bulutOnbellek[anahtar] = deger;
-    _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: firmaSlug || '' })
+    _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: firmaSlug || '' }))
       .catch(e => console.error('Firestore yazma hatasi:', e));
     return;
   }
