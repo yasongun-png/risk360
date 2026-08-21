@@ -247,6 +247,10 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
     ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
   });
+  // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
+  // alayım" — o an ekranda görünen (arama + tür + bölüm filtreli) listedeki
+  // her ekipman için ekipmanNo'yu kodlayan bir barkod etiketi basılır.
+  document.getElementById('ekipmanBarkodYazdirBtn').addEventListener('click', ekipmanBarkodlariYazdir);
   document.getElementById('topluKontrolBtn').addEventListener('click', topluKontrolModalAc);
   document.getElementById('topluKontrolKapatBtn').addEventListener('click', topluKontrolModalKapat);
   document.getElementById('topluKontrolIptalBtn').addEventListener('click', topluKontrolModalKapat);
@@ -508,9 +512,10 @@ function _ekipmanBolumFiltreDoldur() {
   if (bolumler.includes(oncekiSecim)) secim.value = oncekiSecim;
 }
 
-function ekipmanlariCiz(aramaMetni) {
-  const govde = document.getElementById('ekipmanTabloGovde');
-  const bosDurum = document.getElementById('ekipmanBosDurum');
+// Arama kutusu + tür/bölüm filtrelerinin hepsini birlikte uygular — tabloyu
+// çizen ekipmanlariCiz ile barkod yazdırma gibi "ekranda görüneni bas"
+// işlemlerinin AYNI filtrelenmiş listeyi kullanması için ortak yardımcı.
+function _ekipmanFiltrelenmisListeGetir(aramaMetni) {
   const turFiltre = document.getElementById('ekipmanTurFiltre');
   const bolumFiltre = document.getElementById('ekipmanBolumFiltre');
   let liste = ekipmanlariGetir(aramaMetni);
@@ -521,6 +526,13 @@ function ekipmanlariCiz(aramaMetni) {
   // Kullanıcı isteği: "bölüm filtresi de olsun ve buna göre rapor
   // hazırlanabilsin" — bölüme göre de filtrelenebiliyor.
   if (bolumFiltre && bolumFiltre.value) liste = liste.filter(e => (e.bolum || '').trim() === bolumFiltre.value);
+  return liste;
+}
+
+function ekipmanlariCiz(aramaMetni) {
+  const govde = document.getElementById('ekipmanTabloGovde');
+  const bosDurum = document.getElementById('ekipmanBosDurum');
+  let liste = _ekipmanFiltrelenmisListeGetir(aramaMetni);
 
   govde.innerHTML = '';
   if (liste.length === 0) {
@@ -550,6 +562,42 @@ function ekipmanlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
+}
+
+// Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
+// alayım" — o an ekranda görünen (arama + tür + bölüm filtreli) listedeki
+// her ekipman için Ekipman No'yu kodlayan bir CODE128 barkod etiketi
+// basılır (JsBarcode, bkz. index.html script include). core/rapor.js
+// _raporYazdirmaAlaniniGoster kullanılmaz çünkü barkodlar SVG içine
+// window.print() çağrılmadan ÖNCE senkron olarak çizdirilmeli.
+function ekipmanBarkodlariYazdir() {
+  const liste = _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value);
+  if (!liste.length) { alert('Barkod basılacak ekipman bulunamadı.'); return; }
+
+  const etiketlerHtml = liste.map(e => `
+    <div style="width:62mm; border:1px solid #333; border-radius:2mm; padding:3mm; margin:2mm; text-align:center; display:inline-block; vertical-align:top; page-break-inside:avoid;">
+      <div style="font-weight:700; font-size:11px;">${_adKacir(e.tur)}</div>
+      <svg id="ekBarkod-${e.id}"></svg>
+      <div style="font-size:9px; color:#444;">${_adKacir(e.bolum) || ''}${e.bolum && e.lokasyon ? ' — ' : ''}${_adKacir(e.lokasyon) || ''}</div>
+    </div>
+  `).join('');
+
+  const mount = document.getElementById('yazdirmaAlani');
+  mount.innerHTML = `
+    <div class="doc-title">Ekipman Barkodları</div>
+    <div class="doc-meta">${_adKacir(_adFirma ? _adFirma.ad : '')}<br>Toplam ${liste.length} etiket</div>
+    <div>${etiketlerHtml}</div>
+  `;
+  mount.style.display = 'block';
+
+  liste.forEach(e => {
+    JsBarcode(`#ekBarkod-${e.id}`, e.ekipmanNo || e.id, { format: 'CODE128', displayValue: true, fontSize: 12, height: 40, margin: 4 });
+  });
+
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
+  }, 80);
 }
 
 function ekipmanModalAc(ekipman) {
