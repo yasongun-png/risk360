@@ -248,9 +248,10 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
   });
   // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
-  // alayım" — o an ekranda görünen (arama + tür + bölüm filtreli) listedeki
-  // her ekipman için ekipmanNo'yu kodlayan bir barkod etiketi basılır.
-  document.getElementById('ekipmanBarkodYazdirBtn').addEventListener('click', ekipmanBarkodlariYazdir);
+  // alayım" / "barkod pdf olarak olsun" — o an ekranda görünen (arama +
+  // tür + bölüm filtreli) listedeki her ekipman için ekipmanNo'yu
+  // kodlayan bir barkod etiketi içeren indirilebilir bir PDF üretir.
+  document.getElementById('ekipmanBarkodYazdirBtn').addEventListener('click', ekipmanBarkodlariPdfOlustur);
   document.getElementById('topluKontrolBtn').addEventListener('click', topluKontrolModalAc);
   document.getElementById('topluKontrolKapatBtn').addEventListener('click', topluKontrolModalKapat);
   document.getElementById('topluKontrolIptalBtn').addEventListener('click', topluKontrolModalKapat);
@@ -570,34 +571,51 @@ function ekipmanlariCiz(aramaMetni) {
 // basılır (JsBarcode, bkz. index.html script include). core/rapor.js
 // _raporYazdirmaAlaniniGoster kullanılmaz çünkü barkodlar SVG içine
 // window.print() çağrılmadan ÖNCE senkron olarak çizdirilmeli.
-function ekipmanBarkodlariYazdir() {
+// Kullanıcı isteği: "barkod pdf olarak olsun" — önceki window.print()
+// tabanlı sürüm yerine, JsBarcode'un her etiketi bir <canvas>'a çizip
+// jsPDF'in bunu doğrudan görsel olarak sayfaya yerleştirdiği, indirilebilir
+// gerçek bir .pdf dosyası üretir (html2canvas'a gerek yok, sayfa tam
+// kontrollü mm ızgarasıyla diziliyor — bkz. modules/uygunsuzluk/cikti.js
+// dosya başı açıklamasındaki "TAM KONTROLLÜ yöntem" ile aynı ilke).
+function ekipmanBarkodlariPdfOlustur() {
   const liste = _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value);
   if (!liste.length) { alert('Barkod basılacak ekipman bulunamadı.'); return; }
 
-  const etiketlerHtml = liste.map(e => `
-    <div style="width:62mm; border:1px solid #333; border-radius:2mm; padding:3mm; margin:2mm; text-align:center; display:inline-block; vertical-align:top; page-break-inside:avoid;">
-      <div style="font-weight:700; font-size:11px;">${_adKacir(e.tur)}</div>
-      <svg id="ekBarkod-${e.id}"></svg>
-      <div style="font-size:9px; color:#444;">${_adKacir(e.bolum) || ''}${e.bolum && e.lokasyon ? ' — ' : ''}${_adKacir(e.lokasyon) || ''}</div>
-    </div>
-  `).join('');
+  const SAYFA_GENISLIK = 210, SAYFA_YUKSEKLIK = 297, KENAR = 10;
+  const ETIKET_GENISLIK = 60, ETIKET_YUKSEKLIK = 30, BOSLUK = 4;
+  const SUTUN = Math.floor((SAYFA_GENISLIK - 2 * KENAR + BOSLUK) / (ETIKET_GENISLIK + BOSLUK));
+  const SATIR = Math.floor((SAYFA_YUKSEKLIK - 2 * KENAR + BOSLUK) / (ETIKET_YUKSEKLIK + BOSLUK));
+  const SAYFA_BASI = SUTUN * SATIR;
 
-  const mount = document.getElementById('yazdirmaAlani');
-  mount.innerHTML = `
-    <div class="doc-title">Ekipman Barkodları</div>
-    <div class="doc-meta">${_adKacir(_adFirma ? _adFirma.ad : '')}<br>Toplam ${liste.length} etiket</div>
-    <div>${etiketlerHtml}</div>
-  `;
-  mount.style.display = 'block';
+  const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+  liste.forEach((e, i) => {
+    const sayfaIcindekiSira = i % SAYFA_BASI;
+    if (i > 0 && sayfaIcindekiSira === 0) pdf.addPage('a4', 'p');
+    const sutun = sayfaIcindekiSira % SUTUN;
+    const satir = Math.floor(sayfaIcindekiSira / SUTUN);
+    const x = KENAR + sutun * (ETIKET_GENISLIK + BOSLUK);
+    const y = KENAR + satir * (ETIKET_YUKSEKLIK + BOSLUK);
 
-  liste.forEach(e => {
-    JsBarcode(`#ekBarkod-${e.id}`, e.ekipmanNo || e.id, { format: 'CODE128', displayValue: true, fontSize: 12, height: 40, margin: 4 });
+    pdf.setDrawColor(51);
+    pdf.rect(x, y, ETIKET_GENISLIK, ETIKET_YUKSEKLIK);
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(20);
+    pdf.text(e.tur || '', x + ETIKET_GENISLIK / 2, y + 5, { align: 'center' });
+
+    const barkodTuval = document.createElement('canvas');
+    JsBarcode(barkodTuval, e.ekipmanNo || e.id, { format: 'CODE128', displayValue: true, fontSize: 16, height: 40, margin: 4 });
+    const barkodGenislikMm = ETIKET_GENISLIK - 8;
+    const barkodYukseklikMm = barkodTuval.height * (barkodGenislikMm / barkodTuval.width);
+    pdf.addImage(barkodTuval.toDataURL('image/png'), 'PNG', x + 4, y + 7, barkodGenislikMm, barkodYukseklikMm);
+
+    pdf.setFontSize(7);
+    pdf.setTextColor(70);
+    const altYazi = [e.bolum, e.lokasyon].filter(Boolean).join(' — ');
+    pdf.text(altYazi, x + ETIKET_GENISLIK / 2, y + ETIKET_YUKSEKLIK - 3, { align: 'center', maxWidth: ETIKET_GENISLIK - 6 });
   });
 
-  setTimeout(() => {
-    window.print();
-    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
-  }, 80);
+  pdf.save(`Ekipman_Barkodlari_${(_adFirma && _adFirma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.pdf`);
 }
 
 function ekipmanModalAc(ekipman) {
