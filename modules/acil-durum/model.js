@@ -126,25 +126,31 @@ const EKIPMAN_KONTROL_SORULARI = {
   'Yangın Dolabı': [
     { id: 'erisim', soru: 'Dolap kapısı kolayca açılıyor' },
     { id: 'onundeEngelYok', soru: 'Önünde engel yok' },
-    { id: 'hortum', soru: 'Hortum sağlam, katlanmış/düzenli' },
+    { id: 'hortumSaglam', soru: 'Hortum sağlam' },
+    { id: 'hortumDuzenli', soru: 'Hortum düzenli' },
     { id: 'dolapKapagi', soru: 'Dolap kapağı var' },
     { id: 'dolapSaglam', soru: 'Dolap sağlam' },
     { id: 'dolapBoyasi', soru: 'Dolap boyası iyi' },
     { id: 'lansMevcut', soru: 'Lans mevcut' },
-    { id: 'lansSaglam', soru: 'Lans sağlam ve çalışır durumda' }
+    { id: 'lansSaglam', soru: 'Lans sağlam' },
+    { id: 'lansCalisiyor', soru: 'Lans çalışır durumda' }
   ],
   'Göz Duşu': [
     { id: 'erisim', soru: 'Göz duşuna erişim engelsiz' },
-    { id: 'akisBasinc', soru: 'Su akışı ve basıncı yeterli' },
+    { id: 'akis', soru: 'Su akışı yeterli' },
+    { id: 'basinc', soru: 'Su basıncı yeterli' },
     { id: 'aktivasyon', soru: 'Aktivasyon mekanizması (kelebek vana vb.) çalışıyor' },
-    { id: 'nozul', soru: 'Nozullar temiz, koruma kapakları yerinde' },
+    { id: 'nozulTemiz', soru: 'Nozullar temiz' },
+    { id: 'korumaKapaklari', soru: 'Koruma kapakları yerinde' },
     { id: 'sariKapak', soru: 'Sarı kapakları var' }
   ],
   'Göz ve Boy Duşu': [
     { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz' },
-    { id: 'akisBasinc', soru: 'Su basıncı/akışı yeterli' },
+    { id: 'basinc', soru: 'Su basıncı yeterli' },
+    { id: 'akis', soru: 'Su akışı yeterli' },
     { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor' },
-    { id: 'nozul', soru: 'Nozullar/başlıklar temiz ve hasarsız' },
+    { id: 'nozulTemiz', soru: 'Nozullar/başlıklar temiz' },
+    { id: 'nozulHasarsiz', soru: 'Nozullar/başlıklar hasarsız' },
     { id: 'gozPuskurtmeBasligi', soru: 'Göz duşunda püskürtme başlığı var' }
   ],
   'Monitör': [
@@ -154,29 +160,33 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'nozul', soru: 'Nozul/püskürtme başlığı hasarsız' }
   ],
   'Sprinkler Hattı': [
-    { id: 'vanaAcik', soru: 'Ana kontrol vanası açık ve mühürlü/kilitli' },
+    { id: 'vanaAcik', soru: 'Ana kontrol vanası açık' },
+    { id: 'vanaMuhurlu', soru: 'Ana kontrol vanası mühürlü/kilitli' },
     { id: 'basincGostergesi', soru: 'Basınç göstergesi normal aralıkta' },
     { id: 'borularSizinti', soru: 'Borularda sızıntı/korozyon yok' },
     { id: 'baslikEngelsiz', soru: 'Sprinkler başlıklarının altı/çevresi engelsiz (min. 45-50 cm boşluk)' },
-    { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız, boyanmamış/örtülmemiş' },
+    { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız' },
+    { id: 'baslikBoyanmamis', soru: 'Sprinkler başlıkları boyanmamış/örtülmemiş' },
     { id: 'alarmVanasi', soru: 'Alarm vanası/akış şalteri çalışıyor' },
     { id: 'askiDestek', soru: 'Boru askı ve destekleri sağlam' }
   ],
   'Kaçış Yolu': [
     { id: 'engelsiz', soru: 'Kaçış yolu engelsiz' },
-    { id: 'tabela', soru: 'Yönlendirme/tabela levhaları görünür ve sağlam' },
+    { id: 'tabela', soru: 'Yönlendirme/tabela levhaları görünür' },
+    { id: 'tabelaSaglam', soru: 'Yönlendirme/tabela levhaları sağlam' },
     { id: 'aydinlatma', soru: 'Acil aydınlatma çalışıyor' },
     { id: 'zemin', soru: 'Zemin kayma riski taşımıyor' },
     { id: 'kapilar', soru: 'Kapılar kilitli/engelli değil' }
   ],
   'Toplanma Alanı': [
     { id: 'isaretleme', soru: 'Toplanma alanı işaretlemesi görünür' },
-    { id: 'erisim', soru: 'Alan engelsiz ve erişilebilir' },
+    { id: 'erisim', soru: 'Alan engelsiz' },
     { id: 'kapasite', soru: 'Alan kapasiteye yeterli' },
     { id: 'guvenliMesafe', soru: 'Tehlikeli alanlardan güvenli mesafede' }
   ],
   'Alarm / Siren': [
-    { id: 'erisim', soru: 'Alarm butonu/siren erişilebilir ve görünür' },
+    { id: 'erisim', soru: 'Alarm butonu/siren erişilebilir' },
+    { id: 'gorunur', soru: 'Alarm butonu/siren görünür' },
     { id: 'testCalisir', soru: 'Test edildiğinde çalışıyor' },
     { id: 'sesIsik', soru: 'Ses/ışık seviyesi yeterli' },
     { id: 'govde', soru: 'Gövde hasarsız' }
