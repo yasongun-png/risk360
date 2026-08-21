@@ -43,6 +43,28 @@ function tespitOneriEkle(veriler) {
   return { basarili: true, kayit: yeniKayit };
 }
 
+// Excel toplu içe aktarma için -- bkz. tespitOneriTopluEkleRepo yorumu.
+// tespitOneriEkle'yi satır satır çağırmak yerine, her satır önce doğrulanıp
+// bellekte kayda dönüştürülür (kayıt no'ları da henüz Firestore'a hiç
+// yazılmadan, o ana kadar bellekte biriken adaylar da hesaba katılarak art
+// arda üretilir), sonuçta TEK BİR toplu yazımla kaydedilir.
+function tespitOneriTopluEkle(verilerListesi) {
+  const mevcutListe = tespitOneriTumunuGetir();
+  const basariliKayitlar = [];
+  const hatalar = [];
+  verilerListesi.forEach((veriler, index) => {
+    const dogrulama = tespitOneriDogrula(veriler);
+    if (!dogrulama.gecerli) {
+      hatalar.push(`Satır ${index + 2}: ${Object.values(dogrulama.hatalar)[0]}`);
+      return;
+    }
+    const kayitNo = tespitOneriSonrakiNoUret(mevcutListe.concat(basariliKayitlar));
+    basariliKayitlar.push(tespitOneriKaydiOlustur(Object.assign({}, veriler, { kayitNo })));
+  });
+  if (basariliKayitlar.length) tespitOneriTopluEkleRepo(basariliKayitlar);
+  return { basarili: basariliKayitlar.length, basarisizSayisi: hatalar.length, hatalar };
+}
+
 function tespitOneriGuncelle(id, veriler) {
   const dogrulama = tespitOneriDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };

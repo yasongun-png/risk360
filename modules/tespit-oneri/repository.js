@@ -19,6 +19,22 @@ function tespitOneriEkleRepo(kayit) {
   return kayit;
 }
 
+// Excel toplu içe aktarma gibi ÇOK SAYIDA kaydı TEK SEFERDE ekler.
+// tespitOneriEkleRepo'yu satır satır (yüzlerce kez) çağırmak, her satırda
+// TÜM listeyi yeniden Firestore'a yazan AYRI bir ağ isteği anlamına gelir;
+// bu istekler sırayla gönderilse bile (bkz. core/data.js _bulutYaziSiraya)
+// onlarca saniye sürebilir -- kullanıcı hepsi bitmeden sayfayı yenilerse
+// (F5) henüz gönderilmemiş yazımlar hiç Firestore'a ulaşmaz. Kullanıcı
+// raporu: "102 teknik müteahitlik tespit önerisi ekliyorum içe aktarla
+// sayfayı yenilediğimde 18'e düşüyor". Tek bir okuma + tek bir yazımla bu
+// riski tamamen ortadan kaldırır.
+function tespitOneriTopluEkleRepo(yeniKayitlar) {
+  const liste = tespitOneriTumunuGetir();
+  yeniKayitlar.forEach(k => liste.push(k));
+  _tespitOneriKaydet(liste);
+  return yeniKayitlar;
+}
+
 function tespitOneriGuncelleRepo(id, veriler) {
   const liste = tespitOneriTumunuGetir();
   const index = liste.findIndex(k => k.id === id);

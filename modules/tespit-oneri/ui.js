@@ -132,7 +132,13 @@ function tespitOneriSayfasiniBaslat() {
         satir.tebligTarihi = excelTarihiNormallestir(satir.tebligTarihi);
         satir.kapanisTarihi = excelTarihiNormallestir(satir.kapanisTarihi);
       });
-      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, tespitOneriEkle);
+      // Kullanıcı raporu: "102 teknik müteahitlik tespit önerisi ekliyorum
+      // içe aktarla sayfayı yenilediğimde 18'e düşüyor" -- satır satır
+      // tespitOneriEkle çağırmak (excelToplulIceAktarSonucOzetle'nin normal
+      // deseni) her satırda ayrı bir Firestore yazımı tetikliyordu; onlarca
+      // sıralı yazım tamamlanmadan sayfa yenilenirse henüz gönderilmemiş
+      // olanlar kaybolur. tespitOneriTopluEkle TEK bir yazımla kaydeder.
+      const sonuc = tespitOneriTopluEkle(satirlar);
       alert(excelIceAktarOzetMesaji(sonuc));
       _toSicilFiltreDoldur();
   _toUzmanFiltreDoldur();
