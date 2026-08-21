@@ -87,7 +87,7 @@
           <button type="button" class="ikincil" id="ekipmanKontrolFormuWordBtn">📄 Kontrol Formu (Word)</button>
           <button type="button" class="ikincil" id="ekipmanBarkodYazdirBtn">🏷️ Barkod (PDF)</button>
           <button type="button" class="ikincil" id="ekipmanKontrolBarkoduAcBtn">📷 Barkodla Kontrol Formu</button>
-          <button type="button" class="ikincil" id="topluKontrolBtn">✅ Yeni Kontrol Başlat</button>
+          <button type="button" class="ikincil" id="ekipmanBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
           <button type="button" class="birincil" id="yeniEkipmanBtn" style="width:auto;">+ Ekipman Ekle</button>
         </div>
       </div>
@@ -289,42 +289,6 @@
         </div>
       </form>
       <button type="button" class="tablo-buton" id="ekipmanModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
-    </div>
-  </div>
-
-  <!-- TOPLU KONTROL MODAL -- kullanıcı isteği: "seçtiğim bölümün tüm
-       ekipmanları çıkacak altında ben kontrollerini yapacağım" -- tek bir
-       "Yeni Kontrol Başlat" düğmesi, önce bölüm seçtirir, sonra o bölümün
-       TÜM ekipmanlarını alt alta (her biri kendi kontrol listesiyle) tek
-       ekranda listeler; hepsi tek seferde kaydedilir. -->
-  <div class="modal-katman" id="topluKontrolKatman">
-    <div class="modal-kutu" style="max-width:820px; max-height:88vh; overflow-y:auto;">
-      <h3>Yeni Kontrol Başlat</h3>
-      <label for="topluKontrolBolum">Bölüm</label>
-      <select id="topluKontrolBolum"></select>
-      <div class="form-satir-ikili">
-        <div>
-          <label for="topluKontrolTarihi">Kontrol Tarihi</label>
-          <input type="date" id="topluKontrolTarihi">
-        </div>
-        <div>
-          <label for="topluKontrolYapan">Kontrolü Yapan</label>
-          <input type="text" id="topluKontrolYapan" placeholder="Ad Soyad">
-        </div>
-      </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 16px;">
-        <button type="button" class="ikincil" id="topluKontrolListeleBtn" style="width:auto;">Ekipmanları Listele</button>
-        <!-- Kullanıcı isteği: "ama bu barkod taratma yeni kontrol başlatın
-             altında yok" -- barkod tarama artık bu modalın içinde: bölüm
-             seçmeden de tek tek ekipman taratarak listeye eklenebilir. -->
-        <button type="button" class="ikincil" id="topluKontrolBarkodTaraBtn" style="width:auto;">📸 Barkod Tara</button>
-      </div>
-      <div id="topluKontrolListesi"></div>
-      <div class="modal-eylemler" id="topluKontrolEylemler" style="display:none;">
-        <button type="button" class="ikincil" id="topluKontrolIptalBtn">Kapat</button>
-        <button type="button" class="birincil" id="topluKontrolKaydetBtn">Tüm Kontrolleri Kaydet</button>
-      </div>
-      <button type="button" class="tablo-buton" id="topluKontrolKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 

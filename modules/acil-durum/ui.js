@@ -261,17 +261,11 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     window.open('../../ekipman-kontrol-bildir.html?firma=' + encodeURIComponent(_adFirma.slug), '_blank');
   });
   document.getElementById('ekipmanBarkodTaramaKapatBtn').addEventListener('click', ekipmanBarkodTaramaDurdur);
-  document.getElementById('topluKontrolBtn').addEventListener('click', topluKontrolModalAc);
-  // Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
-  // bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın" -- sonra:
-  // "ama bu barkod taratma yeni kontrol başlatın altında yok" -- barkod
-  // tarama artık "Yeni Kontrol Başlat" modalının içinde: bölüm seçmeden de
-  // tek tek ekipman taratarak kontrol listesine eklenebiliyor.
-  document.getElementById('topluKontrolBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
-  document.getElementById('topluKontrolKapatBtn').addEventListener('click', topluKontrolModalKapat);
-  document.getElementById('topluKontrolIptalBtn').addEventListener('click', topluKontrolModalKapat);
-  document.getElementById('topluKontrolListeleBtn').addEventListener('click', topluKontrolListele);
-  document.getElementById('topluKontrolKaydetBtn').addEventListener('click', topluKontrolKaydet);
+  // Kullanıcı isteği: "ekipman sayfasında barkod tara kamera veya barkot
+  // kontrol formu okutulduğunda o ekipman için bugün yeni kontrol
+  // başlatılmış olsun" -- "Yeni Kontrol Başlat" (bölüm bazlı toplu akış)
+  // kaldırıldı, barkod tarama artık tek başına ekipman toolbar'ında.
+  document.getElementById('ekipmanBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
   document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
   document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
@@ -708,12 +702,15 @@ function ekipmanBarkodlariPdfOlustur() {
 // ==================== KAMERA İLE BARKOD TARAMA ====================
 // Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
 // bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın", sonra:
-// "ama bu barkod taratma yeni kontrol başlatın altında yok" -- giriş
-// yapmış kullanıcı, "Yeni Kontrol Başlat" penceresi içinden kamerayla
-// ekipman barkodunu (ekipmanBarkodlariPdfOlustur ile basılan CODE128)
-// okutur; eşleşen ekipman bulununca kamera durdurulur ve o ekipmanın
-// kontrol kartı, bölüm seçilmeden de tek tek taratılarak, aynı toplu
-// kontrol listesine eklenir (bkz. _tkKartEkle).
+// "ekipman sayfasında barkod tara kamera veya barkot kontrol formu
+// okutulduğunda o ekipman için bugün yeni kontrol başlatılmış olsun" --
+// giriş yapmış kullanıcı, uygulama içinden kamerayla ekipman barkodunu
+// (ekipmanBarkodlariPdfOlustur ile basılan CODE128) okutur; eşleşen ekipman
+// bulununca kamera durdurulur ve o ekipmanın düzenleme/kontrol modalı,
+// Son Kontrol tarihi BUGÜNE ayarlanmış ve kontrol listesi TEMİZ (yeni bir
+// kontrol başlatılıyormuş gibi) olarak açılır -- dış/no-login akış olan
+// "📷 Barkodla Kontrol Formu" (ekipman-kontrol-bildir.html) ile aynı
+// "bugün yeni kontrol" mantığı.
 let _ekBarkodTarayici = null;
 
 function ekipmanBarkodTaramaBaslat() {
@@ -746,7 +743,20 @@ function _ekBarkodOkundu(kod) {
     return;
   }
   ekipmanBarkodTaramaDurdur();
-  _tkKartEkle(ekipman);
+  _ekipmanBarkodIleKontrolBaslat(ekipman);
+}
+
+// Kimlik/planlama alanları (ekipmanNo/tür/bölüm/lokasyon/sorumlu/periyot/
+// durum) korunur; Son Kontrol bugüne, kontrol cevapları ve bulgular boşa
+// ayarlanır -- kaydedince ekipmanFormGonderildi zaten aynı id'yi
+// güncelleyeceği için yeni bir kayıt oluşmaz, mevcut ekipmanın kontrolü
+// güncellenmiş olur.
+function _ekipmanBarkodIleKontrolBaslat(ekipman) {
+  ekipmanModalAc(Object.assign({}, ekipman, {
+    sonKontrol: bugunIso(),
+    kontrolCevaplari: {},
+    bulgular: ''
+  }));
 }
 
 function ekipmanBarkodTaramaDurdur() {
@@ -862,213 +872,6 @@ function _ekipmanFotoOnizlemeCiz() {
 function ekipmanModalKapat() {
   document.getElementById('ekipmanModalKatman').classList.remove('acik');
   _duzenlenenEkipmanId = null;
-}
-
-// ==================== TOPLU KONTROL (bölüm bazında) ====================
-// Kullanıcı isteği: "yeni kontrol başlat tek şey olup seçtiğim bölümün tüm
-// ekipmanları çıkacak altında ben kontrollerini yapacağım" -- tek bir düğme,
-// önce bölüm seçtirir, sonra o bölümdeki TÜM ekipmanları alt alta kendi
-// kontrol listesiyle gösterir; hepsi "Tüm Kontrolleri Kaydet" ile tek
-// seferde kaydedilir (her biri kendi Son Kontrol=bugün, temiz kontrol
-// cevapları/bulgular/fotoğrafla, kimlik alanları -No/Tür/Lokasyon/Sorumlu/
-// Periyot- korunarak).
-let _tkFotoUrller = {};
-
-function topluKontrolModalAc() {
-  const bolumler = Array.from(new Set(ekipmanlariTumunuGetir().map(e => (e.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
-  document.getElementById('topluKontrolBolum').innerHTML = bolumler.length
-    ? bolumler.map(b => `<option>${_adKacir(b)}</option>`).join('')
-    : '<option value="">— Bölüm bulunamadı —</option>';
-  // Kullanıcı isteği: "yapılan kontrolün tarihi, kontrolü kim yaptı bunların
-  // girilmesi lazım ve geçmişe dönük kaydedilebilmeli" -- tarih varsayılan
-  // bugün ama elle geçmiş bir tarihe de değiştirilebilir (date input serbest).
-  document.getElementById('topluKontrolTarihi').value = bugunIso();
-  document.getElementById('topluKontrolYapan').value = '';
-  document.getElementById('topluKontrolListesi').innerHTML = '';
-  document.getElementById('topluKontrolEylemler').style.display = 'none';
-  _tkFotoUrller = {};
-  document.getElementById('topluKontrolKatman').classList.add('acik');
-}
-
-function topluKontrolModalKapat() {
-  document.getElementById('topluKontrolKatman').classList.remove('acik');
-}
-
-function _tkKartHtml(ekipman) {
-  const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
-  const oncekiCevaplar = ekipman.kontrolCevaplari || {};
-  return `
-    <div class="kart" style="margin-bottom:14px; padding:14px;" data-tk-kart="${ekipman.id}">
-      <div style="font-weight:700; margin-bottom:8px;">${_adKacir(ekipman.ekipmanNo)} — ${_adKacir(ekipman.tur)} — ${_adKacir(ekipman.lokasyon)}</div>
-      ${sorular.map(s => `
-        <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
-          <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
-          <select data-tk-soru="${s.id}" style="width:auto; min-width:150px;">
-            <option value="" ${oncekiCevaplar[s.id] ? '' : 'selected'}>— Seçilmedi —</option>
-            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${oncekiCevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
-          </select>
-        </div>
-      `).join('')}
-      <label style="margin-top:10px; display:block; font-size:12px; font-weight:600;">Bulgular</label>
-      <textarea data-tk-bulgular rows="2" style="width:100%;">${_adKacir(ekipman.bulgular || '')}</textarea>
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button type="button" class="tablo-buton" data-tk-foto-cek-btn="${ekipman.id}">📷 Fotoğraf Çek</button>
-        <button type="button" class="tablo-buton" data-tk-foto-sec-btn="${ekipman.id}">🖼️ Galeriden Seç</button>
-      </div>
-      <input type="file" accept="image/*" capture="environment" style="display:none;" data-tk-foto-cek-input="${ekipman.id}">
-      <input type="file" accept="image/*" style="display:none;" data-tk-foto-sec-input="${ekipman.id}">
-      <div data-tk-foto-onizleme="${ekipman.id}" style="margin-top:6px;"></div>
-    </div>
-  `;
-}
-
-function topluKontrolListele() {
-  const bolum = document.getElementById('topluKontrolBolum').value;
-  const kutu = document.getElementById('topluKontrolListesi');
-  const eylemler = document.getElementById('topluKontrolEylemler');
-  if (!bolum) {
-    kutu.innerHTML = '<p style="color:var(--metin-soluk); font-size:13px;">Önce bir bölüm seçin.</p>';
-    eylemler.style.display = 'none';
-    return;
-  }
-  const kayitlar = ekipmanlariTumunuGetir()
-    .filter(e => (e.bolum || '').trim() === bolum && e.durum !== 'İptal')
-    .sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr'));
-  if (!kayitlar.length) {
-    kutu.innerHTML = '<p style="color:var(--metin-soluk); font-size:13px;">Bu bölümde ekipman bulunamadı.</p>';
-    eylemler.style.display = 'none';
-    return;
-  }
-
-  // Ekipmanın kayıtlı fotoğrafı varsa (bkz. modules/acil-durum/model.js
-  // fotoUrl alanı) otomatik olarak öniz olarak gösterilir -- kullanıcı
-  // isteği: "değşimde o ekşpmaın fotorafı otomatik gelsin şstersem
-  // değiştrieyim" -- kullanıcı isterse Fotoğraf Çek/Galeriden Seç ile
-  // üzerine yeni bir fotoğraf yükleyip değiştirebilir.
-  _tkFotoUrller = {};
-  kayitlar.forEach(e => { if (e.fotoUrl) _tkFotoUrller[e.id] = e.fotoUrl; });
-  kutu.innerHTML = kayitlar.map(_tkKartHtml).join('');
-  fotoReferanslariCoz(kutu);
-  kayitlar.forEach(e => { _tkFotoOnizlemeCiz(e.id); _tkKartOlaylariBagla(kutu, e.id); });
-
-  eylemler.style.display = 'flex';
-}
-
-// Bir karttaki "Fotoğraf Çek/Galeriden Seç" düğmelerinin dinleyicilerini
-// bağlar -- hem topluKontrolListele()'nin (bölüm bazlı toplu render) hem de
-// _tkKartEkle()'nin (barkod tarayarak tek tek ekleme) ortak kullandığı
-// paylaşılan mantık.
-function _tkKartOlaylariBagla(kutu, ekipmanId) {
-  const cekBtn = kutu.querySelector(`[data-tk-foto-cek-btn="${ekipmanId}"]`);
-  const secBtn = kutu.querySelector(`[data-tk-foto-sec-btn="${ekipmanId}"]`);
-  const cekInput = kutu.querySelector(`[data-tk-foto-cek-input="${ekipmanId}"]`);
-  const secInput = kutu.querySelector(`[data-tk-foto-sec-input="${ekipmanId}"]`);
-  if (cekBtn && cekInput) cekBtn.addEventListener('click', () => cekInput.click());
-  if (secBtn && secInput) secBtn.addEventListener('click', () => secInput.click());
-  if (cekInput) cekInput.addEventListener('change', e => _tkFotoSecildi(e, ekipmanId));
-  if (secInput) secInput.addEventListener('change', e => _tkFotoSecildi(e, ekipmanId));
-}
-
-// Kullanıcı isteği: "ama bu barkod taratma yeni kontrol başlatın altında
-// yok" -- bölüm seçip "Ekipmanları Listele" demeden de, barkod tarayarak
-// tek tek ekipman kontrol listesine eklenebilir. Aynı ekipman ikinci kez
-// taranırsa (yanlışlıkla) tekrar eklenmez.
-function _tkKartEkle(ekipman) {
-  const kutu = document.getElementById('topluKontrolListesi');
-  const eylemler = document.getElementById('topluKontrolEylemler');
-  if (kutu.querySelector(`[data-tk-kart="${ekipman.id}"]`)) {
-    alert(`${ekipman.ekipmanNo || ekipman.tur} zaten listede.`);
-    return;
-  }
-  if (!kutu.querySelector('[data-tk-kart]')) kutu.innerHTML = '';
-  kutu.insertAdjacentHTML('beforeend', _tkKartHtml(ekipman));
-  if (ekipman.fotoUrl) _tkFotoUrller[ekipman.id] = ekipman.fotoUrl;
-  fotoReferanslariCoz(kutu);
-  _tkFotoOnizlemeCiz(ekipman.id);
-  _tkKartOlaylariBagla(kutu, ekipman.id);
-  eylemler.style.display = 'flex';
-}
-
-// Kamera/galeri yükleme mantığı _ekipmanFotoSecildi ile aynı (Storage/CORS'a
-// uğramadan doğrudan fotoSikistir + fotoBuyukKaydet) ama sonucu tek bir
-// _ekipmanFotoUrl yerine ekipmanId'ye göre bir haritada (_tkFotoUrller) tutar.
-async function _tkFotoSecildi(e, ekipmanId) {
-  const dosya = e.target.files[0];
-  e.target.value = '';
-  if (!dosya) return;
-  try {
-    const dataUrl = await fotoSikistir(dosya, 900, 0.6);
-    _tkFotoUrller[ekipmanId] = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
-    _tkFotoOnizlemeCiz(ekipmanId);
-  } catch (hata) {
-    alert(hata.message || 'Fotoğraf yüklenemedi.');
-  }
-}
-
-function _tkFotoOnizlemeCiz(ekipmanId) {
-  const kutu = document.querySelector(`[data-tk-foto-onizleme="${ekipmanId}"]`);
-  if (!kutu) return;
-  const url = _tkFotoUrller[ekipmanId];
-  kutu.innerHTML = url
-    ? `<div style="display:flex; align-items:center; gap:8px;"><img data-foto-ref="${url}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);"><span style="font-size:12px; color:#16a34a; font-weight:600;">✓ Fotoğraf eklendi</span></div>`
-    : '';
-  if (url) fotoReferanslariCoz(kutu);
-}
-
-// Her kart için mevcut ekipman kaydının ÜZERİNE (Object.assign) sadece
-// kontrol alanları (Son Kontrol/Sonraki Kontrol/kontrolCevaplari/bulgular/
-// fotoUrl/kontrolEden) yazılır -- ekipmanGuncelle'nin ürettiği nesne
-// veriler'deki TÜM alanları (bolum, sorumlu, periyotGun, ekipmanNo...)
-// okuduğundan, sadece değişenleri geçmek onları boşaltırdı.
-//
-// Kullanıcı isteği: "Yapılan kontrolün tarihi, kontrolü kim yaptı bunların
-// girilmesi lazım ve geçmişe dönük kaydedilip yazdırılabilmeli word olarak"
-// -- Kontrol Tarihi/Kontrolü Yapan modalda zorunlu (geçmiş bir tarih de
-// girilebilir), kaydettikten sonra o oturumun Word kaydı otomatik indirilir.
-async function topluKontrolKaydet() {
-  const tarih = document.getElementById('topluKontrolTarihi').value;
-  const kontrolEden = document.getElementById('topluKontrolYapan').value.trim();
-  if (!tarih) { alert('Lütfen kontrol tarihini girin.'); return; }
-  if (!kontrolEden) { alert('Lütfen kontrolü yapan kişinin adını girin.'); return; }
-
-  const bolum = document.getElementById('topluKontrolBolum').value;
-  const kartlar = document.querySelectorAll('#topluKontrolListesi [data-tk-kart]');
-  if (!kartlar.length) { topluKontrolModalKapat(); return; }
-
-  let basarili = 0;
-  const kaydedilenler = [];
-  kartlar.forEach(kart => {
-    const id = kart.getAttribute('data-tk-kart');
-    const ekipman = ekipmanIdIleGetirRepo(id);
-    if (!ekipman) return;
-    const cevaplar = {};
-    kart.querySelectorAll('[data-tk-soru]').forEach(sel => { cevaplar[sel.getAttribute('data-tk-soru')] = sel.value; });
-    const bulgular = kart.querySelector('[data-tk-bulgular]').value;
-    const veriler = Object.assign({}, ekipman, {
-      sonKontrol: tarih,
-      sonrakiKontrol: '',
-      kontrolCevaplari: cevaplar,
-      bulgular,
-      fotoUrl: _tkFotoUrller[id] || ekipman.fotoUrl || '',
-      kontrolEden
-    });
-    const sonuc = ekipmanGuncelle(id, veriler);
-    if (sonuc.basarili) { basarili++; kaydedilenler.push(sonuc.ekipman); }
-  });
-
-  topluKontrolModalKapat();
-  _ekipmanBolumFiltreDoldur();
-  ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
-
-  if (kaydedilenler.length) {
-    try {
-      await ekipmanKontrolKaydiWordOlustur(_adFirma, bolum, tarih, kontrolEden, kaydedilenler);
-    } catch (hata) {
-      console.error(hata);
-      alert('Kontrol kaydı Word belgesi üretilemedi: ' + (hata.message || hata));
-    }
-  }
-  alert(`${basarili} ekipmanın kontrolü kaydedildi.`);
 }
 
 // "Bulgular" serbest metninin yanına, seçilen ekipman türüne uygun madde
