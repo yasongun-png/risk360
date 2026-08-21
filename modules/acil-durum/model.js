@@ -144,7 +144,6 @@ const EKIPMAN_KONTROL_SORULARI = {
   ],
   'Göz ve Boy Duşu': [
     { id: 'erisim', soru: 'Göz ve boy duşuna erişim engelsiz' },
-    { id: 'basinc', soru: 'Su basıncı yeterli' },
     { id: 'akis', soru: 'Su akışı yeterli' },
     { id: 'aktivasyon', soru: 'Pedal ve el vanaları çalışıyor' },
     { id: 'nozulTemiz', soru: 'Nozullar/başlıklar temiz' },
