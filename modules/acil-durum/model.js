@@ -162,7 +162,7 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'vanaMuhurlu', soru: 'Ana kontrol vanası mühürlü/kilitli' },
     { id: 'basincGostergesi', soru: 'Basınç göstergesi normal aralıkta' },
     { id: 'borularSizinti', soru: 'Borularda sızıntı/korozyon yok' },
-    { id: 'baslikEngelsiz', soru: 'Sprinkler başlıklarının altı/çevresi engelsiz (min. 45-50 cm boşluk)' },
+    { id: 'tumNozullardanSu', soru: 'Tüm nozullardan yeterli su geliyor' },
     { id: 'baslikHasarsiz', soru: 'Sprinkler başlıkları hasarsız' },
     { id: 'baslikBoyanmamis', soru: 'Sprinkler başlıkları boyanmamış/örtülmemiş' },
     { id: 'alarmVanasi', soru: 'Alarm vanası/akış şalteri çalışıyor' },
