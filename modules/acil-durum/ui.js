@@ -260,11 +260,14 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     if (!_adFirma) return;
     window.open('../../ekipman-kontrol-bildir.html?firma=' + encodeURIComponent(_adFirma.slug), '_blank');
   });
-  // Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
-  // bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın".
-  document.getElementById('ekipmanBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
   document.getElementById('ekipmanBarkodTaramaKapatBtn').addEventListener('click', ekipmanBarkodTaramaDurdur);
   document.getElementById('topluKontrolBtn').addEventListener('click', topluKontrolModalAc);
+  // Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
+  // bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın" -- sonra:
+  // "ama bu barkod taratma yeni kontrol başlatın altında yok" -- barkod
+  // tarama artık "Yeni Kontrol Başlat" modalının içinde: bölüm seçmeden de
+  // tek tek ekipman taratarak kontrol listesine eklenebiliyor.
+  document.getElementById('topluKontrolBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
   document.getElementById('topluKontrolKapatBtn').addEventListener('click', topluKontrolModalKapat);
   document.getElementById('topluKontrolIptalBtn').addEventListener('click', topluKontrolModalKapat);
   document.getElementById('topluKontrolListeleBtn').addEventListener('click', topluKontrolListele);
@@ -704,12 +707,13 @@ function ekipmanBarkodlariPdfOlustur() {
 
 // ==================== KAMERA İLE BARKOD TARAMA ====================
 // Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
-// bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın" -- giriş
-// yapmış kullanıcı, uygulama içinden kamerayla ekipman barkodunu
-// (ekipmanBarkodlariPdfOlustur ile basılan CODE128) doğrudan okutur;
-// eşleşen ekipman bulununca kamera durdurulur ve ekipmanModalAc ile o
-// ekipmanın kontrol formu otomatik açılır (dış/no-login akış olan
-// ekipmanKontrolBarkoduAcBtn'den farklı olarak burada oturum zaten açık).
+// bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın", sonra:
+// "ama bu barkod taratma yeni kontrol başlatın altında yok" -- giriş
+// yapmış kullanıcı, "Yeni Kontrol Başlat" penceresi içinden kamerayla
+// ekipman barkodunu (ekipmanBarkodlariPdfOlustur ile basılan CODE128)
+// okutur; eşleşen ekipman bulununca kamera durdurulur ve o ekipmanın
+// kontrol kartı, bölüm seçilmeden de tek tek taratılarak, aynı toplu
+// kontrol listesine eklenir (bkz. _tkKartEkle).
 let _ekBarkodTarayici = null;
 
 function ekipmanBarkodTaramaBaslat() {
@@ -742,7 +746,7 @@ function _ekBarkodOkundu(kod) {
     return;
   }
   ekipmanBarkodTaramaDurdur();
-  ekipmanModalAc(ekipman);
+  _tkKartEkle(ekipman);
 }
 
 function ekipmanBarkodTaramaDurdur() {
@@ -945,15 +949,43 @@ function topluKontrolListele() {
   kayitlar.forEach(e => { if (e.fotoUrl) _tkFotoUrller[e.id] = e.fotoUrl; });
   kutu.innerHTML = kayitlar.map(_tkKartHtml).join('');
   fotoReferanslariCoz(kutu);
-  kayitlar.forEach(e => _tkFotoOnizlemeCiz(e.id));
+  kayitlar.forEach(e => { _tkFotoOnizlemeCiz(e.id); _tkKartOlaylariBagla(kutu, e.id); });
 
-  kutu.querySelectorAll('[data-tk-foto-cek-btn]').forEach(btn => btn.addEventListener('click', () =>
-    kutu.querySelector(`[data-tk-foto-cek-input="${btn.getAttribute('data-tk-foto-cek-btn')}"]`).click()));
-  kutu.querySelectorAll('[data-tk-foto-sec-btn]').forEach(btn => btn.addEventListener('click', () =>
-    kutu.querySelector(`[data-tk-foto-sec-input="${btn.getAttribute('data-tk-foto-sec-btn')}"]`).click()));
-  kutu.querySelectorAll('[data-tk-foto-cek-input]').forEach(inp => inp.addEventListener('change', e => _tkFotoSecildi(e, inp.getAttribute('data-tk-foto-cek-input'))));
-  kutu.querySelectorAll('[data-tk-foto-sec-input]').forEach(inp => inp.addEventListener('change', e => _tkFotoSecildi(e, inp.getAttribute('data-tk-foto-sec-input'))));
+  eylemler.style.display = 'flex';
+}
 
+// Bir karttaki "Fotoğraf Çek/Galeriden Seç" düğmelerinin dinleyicilerini
+// bağlar -- hem topluKontrolListele()'nin (bölüm bazlı toplu render) hem de
+// _tkKartEkle()'nin (barkod tarayarak tek tek ekleme) ortak kullandığı
+// paylaşılan mantık.
+function _tkKartOlaylariBagla(kutu, ekipmanId) {
+  const cekBtn = kutu.querySelector(`[data-tk-foto-cek-btn="${ekipmanId}"]`);
+  const secBtn = kutu.querySelector(`[data-tk-foto-sec-btn="${ekipmanId}"]`);
+  const cekInput = kutu.querySelector(`[data-tk-foto-cek-input="${ekipmanId}"]`);
+  const secInput = kutu.querySelector(`[data-tk-foto-sec-input="${ekipmanId}"]`);
+  if (cekBtn && cekInput) cekBtn.addEventListener('click', () => cekInput.click());
+  if (secBtn && secInput) secBtn.addEventListener('click', () => secInput.click());
+  if (cekInput) cekInput.addEventListener('change', e => _tkFotoSecildi(e, ekipmanId));
+  if (secInput) secInput.addEventListener('change', e => _tkFotoSecildi(e, ekipmanId));
+}
+
+// Kullanıcı isteği: "ama bu barkod taratma yeni kontrol başlatın altında
+// yok" -- bölüm seçip "Ekipmanları Listele" demeden de, barkod tarayarak
+// tek tek ekipman kontrol listesine eklenebilir. Aynı ekipman ikinci kez
+// taranırsa (yanlışlıkla) tekrar eklenmez.
+function _tkKartEkle(ekipman) {
+  const kutu = document.getElementById('topluKontrolListesi');
+  const eylemler = document.getElementById('topluKontrolEylemler');
+  if (kutu.querySelector(`[data-tk-kart="${ekipman.id}"]`)) {
+    alert(`${ekipman.ekipmanNo || ekipman.tur} zaten listede.`);
+    return;
+  }
+  if (!kutu.querySelector('[data-tk-kart]')) kutu.innerHTML = '';
+  kutu.insertAdjacentHTML('beforeend', _tkKartHtml(ekipman));
+  if (ekipman.fotoUrl) _tkFotoUrller[ekipman.id] = ekipman.fotoUrl;
+  fotoReferanslariCoz(kutu);
+  _tkFotoOnizlemeCiz(ekipman.id);
+  _tkKartOlaylariBagla(kutu, ekipman.id);
   eylemler.style.display = 'flex';
 }
 
