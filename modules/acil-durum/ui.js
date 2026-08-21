@@ -252,6 +252,18 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // tür + bölüm filtreli) listedeki her ekipman için ekipmanNo'yu
   // kodlayan bir barkod etiketi içeren indirilebilir bir PDF üretir.
   document.getElementById('ekipmanBarkodYazdirBtn').addEventListener('click', ekipmanBarkodlariPdfOlustur);
+  // Kullanıcı isteği: "barkodu okuttuğumda o ekipmanın kontrol formunu
+  // doldurabileyim tarih otomatik o gün olsun" -- ramak-kala/is-izni/
+  // ekipman-bakim ile aynı barkod-formu deseni (bkz. ekipman-kontrol-bildir.html,
+  // firma-yonetim.html BARKOD_TIPLERI). Liste ekranı kaybolmasın diye yeni sekmede açılır.
+  document.getElementById('ekipmanKontrolBarkoduAcBtn').addEventListener('click', () => {
+    if (!_adFirma) return;
+    window.open('../../ekipman-kontrol-bildir.html?firma=' + encodeURIComponent(_adFirma.slug), '_blank');
+  });
+  // Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
+  // bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın".
+  document.getElementById('ekipmanBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
+  document.getElementById('ekipmanBarkodTaramaKapatBtn').addEventListener('click', ekipmanBarkodTaramaDurdur);
   document.getElementById('topluKontrolBtn').addEventListener('click', topluKontrolModalAc);
   document.getElementById('topluKontrolKapatBtn').addEventListener('click', topluKontrolModalKapat);
   document.getElementById('topluKontrolIptalBtn').addEventListener('click', topluKontrolModalKapat);
@@ -577,6 +589,90 @@ function ekipmanlariCiz(aramaMetni) {
 // gerçek bir .pdf dosyası üretir (html2canvas'a gerek yok, sayfa tam
 // kontrollü mm ızgarasıyla diziliyor — bkz. modules/uygunsuzluk/cikti.js
 // dosya başı açıklamasındaki "TAM KONTROLLÜ yöntem" ile aynı ilke).
+// Etiket metinleri artık jsPDF'in pdf.text() ile DEĞİL, her etiketin tamamı
+// tek bir <canvas>'a (tarayıcının kendi font motoruyla, Türkçe karakterler
+// dahil doğru biçimde) çizilip pdf.addImage() ile tek görsel olarak
+// gömülüyor. jsPDF'in standart fontlarında "ı/ş/ğ" gibi karakterler yok
+// (kullanıcı raporu: "Yang1n Dolab1"), ayrıca alt yazı burada elle
+// satırlara bölünüp taşmadan önce kırpılıyor.
+function _ekBarkodMetniSatirlaraBol(ctx, metin, maksGenislik, maksSatir) {
+  if (!metin) return [];
+  const kelimeler = metin.split(/\s+/).filter(Boolean);
+  const satirlar = [];
+  let mevcutSatir = '';
+  kelimeler.forEach(kelime => {
+    const aday = mevcutSatir ? mevcutSatir + ' ' + kelime : kelime;
+    if (ctx.measureText(aday).width <= maksGenislik || !mevcutSatir) {
+      mevcutSatir = aday;
+    } else {
+      satirlar.push(mevcutSatir);
+      mevcutSatir = kelime;
+    }
+  });
+  if (mevcutSatir) satirlar.push(mevcutSatir);
+
+  if (satirlar.length > maksSatir) {
+    const kesilenler = satirlar.slice(0, maksSatir);
+    let sonSatir = kesilenler[maksSatir - 1];
+    while (sonSatir.length > 1 && ctx.measureText(sonSatir + '…').width > maksGenislik) {
+      sonSatir = sonSatir.slice(0, -1);
+    }
+    kesilenler[maksSatir - 1] = sonSatir + '…';
+    return kesilenler;
+  }
+  return satirlar;
+}
+
+function _ekBarkodEtiketiCanvasOlustur(e, genislikMm, yukseklikMm) {
+  const OLCEK = 12;
+  const tuval = document.createElement('canvas');
+  tuval.width = genislikMm * OLCEK;
+  tuval.height = yukseklikMm * OLCEK;
+  const ctx = tuval.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, tuval.width, tuval.height);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const kenarBosluk = 4 * OLCEK;
+  const genislikPx = tuval.width;
+  const merkezX = genislikPx / 2;
+
+  let baslikBoyut = Math.round(8 * OLCEK / 2.83);
+  ctx.font = `bold ${baslikBoyut}px Arial, sans-serif`;
+  let baslik = e.tur || '';
+  while (baslik && ctx.measureText(baslik).width > genislikPx - kenarBosluk && baslikBoyut > Math.round(5 * OLCEK / 2.83)) {
+    baslikBoyut -= 1;
+    ctx.font = `bold ${baslikBoyut}px Arial, sans-serif`;
+  }
+  while (baslik.length > 1 && ctx.measureText(baslik).width > genislikPx - kenarBosluk) {
+    baslik = baslik.slice(0, -1);
+  }
+  if (baslik !== (e.tur || '') && baslik.length > 1) baslik = baslik.slice(0, -1) + '…';
+  ctx.fillStyle = '#141414';
+  ctx.fillText(baslik, merkezX, 5 * OLCEK);
+
+  const barkodTuval = document.createElement('canvas');
+  JsBarcode(barkodTuval, e.ekipmanNo || e.id, { format: 'CODE128', displayValue: true, fontSize: 16, height: 40, margin: 4 });
+  const barkodGenislikPx = genislikPx - kenarBosluk;
+  const barkodYukseklikPx = barkodTuval.height * (barkodGenislikPx / barkodTuval.width);
+  const barkodY = 7 * OLCEK;
+  ctx.drawImage(barkodTuval, kenarBosluk / 2, barkodY, barkodGenislikPx, Math.min(barkodYukseklikPx, tuval.height - barkodY - 8 * OLCEK));
+
+  const altYazi = [e.bolum, e.lokasyon].filter(Boolean).join(' — ');
+  const altBoyut = Math.round(7 * OLCEK / 2.83);
+  ctx.font = `${altBoyut}px Arial, sans-serif`;
+  ctx.fillStyle = '#464646';
+  const satirlar = _ekBarkodMetniSatirlaraBol(ctx, altYazi, genislikPx - kenarBosluk, 2);
+  const satirYuksekligi = altBoyut * 1.25;
+  const altBaslangicY = tuval.height - (satirlar.length * satirYuksekligi) - (2 * OLCEK / 2.83);
+  satirlar.forEach((satir, i) => {
+    ctx.fillText(satir, merkezX, altBaslangicY + i * satirYuksekligi + satirYuksekligi / 2);
+  });
+
+  return tuval;
+}
+
 function ekipmanBarkodlariPdfOlustur() {
   const liste = _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value);
   if (!liste.length) { alert('Barkod basılacak ekipman bulunamadı.'); return; }
@@ -599,23 +695,63 @@ function ekipmanBarkodlariPdfOlustur() {
     pdf.setDrawColor(51);
     pdf.rect(x, y, ETIKET_GENISLIK, ETIKET_YUKSEKLIK);
 
-    pdf.setFontSize(8);
-    pdf.setTextColor(20);
-    pdf.text(e.tur || '', x + ETIKET_GENISLIK / 2, y + 5, { align: 'center' });
-
-    const barkodTuval = document.createElement('canvas');
-    JsBarcode(barkodTuval, e.ekipmanNo || e.id, { format: 'CODE128', displayValue: true, fontSize: 16, height: 40, margin: 4 });
-    const barkodGenislikMm = ETIKET_GENISLIK - 8;
-    const barkodYukseklikMm = barkodTuval.height * (barkodGenislikMm / barkodTuval.width);
-    pdf.addImage(barkodTuval.toDataURL('image/png'), 'PNG', x + 4, y + 7, barkodGenislikMm, barkodYukseklikMm);
-
-    pdf.setFontSize(7);
-    pdf.setTextColor(70);
-    const altYazi = [e.bolum, e.lokasyon].filter(Boolean).join(' — ');
-    pdf.text(altYazi, x + ETIKET_GENISLIK / 2, y + ETIKET_YUKSEKLIK - 3, { align: 'center', maxWidth: ETIKET_GENISLIK - 6 });
+    const etiketTuval = _ekBarkodEtiketiCanvasOlustur(e, ETIKET_GENISLIK, ETIKET_YUKSEKLIK);
+    pdf.addImage(etiketTuval.toDataURL('image/png'), 'PNG', x, y, ETIKET_GENISLIK, ETIKET_YUKSEKLIK);
   });
 
   pdf.save(`Ekipman_Barkodlari_${(_adFirma && _adFirma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.pdf`);
+}
+
+// ==================== KAMERA İLE BARKOD TARAMA ====================
+// Kullanıcı isteği: "uygulamsnın içinde kamera sçan ve barkodu okuyan
+// bişey olsun okutunca ilgili ekipmanın kontrol kısmı açılsın" -- giriş
+// yapmış kullanıcı, uygulama içinden kamerayla ekipman barkodunu
+// (ekipmanBarkodlariPdfOlustur ile basılan CODE128) doğrudan okutur;
+// eşleşen ekipman bulununca kamera durdurulur ve ekipmanModalAc ile o
+// ekipmanın kontrol formu otomatik açılır (dış/no-login akış olan
+// ekipmanKontrolBarkoduAcBtn'den farklı olarak burada oturum zaten açık).
+let _ekBarkodTarayici = null;
+
+function ekipmanBarkodTaramaBaslat() {
+  if (typeof Html5Qrcode === 'undefined') { alert('Barkod tarama bileşeni yüklenemedi.'); return; }
+  const durum = document.getElementById('ekipmanBarkodTaramaDurum');
+  durum.textContent = '';
+  durum.classList.remove('gorunur');
+  document.getElementById('ekipmanBarkodTaramaKatman').classList.add('acik');
+
+  _ekBarkodTarayici = new Html5Qrcode('ekipmanBarkodTaramaOkuyucu', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128], verbose: false });
+  _ekBarkodTarayici.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 260, height: 120 } },
+    _ekBarkodOkundu,
+    () => {}
+  ).catch(hata => {
+    durum.textContent = 'Kamera açılamadı: ' + (hata.message || hata);
+    durum.classList.add('gorunur');
+  });
+}
+
+function _ekBarkodOkundu(kod) {
+  const ekipman = ekipmanlariTumunuGetir().find(e => (e.ekipmanNo || '').trim() === kod.trim() || e.id === kod.trim());
+  if (!ekipman) {
+    const durum = document.getElementById('ekipmanBarkodTaramaDurum');
+    if (durum) {
+      durum.textContent = `"${kod}" koduyla eşleşen ekipman bulunamadı, taramaya devam ediliyor…`;
+      durum.classList.add('gorunur');
+    }
+    return;
+  }
+  ekipmanBarkodTaramaDurdur();
+  ekipmanModalAc(ekipman);
+}
+
+function ekipmanBarkodTaramaDurdur() {
+  document.getElementById('ekipmanBarkodTaramaKatman').classList.remove('acik');
+  if (_ekBarkodTarayici) {
+    const tarayici = _ekBarkodTarayici;
+    _ekBarkodTarayici = null;
+    tarayici.stop().then(() => tarayici.clear()).catch(() => {});
+  }
 }
 
 function ekipmanModalAc(ekipman) {
