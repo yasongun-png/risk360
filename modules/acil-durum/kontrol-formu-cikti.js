@@ -14,7 +14,10 @@ function _kfBaslik(metin, seviye, sayfaSonuOncesi) {
     heading: seviye || docx.HeadingLevel.HEADING_2,
     pageBreakBefore: !!sayfaSonuOncesi,
     spacing: { before: 260, after: 120 },
-    children: [new docx.TextRun({ text: metin, bold: true })]
+    // Kullanıcı isteği: "mavi başlıklar var onları siyaha çevirelim" --
+    // docx.js'in Heading1/Heading2 stilleri varsayılan olarak mavi; renk
+    // burada elle siyaha zorlanmazsa metin rengini miras alıyor.
+    children: [new docx.TextRun({ text: metin, bold: true, color: '000000' })]
   });
 }
 
