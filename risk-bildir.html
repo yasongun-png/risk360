@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>Risk / Tehlike Bildirimi</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* Bu sayfa giriş yapmadan (barkod/QR ile) açılır — ramak-kala-bildir.html
+     ile aynı ilke: sahadaki bir çalışanın telefonunda tek ekranda
+     doldurup gönderebileceği tek bir kart. Çalışan tam bir risk
+     değerlendirmesi (Fine-Kinney puanlama vb.) yapmaz; sadece gördüğü
+     tehlikeyi bildirir, İSG uzmanı sonradan Risk modülünden açıp puanlar. */
+  body { background: var(--arka-plan, #f3f4f6); }
+  .rb-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
+  .rb-kart { width: 100%; max-width: 480px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
+  .rb-baslik { text-align: center; margin-bottom: 4px; font-size: 19px; font-weight: 800; }
+  .rb-firma { text-align: center; color: var(--celik-mavi-koyu, #1d4ed8); font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+  .rb-not { font-size: 12px; color: var(--metin-soluk, #6b7280); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+  .rb-alan { margin-bottom: 14px; }
+  .rb-alan label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; color: var(--metin-soluk, #6b7280); }
+  .rb-bolum-hizli { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .rb-bolum-hizli button { border: 1px solid var(--kenarlik, #e5e7eb); background: #f9fafb; border-radius: 999px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+  .rb-gonder-btn { width: 100%; padding: 15px; font-size: 15px; margin-top: 6px; }
+  .rb-durum { text-align: center; padding: 30px 6px; }
+  .rb-durum .ikon { font-size: 46px; margin-bottom: 10px; }
+  .rb-durum h2 { margin: 0 0 8px; font-size: 18px; }
+  .rb-durum p { color: var(--metin-soluk, #6b7280); font-size: 13px; margin: 0 0 20px; }
+  .gizli { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="rb-sahne">
+    <div class="rb-kart">
+
+      <div id="rbYukleniyor">
+        <div class="rb-baslik">🛡️ Yükleniyor…</div>
+      </div>
+
+      <div id="rbHataDurumu" class="rb-durum gizli">
+        <div class="ikon">⚠️</div>
+        <h2>Bağlantı Geçersiz</h2>
+        <p>Bu barkod/link geçerli bir işyerine ait değil. Lütfen İSG ekibinizle iletişime geçin.</p>
+      </div>
+
+      <div id="rbFormAlani" class="gizli">
+        <div class="rb-baslik">⚠️ Risk / Tehlike Bildirimi</div>
+        <div class="rb-firma" id="rbFirmaAdi"></div>
+        <div class="rb-not">
+          Sahada gördüğünüz bir tehlikeyi/riski buradan bildirebilirsiniz.
+          İSG uzmanı bunu inceleyip tam risk değerlendirmesine dönüştürecektir.
+          İsminizi yazmak <b>zorunlu değildir</b>.
+        </div>
+
+        <form id="rbForm">
+          <div class="rb-alan">
+            <label for="rbTehlike">Ne gördünüz / tehlike nedir? *</label>
+            <textarea id="rbTehlike" rows="4" placeholder="Kısaca anlatın..." required></textarea>
+          </div>
+
+          <div class="rb-alan">
+            <label for="rbBolum">Bölüm / Konum (isteğe bağlı)</label>
+            <input type="text" id="rbBolum" placeholder="Örn. Üretim Sahası, Depo...">
+            <div class="rb-bolum-hizli" id="rbBolumHizli"></div>
+          </div>
+
+          <div class="rb-alan">
+            <label for="rbAdSoyad">Adınız (isteğe bağlı)</label>
+            <input type="text" id="rbAdSoyad" placeholder="İsteğe bağlı — boş bırakabilirsiniz">
+          </div>
+
+          <div class="rb-alan">
+            <label for="rbFotoDosya">Fotoğraf (isteğe bağlı)</label>
+            <button type="button" class="ikincil" id="rbFotoSecBtn" style="width:auto; padding:9px 16px;">📷 Fotoğraf Ekle</button>
+            <input type="file" id="rbFotoDosya" accept="image/*" capture="environment" style="display:none;">
+            <div id="rbFotoOnizleme" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="hata-mesaji" id="rbHataMesaji"></div>
+
+          <button type="submit" class="birincil rb-gonder-btn" id="rbGonderBtn">Gönder</button>
+        </form>
+      </div>
+
+      <div id="rbBasariDurumu" class="rb-durum gizli">
+        <div class="ikon">✅</div>
+        <h2>Bildiriminiz Alındı</h2>
+        <p>Teşekkürler — bildiriminiz İSG ekibine iletildi.</p>
+        <button type="button" class="ikincil" id="rbYeniBildirimBtn" style="width:auto; padding:10px 22px;">Yeni Bildirim Gönder</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script src="modules/risk/model.js"></script>
+  <script>
+    function _rbKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    const _rbParams = new URLSearchParams(window.location.search);
+    const _rbSlug = (_rbParams.get('firma') || '').trim();
+    let _rbFirma = null;
+    let _rbFotoUrl = '';
+
+    function _rbRiskAnahtari() {
+      return 'isg_' + _rbFirma.slug + '_risk_kayitlari';
+    }
+
+    function _rbFotoOnizlemeCiz() {
+      const kutu = document.getElementById('rbFotoOnizleme');
+      kutu.innerHTML = _rbFotoUrl
+        ? `<div style="display:flex; align-items:center; gap:10px;">
+             <img data-foto-ref="${_rbFotoUrl}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik,#e5e7eb);">
+             <button type="button" id="rbFotoKaldirBtn" style="border:none; background:none; color:var(--hata,#dc2626); font-size:12px; font-weight:600; cursor:pointer;">Kaldır</button>
+           </div>`
+        : '';
+      if (_rbFotoUrl) {
+        document.getElementById('rbFotoKaldirBtn').addEventListener('click', () => { _rbFotoUrl = ''; _rbFotoOnizlemeCiz(); });
+        fotoReferanslariCoz(kutu);
+      }
+    }
+
+    // Anonim (giriş yapılmamış) bildirimde core/data.js -> yaz()'daki otomatik
+    // "yeni kayıt" bildirimi hiç tetiklenmez -- bkz. ramak-kala-bildir.html
+    // ile aynı gerekçe/desen -- admin'in 🔔 ziline elle bir satır düşülür.
+    async function _rbBildirimGonder(kayit) {
+      const bildirimler = oku('isg_bildirimler', []);
+      bildirimler.push({
+        id: rastgeleId(),
+        kullaniciAdi: 'Barkod',
+        adSoyad: kayit._adSoyad ? kayit._adSoyad : 'İsimsiz Bildirim (Barkod)',
+        anahtar: _rbRiskAnahtari(),
+        kayitEtiketleri: ['Risk/Tehlike Bildirimi: ' + kayit.tehlike.slice(0, 60)],
+        tarih: new Date().toISOString(),
+        okunduMu: false
+      });
+      const sonuc = await kucukVeriYazVeSonucuGetir('isg_bildirimler', bildirimler.slice(-300));
+      if (!sonuc.basarili) console.warn('Barkod bildirimi oluşturulamadı:', sonuc.hata);
+    }
+
+    function _rbBolumHizliCiz() {
+      const kutu = document.getElementById('rbBolumHizli');
+      const bolumler = Array.isArray(_rbFirma.bolumler) ? _rbFirma.bolumler : [];
+      if (!bolumler.length) { kutu.innerHTML = ''; return; }
+      kutu.innerHTML = bolumler.map(b => `<button type="button" data-b="${_rbKacir(b)}">${_rbKacir(b)}</button>`).join('');
+      kutu.querySelectorAll('[data-b]').forEach(btn => {
+        btn.addEventListener('click', () => { document.getElementById('rbBolum').value = btn.getAttribute('data-b'); });
+      });
+    }
+
+    function _rbFormuBaslat() {
+      document.getElementById('rbYukleniyor').classList.add('gizli');
+      document.getElementById('rbFormAlani').classList.remove('gizli');
+      document.getElementById('rbFirmaAdi').textContent = _rbFirma.ad;
+      _rbBolumHizliCiz();
+
+      document.getElementById('rbFotoSecBtn').addEventListener('click', () => document.getElementById('rbFotoDosya').click());
+      document.getElementById('rbFotoDosya').addEventListener('change', async e => {
+        const dosya = e.target.files[0];
+        e.target.value = '';
+        if (!dosya) return;
+        const secBtn = document.getElementById('rbFotoSecBtn');
+        secBtn.disabled = true;
+        secBtn.textContent = 'Yükleniyor…';
+        try {
+          const sonuc = await fotoYukle(dosya, 'risk/' + _rbFirma.slug + '-barkod');
+          _rbFotoUrl = sonuc.url;
+          _rbFotoOnizlemeCiz();
+        } catch (hata) {
+          alert(hata.message || 'Fotoğraf yüklenemedi.');
+        } finally {
+          secBtn.disabled = false;
+          secBtn.textContent = '📷 Fotoğraf Ekle';
+        }
+      });
+
+      document.getElementById('rbForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const hataMesaji = document.getElementById('rbHataMesaji');
+        hataMesaji.classList.remove('gorunur');
+
+        const tehlike = document.getElementById('rbTehlike').value.trim();
+        if (!tehlike) {
+          hataMesaji.textContent = 'Lütfen ne gördüğünüzü kısaca yazın.';
+          hataMesaji.classList.add('gorunur');
+          return;
+        }
+
+        const adSoyad = document.getElementById('rbAdSoyad').value.trim();
+        const bolum = document.getElementById('rbBolum').value.trim();
+
+        const gonderBtn = document.getElementById('rbGonderBtn');
+        gonderBtn.disabled = true;
+        gonderBtn.textContent = 'Gönderiliyor…';
+
+        // Diğer barkod formlarıyla aynı gerekçe: yaz() BEKLENMEDEN yazarsa
+        // ağ/izin hatasında kullanıcıya "gönderildi" yanılgısı yaşatabilir --
+        // bu yüzden yazVeSonucuGetir() ile gerçekten Firestore'a ulaştığı
+        // doğrulanmadan başarı ekranı gösterilmez.
+        try {
+          const anahtar = _rbRiskAnahtari();
+          const mevcutListe = oku(anahtar, []);
+          const riskNo = sonrakiRiskNoUret(bolum, mevcutListe);
+          // Çalışan tam bir risk değerlendirmesi (Olasılık/Frekans/Şiddet
+          // puanlaması, önlem, sorumlu, termin) yapmaz -- sadece gördüğü
+          // tehlikeyi bildirir; bu alanlar boş bırakılır, İSG uzmanı Risk
+          // modülünden kaydı açıp tamamlar/puanlar.
+          const yeniKayit = riskKaydiOlustur({
+            riskNo,
+            bolum,
+            tehlike,
+            tespit: '(Barkod ile bildirildi' + (adSoyad ? ' — ' + adSoyad : ' — isim belirtilmedi') + ')',
+            fotoOncesi: _rbFotoUrl || ''
+          });
+          mevcutListe.push(yeniKayit);
+          const sonuc = await yazVeSonucuGetir(anahtar, mevcutListe);
+          if (!sonuc.basarili) throw (sonuc.hata || new Error('Firestore yazımı başarısız.'));
+          await _rbBildirimGonder(Object.assign({}, yeniKayit, { _adSoyad: adSoyad }));
+
+          _rbFotoUrl = '';
+          document.getElementById('rbFormAlani').classList.add('gizli');
+          document.getElementById('rbBasariDurumu').classList.remove('gizli');
+        } catch (hata) {
+          console.error('Risk bildirimi gönderilemedi:', hata);
+          hataMesaji.textContent = 'Bir hata oluştu, bildirim gönderilemedi. Lütfen tekrar deneyin (bağlantınızı kontrol edin).';
+          hataMesaji.classList.add('gorunur');
+          gonderBtn.disabled = false;
+          gonderBtn.textContent = 'Gönder';
+        }
+      });
+    }
+
+    document.getElementById('rbYeniBildirimBtn').addEventListener('click', () => {
+      document.getElementById('rbForm').reset();
+      _rbFotoUrl = '';
+      _rbFotoOnizlemeCiz();
+      const gonderBtn = document.getElementById('rbGonderBtn');
+      gonderBtn.disabled = false;
+      gonderBtn.textContent = 'Gönder';
+      document.getElementById('rbBasariDurumu').classList.add('gizli');
+      document.getElementById('rbFormAlani').classList.remove('gizli');
+    });
+
+    if (!_rbSlug) {
+      document.getElementById('rbYukleniyor').classList.add('gizli');
+      document.getElementById('rbHataDurumu').classList.remove('gizli');
+    } else {
+      bulutHazirOlduğunda(() => {
+        const firmalar = oku('isg_firmalar', []);
+        _rbFirma = firmalar.find(f => f.slug === _rbSlug) || null;
+        if (!_rbFirma) {
+          document.getElementById('rbYukleniyor').classList.add('gizli');
+          document.getElementById('rbHataDurumu').classList.remove('gizli');
+          return;
+        }
+        bulutFirmaHazirOlduğunda(_rbFirma.slug, _rbFormuBaslat);
+      });
+    }
+  </script>
+</body>
+</html>

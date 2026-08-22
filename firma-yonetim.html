@@ -327,6 +327,18 @@
         posterBaslik: 'EKİPMAN KONTROL FORMU',
         posterMetin: 'Acil durum ekipmanının (hidrant, yangın dolabı, göz duşu vb.) periyodik kontrolünü doldurmak için barkodu telefonunuzla okutup ekipman üzerindeki barkod/ekipman no\'yu girin.',
         posterAlt: 'Kontrol tarihi otomatik o güne, checklist bir önceki kontrolün cevaplarına göre önceden doldurulur.'
+      },
+      // Kullanıcı isteği: "risk değerlendirmesi içinde sadece bir risk
+      // eklenilen barkot okutmalı sistem yapalım çalışan barkotu taratıp
+      // risk ekleyebilsin" -- ramak-kala-bildir.html ile aynı ilke: çalışan
+      // tam bir risk değerlendirmesi yapmaz, sadece gördüğü tehlikeyi
+      // bildirir; İSG uzmanı Risk modülünden açıp puanlar/tamamlar.
+      'risk': {
+        sayfa: 'risk-bildir.html',
+        baslik: 'Risk / Tehlike Bildirimi Barkodu',
+        posterBaslik: 'RİSK / TEHLİKE BİLDİRİMİ',
+        posterMetin: 'Sahada gördüğünüz bir tehlikeyi/riski bildirmek için barkodu telefonunuzla okutun.',
+        posterAlt: 'İsim zorunlu değildir. Bildirim, İSG uzmanının tamamlayacağı bir risk kaydı olarak eklenir.'
       }
     };
 
@@ -369,6 +381,7 @@
             <button class="mini-buton" data-is-izni-sifre="${firma.id}">🔒 İş İzni Şifreleri</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-kontrol">🧯 Ekipman Kontrol Barkodu</button>
+            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="risk">⚠️ Risk Bildirimi Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>
             <button class="mini-buton sil" data-sil="${firma.id}">Sil</button>
           </div>
