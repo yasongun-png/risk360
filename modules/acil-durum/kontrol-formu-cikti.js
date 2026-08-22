@@ -254,7 +254,7 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
   const tablo = new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: satirlar });
 
   const cocuklar = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMANLARI LİSTE RAPORU', bold: true, size: 32, color: '000000' })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMAN KONTROL LİSTESİ', bold: true, size: 32, color: '000000' })] }),
     new docx.Paragraph({
       alignment: docx.AlignmentType.CENTER,
       spacing: { after: 200 },
@@ -275,5 +275,5 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
   const blob = await docx.Packer.toBlob(dokuman);
   const turAdi = turFiltre ? turFiltre : 'Tum_Turler';
   const bolumAdi = bolumFiltre ? '_' + bolumFiltre.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
-  saveAs(blob, `Ekipman_Liste_Raporu_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
+  saveAs(blob, `Acil_Durum_Ekipman_Kontrol_Listesi_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
