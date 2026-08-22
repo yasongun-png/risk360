@@ -40,7 +40,7 @@ function excelSablonIndir(kolonlar, dosyaAdi) {
 function excelDisaAktar(liste, kolonlar, dosyaAdi) {
   xlsxHazirOlduğunda(() => {
     const basliklar = kolonlar.map(k => k.baslik);
-    const satirlar = liste.map(satir => kolonlar.map(k => (satir[k.anahtar] ?? '')));
+    const satirlar = liste.map(satir => kolonlar.map(k => _tarihGoruntuyeCevir(satir[k.anahtar] ?? '')));
     const ws = XLSX.utils.aoa_to_sheet([basliklar, ...satirlar]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Veri');

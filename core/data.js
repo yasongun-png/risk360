@@ -403,6 +403,20 @@ function gunAyYil(isoTarih) {
   return `${eslesme[3]}.${eslesme[2]}.${eslesme[1]}`;
 }
 
+// Kullanıcı isteği: "tarihler gün ay yıl şeklinde olsun tüm uygulamada
+// geçerli bu tüm modüllerde" -- core/excel.js excelDisaAktar ve
+// core/rapor.js raporListesiYazdir/raporKartiYazdir GENEL amaçlı (kolonlar
+// dışarıdan verilen) yardımcılar olduğundan hangi kolonun "tarih" olduğunu
+// bilmezler ve ham ISO (YYYY-MM-DD) değeri olduğu gibi basarlardı. Bu
+// merkezi yardımcı, ISO tarih GÖRÜNÜMÜNDEKİ (YYYY-MM-DD, gerekirse saatiyle)
+// her metni otomatik olarak gunAyYil ile GG.AA.YYYY'e çevirir; tarih
+// olmayan değerlere dokunmaz. Böylece TEK bir yerden tüm modüllerin
+// Excel/Yazdır çıktıları kapsanır.
+function _tarihGoruntuyeCevir(deger) {
+  if (typeof deger !== 'string') return deger;
+  return /^\d{4}-\d{2}-\d{2}($|T)/.test(deger) ? gunAyYil(deger) : deger;
+}
+
 const FIRMA_ROZET_RENKLERI = ['#1d4ed8', '#0891b2', '#7c3aed', '#c2410c', '#059669', '#be185d', '#4338ca'];
 
 // Firma bazlı tehlike sınıfı: İSG mevzuatına göre her firma tek bir sınıfa

@@ -489,7 +489,7 @@ function uygunlugCiz() {
   }
 
   const gecmisUyelerHtml = sonuc.egitimiGecmisUyeler.length
-    ? `<ul style="font-size:13px; padding-left:20px;">${sonuc.egitimiGecmisUyeler.map(u => `<li>${_adKacir(u.personelAdi)} — ${_adKacir(u.ekipTuru)} (geçerlilik: ${u.gecerlilikTarihi})</li>`).join('')}</ul>`
+    ? `<ul style="font-size:13px; padding-left:20px;">${sonuc.egitimiGecmisUyeler.map(u => `<li>${_adKacir(u.personelAdi)} — ${_adKacir(u.ekipTuru)} (geçerlilik: ${gunAyYil(u.gecerlilikTarihi)})</li>`).join('')}</ul>`
     : '<div class="bos-durum gorunur">Eğitimi geçmiş ekip üyesi yok.</div>';
 
   kutu.innerHTML = `
