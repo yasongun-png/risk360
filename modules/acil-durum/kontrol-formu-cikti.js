@@ -222,19 +222,36 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
   }
 
   const bugun = gunAyYil(bugunIso());
-  const basliklar = ['Ekipman No', 'Tür', 'Bölüm', 'Lokasyon', 'Son Kontrol', 'Sonraki Kontrol', 'Durum', 'Bulgular'];
-  const tablo = new docx.Table({
-    width: { size: 100, type: docx.WidthType.PERCENTAGE },
-    rows: [
-      new docx.TableRow({ tableHeader: true, children: basliklar.map(b => _kfHucre(b, true)) }),
-      ...liste.map(e => new docx.TableRow({
-        children: [
-          _kfHucre(e.ekipmanNo), _kfHucre(e.tur), _kfHucre(e.bolum), _kfHucre(e.lokasyon),
-          _kfHucre(e.sonKontrol), _kfHucre(e.sonrakiKontrol), _kfHucre(e.durumGoruntu), _kfHucre(e.bulgular)
-        ]
-      }))
-    ]
+  // Kullanıcı isteği: "durumunrapora koyma" -- Durum kolonu kaldırıldı.
+  const basliklar = ['Ekipman No', 'Bölüm', 'Lokasyon', 'Son Kontrol', 'Sonraki Kontrol', 'Bulgular'];
+  const SUTUN_SAYISI = basliklar.length;
+
+  // Kullanıcı isteği: "rapor başlığı olmamaış" -- düz bir liste tüm
+  // türleri karışık gösterip başlıksız görünüyordu; artık tür başına ayrı
+  // bir başlık (grup) satırıyla bölünüyor (Tür artık ayrı kolon değil, bu
+  // grup başlığında geçiyor).
+  const satirlar = [];
+  let mevcutTur = null;
+  liste.forEach(e => {
+    if (e.tur !== mevcutTur) {
+      mevcutTur = e.tur;
+      satirlar.push(new docx.TableRow({
+        children: [new docx.TableCell({
+          columnSpan: SUTUN_SAYISI,
+          shading: { fill: 'D1D5DB' },
+          children: [new docx.Paragraph({ children: [new docx.TextRun({ text: mevcutTur || 'Diğer', bold: true, size: 20 })] })]
+        })]
+      }));
+      satirlar.push(new docx.TableRow({ tableHeader: true, children: basliklar.map(b => _kfHucre(b, true)) }));
+    }
+    satirlar.push(new docx.TableRow({
+      children: [
+        _kfHucre(e.ekipmanNo), _kfHucre(e.bolum), _kfHucre(e.lokasyon),
+        _kfHucre(e.sonKontrol), _kfHucre(e.sonrakiKontrol), _kfHucre(e.bulgular)
+      ]
+    }));
   });
+  const tablo = new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: satirlar });
 
   const cocuklar = [
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMANLARI LİSTE RAPORU', bold: true, size: 32, color: '000000' })] }),
