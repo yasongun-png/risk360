@@ -203,3 +203,60 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre) {
   const bolumAdi = bolumFiltre ? '_' + bolumFiltre.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
   saveAs(blob, `Ekipman_Kontrol_Formu_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
+
+// Kullanıcı isteği: "acil durum ekipman kontrolünde word raporu kalsın bir
+// de liste şeklinde rapor olsun" -- ekipmanKontrolFormuWordOlustur (her
+// ekipman tam detaylı, ayrı sayfada) korunuyor; bunun YANINDA, aynı tür/
+// bölüm filtreleriyle çalışan, her ekipmanı TEK SATIRDA gösteren kompakt
+// bir tablo (liste) raporu üretir -- ekranın "Dışa Aktar" Excel'iyle aynı
+// kolonlar (bkz. ui.js EKIPMAN_EXPORT_KOLONLARI), Word olarak.
+async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre) {
+  let liste = ekipmanlariGetir('');
+  if (turFiltre) liste = liste.filter(e => e.tur === turFiltre);
+  if (bolumFiltre) liste = liste.filter(e => (e.bolum || '').trim() === bolumFiltre);
+  liste.sort((a, b) => (a.tur || '').localeCompare(b.tur || '', 'tr') || (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr'));
+
+  if (!liste.length) {
+    alert('Liste raporu üretebilmek için önce ilgili tür/bölümde en az bir ekipman kaydı ekleyin.');
+    return;
+  }
+
+  const bugun = gunAyYil(bugunIso());
+  const basliklar = ['Ekipman No', 'Tür', 'Bölüm', 'Lokasyon', 'Son Kontrol', 'Sonraki Kontrol', 'Durum', 'Bulgular'];
+  const tablo = new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      new docx.TableRow({ tableHeader: true, children: basliklar.map(b => _kfHucre(b, true)) }),
+      ...liste.map(e => new docx.TableRow({
+        children: [
+          _kfHucre(e.ekipmanNo), _kfHucre(e.tur), _kfHucre(e.bolum), _kfHucre(e.lokasyon),
+          _kfHucre(e.sonKontrol), _kfHucre(e.sonrakiKontrol), _kfHucre(e.durumGoruntu), _kfHucre(e.bulgular)
+        ]
+      }))
+    ]
+  });
+
+  const cocuklar = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMANLARI LİSTE RAPORU', bold: true, size: 32, color: '000000' })] }),
+    new docx.Paragraph({
+      alignment: docx.AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [new docx.TextRun({
+        text: `${firma.ad || ''}${bolumFiltre ? ' — ' + bolumFiltre + ' Bölümü' : ''}${turFiltre ? ' — ' + turFiltre : ''}   |   Düzenleme Tarihi: ${bugun}   |   Toplam: ${liste.length} ekipman`,
+        size: 20
+      })]
+    }),
+    tablo
+  ];
+
+  const dokuman = new docx.Document({
+    sections: [{
+      properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: { top: 720, right: 560, bottom: 720, left: 560 } } },
+      children: cocuklar
+    }]
+  });
+  const blob = await docx.Packer.toBlob(dokuman);
+  const turAdi = turFiltre ? turFiltre : 'Tum_Turler';
+  const bolumAdi = bolumFiltre ? '_' + bolumFiltre.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
+  saveAs(blob, `Ekipman_Liste_Raporu_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
+}

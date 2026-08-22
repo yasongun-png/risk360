@@ -247,6 +247,13 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
     ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
   });
+  // Kullanıcı isteği: "acil durum ekipman kontrolünde word raporu kalsın
+  // bir de liste şeklinde rapor olsun" — yukarıdaki (her ekipman ayrı
+  // sayfada) detaylı Word raporunun yanında, aynı filtrelerle çalışan,
+  // her ekipmanı tek satırda gösteren kompakt bir tablo raporu.
+  document.getElementById('ekipmanListeRaporuWordBtn').addEventListener('click', () => {
+    ekipmanKontrolFormuListeWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
+  });
   // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
   // alayım" / "barkod pdf olarak olsun" — o an ekranda görünen (arama +
   // tür + bölüm filtreli) listedeki her ekipman için ekipmanNo'yu
