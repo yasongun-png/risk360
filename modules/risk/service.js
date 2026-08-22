@@ -86,6 +86,34 @@ function riskleriGetir(aramaMetni, filtreler) {
   return liste;
 }
 
+// Excel toplu içe aktarma için -- bkz. modules/tespit-oneri/service.js
+// tespitOneriTopluEkle ile aynı gerekçe: satır satır riskEkle çağırmak (ve
+// dolayısıyla satır başına ayrı bir Firestore yazımı) büyük içe
+// aktarımlarda (ör. eski bir uygulamadan taşınan yüzlerce risk kaydı)
+// sayfa erken yenilenirse veri kaybına yol açabiliyordu. Her satır önce
+// doğrulanıp bellekte kayda dönüştürülür (riskNo'lar da bellekte art arda
+// üretilir), sonuçta riskKayitlariTopluEkleRepo ile TEK BİR toplu (ve
+// GERÇEKTEN Firestore'a ulaştığı doğrulanan) yazımla kaydedilir.
+async function riskExcelTopluEkle(verilerListesi) {
+  const mevcutListe = riskTumunuGetir();
+  const basariliKayitlar = [];
+  const hatalar = [];
+  verilerListesi.forEach((veriler, index) => {
+    const dogrulama = riskDogrula(veriler);
+    if (!dogrulama.gecerli) {
+      hatalar.push(`Satır ${index + 2}: ${Object.values(dogrulama.hatalar)[0]}`);
+      return;
+    }
+    const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutListe.concat(basariliKayitlar));
+    basariliKayitlar.push(riskKaydiOlustur(Object.assign({}, veriler, { riskNo })));
+  });
+
+  if (!basariliKayitlar.length) return { basarili: 0, basarisizSayisi: hatalar.length, hatalar };
+  const yazimSonucu = await riskKayitlariTopluEkleRepo(basariliKayitlar);
+  if (!yazimSonucu.basarili) return { basarili: 0, basarisizSayisi: verilerListesi.length, hatalar: hatalar.concat(['Bulut yazımı başarısız oldu.']) };
+  return { basarili: basariliKayitlar.length, basarisizSayisi: hatalar.length, hatalar };
+}
+
 function riskEkle(veriler) {
   const dogrulama = riskDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };

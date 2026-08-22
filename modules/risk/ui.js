@@ -138,11 +138,15 @@ function riskSayfasiniBaslat() {
   });
   document.getElementById('iceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
-    excelIceAktar(dosya, RISK_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+    // Kullanıcı isteği: "eski uygulamadaki risklerin hepsini bıraya da
+    // aktarmak istiyorum" -- büyük toplu içe aktarımlarda satır satır
+    // yazım yerine TEK bir toplu (ve doğrulanan) yazım kullanılır, bkz.
+    // riskExcelTopluEkle.
+    excelIceAktar(dosya, RISK_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
       satirlar.forEach(satir => { satir.termin = excelTarihiNormallestir(satir.termin); });
-      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, riskEkle);
+      const sonuc = await riskExcelTopluEkle(satirlar);
       alert(excelIceAktarOzetMesaji(sonuc));
       _bolumFiltreDoldur();
       kayitlariCiz(document.getElementById('aramaKutusu').value);
