@@ -231,9 +231,12 @@ function _riskTabloParcalariHtml(riskler, satirBasina) {
     <div class="rsk-bolum"${index > 0 ? ' style="page-break-before:always;"' : ''}>
       <table class="rsk-tablo">
         <colgroup>
-          <col style="width:7%"><col style="width:9%"><col style="width:10%"><col style="width:11%">
-          <col style="width:13%"><col style="width:5%"><col style="width:8%"><col style="width:7%">
-          <col style="width:5%"><col style="width:5%"><col style="width:7%"><col style="width:7%">
+          <!-- Kullanıcı isteği: "düzey kolnunu buna göre daralt" -- Düzey
+               artık kısaltma (T.G. vb.) bastığından 8%'den 4%'e daraltıldı;
+               açılan yer Tehlike/Risk metin kolonlarına verildi. -->
+          <col style="width:6%"><col style="width:8%"><col style="width:9%"><col style="width:14%">
+          <col style="width:16%"><col style="width:4%"><col style="width:4%"><col style="width:6%">
+          <col style="width:4%"><col style="width:4%"><col style="width:6%"><col style="width:7%">
           <col style="width:6%"><col style="width:6%">
         </colgroup>
         <thead>${_riskTabloBasligiHtml()}</thead>
