@@ -16,6 +16,18 @@ function _okKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// Kullanıcı isteği: "tıbbi tedavi yazsa bile iş kazası olduğunda mutlaka
+// belirtmesi lazım" — yaralanmalı olay tiplerinde (OLAY_KISI_ZORUNLU_TIPLERI)
+// "Kaza Sınıfı" satırı sadece olay tipini (ör. "Tıbbi Tedavi") göstermek
+// yerine önüne "İş Kazası —" ekler; kazaSinifi elle doldurulmuşsa ve zaten
+// "iş kazası" geçiyorsa tekrar eklenmez.
+function _okKazaSinifiMetni(k) {
+  const temel = k.kazaSinifi || k.olayTipi;
+  const isKazasiMi = OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi);
+  if (!isKazasiMi || /iş kazası/i.test(temel)) return temel;
+  return 'İş Kazası — ' + temel;
+}
+
 function _okRpRozet(rp) {
   if (rp == null) return '-';
   if (rp < 20) return `Düşük (${rp})`;
@@ -200,7 +212,7 @@ async function kazaRaporuPdfOlustur(id) {
     <table class="ok-tablo">
       ${_okAlanSatiri('Rapor No', k.kayitNo, 'Rapor Tarihi', bugun)}
       ${_okAlanSatiriTek('Hazırlayan', [k.hazirlayanAdi, k.hazirlayanUnvan].filter(Boolean).join(' – '))}
-      ${_okAlanSatiri('Kaza Sınıfı', k.kazaSinifi || k.olayTipi, 'Soruşturma Süresi', [gunAyYil(k.sorusturmaBaslangic), gunAyYil(k.sorusturmaBitis)].filter(Boolean).join(' – '))}
+      ${_okAlanSatiri('Kaza Sınıfı', _okKazaSinifiMetni(k), 'Soruşturma Süresi', [gunAyYil(k.sorusturmaBaslangic), gunAyYil(k.sorusturmaBitis)].filter(Boolean).join(' – '))}
     </table>
 
     ${_okBolumleriBirlestir(bolumler)}
@@ -410,7 +422,7 @@ async function kazaRaporuWordOlustur(id) {
     rows: [
       _okWordIkiliSatir('Rapor No', k.kayitNo, 'Rapor Tarihi', bugun),
       _okWordTekliSatir('Hazırlayan', [k.hazirlayanAdi, k.hazirlayanUnvan].filter(Boolean).join(' – ')),
-      _okWordIkiliSatir('Kaza Sınıfı', k.kazaSinifi || k.olayTipi, 'Soruşturma Süresi', [gunAyYil(k.sorusturmaBaslangic), gunAyYil(k.sorusturmaBitis)].filter(Boolean).join(' – '))
+      _okWordIkiliSatir('Kaza Sınıfı', _okKazaSinifiMetni(k), 'Soruşturma Süresi', [gunAyYil(k.sorusturmaBaslangic), gunAyYil(k.sorusturmaBitis)].filter(Boolean).join(' – '))
     ]
   });
 

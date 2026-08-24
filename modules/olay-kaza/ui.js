@@ -341,7 +341,7 @@ function kayitlariCiz(aramaMetni) {
       : '-';
     satir.innerHTML = `
       <td>${_okKacir(k.kayitNo)}</td>
-      <td>${_okKacir(k.olayTipi)}</td>
+      <td>${_okKacir(k.olayTipi)}${OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi) ? '<br><span class="genel-rozet rozet-kirmizi" style="font-size:10px;">İş Kazası</span>' : ''}</td>
       <td>${k.kazaTarihi}${k.kazaSaati ? ' ' + k.kazaSaati : ''}</td>
       <td>${_okKacir(k.bolum)}</td>
       <td>${_okKacir(k.adSoyad)}${k.personelFirmaId ? ' <span style="font-size:11px; color:var(--metin-soluk);">(' + _okKacir(_digerFirmaAdiGetir(k.personelFirmaId)) + ')</span>' : ''}</td>
