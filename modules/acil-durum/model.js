@@ -84,7 +84,7 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -98,6 +98,7 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Monitör': 'MNT',
   'Sprinkler Hattı': 'SPK',
   'Kaçış Yolu': 'KY',
+  'Acil Çıkış Kapısı': 'ACK',
   'Toplanma Alanı': 'TA',
   'Alarm / Siren': 'ALS',
   'Acil Aydınlatma': 'AAY',
@@ -171,8 +172,22 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'tabela', soru: 'Yönlendirme/tabela levhaları görünür' },
     { id: 'tabelaSaglam', soru: 'Yönlendirme/tabela levhaları sağlam' },
     { id: 'aydinlatma', soru: 'Acil aydınlatma çalışıyor' },
-    { id: 'zemin', soru: 'Zemin kayma riski taşımıyor' },
-    { id: 'kapilar', soru: 'Kapılar kilitli/engelli değil' }
+    { id: 'zemin', soru: 'Zemin kayma riski taşımıyor' }
+  ],
+  // Kullanıcı isteği: "acil durum ekipman kontrollerine acil çıkış kapısı
+  // ekleyelim ve ona göre soru listesi düzenleyelim" -- kapı, kaçış
+  // yolundan ayrı, kendi kontrol kriterleri olan bağımsız bir ekipman türü
+  // oldu; Kaçış Yolu'ndaki genel "Kapılar kilitli/engelli değil" kriteri
+  // (yukarıda) bu yeni türe taşındığı için kaldırıldı.
+  'Acil Çıkış Kapısı': [
+    { id: 'erisim', soru: 'Kapı kolayca açılıyor' },
+    { id: 'acilisYonu', soru: 'Kapı kaçış yönünde (dışa doğru) açılıyor' },
+    { id: 'onundeEngelYok', soru: 'Kapı önünde engel yok' },
+    { id: 'kilitliDegil', soru: 'Kapı kilitli/engelli değil' },
+    { id: 'tabela', soru: 'Kapı üzerinde yönlendirme tabelası var' },
+    { id: 'kendindenKapanma', soru: 'Kapı kendiliğinden kapanıyor' },
+    { id: 'panelSaglam', soru: 'Kapı camı/paneli sağlam' },
+    { id: 'menteseSaglam', soru: 'Kapı menteşeleri/kolu sağlam' }
   ],
   'Toplanma Alanı': [
     { id: 'isaretleme', soru: 'Toplanma alanı işaretlemesi görünür' },
