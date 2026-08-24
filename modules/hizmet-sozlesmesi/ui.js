@@ -598,7 +598,9 @@ function _sicilRaporSatirlariniAyristir(hamSatirlar) {
       return {
         firmaAdi: firmaMetni,
         sicilNo: String(satir[iSicilNo] || '').trim(),
-        iseverenVekili: String(satir[iVekil] || '').split('\n')[0].trim(),
+        // Orijinal rapor "Ad Soyad\nÜnvan" iki satır halinde paketler; sadece
+        // ilk satırı almak ünvanı sessizce kaybediyordu, ikisini de tutuyoruz.
+        iseverenVekili: String(satir[iVekil] || '').split('\n').map(s => s.trim()).filter(Boolean).join(' — '),
         tehlikeSinifi: personelHucresi[1] || '',
         personelSayisi: _soDakikaCoz(personelHucresi[0] || '0'),
         isgUzmaniAdSoyad: isg.adSoyad, isgUzmaniSinifi: isg.sinif, isgUzmaniAtananDakika: isg.dakika,
