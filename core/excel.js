@@ -129,6 +129,34 @@ function excelTarihiNormallestir(deger) {
   return metin;
 }
 
+// ExcelJS: SheetJS'in ücretsiz sürümü hücre stili (renk/dolgu/kenarlık)
+// yazamadığından, orijinal görünümüyle birebir (renkli, birleştirilmiş
+// hücreli) rapor üretmesi gereken modüller bunu kullanır. CDN yerine
+// assets/vendor/exceljs.min.js'ten yerel olarak yüklenir (internet
+// gerektirmez). document.currentScript ile bu betiğin kendi konumundan
+// yol türetildiğinden, farklı derinlikteki modül sayfalarında da çalışır.
+const _EXCELJS_LOCAL_URL = (() => {
+  const cs = document.currentScript;
+  const src = cs ? cs.src : '';
+  return src.replace(/core\/excel\.js(\?.*)?$/, 'assets/vendor/exceljs.min.js');
+})();
+
+function _exceljsYuklu() {
+  return typeof ExcelJS !== 'undefined';
+}
+
+function exceljsHazirOlduğunda(callback) {
+  if (_exceljsYuklu()) { callback(); return; }
+  const mevcutScript = document.querySelector(`script[src="${_EXCELJS_LOCAL_URL}"]`);
+  if (mevcutScript) { mevcutScript.addEventListener('load', callback); return; }
+
+  const script = document.createElement('script');
+  script.src = _EXCELJS_LOCAL_URL;
+  script.onload = callback;
+  script.onerror = () => alert('Excel (biçimli) kütüphanesi yüklenemedi.');
+  document.head.appendChild(script);
+}
+
 function excelIceAktarOzetMesaji(sonuc) {
   let mesaj = `${sonuc.basarili} kayıt başarıyla eklendi.`;
   if (sonuc.basarisizSayisi > 0) {

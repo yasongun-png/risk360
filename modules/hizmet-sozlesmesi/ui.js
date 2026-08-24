@@ -445,44 +445,121 @@ const HS_SICIL_OZETI_KOLONLARI = [
 ];
 
 // Rapor başlık satırlarını (title/subtitle/rapor tarihi) içeren, kullanıcının
-// paylaştığı örnekle birebir aynı yapıda bir Excel üretir — core/excel.js'teki
-// genel excelDisaAktar sadece düz başlık+satır dökümü yaptığından burada
-// doğrudan SheetJS (aoa_to_sheet) kullanılıyor.
+// paylaştığı örnekle birebir aynı GÖRÜNÜMDE (renkli başlıklar, birleştirilmiş
+// hücreler, kenarlıklar, uygunluğa göre renklendirilmiş hücreler) bir Excel
+// üretir. SheetJS'in ücretsiz sürümü hücre stili yazamadığından ExcelJS
+// kullanılıyor (bkz. core/excel.js exceljsHazirOlduğunda).
+function _soThinBorderUygula(cell) {
+  const kenarlik = { style: 'thin', color: { argb: 'FFCBD5E1' } };
+  cell.border = { top: kenarlik, bottom: kenarlik, left: kenarlik, right: kenarlik };
+}
+
 function _sicilOzetiExcelDisaAktar() {
   const liste = hizmetSozlesmesiSicilOzetiHesapla();
-  xlsxHazirOlduğunda(() => {
+  exceljsHazirOlduğunda(async () => {
     const simdi = new Date();
-    const tarihMetni = simdi.toLocaleDateString('tr-TR') + ' ' + simdi.toLocaleTimeString('tr-TR');
-    const basSatirlar = [
-      ['Hizmet Sözleşmeleri'],
-      ['Sicil bazında İSG profesyoneli atama dakikası, yasal süre hesabı ve uygunluk değerlendirmesi.'],
-      [`Rapor Tarihi: ${tarihMetni}   |   Kayıt Sayısı: ${liste.length}`],
-      [],
-      ['No', 'Sicil / Firma', 'Sicil No', 'İşveren Vekili', 'İSG Uzmanı', 'İşyeri Hekimi', 'DSP', 'Personel / Tehlike', 'Uygunluk Durumu', 'PDF Belgeler']
-    ];
+    const pad = n => String(n).padStart(2, '0');
+    const tarihMetni = `${pad(simdi.getDate())}.${pad(simdi.getMonth() + 1)}.${simdi.getFullYear()} ${pad(simdi.getHours())}:${pad(simdi.getMinutes())}:${pad(simdi.getSeconds())}`;
     const gorevEtiketleri = { 'İSG Uzmanı': 'İG Uzmanı', 'İşyeri Hekimi': 'Hekim', 'Diğer Sağlık Personeli': 'DSP' };
-    const veriSatirlari = liste.map((satirVerisi, i) => {
+    const basliklar = ['No', 'Sicil / Firma', 'Sicil No', 'İşveren Vekili', 'İSG Uzmanı', 'İşyeri Hekimi', 'DSP', 'Personel / Tehlike', 'Uygunluk Durumu', 'PDF Belgeler'];
+    const toplamKolon = basliklar.length;
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Hizmet Sözleşmeleri', { views: [{ state: 'frozen', ySplit: 5 }] });
+    ws.columns = [
+      { key: 'no', width: 6 }, { key: 'firma', width: 30 }, { key: 'sicilNo', width: 33 },
+      { key: 'vekil', width: 23 }, { key: 'isg', width: 29 }, { key: 'hekim', width: 26 },
+      { key: 'dsp', width: 25 }, { key: 'personel', width: 18 }, { key: 'uygunluk', width: 38 }, { key: 'pdf', width: 20 }
+    ];
+
+    ws.mergeCells(1, 1, 1, toplamKolon);
+    const baslikHucre = ws.getCell(1, 1);
+    baslikHucre.value = 'Hizmet Sözleşmeleri';
+    baslikHucre.font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+    baslikHucre.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3A5F' } };
+    baslikHucre.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws.getRow(1).height = 26.1;
+
+    ws.mergeCells(2, 1, 2, toplamKolon);
+    const altBaslikHucre = ws.getCell(2, 1);
+    altBaslikHucre.value = 'Sicil bazında İSG profesyoneli atama dakikası, yasal süre hesabı ve uygunluk değerlendirmesi.';
+    altBaslikHucre.font = { name: 'Segoe UI', size: 9 };
+    altBaslikHucre.alignment = { vertical: 'top', wrapText: true };
+    _soThinBorderUygula(altBaslikHucre);
+    ws.getRow(2).height = 21.95;
+
+    ws.mergeCells(3, 1, 3, toplamKolon);
+    const bilgiHucre = ws.getCell(3, 1);
+    bilgiHucre.value = `Rapor Tarihi: ${tarihMetni}   |   Kayıt Sayısı: ${liste.length}`;
+    bilgiHucre.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF1E293B' } };
+    bilgiHucre.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+    bilgiHucre.alignment = { vertical: 'middle' };
+    _soThinBorderUygula(bilgiHucre);
+    ws.getRow(3).height = 18;
+
+    const baslikSatiri = ws.getRow(5);
+    basliklar.forEach((h, i) => {
+      const hucre = baslikSatiri.getCell(i + 1);
+      hucre.value = h;
+      hucre.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+      hucre.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF24364B' } };
+      hucre.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      _soThinBorderUygula(hucre);
+    });
+    baslikSatiri.height = 20;
+
+    liste.forEach((satirVerisi, idx) => {
+      const r = 6 + idx;
+      const satir = ws.getRow(r);
       const [isg, hekim, dsp] = satirVerisi.gorevOzetleri;
       const pdfMetni = satirVerisi.gorevOzetleri
         .map(g => g.gorevliler.some(gv => gv.sozlesmeBelgesi) ? gorevEtiketleri[g.gorevTuru] + ' PDF' : '')
         .filter(Boolean).join('\n');
-      return [
-        i + 1,
+
+      const degerler = [
+        idx + 1,
         satirVerisi.firma.ad,
         satirVerisi.sicilNo,
         satirVerisi.iseverenVekili,
         _soGorevOzetSatirlari(isg).join('\n'),
         _soGorevOzetSatirlari(hekim).join('\n'),
         _soGorevOzetSatirlari(dsp).join('\n'),
-        satirVerisi.personelSayisi + '\n' + satirVerisi.tehlikeSinifi,
-        (satirVerisi.tumuUygunMu ? 'Uygun' : 'Yetersiz') + '\n' + (satirVerisi.tumuUygunMu ? 'Atama süreleri uygun.' : 'Eksik görevli/süre var.'),
-        pdfMetni
+        `${satirVerisi.personelSayisi}\n${satirVerisi.tehlikeSinifi}`,
+        `${satirVerisi.tumuUygunMu ? 'Uygun' : 'Yetersiz'}\n${satirVerisi.tumuUygunMu ? 'Atama süreleri uygun.' : 'Eksik görevli/süre var.'}`,
+        pdfMetni || '-'
       ];
+
+      degerler.forEach((deger, i) => {
+        const hucre = satir.getCell(i + 1);
+        hucre.value = deger;
+        hucre.font = { name: 'Segoe UI', size: 9 };
+        hucre.alignment = { vertical: 'top', wrapText: true };
+        _soThinBorderUygula(hucre);
+      });
+
+      const sicilHucre = satir.getCell(3);
+      sicilHucre.font = { name: 'Consolas', size: 9 };
+      sicilHucre.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      sicilHucre.numFmt = '@';
+
+      const uygunlukHucre = satir.getCell(9);
+      uygunlukHucre.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      uygunlukHucre.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: satirVerisi.tumuUygunMu ? 'FF166534' : 'FF991B1B' } };
+      uygunlukHucre.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: satirVerisi.tumuUygunMu ? 'FFDCFCE7' : 'FFFEE2E2' } };
+
+      satir.height = 57.95;
     });
-    const ws = XLSX.utils.aoa_to_sheet(basSatirlar.concat(veriSatirlari));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Hizmet Sözleşmeleri');
-    XLSX.writeFile(wb, 'ISG_Hizmet_Sozlesmeleri_Ana_Sayfa_Raporu.xlsx');
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ISG_Hizmet_Sozlesmeleri_Ana_Sayfa_Raporu.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
 }
 
