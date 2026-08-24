@@ -23,9 +23,14 @@ function _riskDuzeyRenk(etiket) {
   return harita[etiket] || { bg: '#e5e7eb', fg: '#111827' };
 }
 
+// Kullanıcı raporu: "tolerans gösterilemez hücre dışına çıkıyor" -- Düzey
+// kolonu dar (rsk-tablo colgroup'ta ~%8) olduğundan, "Tolerans Gösterilemez"
+// gibi uzun etiketler white-space:nowrap ile tek satıra zorlanınca hücre
+// sınırının dışına taşıyordu. Artık satır kırılmasına izin veriliyor
+// (gerekirse rozet iki satıra bölünüyor, hücreyi taşmıyor).
 function _riskDuzeyRozetHtml(etiket, kucuk) {
   const renk = _riskDuzeyRenk(etiket);
-  return `<span style="display:inline-block; padding:${kucuk ? '1px 6px' : '2px 8px'}; border-radius:8px; font-size:${kucuk ? '7pt' : '8pt'}; font-weight:700; white-space:nowrap; background:${renk.bg}; color:${renk.fg};">${_riskCiktiKacir(etiket)}</span>`;
+  return `<span style="display:inline-block; padding:${kucuk ? '1px 6px' : '2px 8px'}; border-radius:8px; font-size:${kucuk ? '7pt' : '8pt'}; font-weight:700; white-space:normal; line-height:1.25; word-break:break-word; background:${renk.bg}; color:${renk.fg};">${_riskCiktiKacir(etiket)}</span>`;
 }
 
 // RISK_DUZEYLERI (model.js) minExclusive'e göre azalan sırada tanımlı; ardışık
