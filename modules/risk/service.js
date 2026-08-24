@@ -94,7 +94,9 @@ function riskleriGetir(aramaMetni, filtreler) {
     );
   }
 
-  return liste;
+  // Kullanıcı isteği: "en son yazdığım risk en üstte görünsün" -- en son
+  // eklenen (olusturmaTarihi'ne göre) en üstte.
+  return liste.sort((a, b) => (b.olusturmaTarihi || '').localeCompare(a.olusturmaTarihi || ''));
 }
 
 // Excel toplu içe aktarma için -- bkz. modules/tespit-oneri/service.js
