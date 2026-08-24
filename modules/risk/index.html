@@ -62,6 +62,9 @@
           <button type="button" class="ikincil" id="checklistExcelBtn">Checklist (Excel)</button>
           <button type="button" class="ikincil" id="checklistPdfBtn">Checklist (PDF)</button>
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
+          <!-- Kullanıcı isteği: "bölümler arasında risk taşınabilsin" --
+               seçilen risk(ler)i tek seferde başka bir bölüme taşır. -->
+          <button type="button" class="ikincil" id="topluTasiBtn">Seçilenleri Taşı</button>
           <button type="button" class="birincil" id="yeniRiskBtn" style="width:auto;">+ Yeni Risk</button>
         </div>
       </div>
@@ -71,6 +74,7 @@
         <table class="veri-tablosu">
           <thead>
             <tr>
+              <th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th>
               <th>Risk No</th><th>Yöntem</th><th>Bölüm</th><th>Yer / Ekipman</th><th>Tehlike</th><th>Risk</th>
               <th>Alınmış Önlem</th><th>RP1</th><th>Düzey</th><th>Öncesi</th><th>Alınacak Önlem</th><th>RP2</th><th>Azalma</th><th>Sonrası</th>
               <th>Sorumlu</th><th>Termin</th><th>Durum</th><th>İşlemler</th>
@@ -267,6 +271,24 @@
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="hazirlayanModalKapatBtn">İptal</button>
         <button type="button" class="birincil" id="hazirlayanOnaylaBtn" style="width:auto;">PDF Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kullanıcı isteği: "bölümler arasında risk taşınabilsin" -- listede
+       seçilen risk(ler)i tek seferde başka bir bölüme taşımak için hedef
+       bölüm seçim modalı. -->
+  <div class="modal-katman" id="topluTasiKatman">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3>Seçilenleri Başka Bölüme Taşı</h3>
+      <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;" id="topluTasiSayisi"></p>
+
+      <label for="topluTasiBolum">Hedef Bölüm</label>
+      <select id="topluTasiBolum"></select>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="topluTasiKapatBtn">İptal</button>
+        <button type="button" class="birincil" id="topluTasiOnaylaBtn" style="width:auto;">Taşı</button>
       </div>
     </div>
   </div>

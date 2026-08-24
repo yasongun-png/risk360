@@ -49,6 +49,24 @@ function riskGuncelleRepoVeBekle(id, veriler) {
   return yazVeSonucuGetir(_riskAnahtari(), liste).then(() => liste[index]);
 }
 
+// Kullanıcı isteği: "bölümler arasında risk taşınabilsin" -- birden çok
+// riski TEK bir bulut yazımıyla başka bir bölüme taşır (riskGuncelleRepo'yu
+// seçili her risk için ayrı ayrı çağırmak, satır satır yazım yapan diğer
+// toplu işlemlerdeki aynı veri kaybı riskini taşırdı, bkz.
+// riskKayitlariTopluEkleRepo yorumu).
+function riskBolumTopluGuncelleRepo(idler, yeniBolum) {
+  const idSeti = new Set(idler);
+  const liste = riskTumunuGetir();
+  let sayac = 0;
+  const yeniListe = liste.map(r => {
+    if (!idSeti.has(r.id)) return r;
+    sayac++;
+    return Object.assign({}, r, { bolum: yeniBolum });
+  });
+  if (!sayac) return Promise.resolve({ basarili: true, sayac: 0 });
+  return yazVeSonucuGetir(_riskAnahtari(), yeniListe).then(sonuc => Object.assign({}, sonuc, { sayac }));
+}
+
 function riskSilRepo(id) {
   _riskKaydet(riskTumunuGetir().filter(r => r.id !== id));
 }

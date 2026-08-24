@@ -116,6 +116,32 @@ function riskSayfasiniBaslat() {
     _bolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
+  // Kullanıcı isteği: "bölümler arasında risk taşınabilsin" -- listede
+  // seçilen risk(ler)i tek seferde başka bir bölüme taşır.
+  document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
+    document.querySelectorAll('#tabloGovde [data-sec]').forEach(cb => { cb.checked = e.target.checked; });
+  });
+  document.getElementById('topluTasiBtn').addEventListener('click', () => {
+    const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+    if (!secililer.length) { alert('Lütfen taşımak için en az bir risk seçin.'); return; }
+    document.getElementById('topluTasiSayisi').textContent = `${secililer.length} risk kaydı taşınacak.`;
+    document.getElementById('topluTasiBolum').innerHTML = bolumleriGetir().map(b => `<option value="${b.ad}">${b.ad}</option>`).join('');
+    document.getElementById('topluTasiKatman').classList.add('acik');
+  });
+  document.getElementById('topluTasiKapatBtn').addEventListener('click', () => {
+    document.getElementById('topluTasiKatman').classList.remove('acik');
+  });
+  document.getElementById('topluTasiOnaylaBtn').addEventListener('click', async () => {
+    const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+    const yeniBolum = document.getElementById('topluTasiBolum').value;
+    const sonuc = await riskTopluTasi(secililer, yeniBolum);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    document.getElementById('topluTasiKatman').classList.remove('acik');
+    document.getElementById('tumunuSecCheckbox').checked = false;
+    alert(`${sonuc.tasinan} risk kaydı "${yeniBolum}" bölümüne taşındı.`);
+    _bolumFiltreDoldur();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeOzet').addEventListener('click', () => gorunumDegistir('ozet'));
 
@@ -436,6 +462,7 @@ function kayitlariCiz(aramaMetni) {
   riskler.forEach(r => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td><input type="checkbox" data-sec data-id="${r.id}"></td>
       <td>${_riskKacir(r.riskNo)}</td>
       <td>${_riskKacir(r.yontem)}</td>
       <td>${_riskKacir(r.bolum)}</td>

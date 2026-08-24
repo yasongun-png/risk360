@@ -63,6 +63,17 @@ function bolumSil(ad) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "bölümler arasında risk taşınabilsin" -- listede
+// seçilen birden çok riski tek seferde başka bir bölüme taşır.
+async function riskTopluTasi(idler, yeniBolum) {
+  const bolum = (yeniBolum || '').trim();
+  if (!bolum) return { basarili: false, hata: 'Hedef bölüm seçilmedi.' };
+  if (!idler || !idler.length) return { basarili: false, hata: 'Taşınacak risk seçilmedi.' };
+  const sonuc = await riskBolumTopluGuncelleRepo(idler, bolum);
+  if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
+  return { basarili: true, tasinan: sonuc.sayac };
+}
+
 function riskleriGetir(aramaMetni, filtreler) {
   const f = filtreler || {};
   let liste = riskTumunuGetir().map(_riskiZenginlestir);
