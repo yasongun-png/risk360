@@ -8,6 +8,24 @@ function _riskCiktiKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// Kullanıcı isteği: "kısaltmalarını yazalım" / "T.G. gibi" -- dar Düzey
+// kolonunda (risk listesi tablosu) tam etiket yerine kısaltma basılır;
+// geniş yöntem/ölçek referans tablolarında (kucuk=false) tam etiket kalır.
+// Harf çakışmasını önlemek için (ör. "Önemli"/"Önemsiz" ikisi de "Ö" ile
+// başlıyor) bazılarında ikinci harf, kelimenin baş harfi yerine ayırt edici
+// bir harften seçildi.
+const _RISK_DUZEY_KISALTMA = {
+  'Önemsiz Risk': 'Ö.S.',
+  'Olası Risk': 'O.L.',
+  'Önemli Risk': 'Ö.M.',
+  'Esaslı Risk': 'E.S.',
+  'Tolerans Gösterilemez': 'T.G.',
+  'Düşük Risk': 'D.Ş.',
+  'Orta Risk': 'O.T.',
+  'Yüksek Risk': 'Y.K.',
+  'Kritik Risk': 'K.R.'
+};
+
 function _riskDuzeyRenk(etiket) {
   const harita = {
     'Önemsiz Risk': { bg: '#dcfce7', fg: '#15803d' },
@@ -27,10 +45,19 @@ function _riskDuzeyRenk(etiket) {
 // kolonu dar (rsk-tablo colgroup'ta ~%8) olduğundan, "Tolerans Gösterilemez"
 // gibi uzun etiketler white-space:nowrap ile tek satıra zorlanınca hücre
 // sınırının dışına taşıyordu. Artık satır kırılmasına izin veriliyor
-// (gerekirse rozet iki satıra bölünüyor, hücreyi taşmıyor).
+// (gerekirse rozet iki satıra bölünüyor, hücreyi taşmıyor). kucuk=true iken
+// (risk listesi tablosu) kullanıcı isteğiyle ("kısaltmalarını yazalım" /
+// "T.G. gibi") tam etiket yerine kısaltma basılır -- bkz.
+// _RISK_DUZEY_KISALTMA ve _riskDuzeyKisaltmaAciklamaHtml (açıklama metni).
 function _riskDuzeyRozetHtml(etiket, kucuk) {
   const renk = _riskDuzeyRenk(etiket);
-  return `<span style="display:inline-block; padding:${kucuk ? '1px 6px' : '2px 8px'}; border-radius:8px; font-size:${kucuk ? '7pt' : '8pt'}; font-weight:700; white-space:normal; line-height:1.25; word-break:break-word; background:${renk.bg}; color:${renk.fg};">${_riskCiktiKacir(etiket)}</span>`;
+  const gosterilecekMetin = kucuk ? (_RISK_DUZEY_KISALTMA[etiket] || etiket) : etiket;
+  return `<span style="display:inline-block; padding:${kucuk ? '1px 6px' : '2px 8px'}; border-radius:8px; font-size:${kucuk ? '7pt' : '8pt'}; font-weight:700; white-space:normal; line-height:1.25; word-break:break-word; background:${renk.bg}; color:${renk.fg};">${_riskCiktiKacir(gosterilecekMetin)}</span>`;
+}
+
+function _riskDuzeyKisaltmaAciklamaHtml() {
+  const parcalar = Object.keys(_RISK_DUZEY_KISALTMA).map(etiket => `${_RISK_DUZEY_KISALTMA[etiket]} = ${_riskCiktiKacir(etiket)}`);
+  return `<div class="rsk-kisaltma-aciklama">Düzey kısaltmaları: ${parcalar.join(' &nbsp;•&nbsp; ')}</div>`;
 }
 
 // RISK_DUZEYLERI (model.js) minExclusive'e göre azalan sırada tanımlı; ardışık
@@ -166,6 +193,7 @@ const _RSK_PDF_STIL = `
   #rskPdfKok .rsk-yontem-tablo{ border-collapse:collapse; flex:1; font-size:7.5pt; }
   #rskPdfKok .rsk-yontem-tablo th{ background:#e5e7eb; color:#111827; padding:3px 5px; border:1px solid #94a3b8; }
   #rskPdfKok .rsk-yontem-tablo td{ padding:2.5px 5px; border:1px solid #cbd5e1; }
+  #rskPdfKok .rsk-kisaltma-aciklama{ font-size:7pt; color:#4b5563; margin:2mm 0 3mm; line-height:1.5; }
 
   #rskPdfKok table.rsk-tablo{ width:100%; border-collapse:collapse; table-layout:fixed; }
   #rskPdfKok table.rsk-tablo th{ background:#e5e7eb; color:#111827; font-size:7.3pt; padding:3px 4px; border:1px solid #94a3b8; text-transform:uppercase; }
@@ -265,6 +293,7 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
         <div><b>${ozet.onemliVeUstu}</b>Önemli+</div>
       </div>
     </div>
+    ${_riskDuzeyKisaltmaAciklamaHtml()}
 
     ${_riskTabloParcalariHtml(riskler, 15)}
 
