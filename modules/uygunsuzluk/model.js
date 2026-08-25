@@ -3,7 +3,7 @@
 const UYGUNSUZLUK_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Kapalı', 'İptal'];
 const ONAY_DURUMLARI = ['Onay Gerekmiyor', 'Onay Bekliyor', 'Onaylandı', 'Reddedildi'];
 const RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Çok Yüksek'];
-const KAYNAK_TURLERI = ['Saha Denetimi', 'İş Kazası', 'Ramak Kala', 'Yasal Şart', 'Risk Değerlendirme', 'İSG Kurul', 'Manuel Bildirim'];
+const KAYNAK_TURLERI = ['Saha Denetimi', 'İş Kazası', 'Ramak Kala', 'Yasal Şart', 'Risk Değerlendirme', 'İSG Kurul', 'JSA (İş Güvenliği Analizi)', 'Manuel Bildirim'];
 
 // Eski isg platformundaki ("İlgili Yasal Şartlar" çoklu seçim listesi) ile
 // birebir aynı liste — kayıtlar birden fazla mevzuata birden bağlanabilir.

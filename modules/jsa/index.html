@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="../../assets/icons/favicon-32.png">
+<title>İSG Platform - İş Güvenliği Analizi (JSA)</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* Dijital imza pad'i -- modules/tespit-oneri/index.html'deki .uc-imza-*
+     ile aynı desen (bkz. ui.js _jsaImzaPaduBagla). */
+  .uc-imza-canvas { width: 100%; height: 120px; border: 1.5px dashed var(--kenarlik, #9ca3af); border-radius: 10px; touch-action: none; background: #fff; display: block; }
+  .uc-imza-arac { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .uc-imza-temizle { border: none; background: none; color: var(--hata, #dc2626); font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px; }
+  .uc-imza-ipucu { font-size: 11px; color: var(--metin-soluk, #6b7280); }
+  .uc-imza-rol-satir { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--kenarlik, #e5e7eb); }
+  .uc-imza-rol-satir:last-child { border-bottom: none; }
+
+  .jsa-adim-kutu { border: 1px solid var(--kenarlik, #e5e7eb); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: var(--kart-bg, #fff); }
+  .jsa-adim-baslik { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .jsa-adim-no { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .jsa-adim-eylem { flex: 1; }
+  .jsa-tehlike-satir { display: grid; grid-template-columns: 1.4fr 0.9fr 0.9fr 0.9fr 0.7fr 1.4fr auto; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid var(--kenarlik, #eef1f5); }
+  .jsa-tehlike-satir:first-of-type { border-top: none; }
+  .jsa-risk-rozet { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  @media (max-width: 900px) { .jsa-tehlike-satir { grid-template-columns: 1fr; } }
+  .jsa-adim-stepper { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .jsa-adim-stepper button { flex: 1; min-width: 160px; }
+  .jsa-hazirlik-liste { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 14px; margin: 8px 0 14px; }
+  .jsa-hazirlik-liste label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">İş Güvenliği Analizi (JSA)</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div id="ozetKutusu" style="margin-bottom:16px;"></div>
+
+    <!-- ==================== LİSTE GÖRÜNÜMÜ ==================== -->
+    <div id="bolum-liste">
+      <div class="arac-cubugu">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Kayıt no, işletme veya değerlendirilen işe göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="durumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
+          <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
+          <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni JSA</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr><th>Kayıt No</th><th>Değerlendirilen İş</th><th>İşletme / Alan</th><th>Tarih</th><th>En Yüksek Risk</th><th>Durum</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody id="tabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bosDurum"></div>
+    </div>
+
+    <!-- ==================== EDİTÖR GÖRÜNÜMÜ (3 adım) ==================== -->
+    <div id="bolum-editor" style="display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <div>
+          <a href="#" id="editorGeriLink" class="geri-link" style="display:inline-block;">← Kayıtlara Dön</a>
+          <h3 style="margin:6px 0 0;" id="editorBaslik">Yeni JSA</h3>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="editorPdfBtn">PDF İndir</button>
+          <button type="button" class="ikincil" id="editorWordBtn">Word İndir</button>
+          <button type="button" class="birincil" id="editorKaydetBtn" style="width:auto;">Kaydet</button>
+        </div>
+      </div>
+
+      <div class="jsa-adim-stepper">
+        <button type="button" class="birincil" id="adimSekme1">1. Görev ve İş Adımları</button>
+        <button type="button" class="ikincil" id="adimSekme2">2. Tehlikeler, Riskler ve Kontroller</button>
+        <button type="button" class="ikincil" id="adimSekme3">3. Rapor, Onay ve Takip</button>
+      </div>
+
+      <!-- ADIM 1 -->
+      <div id="jsaAdim1">
+        <p style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;">
+          Önce hangi işin, nerede, kimlerle ve hangi sınırlar içinde incelendiğini yazın. Sonra işi, her biri tek bir gözlenebilir eylem içeren doğru sıralı adımlara ayırın.
+        </p>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="jsaIsletme">İşletme</label>
+            <input type="text" id="jsaIsletme">
+          </div>
+          <div>
+            <label for="jsaDegerlendirilenIs">Değerlendirilen İş veya Faaliyet</label>
+            <input type="text" id="jsaDegerlendirilenIs">
+            <div class="alan-hatasi" id="degerlendirilenIsHata" style="color:var(--hata); font-size:12px; margin-top:-6px;"></div>
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="jsaAlanEkipman">Alan / Ekipman</label>
+            <input type="text" id="jsaAlanEkipman">
+          </div>
+          <div>
+            <label for="jsaIsiYapanEkip">İşi Yapan Ekip</label>
+            <input type="text" id="jsaIsiYapanEkip">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="jsaDegerlendirmeEkibi">Değerlendirme Ekibi / Kolaylaştırıcı</label>
+            <input type="text" id="jsaDegerlendirmeEkibi">
+          </div>
+          <div>
+            <label for="jsaTarih">Tarih / Revizyon</label>
+            <div style="display:flex; gap:8px;">
+              <input type="date" id="jsaTarih" style="flex:1;">
+              <input type="text" id="jsaRevizyon" placeholder="Rev. No" style="flex:1;">
+            </div>
+            <div class="alan-hatasi" id="tarihHata" style="color:var(--hata); font-size:12px; margin-top:-6px;"></div>
+          </div>
+        </div>
+        <label for="jsaKapsam">Kapsam, Başlangıç-Bitiş ve Eşzamanlı İşler</label>
+        <textarea id="jsaKapsam" rows="2"></textarea>
+
+        <label style="margin-top:10px;">Hazırlık Kanıtı</label>
+        <div class="jsa-hazirlik-liste" id="hazirlikKanitiListesi"></div>
+
+        <label>İşin Genel Fotoğrafı <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label>
+        <div id="genelFotoOnizleme" style="margin-bottom:10px;"></div>
+        <input type="file" id="genelFotoDosya" accept="image/*" style="display:none;">
+        <button type="button" class="ikincil" id="genelFotoSecBtn">+ Fotoğraf Seç</button>
+
+        <label style="margin-top:16px;">İşin Gözlenebilir Adımları</label>
+        <div id="jsaAdimListesi"></div>
+        <button type="button" class="ikincil" id="jsaAdimEkleBtn" style="margin-top:6px;">+ İş Adımı Ekle</button>
+      </div>
+
+      <!-- ADIM 2 -->
+      <div id="jsaAdim2" style="display:none;">
+        <p style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;">
+          Her iş adımı için olası tehlikeleri tanımlayın, Fine-Kinney yöntemiyle (Olasılık × Frekans × Şiddet) risk puanını hesaplayın ve alınacak/alınmış kontrol önlemlerini yazın.
+        </p>
+        <div id="jsaTehlikeAlani"></div>
+      </div>
+
+      <!-- ADIM 3 -->
+      <div id="jsaAdim3" style="display:none;">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="jsaDurum">Durum</label>
+            <select id="jsaDurum"></select>
+          </div>
+        </div>
+
+        <div class="form-bolum-baslik" style="margin-top:6px;">Kaşe / İmza</div>
+        <div class="uc-imza-rol-satir">
+          <span><b>Hazırlayan</b><br><small id="hazirlayanImzaDurum" style="color:var(--metin-soluk);">Henüz imzalanmadı</small></span>
+          <button type="button" class="tablo-buton" id="hazirlayanImzaBtn">✍️ İmzala</button>
+        </div>
+        <div class="uc-imza-rol-satir">
+          <span><b>Onaylayan</b><br><small id="onaylayanImzaDurum" style="color:var(--metin-soluk);">Henüz imzalanmadı</small></span>
+          <button type="button" class="tablo-buton" id="onaylayanImzaBtn">✍️ İmzala</button>
+        </div>
+
+        <div class="form-bolum-baslik" style="margin-top:16px;">Takip Aksiyonları <span style="font-weight:400; font-size:12px; color:var(--metin-soluk);">(kaydedince otomatik olarak Uygunsuzluk modülüne de işlenir)</span></div>
+        <div id="jsaAksiyonListesi"></div>
+        <button type="button" class="ikincil" id="jsaAksiyonEkleBtn" style="margin-top:6px;">+ Aksiyon Ekle</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <!-- İMZA MODAL -->
+  <div class="modal-katman" id="imzaKatmani">
+    <div class="modal-kutu" style="max-width:440px;">
+      <h3>Kaşe / İmza</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;" id="imzaKayitEtiketi"></p>
+      <label for="imzaAdSoyad">Ad Soyad</label>
+      <input type="text" id="imzaAdSoyad">
+      <canvas id="imzaCanvas" class="uc-imza-canvas"></canvas>
+      <div class="uc-imza-arac">
+        <span class="uc-imza-ipucu">Fare/parmakla imzalayın</span>
+        <button type="button" class="uc-imza-temizle" id="imzaTemizleBtn">Temizle</button>
+      </div>
+      <div class="alan-hatasi" id="imzaHata" style="color:var(--hata); font-size:12px; margin-top:8px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="imzaKatmaniIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="imzaKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="imzaKatmaniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="../../core/data.js"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/form-ayarlari.js"></script>
+  <script src="../../core/metin-istem.js"></script>
+  <script src="../risk/model.js"></script>
+  <script src="model.js"></script>
+  <script src="validation.js"></script>
+  <script src="repository.js"></script>
+  <script src="service.js"></script>
+  <script src="../uygunsuzluk/model.js"></script>
+  <script src="../uygunsuzluk/validation.js"></script>
+  <script src="../uygunsuzluk/repository.js"></script>
+  <script src="../uygunsuzluk/service.js"></script>
+  <script src="ui.js"></script>
+  <script src="cikti.js"></script>
+  <script>
+    const kullanici = girisGerekliModul('jsa');
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' firmasına ait JSA kayıtları';
+          jsaSayfasiniBaslat(aktifFirma);
+        });
+      }
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('../../sw.js'); }</script>
+</body>
+</html>
