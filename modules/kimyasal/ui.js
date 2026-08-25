@@ -46,7 +46,7 @@ function kimyasalSayfasiniBaslat() {
   document.getElementById('depolamaGrubuFiltre').addEventListener('change', () => kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value));
   document.getElementById('riskSeviyesiFiltre').addEventListener('change', () => kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value));
   document.getElementById('kritikFiltre').addEventListener('change', () => kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value));
-  document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('kimyasal', 'Kimyasal Yönetimi'));
+  document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('kimyasal', 'Kimyasal'));
 
   document.getElementById('nfpaTahminBtn').addEventListener('click', () => {
     const hKodlari = document.getElementById('hKodlari').value.split(/[;,]+/).map(s => s.trim()).filter(Boolean);

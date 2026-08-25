@@ -107,7 +107,7 @@ function raporlarSayfasiniCiz(ozet) {
       ${_rpKart('Bu Yıl İhlal Sayısı', kkd.buYilIhlal)}
     </div>
 
-    ${_rpBolumBasligi('Kimyasal Yönetimi')}
+    ${_rpBolumBasligi('Kimyasal')}
     <div class="istatistik-grid">
       ${_rpKart('Toplam Kayıt', kim.toplamKayit)}
       ${_rpKart('SDS Süresi Geçmiş (5 Yıl)', kim.sdsSuresiGecmis, kim.sdsSuresiGecmis > 0)}

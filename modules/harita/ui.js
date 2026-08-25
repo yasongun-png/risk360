@@ -83,7 +83,7 @@ const HARITA_DIS_KAYNAKLAR = {
     konumGuncelle: (id, tesisId, x, y) => ekipmanGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
     yeniKayitUrl: (tesisId, x, y) => `../acil-durum/index.html?yeniKonum=1&tesisId=${tesisId}&x=${x}&y=${y}`,
     acUrl: id => `../acil-durum/index.html?ac=${id}`,
-    modulAdi: 'Acil Durum Yönetimi',
+    modulAdi: 'Acil Durum',
     normallestir: k => {
       const e = _haritaEkipmanTurEslesme(k.tur);
       return {
