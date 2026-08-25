@@ -362,7 +362,7 @@ async function kkdNumuneFormuWordOlustur(numuneId) {
   cocuklar.push(_kkdNumBaslik('Çalışan Görüşü'));
   cocuklar.push(new docx.Paragraph({ spacing: { after: 200 }, children: [new docx.TextRun({ text: k.calisanGorusu || '-' })] }));
 
-  cocuklar.push(_kkdNumBaslik('İSG Uzmanı Değerlendirmesi'));
+  cocuklar.push(_kkdNumBaslik('İG Uzmanı Değerlendirmesi'));
   cocuklar.push(new docx.Paragraph({ spacing: { after: 240 }, children: [new docx.TextRun({ text: k.isgDegerlendirmesi || '-' })] }));
 
   cocuklar.push(_kkdNumBaslik('Onay'));
@@ -372,7 +372,7 @@ async function kkdNumuneFormuWordOlustur(numuneId) {
       height: { value: 1360, rule: docx.HeightRule.ATLEAST },
       children: [
         await _kkdNumImzaHucresi('Deneyen Çalışan', k.imzalar && k.imzalar.calisan, k.personelAdSoyad),
-        await _kkdNumImzaHucresi('İSG Uzmanı', k.imzalar && k.imzalar.isgUzmani)
+        await _kkdNumImzaHucresi('İG Uzmanı', k.imzalar && k.imzalar.isgUzmani)
       ]
     })]
   }));

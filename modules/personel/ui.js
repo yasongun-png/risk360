@@ -97,10 +97,10 @@ function imzaListesiModalAc() {
   document.getElementById('ilSaat').value = '';
   // Kullanıcı isteği: "eğitim veren her zaman neden Koray Şahbaz" — önceden
   // eğitimci otomatik ve DEĞİŞTİRİLEMEZ şekilde her seferinde aynı (en
-  // güncel) İSG Uzmanı hizmet sözleşmesinden basılıyordu; artık sadece bir
+  // güncel) İG Uzmanı hizmet sözleşmesinden basılıyordu; artık sadece bir
   // varsayılan ÖNERİ olarak dolduruluyor, kullanıcı ihtiyaç halinde
   // (eğitimi başka biri verdiyse) değiştirebiliyor.
-  document.getElementById('ilEgitimci').value = _prsGorevliAdiGetir('İSG Uzmanı');
+  document.getElementById('ilEgitimci').value = _prsGorevliAdiGetir('İG Uzmanı');
   document.getElementById('ilIsverenVekili').value = '';
   _ilTurAlanlariniGuncelle();
   document.getElementById('ilPersonelArama').value = '';

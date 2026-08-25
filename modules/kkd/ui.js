@@ -843,7 +843,7 @@ function _numImzaKirp(canvas) {
 function numImzaModalAc(rol) {
   if (!_duzenlenenNumuneId) { alert('İmzalamak için önce kaydı bir kez kaydedin.'); return; }
   _numImzaBekleyenRol = rol;
-  document.getElementById('numImzaRolEtiketi').textContent = rol === 'calisan' ? 'Denemeyi Yapan Çalışan' : 'İSG Uzmanı';
+  document.getElementById('numImzaRolEtiketi').textContent = rol === 'calisan' ? 'Denemeyi Yapan Çalışan' : 'İG Uzmanı';
   document.getElementById('numImzaAdSoyad').value = rol === 'calisan' ? (document.getElementById('numunePersonelAdi').value || '') : '';
   document.getElementById('numImzaHata').textContent = '';
   document.getElementById('numImzaKatmani').classList.add('acik');

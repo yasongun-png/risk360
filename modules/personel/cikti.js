@@ -30,7 +30,7 @@ const _PRS_IMZA_SON_SAYFA_ESIK = 14;
 
 // Kullanıcı isteği: "eğitimci ve işveren vekili imza kısmı yok", sonra
 // "eğitim veren her zaman neden Koray Şahbaz" — Eğitim modülündeki Temel
-// İSG sertifikasıyla aynı sorguyla (en güncel, feshedilmemiş İSG Uzmanı
+// İSG sertifikasıyla aynı sorguyla (en güncel, feshedilmemiş İG Uzmanı
 // hizmet sözleşmesi) SADECE bir varsayılan ÖNERİ üretir; ui.js
 // imzaListesiModalAc bunu forma önceden doldurur ama kullanıcı serbestçe
 // değiştirebilir/silebilir — eğitimBilgi.egitimci/isverenVekili (bkz.

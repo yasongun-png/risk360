@@ -12,7 +12,7 @@
      ile aynı ilke: sahadaki bir çalışanın telefonunda tek ekranda
      doldurup gönderebileceği tek bir kart. Çalışan tam bir risk
      değerlendirmesi (Fine-Kinney puanlama vb.) yapmaz; sadece gördüğü
-     tehlikeyi bildirir, İSG uzmanı sonradan Risk modülünden açıp puanlar. */
+     tehlikeyi bildirir, İG uzmanı sonradan Risk modülünden açıp puanlar. */
   body { background: var(--arka-plan, #f3f4f6); }
   .rb-sahne { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
   .rb-kart { width: 100%; max-width: 480px; background: var(--kart-bg, #fff); border-radius: 14px; box-shadow: var(--golge, 0 2px 10px rgba(0,0,0,.08)); padding: 24px 22px; }
@@ -50,7 +50,7 @@
         <div class="rb-firma" id="rbFirmaAdi"></div>
         <div class="rb-not">
           Sahada gördüğünüz bir tehlikeyi/riski buradan bildirebilirsiniz.
-          İSG uzmanı bunu inceleyip tam risk değerlendirmesine dönüştürecektir.
+          İG uzmanı bunu inceleyip tam risk değerlendirmesine dönüştürecektir.
           İsminizi yazmak <b>zorunlu değildir</b>.
         </div>
 
@@ -210,7 +210,7 @@
           const riskNo = sonrakiRiskNoUret(bolum, mevcutListe);
           // Çalışan tam bir risk değerlendirmesi (Olasılık/Frekans/Şiddet
           // puanlaması, önlem, sorumlu, termin) yapmaz -- sadece gördüğü
-          // tehlikeyi bildirir; bu alanlar boş bırakılır, İSG uzmanı Risk
+          // tehlikeyi bildirir; bu alanlar boş bırakılır, İG uzmanı Risk
           // modülünden kaydı açıp tamamlar/puanlar.
           const yeniKayit = riskKaydiOlustur({
             riskNo,

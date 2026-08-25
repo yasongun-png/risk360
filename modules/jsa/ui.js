@@ -38,7 +38,7 @@ function _jsaOrnekKayitlariUret() {
       degerlendirilenIs: 'Yüksekte Boru Hattı Kaynak ve Bakım İşi',
       alanEkipman: 'Proses Binası — 8m Kot, Buhar Hattı',
       isiYapanEkip: 'Kaynakçı, Yardımcı Personel',
-      degerlendirmeEkibi: 'İSG Uzmanı, Bakım Şefi',
+      degerlendirmeEkibi: 'İG Uzmanı, Bakım Şefi',
       tarih: bugunIso(),
       revizyon: '00',
       kapsam: 'Sabah vardiyası 08:00-16:00. Aynı bölgede eşzamanlı elektrik işi yapılmayacak.',
@@ -69,7 +69,7 @@ function _jsaOrnekKayitlariUret() {
       degerlendirilenIs: 'Kapalı Alanda (Gübre Silosu) Temizlik Çalışması',
       alanEkipman: 'Depo Sahası — Silo No:3',
       isiYapanEkip: 'Temizlik Ekibi (2 kişi) + Gözcü',
-      degerlendirmeEkibi: 'İSG Uzmanı, İşyeri Hekimi',
+      degerlendirmeEkibi: 'İG Uzmanı, İşyeri Hekimi',
       tarih: bugunIso(),
       revizyon: '00',
       kapsam: 'Silo tamamen boşaltıldıktan sonra yapılacak; girişten önce gaz ölçümü zorunlu.',
@@ -90,7 +90,7 @@ function _jsaOrnekKayitlariUret() {
           { tehlike: 'Dar geçitte sıkışma/düşme', olasilik: '1', frekans: '1', siddet: '7', kontroller: 'Kurtarma tripodu ve halat sistemi hazır bulundurulur.' }
         ] }
       ],
-      aksiyonlar: [{ baslik: 'Kapalı alan giriş izni prosedürü güncellensin', sorumlu: 'İSG Uzmanı', termin: _jsaGunEkle(14) }]
+      aksiyonlar: [{ baslik: 'Kapalı alan giriş izni prosedürü güncellensin', sorumlu: 'İG Uzmanı', termin: _jsaGunEkle(14) }]
     }
   ];
 }

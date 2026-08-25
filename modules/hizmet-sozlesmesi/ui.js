@@ -358,7 +358,7 @@ function sicilOzetiCiz() {
   }
   bosDurum.classList.remove('gorunur');
 
-  const gorevEtiketleri = { 'İSG Uzmanı': 'İG Uzmanı', 'İşyeri Hekimi': 'Hekim', 'Diğer Sağlık Personeli': 'DSP' };
+  const gorevEtiketleri = { 'İG Uzmanı': 'İG Uzmanı', 'İşyeri Hekimi': 'Hekim', 'Diğer Sağlık Personeli': 'DSP' };
 
   liste.forEach((satirVerisi, i) => {
     const satir = document.createElement('tr');
@@ -435,9 +435,9 @@ const HS_SICIL_OZETI_KOLONLARI = [
   { anahtar: 'iseverenVekili', baslik: 'İşveren Vekili' },
   { anahtar: 'tehlikeSinifi', baslik: 'Tehlike Sınıfı' },
   { anahtar: 'personelSayisi', baslik: 'Personel Sayısı' },
-  { anahtar: 'isgUzmaniAdSoyad', baslik: 'İSG Uzmanı Ad Soyad' },
-  { anahtar: 'isgUzmaniSinifi', baslik: 'İSG Uzmanı Sınıfı' },
-  { anahtar: 'isgUzmaniAtananDakika', baslik: 'İSG Uzmanı Atanan dk/ay' },
+  { anahtar: 'isgUzmaniAdSoyad', baslik: 'İG Uzmanı Ad Soyad' },
+  { anahtar: 'isgUzmaniSinifi', baslik: 'İG Uzmanı Sınıfı' },
+  { anahtar: 'isgUzmaniAtananDakika', baslik: 'İG Uzmanı Atanan dk/ay' },
   { anahtar: 'hekimAdSoyad', baslik: 'İşyeri Hekimi Ad Soyad' },
   { anahtar: 'hekimAtananDakika', baslik: 'İşyeri Hekimi Atanan dk/ay' },
   { anahtar: 'dspAdSoyad', baslik: 'DSP Ad Soyad' },
@@ -460,8 +460,8 @@ function _sicilOzetiExcelDisaAktar() {
     const simdi = new Date();
     const pad = n => String(n).padStart(2, '0');
     const tarihMetni = `${pad(simdi.getDate())}.${pad(simdi.getMonth() + 1)}.${simdi.getFullYear()} ${pad(simdi.getHours())}:${pad(simdi.getMinutes())}:${pad(simdi.getSeconds())}`;
-    const gorevEtiketleri = { 'İSG Uzmanı': 'İG Uzmanı', 'İşyeri Hekimi': 'Hekim', 'Diğer Sağlık Personeli': 'DSP' };
-    const basliklar = ['No', 'Sicil / Firma', 'Sicil No', 'İşveren Vekili', 'İSG Uzmanı', 'İşyeri Hekimi', 'DSP', 'Personel / Tehlike', 'Uygunluk Durumu', 'PDF Belgeler'];
+    const gorevEtiketleri = { 'İG Uzmanı': 'İG Uzmanı', 'İşyeri Hekimi': 'Hekim', 'Diğer Sağlık Personeli': 'DSP' };
+    const basliklar = ['No', 'Sicil / Firma', 'Sicil No', 'İşveren Vekili', 'İG Uzmanı', 'İşyeri Hekimi', 'DSP', 'Personel / Tehlike', 'Uygunluk Durumu', 'PDF Belgeler'];
     const toplamKolon = basliklar.length;
 
     const wb = new ExcelJS.Workbook();
@@ -605,7 +605,7 @@ function _sicilOzetiExcelIceAktar(dosya, tamamlandiCB) {
         basariliFirma++;
 
         [
-          { gorevTuru: 'İSG Uzmanı', ad: satir.isgUzmaniAdSoyad, sinif: satir.isgUzmaniSinifi, dakika: satir.isgUzmaniAtananDakika },
+          { gorevTuru: 'İG Uzmanı', ad: satir.isgUzmaniAdSoyad, sinif: satir.isgUzmaniSinifi, dakika: satir.isgUzmaniAtananDakika },
           { gorevTuru: 'İşyeri Hekimi', ad: satir.hekimAdSoyad, sinif: '', dakika: satir.hekimAtananDakika },
           { gorevTuru: 'Diğer Sağlık Personeli', ad: satir.dspAdSoyad, sinif: '', dakika: satir.dspAtananDakika }
         ].forEach(gorev => {
@@ -659,7 +659,11 @@ function _sicilRaporSatirlariniAyristir(hamSatirlar) {
   const veriSatirlari = hamSatirlar.slice(basliklarSatiriIndex + 1).filter(satir => satir.some(h => String(h).trim()));
 
   // Orijinal rapor formatı: "İSG Uzmanı" / "İşyeri Hekimi" / "DSP" paketlenmiş
-  // sütunları ve "Personel / Tehlike" birleşik sütunu var.
+  // sütunları ve "Personel / Tehlike" birleşik sütunu var. NOT: "İSG Uzmanı"
+  // burada kasıtlı olarak DEĞİŞTİRİLMEDİ — bu, kullanıcının eski üretim
+  // uygulamasından gerçekten dışa aktardığı geçmiş Excel dosyalarının GERÇEK
+  // sütun başlığı metnidir (dosya içeriği); modülün kendi "İG Uzmanı" adlandırması
+  // (bkz. model.js HIZMET_GOREV_TURLERI) bu içe aktarma eşleşmesini etkilemez.
   const paketliMi = basliklar.includes('İSG Uzmanı') && basliklar.includes('Personel / Tehlike');
   const sutunIndex = ad => basliklar.indexOf(ad);
 

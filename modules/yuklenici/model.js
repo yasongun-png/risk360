@@ -221,7 +221,7 @@ const YUKLENICI_FIRMA_EGITIMI_VARSAYILAN_AY = 6;
 // İSG; exp boşsa base+tehlike-sınıfı-yılı ile hesaplanır) | 'egitim' (Firma
 // Eğitimi; exp boşsa base+ay ile hesaplanır, eğitmen adı zorunlu).
 // girisEngelleyici: eksik/süresi geçmişse "Giriş Engeli" (kritik) sayılır —
-// false olanlar (Diploma, İSG Uzmanı/Hekim atama belgeleri, operatör belgeleri)
+// false olanlar (Diploma, İG Uzmanı/Hekim atama belgeleri, operatör belgeleri)
 // eski uygulamada da girişi engellemez, sadece bilgi amaçlıdır.
 // bolum: sadece UI'da gruplama/başlıklandırma için (hesaplamayı etkilemez).
 const YUKLENICI_BELGE_BOLUMLERI = {

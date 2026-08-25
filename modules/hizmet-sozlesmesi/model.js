@@ -1,14 +1,21 @@
-// Hizmet Sözleşmeleri veri modeli. Firmaya hizmet veren İSG Uzmanı, İşyeri
-// Hekimi ve Diğer Sağlık Personeli için sözleşme kayıtlarını tutar (6331 sayılı
-// Kanun ve İSG Hizmetleri Yönetmeliği kapsamında OSGB/işveren ile görevlendirilen
-// personel arasındaki hizmet sözleşmesi). Durum, sözleşme bitiş tarihine göre
-// otomatik türetilir — kullanıcı elle "Feshedildi" seçtiyse o korunur.
+// Hizmet Sözleşmeleri veri modeli. Firmaya hizmet veren İG Uzmanı (İş
+// Güvenliği Uzmanı), İşyeri Hekimi ve Diğer Sağlık Personeli için sözleşme
+// kayıtlarını tutar (6331 sayılı Kanun ve İSG Hizmetleri Yönetmeliği
+// kapsamında OSGB/işveren ile görevlendirilen personel arasındaki hizmet
+// sözleşmesi). Durum, sözleşme bitiş tarihine göre otomatik türetilir —
+// kullanıcı elle "Feshedildi" seçtiyse o korunur.
+// Kullanıcı isteği: "hiçbir modülde hiçbir yerde İSG Uzmanı olmasın,
+// bizler iş güvenliği uzmanıyız, sağlık işyeri hekimi ve diğer sağlık
+// personellerinin işi, İG uzmanı diyebiliriz" — bu görev türü artık
+// "İG Uzmanı" (bkz. repository.js hizmetSozlesmeleriTumunuGetir: eski
+// kayıtlardaki "İSG Uzmanı" değeri okuma sırasında otomatik "İG Uzmanı"na
+// çevrilir, veri kaybı olmaz).
 
 function bugunIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const HIZMET_GOREV_TURLERI = ['İSG Uzmanı', 'İşyeri Hekimi', 'Diğer Sağlık Personeli'];
+const HIZMET_GOREV_TURLERI = ['İG Uzmanı', 'İşyeri Hekimi', 'Diğer Sağlık Personeli'];
 const HIZMET_SOZLESME_DURUMLARI = ['Aktif', 'Yaklaşıyor', 'Süresi Geçti', 'Feshedildi'];
 const HIZMET_SOZLESME_TERMINAL_DURUMLAR = ['Feshedildi'];
 
@@ -39,7 +46,7 @@ function hizmetSozlesmesiKaydiOlustur(veriler) {
   const kayit = {
     id: veriler.id || rastgeleId(),
     sozlesmeNo: veriler.sozlesmeNo || '',
-    gorevTuru: HIZMET_GOREV_TURLERI.includes(veriler.gorevTuru) ? veriler.gorevTuru : 'İSG Uzmanı',
+    gorevTuru: HIZMET_GOREV_TURLERI.includes(veriler.gorevTuru) ? veriler.gorevTuru : 'İG Uzmanı',
     adSoyad: (veriler.adSoyad || '').trim(),
     belgeNo: (veriler.belgeNo || '').trim(),
     belgeSinifi: (veriler.belgeSinifi || '').trim(),
@@ -68,18 +75,18 @@ function hizmetSozlesmesiKaydiOlustur(veriler) {
 }
 
 // ---- Sicil Özeti: yasal atama süresi hesabı ----
-// Kullanıcının paylaştığı 3 yönetmelik maddesinden (İSG Uzmanları
+// Kullanıcının paylaştığı 3 yönetmelik maddesinden (İş Güvenliği Uzmanları
 // Yönetmeliği Md.12, İşyeri Hekimi Yönetmeliği Md.12, Diğer Sağlık
 // Personeli Yönetmeliği Md.19) birebir alınmıştır; örnek rapordaki 6
 // satırın TAMAMIYLA doğrulanmıştır. NOT: her üç maddenin de 2-4. fıkralarında
-// tanımlı "çok büyük işyerlerinde ek tam gün görevli" eşiği (İSG Uzmanı
+// tanımlı "çok büyük işyerlerinde ek tam gün görevli" eşiği (İG Uzmanı
 // 1000/500/250, İşyeri Hekimi 2000/1000/750 çalışan başına) burada
 // UYGULANMAZ — "tam gün" karşılığı dakika/ay değeri yönetmelikte sayısal
 // olarak verilmediğinden (genel çalışma mevzuatına bağlı) tahminle
 // hardcode edilmedi. Bu eşiklerin üzerindeki çok büyük işyerleri için
 // "Gerekli" değeri gerçek yasal asgariden düşük hesaplanabilir.
 const HIZMET_GEREKLI_DAKIKA_KISI = {
-  'İSG Uzmanı': { 'Az Tehlikeli': 10, 'Tehlikeli': 20, 'Çok Tehlikeli': 40 },
+  'İG Uzmanı': { 'Az Tehlikeli': 10, 'Tehlikeli': 20, 'Çok Tehlikeli': 40 },
   'İşyeri Hekimi': { 'Az Tehlikeli': 5, 'Tehlikeli': 10, 'Çok Tehlikeli': 15 }
 };
 

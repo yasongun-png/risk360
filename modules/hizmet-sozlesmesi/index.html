@@ -77,7 +77,7 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th>No</th><th>Sicil / Firma</th><th>Sicil No</th><th>İşveren Vekili</th><th>İSG Uzmanı</th><th>İşyeri Hekimi</th><th>DSP</th><th>Personel / Tehlike</th><th>Uygunluk Durumu</th><th>İşlem</th></tr>
+            <tr><th>No</th><th>Sicil / Firma</th><th>Sicil No</th><th>İşveren Vekili</th><th>İG Uzmanı</th><th>İşyeri Hekimi</th><th>DSP</th><th>Personel / Tehlike</th><th>Uygunluk Durumu</th><th>İşlem</th></tr>
           </thead>
           <tbody id="soTabloGovde"></tbody>
         </table>
@@ -125,7 +125,7 @@
           </div>
         </div>
 
-        <label for="belgeSinifi">Belge Sınıfı <span style="color:var(--metin-soluk); font-weight:400;">(İSG Uzmanı için A/B/C)</span></label>
+        <label for="belgeSinifi">Belge Sınıfı <span style="color:var(--metin-soluk); font-weight:400;">(İG Uzmanı için A/B/C)</span></label>
         <input type="text" id="belgeSinifi">
 
         <label for="hizmetFirmaId">Hizmet Verilen Firma / Sicil <span style="color:var(--metin-soluk); font-weight:400;">(Sicil Özeti raporuna dahil olması için)</span></label>
@@ -214,7 +214,7 @@
         window.location.href = '../../firma-sec.html';
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
-          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — İSG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmeleri';
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — İG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmeleri';
           document.getElementById('gorevFiltre').innerHTML += HIZMET_GOREV_TURLERI.map(g => `<option>${g}</option>`).join('');
           document.getElementById('durumFiltre').innerHTML += HIZMET_SOZLESME_DURUMLARI.map(d => `<option>${d}</option>`).join('');
           hizmetSozlesmesiSayfasiniBaslat();

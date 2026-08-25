@@ -112,7 +112,7 @@ function _egitimGorevliAdiGetir(gorevTuru) {
 }
 
 function _egitimImzaSatirlariHtml() {
-  const isg = _egitimGorevliAdiGetir('İSG Uzmanı');
+  const isg = _egitimGorevliAdiGetir('İG Uzmanı');
   const hekim = _egitimGorevliAdiGetir('İşyeri Hekimi');
   return `
     <div class="egt-imzalar">

@@ -2,7 +2,7 @@
 // sertifikasıyla (bkz. modules/egitim/cikti.js) aynı teknik ve görsel desen:
 // html2canvas + jsPDF ile iki sayfalı gerçek PDF (ön yüz: katılımcı bilgisi +
 // imzalar, arka yüz: konu/süre tablosu), Sertifika Ayarları penceresinden
-// tehlike sınıfı seçimi, İSG Uzmanı/İşyeri Hekimi imzaları Hizmet
+// tehlike sınıfı seçimi, İG Uzmanı/İşyeri Hekimi imzaları Hizmet
 // Sözleşmeleri'nden. Konu listesi/süre tablosu zaten stajyer/model.js'te
 // (SERTIFIKA_KONULARI/SERTIFIKA_PLANLARI) tanımlı — burada tekrar edilmez.
 // Stajyerler için "ilk/tekrar" ayrımı yoktur (her zaman ilk temel eğitim).
@@ -26,7 +26,7 @@ function _sjGorevliAdiGetir(gorevTuru) {
 }
 
 function _sjImzaSatirlariHtml() {
-  const isg = _sjGorevliAdiGetir('İSG Uzmanı');
+  const isg = _sjGorevliAdiGetir('İG Uzmanı');
   const hekim = _sjGorevliAdiGetir('İşyeri Hekimi');
   return `
     <div class="egt-imzalar">

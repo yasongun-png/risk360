@@ -130,7 +130,7 @@ const IHLAL_ISLEMLERI = ['Sözlü Uyarı', 'Yazılı Uyarı', 'Tutanak', 'Eğiti
 // Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim, nihayetinde
 // çalışan ve İSG imzalı Numune Değerlendirme Formu" — yeni bir KKD satın
 // alınmadan/toplu zimmetlenmeden önce bir personele saha koşullarında
-// denetilip hem kullanan çalışanın hem İSG uzmanının kaşe/imzasıyla onay
+// denetilip hem kullanan çalışanın hem İG uzmanının kaşe/imzasıyla onay
 // verdiği deneme kaydı (Tespit Öneri/Uygunsuzluk modülleriyle aynı dijital
 // imza deseni, bkz. ui.js).
 const NUMUNE_SONUC_SECENEKLERI = ['Uygun', 'Şartlı Uygun', 'Uygun Değil'];

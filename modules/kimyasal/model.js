@@ -2,7 +2,7 @@
 // modülünden mümkün olduğunca aynı iş kuralları taşınmıştır: GHS/H-kodu tabanlı
 // risk seviyesi ve NFPA 704 ("yangın elması") başlangıç önerisi, depolama grubu
 // bazlı birlikte-depolanamama matrisi, GBF/SDS 5 yıllık geçerlilik kuralı. NFPA
-// ve risk önerileri SADECE başlangıç önerisidir — İSG uzmanı SDS Bölüm 2/16'ya
+// ve risk önerileri SADECE başlangıç önerisidir — İG uzmanı SDS Bölüm 2/16'ya
 // göre teyit etmeli/değiştirmelidir; otomatik öneri kesin veri yerine geçmez.
 
 function bugunIso() {
