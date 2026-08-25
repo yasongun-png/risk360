@@ -221,7 +221,6 @@ const EKIPMAN_KONTROL_SORULARI = {
   // malzemelerinin (KKD, ilk yardım, iletişim, aydınlatma vb.) topluca
   // muhafaza edildiği dolap/kabin.
   'Ekipman Dolabı': [
-    { id: 'erisim', soru: 'Dolaba erişim engelsiz' },
     { id: 'onundeEngelYok', soru: 'Önünde engel yok' },
     { id: 'kapiSaglam', soru: 'Dolap kapısı/gövdesi sağlam' },
     { id: 'kilit', soru: 'Kilit/mandal düzgün çalışıyor' },
