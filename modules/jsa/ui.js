@@ -18,6 +18,99 @@ function jsaRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+// ==================== ÖRNEK JSA'LAR ====================
+// Kullanıcı isteği: "iki adet örnek yap uygulama içinde" — ekran
+// görüntüsündeki araçtaki "Örnek JSA'yı yükle" butonuna karşılık gelir;
+// risk360'ta her kayıt Firestore'a otomatik kaydedildiğinden burada ayrı
+// bir dosya/taslak değil, doğrudan gerçek (silinebilir/düzenlenebilir) iki
+// örnek KAYIT oluşturur. Bir Çok Tehlikeli (kimya gübre fabrikası) işletme
+// bağlamına uygun, farklı risk düzeylerini ve iki farklı durumu (Onay
+// Bekliyor / Taslak) gösteren iki örnek seçildi.
+function _jsaGunEkle(gun) {
+  const d = new Date(bugunIso() + 'T00:00:00');
+  d.setDate(d.getDate() + gun);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function _jsaOrnekKayitlariUret() {
+  return [
+    {
+      degerlendirilenIs: 'Yüksekte Boru Hattı Kaynak ve Bakım İşi',
+      alanEkipman: 'Proses Binası — 8m Kot, Buhar Hattı',
+      isiYapanEkip: 'Kaynakçı, Yardımcı Personel',
+      degerlendirmeEkibi: 'İSG Uzmanı, Bakım Şefi',
+      tarih: bugunIso(),
+      revizyon: '00',
+      kapsam: 'Sabah vardiyası 08:00-16:00. Aynı bölgede eşzamanlı elektrik işi yapılmayacak.',
+      hazirlikKanitlari: JSA_HAZIRLIK_KANITLARI.slice(),
+      durum: 'Onay Bekliyor',
+      adimlar: [
+        { eylem: 'İş iznini alma ve alanı çevirme', tehlikeler: [
+          { tehlike: 'Yetkisiz giriş / alt tarafta düşen cisim tehlikesi', olasilik: '3', frekans: '3', siddet: '7', kontroller: 'İş izni imzalanır; bariyer ve uyarı levhaları konulur.' }
+        ] },
+        { eylem: 'İskeleye/platforma çıkılması', tehlikeler: [
+          { tehlike: 'Yüksekten düşme', olasilik: '3', frekans: '3', siddet: '15', kontroller: 'Tam vücut kemer + çift halat; iskele periyodik kontrol etiketi doğrulanır.' }
+        ] },
+        { eylem: 'Kaynak makinesi ve tüplerin hazırlanması', tehlikeler: [
+          { tehlike: 'Elektrik çarpması', olasilik: '1', frekans: '3', siddet: '15', kontroller: 'Topraklama ve kaçak akım rölesi testi yapılır.' },
+          { tehlike: 'Gaz tüpü devrilmesi / patlama', olasilik: '1', frekans: '1', siddet: '40', kontroller: 'Tüpler dik ve sabitlenmiş; valfler ve hortum bağlantıları kontrol edilir.' }
+        ] },
+        { eylem: 'Kaynak işleminin yapılması', tehlikeler: [
+          { tehlike: 'Yanık / kıvılcım sıçraması', olasilik: '3', frekans: '6', siddet: '7', kontroller: 'KKD (kaynak gözlüğü, deri eldiven, önlük); yangın gözcüsü bulunur; yanıcı malzeme uzaklaştırılır.' },
+          { tehlike: 'Toksik duman solunması', olasilik: '3', frekans: '3', siddet: '7', kontroller: 'Yerel egzoz havalandırma; gerekiyorsa maske kullanımı.' }
+        ] },
+        { eylem: 'Alanın toparlanması ve iş izninin kapatılması', tehlikeler: [
+          { tehlike: 'Kesici/keskin malzeme yaralanması', olasilik: '1', frekans: '1', siddet: '3', kontroller: 'Eldiven kullanımı; atıklar uygun şekilde toplanıp etiketlenir.' }
+        ] }
+      ],
+      aksiyonlar: [{ baslik: 'İskele periyodik kontrol etiketinin süresi yenilensin', sorumlu: 'Bakım', termin: _jsaGunEkle(7) }]
+    },
+    {
+      degerlendirilenIs: 'Kapalı Alanda (Gübre Silosu) Temizlik Çalışması',
+      alanEkipman: 'Depo Sahası — Silo No:3',
+      isiYapanEkip: 'Temizlik Ekibi (2 kişi) + Gözcü',
+      degerlendirmeEkibi: 'İSG Uzmanı, İşyeri Hekimi',
+      tarih: bugunIso(),
+      revizyon: '00',
+      kapsam: 'Silo tamamen boşaltıldıktan sonra yapılacak; girişten önce gaz ölçümü zorunlu.',
+      hazirlikKanitlari: JSA_HAZIRLIK_KANITLARI.slice(0, 3),
+      durum: 'Taslak',
+      adimlar: [
+        { eylem: 'Kapalı alan giriş izninin alınması ve gaz ölçümü', tehlikeler: [
+          { tehlike: 'Oksijen eksikliği / toksik gaz (NH3) birikimi', olasilik: '3', frekans: '1', siddet: '40', kontroller: 'Giriş öncesi ve süreklı gaz ölçümü (O2, H2S, NH3); kapalı alan giriş izni imzalanır.' }
+        ] },
+        { eylem: 'Havalandırma ekipmanının kurulması', tehlikeler: [
+          { tehlike: 'Elektrik çarpması (nemli ortam)', olasilik: '1', frekans: '1', siddet: '15', kontroller: 'Düşük gerilimli/su geçirmez ekipman; ayrı toprak hattı.' }
+        ] },
+        { eylem: 'Siloya giriş ve temizlik', tehlikeler: [
+          { tehlike: 'Boğulma/gömülme (malzeme akması)', olasilik: '1', frekans: '1', siddet: '40', kontroller: 'Tüm besleme hatları enerjisi kesilip kilitlenir (LOTO); gözcü sürekli iletişimde kalır.' },
+          { tehlike: 'Toz maruziyeti', olasilik: '6', frekans: '3', siddet: '3', kontroller: 'P2/P3 toz maskesi; lokal aspirasyon.' }
+        ] },
+        { eylem: 'Ekipman ve personelin siloyu terk etmesi', tehlikeler: [
+          { tehlike: 'Dar geçitte sıkışma/düşme', olasilik: '1', frekans: '1', siddet: '7', kontroller: 'Kurtarma tripodu ve halat sistemi hazır bulundurulur.' }
+        ] }
+      ],
+      aksiyonlar: [{ baslik: 'Kapalı alan giriş izni prosedürü güncellensin', sorumlu: 'İSG Uzmanı', termin: _jsaGunEkle(14) }]
+    }
+  ];
+}
+
+async function jsaOrnekleriYukle() {
+  const mevcutBasliklar = jsaKayitlariTumunuGetir().map(k => k.degerlendirilenIs);
+  const ornekler = _jsaOrnekKayitlariUret().filter(o => !mevcutBasliklar.includes(o.degerlendirilenIs));
+  if (!ornekler.length) {
+    alert('Örnek JSA kayıtları zaten mevcut.');
+    return;
+  }
+  if (!(await onayModali(`${ornekler.length} adet örnek JSA kaydı oluşturulacak. Devam edilsin mi?`, 'Örnekleri Yükle'))) return;
+
+  ornekler.forEach(veriler => {
+    const sonuc = jsaKaydiEkle(Object.assign({ isletme: _jsaAktifFirma ? _jsaAktifFirma.ad : '' }, veriler));
+    if (!sonuc.basarili) console.error('Örnek JSA eklenemedi:', sonuc.hatalar);
+  });
+  jsaKayitlariCiz(document.getElementById('aramaKutusu').value);
+}
+
 // ==================== LİSTE GÖRÜNÜMÜ ====================
 
 function _jsaOzetiCiz() {
@@ -509,6 +602,7 @@ function jsaSayfasiniBaslat(firma) {
   document.getElementById('durumFiltre').innerHTML = '<option value="">Tüm Durumlar</option>' + JSA_DURUMLARI.map(d => `<option value="${d}">${d}</option>`).join('');
   document.getElementById('durumFiltre').addEventListener('change', () => jsaKayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('yeniKayitBtn').addEventListener('click', () => jsaEditorAc(null));
+  document.getElementById('ornekYukleBtn').addEventListener('click', jsaOrnekleriYukle);
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('jsa', 'İş Güvenliği Analizi (JSA)'));
 
   document.getElementById('editorGeriLink').addEventListener('click', e => { e.preventDefault(); jsaEditorKapat(); });

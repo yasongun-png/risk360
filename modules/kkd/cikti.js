@@ -64,7 +64,7 @@ async function _kkdPdfUret(dosyaAdi, govdeHtml) {
   mount.innerHTML = html;
   mount.style.display = 'block';
 
-  await html2pdf()
+  const worker = html2pdf()
     .set({
       margin: [8, 8, 8, 8],
       filename: dosyaAdi,
@@ -74,7 +74,24 @@ async function _kkdPdfUret(dosyaAdi, govdeHtml) {
       pagebreak: { mode: ['css', 'legacy'] }
     })
     .from(mount)
-    .save();
+    .toPdf();
+
+  // Kullanıcı isteği: "eğer 1 sayfaysa 1/1, iki sayfaysa 1/2-2/2 ... böyle
+  // devam etmeli" — Form Ayarları kutusundaki sabit "Sayfa Sayısı" içerik
+  // uzunluğuna göre değişen gerçek sayfa sayısını yansıtmadığından, PDF
+  // üretildikten SONRA (bkz. modules/olay-kaza/cikti.js aynı desen) her
+  // sayfanın altına gerçek "Sayfa X / N" damgası basılır.
+  const pdf = await worker.get('pdf');
+  const toplamSayfa = pdf.internal.getNumberOfPages();
+  const genislik = pdf.internal.pageSize.getWidth();
+  const yukseklik = pdf.internal.pageSize.getHeight();
+  for (let i = 1; i <= toplamSayfa; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(8);
+    pdf.setTextColor(100);
+    pdf.text(`Sayfa ${i} / ${toplamSayfa}`, genislik / 2, yukseklik - 5, { align: 'center' });
+  }
+  await worker.save();
 
   mount.innerHTML = '';
   mount.style.display = 'none';

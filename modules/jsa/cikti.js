@@ -139,7 +139,7 @@ async function jsaRaporuPdfOlustur(kayit, firma) {
   mount.innerHTML = html;
   mount.style.display = 'block';
 
-  await html2pdf()
+  const worker = html2pdf()
     .set({
       margin: [8, 0, 8, 0],
       filename: `JSA_${(kayit.kayitNo || 'Taslak').replace(/[\\/]/g, '-')}.pdf`,
@@ -149,7 +149,27 @@ async function jsaRaporuPdfOlustur(kayit, firma) {
       pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'p', 'table.jr-tablo', '.jr-adim-kutu', '.jr-imza-satir'] }
     })
     .from(mount)
-    .save();
+    .toPdf();
+
+  // Kullanıcı isteği: "eğer 1 sayfaysa 1/1, iki sayfaysa 1/2 - 2/2, üç
+  // sayfaysa 1/3 - 2/3 - 3/3 böyle devam etmeli" — üstbilgideki Form
+  // Ayarları kutusundaki "Sayfa Sayısı" sabit/elle girilen bir değer
+  // olduğundan içerik uzunluğuna göre değişen gerçek sayfa sayısını hiç
+  // yansıtmıyordu. Gerçek sayı ancak PDF üretildikten SONRA bilinebildiği
+  // için (bkz. modules/olay-kaza/cikti.js, modules/risk/cikti.js aynı
+  // desen) her sayfanın altına jsPDF ile doğrudan "Sayfa X / N" damgası
+  // basılır — bu değer HER ZAMAN doğrudur.
+  const pdf = await worker.get('pdf');
+  const toplamSayfa = pdf.internal.getNumberOfPages();
+  const genislik = pdf.internal.pageSize.getWidth();
+  const yukseklik = pdf.internal.pageSize.getHeight();
+  for (let i = 1; i <= toplamSayfa; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(8);
+    pdf.setTextColor(100);
+    pdf.text(`Sayfa ${i} / ${toplamSayfa}`, genislik / 2, yukseklik - 5, { align: 'center' });
+  }
+  await worker.save();
 
   mount.innerHTML = '';
   mount.style.display = 'none';
