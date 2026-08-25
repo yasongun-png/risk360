@@ -12,6 +12,15 @@
 <link rel="icon" href="../../assets/icons/favicon-32.png">
 <title>İSG Platform - Acil Durum</title>
 <link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* Dijital imza pad'i -- modules/tespit-oneri/index.html, modules/
+     uygunsuzluk/index.html'deki .uc-imza-* ile birebir aynı desen (bkz.
+     ui.js _kfImzaPaduBagla). */
+  .uc-imza-canvas { width: 100%; height: 120px; border: 1.5px dashed var(--kenarlik, #9ca3af); border-radius: 10px; touch-action: none; background: #fff; display: block; }
+  .uc-imza-arac { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .uc-imza-temizle { border: none; background: none; color: var(--hata, #dc2626); font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 4px; }
+  .uc-imza-ipucu { font-size: 11px; color: var(--metin-soluk, #6b7280); }
+</style>
 </head>
 <body>
   <div class="ust-cubuk">
@@ -308,6 +317,47 @@
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="ekipmanBarkodTaramaKapatBtn">Kapat</button>
       </div>
+    </div>
+  </div>
+
+  <!-- KONTROL FORMU (WORD) İMZA MODAL -- kullanıcı isteği: "acil durum
+       ekipman kontrol formları word imza aynı tespit öneri kaşe imza gibi
+       imzalansın" -- Word oluşturulmadan önce "Kontrolü Yapan" ve "Bölüm
+       Sorumlusu" burada dijital olarak imzalayabilir (boş bırakılan taraf
+       belgede sahada elle imzalanacak boş çizgilerle basılır, bkz.
+       kontrol-formu-cikti.js _kfImzaHucresi). -->
+  <div class="modal-katman" id="kfImzaModalKatman">
+    <div class="modal-kutu" style="max-width:460px;">
+      <h3>Kontrol Formu İmzaları</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        İsterseniz imzalayın; boş bıraktığınız taraf belgede kağıda elle imzalanacak şekilde boş satırlarla basılır.
+      </p>
+
+      <div class="uc-imza-rol-satir" style="display:block; border-bottom:1px solid var(--kenarlik); padding-bottom:14px; margin-bottom:14px;">
+        <label for="kfImzaAd1">Kontrolü Yapan — Ad Soyad</label>
+        <input type="text" id="kfImzaAd1">
+        <canvas id="kfImzaCanvas1" class="uc-imza-canvas"></canvas>
+        <div class="uc-imza-arac">
+          <span class="uc-imza-ipucu">Fare/parmakla imzalayın</span>
+          <button type="button" class="uc-imza-temizle" data-kf-imza-temizle="1">Temizle</button>
+        </div>
+      </div>
+
+      <div style="display:block;">
+        <label for="kfImzaAd2">Bölüm Sorumlusu — Ad Soyad</label>
+        <input type="text" id="kfImzaAd2">
+        <canvas id="kfImzaCanvas2" class="uc-imza-canvas"></canvas>
+        <div class="uc-imza-arac">
+          <span class="uc-imza-ipucu">Fare/parmakla imzalayın</span>
+          <button type="button" class="uc-imza-temizle" data-kf-imza-temizle="2">Temizle</button>
+        </div>
+      </div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="kfImzaIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="kfImzaOnaylaBtn">Word Oluştur</button>
+      </div>
+      <button type="button" class="tablo-buton" id="kfImzaKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 

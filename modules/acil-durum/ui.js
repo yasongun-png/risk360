@@ -245,7 +245,16 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // yalnız o türün, seçili değilse kaydı olan HER türün ayrı bölüm/sayfa
   // olarak basıldığı tek bir Word belgesi üretilir.
   document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
-    ekipmanKontrolFormuWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
+    kfImzaModalAc(document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
+  });
+  document.getElementById('kfImzaIptalBtn').addEventListener('click', kfImzaModalKapat);
+  document.getElementById('kfImzaKapatBtn').addEventListener('click', kfImzaModalKapat);
+  document.getElementById('kfImzaOnaylaBtn').addEventListener('click', kfImzaOnaylaTiklandi);
+  document.querySelectorAll('[data-kf-imza-temizle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pad = btn.getAttribute('data-kf-imza-temizle') === '1' ? _kfImzaPad1 : _kfImzaPad2;
+      if (pad) pad.temizle();
+    });
   });
   // Kullanıcı isteği: "acil durum ekipman kontrolünde word raporu kalsın
   // bir de liste şeklinde rapor olsun" — yukarıdaki (her ekipman ayrı
@@ -1249,6 +1258,141 @@ function tatbikatFormGonderildi(e) {
 
   tatbikatModalKapat();
   tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value);
+}
+
+// ==================== KONTROL FORMU (WORD) İMZA MODAL ====================
+// Kullanıcı isteği: "acil durum ekipman kontrol formları word imza aynı
+// tespit öneri kaşe imza gibi imzalansın" — modules/tespit-oneri/ui.js
+// _toImzaPaduBagla/_toImzaKirp ile birebir aynı canvas imza pad'i deseni;
+// bu modül diğer modüllerin ui.js'ini yüklemediğinden kendi önekiyle (_kf)
+// tekrarlanır (aynı ilke modules/uygunsuzluk/cikti.js dosya başında da
+// açıklanır). Storage'a hiç yüklenmez — Word üretimi zaten aynı sayfada
+// (client-side) yapıldığından canvas'tan doğrudan dataURL alınıp
+// kontrol-formu-cikti.js'e geçirilir (bkz. kfImzaOnaylaBtn handler'ı).
+function _kfImzaPaduBagla(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+
+  function boyutlandir() {
+    const oran = window.devicePixelRatio || 1;
+    const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 120;
+    canvas.width = genislik * oran;
+    canvas.height = yukseklik * oran;
+    ctx.scale(oran, oran);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a';
+  }
+  boyutlandir();
+
+  function konum(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const y = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+    return { x: x - r.left, y: y - r.top };
+  }
+  function basla(e) { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; }
+  function ciz(e) {
+    if (!ciziliyor) return;
+    e.preventDefault();
+    const p = konum(e);
+    ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    sonX = p.x; sonY = p.y;
+  }
+  function bitir() { ciziliyor = false; }
+
+  canvas.addEventListener('pointerdown', basla);
+  canvas.addEventListener('pointermove', ciz);
+  window.addEventListener('pointerup', bitir);
+
+  return {
+    temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+    doluMu: () => dolu,
+    canvasElemani: canvas
+  };
+}
+
+// Ham canvas geniş/boş bir tuval olduğundan, imza sadece sol tarafa küçük
+// çizilmişse Word'de "sola yaslanmış" görünür -- bkz. modules/tespit-oneri/
+// ui.js _toImzaKirp ile aynı çözüm: kaydetmeden önce gerçekte boyanmış
+// (alpha>0) piksellerin sınırlayıcı kutusuna kırpılır.
+function _kfImzaKirp(canvas) {
+  const ctx = canvas.getContext('2d');
+  const genislik = canvas.width, yukseklik = canvas.height;
+  const veri = ctx.getImageData(0, 0, genislik, yukseklik).data;
+  let minX = genislik, minY = yukseklik, maxX = 0, maxY = 0, doluVarMi = false;
+  for (let y = 0; y < yukseklik; y++) {
+    for (let x = 0; x < genislik; x++) {
+      if (veri[(y * genislik + x) * 4 + 3] > 10) {
+        doluVarMi = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!doluVarMi) return canvas;
+  const bosluk = Math.round(genislik * 0.02);
+  minX = Math.max(0, minX - bosluk);
+  minY = Math.max(0, minY - bosluk);
+  maxX = Math.min(genislik, maxX + bosluk);
+  maxY = Math.min(yukseklik, maxY + bosluk);
+
+  const kirpilmis = document.createElement('canvas');
+  kirpilmis.width = maxX - minX;
+  kirpilmis.height = maxY - minY;
+  kirpilmis.getContext('2d').drawImage(canvas, minX, minY, kirpilmis.width, kirpilmis.height, 0, 0, kirpilmis.width, kirpilmis.height);
+  return kirpilmis;
+}
+
+let _kfImzaPad1 = null, _kfImzaPad2 = null;
+let _kfImzaBekleyenIstek = null;
+
+function kfImzaModalAc(tur, bolum) {
+  _kfImzaBekleyenIstek = { tur, bolum };
+  document.getElementById('kfImzaAd1').value = '';
+  document.getElementById('kfImzaAd2').value = '';
+  document.getElementById('kfImzaModalKatman').classList.add('acik');
+  requestAnimationFrame(() => {
+    if (!_kfImzaPad1) _kfImzaPad1 = _kfImzaPaduBagla('kfImzaCanvas1'); else _kfImzaPad1.temizle();
+    if (!_kfImzaPad2) _kfImzaPad2 = _kfImzaPaduBagla('kfImzaCanvas2'); else _kfImzaPad2.temizle();
+  });
+}
+
+function kfImzaModalKapat() {
+  document.getElementById('kfImzaModalKatman').classList.remove('acik');
+  _kfImzaBekleyenIstek = null;
+}
+
+// Ad girilmiş VE imza pad'i doluysa {ad, dataUrl} döner, aksi halde null
+// (boş bırakılan taraf kontrol-formu-cikti.js'te elle imzalanacak boş
+// çizgilerle basılır).
+function _kfImzaKaydiOku(adInputId, pad) {
+  const ad = document.getElementById(adInputId).value.trim();
+  if (!ad || !pad || !pad.doluMu()) return null;
+  return { ad, dataUrl: _kfImzaKirp(pad.canvasElemani).toDataURL('image/png') };
+}
+
+async function kfImzaOnaylaTiklandi() {
+  if (!_kfImzaBekleyenIstek) return;
+  const { tur, bolum } = _kfImzaBekleyenIstek;
+  const imzalar = {
+    'Kontrolü Yapan': _kfImzaKaydiOku('kfImzaAd1', _kfImzaPad1),
+    'Bölüm Sorumlusu': _kfImzaKaydiOku('kfImzaAd2', _kfImzaPad2)
+  };
+  const dugme = document.getElementById('kfImzaOnaylaBtn');
+  dugme.disabled = true;
+  try {
+    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, bolum, imzalar);
+    kfImzaModalKapat();
+  } catch (hata) {
+    console.error(hata);
+    alert('Kontrol formu oluşturulamadı: ' + (hata.message || hata));
+  } finally {
+    dugme.disabled = false;
+  }
 }
 
 // ==================== Ortak yardımcılar ====================
