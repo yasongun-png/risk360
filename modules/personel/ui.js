@@ -30,6 +30,85 @@ const PERSONEL_EXCEL_KOLONLARI = [
   { anahtar: 'lojman', baslik: 'Lojman' }
 ];
 
+// ==================== İMZA LİSTESİ OLUŞTUR (Eğitim Katılım Formu) ====================
+// Kullanıcı isteği: "herhangi bir eğitim için imza listesi oluştur butonu
+// eğitim türü ve katılımcıları seçip sicil no ad soyad imza olsun" — Eğitim
+// modülündeki Toplu Eğitim Girişi ile aynı arama+çoklu seçim deseni, ama
+// kayıt oluşturmaz, sadece boş imza haneli bir PDF üretir (bkz. cikti.js
+// imzaListesiPdfOlustur). Eğitim türü kataloğu ../egitim/model.js'ten
+// (egitimTurleriTumu) okunur — bkz. index.html script sırası. Kullanıcı
+// isteği: "bunun personel modülünde olması daha doğru olacak" ile Eğitim
+// modülünden buraya taşındı.
+let _ilSeciliPersonelIdleri = new Set();
+
+function _ilPersonelListesiCiz(aramaMetni) {
+  const kutu = document.getElementById('ilPersonelListesi');
+  const personeller = personelleriGetir(aramaMetni, false);
+
+  if (!personeller.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px;">Eşleşen personel bulunamadı.</div>';
+  } else {
+    kutu.innerHTML = personeller.map(p => `
+      <label style="display:flex; align-items:center; gap:8px; padding:4px 2px; cursor:pointer;">
+        <input type="checkbox" data-il-personel="${p.id}" style="width:auto;" ${_ilSeciliPersonelIdleri.has(p.id) ? 'checked' : ''}>
+        <span>${_prsKacir(p.adSoyad)} (${_prsKacir(p.sicilNo)})</span>
+      </label>
+    `).join('');
+    kutu.querySelectorAll('[data-il-personel]').forEach(kutucuk => {
+      kutucuk.addEventListener('change', () => {
+        const id = kutucuk.getAttribute('data-il-personel');
+        if (kutucuk.checked) _ilSeciliPersonelIdleri.add(id);
+        else _ilSeciliPersonelIdleri.delete(id);
+        _ilSeciliSayisiGuncelle(personeller);
+      });
+    });
+  }
+  _ilSeciliSayisiGuncelle(personeller);
+}
+
+function _ilSeciliSayisiGuncelle(gorunenler) {
+  document.getElementById('ilSeciliSayisi').textContent = `${_ilSeciliPersonelIdleri.size} kişi seçildi`;
+  const tumunuSec = document.getElementById('ilTumunuSecCheckbox');
+  const gorunenSecili = gorunenler.length > 0 && gorunenler.every(p => _ilSeciliPersonelIdleri.has(p.id));
+  tumunuSec.checked = gorunenSecili;
+  tumunuSec.indeterminate = !gorunenSecili && gorunenler.some(p => _ilSeciliPersonelIdleri.has(p.id));
+}
+
+function imzaListesiModalAc() {
+  _ilSeciliPersonelIdleri.clear();
+  // egitimSayfasiniBaslat bu sayfada hiç çalışmadığından firmaya özel eğitim
+  // türleri (bkz. egitim/model.js egitimTurleriTumu) modal her açıldığında
+  // burada tazelenir, aksi halde sadece sabit katalog görünürdü.
+  egitimTurleriniAyarla(aktifFirmaGetir());
+  document.getElementById('ilTuruId').innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${_prsKacir(t.ad)}</option>`).join('');
+  document.getElementById('ilPersonelArama').value = '';
+  _ilPersonelListesiCiz('');
+  document.getElementById('imzaListesiModal').classList.add('acik');
+}
+
+function imzaListesiModalKapat() {
+  document.getElementById('imzaListesiModal').classList.remove('acik');
+}
+
+async function imzaListesiOlusturTiklandi() {
+  const tur = egitimTuruGetir(document.getElementById('ilTuruId').value);
+  if (!tur) { alert('Eğitim/Sertifika türü seçin.'); return; }
+  if (!_ilSeciliPersonelIdleri.size) { alert('En az bir personel seçin.'); return; }
+
+  const secilenler = personelleriGetir('', false).filter(p => _ilSeciliPersonelIdleri.has(p.id));
+  const dugme = document.getElementById('ilOlusturBtn');
+  dugme.disabled = true;
+  try {
+    await imzaListesiPdfOlustur(tur.ad, secilenler);
+    imzaListesiModalKapat();
+  } catch (hata) {
+    console.error(hata);
+    alert('İmza listesi oluşturulamadı: ' + (hata.message || hata));
+  } finally {
+    dugme.disabled = false;
+  }
+}
+
 function personelSayfasiniBaslat() {
   document.getElementById('yeniPersonelBtn').addEventListener('click', () => modalAc());
   document.getElementById('modalKapatBtn').addEventListener('click', modalKapat);
@@ -38,6 +117,18 @@ function personelSayfasiniBaslat() {
   document.getElementById('aramaKutusu').addEventListener('input', e => tabloyuCiz(e.target.value));
   document.getElementById('sekmeAktif').addEventListener('click', () => sekmeDegistir(false));
   document.getElementById('sekmeArsiv').addEventListener('click', () => sekmeDegistir(true));
+
+  document.getElementById('imzaListesiBtn').addEventListener('click', () => imzaListesiModalAc());
+  document.getElementById('ilIptalBtn').addEventListener('click', imzaListesiModalKapat);
+  document.getElementById('ilKapatBtn').addEventListener('click', imzaListesiModalKapat);
+  document.getElementById('ilOlusturBtn').addEventListener('click', imzaListesiOlusturTiklandi);
+  document.getElementById('ilPersonelArama').addEventListener('input', e => _ilPersonelListesiCiz(e.target.value));
+  document.getElementById('ilTumunuSecCheckbox').addEventListener('change', e => {
+    const gorunenler = personelleriGetir(document.getElementById('ilPersonelArama').value, false);
+    if (e.target.checked) gorunenler.forEach(p => _ilSeciliPersonelIdleri.add(p.id));
+    else gorunenler.forEach(p => _ilSeciliPersonelIdleri.delete(p.id));
+    _ilPersonelListesiCiz(document.getElementById('ilPersonelArama').value);
+  });
 
   document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
     const gorunenler = personelleriGetir(document.getElementById('aramaKutusu').value, _arsivGorunumu);
