@@ -49,7 +49,12 @@ function _prsImzaListesiStilHtml(kokSelector) {
   `;
 }
 
-function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, baslangicNo, sayfaNo, toplamSayfa) {
+function _prsEgitimTarihiGoruntu(egitimBilgi) {
+  const tarihMetni = egitimBilgi.tarih2 ? `${gunAyYil(egitimBilgi.tarih)} - ${gunAyYil(egitimBilgi.tarih2)}` : gunAyYil(egitimBilgi.tarih);
+  return tarihMetni;
+}
+
+function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilgi, baslangicNo, sayfaNo, toplamSayfa) {
   const logo = firma && firmaLogoGetir(firma.id);
   const satirlar = katilimcilar.map((p, i) => `
     <tr>
@@ -70,7 +75,8 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, baslangicN
       </div>
       <div class="eil-bilgi">
         <span><b>Eğitim/Sertifika Türü:</b> ${_prsSertKacir(egitimTuruAdi)}</span>
-        <span><b>Tarih:</b> ${gunAyYil(_prsBugunIso())}</span>
+        <span><b>Tarih:</b> ${_prsSertKacir(_prsEgitimTarihiGoruntu(egitimBilgi))}</span>
+        ${egitimBilgi.saat ? `<span><b>Süre:</b> ${_prsSertKacir(egitimBilgi.saat)} Saat</span>` : ''}
       </div>
       <table class="eil-tablo">
         <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İşyeri Sicili</th><th>İmza</th></tr></thead>
@@ -88,15 +94,19 @@ async function _prsSayfaCanvasaCevir(el) {
   return await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
 }
 
-async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar) {
+// egitimBilgi: { tarih, tarih2 (opsiyonel, iki günlü eğitimler için), saat
+// (opsiyonel) } -- bkz. ui.js imzaListesiOlusturTiklandi, seçilen eğitim
+// türünün ikiGunluMu/saatliMi alanlarına göre doldurulur.
+async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar, egitimBilgi) {
   if (!Array.isArray(katilimcilar) || !katilimcilar.length) return;
   const firma = aktifFirmaGetir();
+  const bilgi = egitimBilgi || { tarih: _prsBugunIso() };
 
   const sayfalar = [];
   for (let i = 0; i < katilimcilar.length; i += _PRS_IMZA_SATIR_SAYFA_BASI) sayfalar.push(katilimcilar.slice(i, i + _PRS_IMZA_SATIR_SAYFA_BASI));
 
   const html = `<div id="prsImzaListesiPdf">${_prsImzaListesiStilHtml('#prsImzaListesiPdf')}${
-    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, sayfalar.length)).join('')
+    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, sayfalar.length)).join('')
   }</div>`;
 
   const mount = document.getElementById('yazdirmaAlani');

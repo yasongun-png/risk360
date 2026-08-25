@@ -74,6 +74,17 @@ function _ilSeciliSayisiGuncelle(gorunenler) {
   tumunuSec.indeterminate = !gorunenSecili && gorunenler.some(p => _ilSeciliPersonelIdleri.has(p.id));
 }
 
+// Toplu Eğitim Girişi'ndeki (bkz. egitim/ui.js topluTurAlanlariniGuncelle)
+// aynı desen — kullanıcı isteği: "eğitim iki gün girilebilsin, eğitim
+// saatleri seçilebilsin". Seçilen türe göre 2. gün tarihi (ikiGunluMu) ve
+// süre/saat (saatliMi) alanları gösterilir/gizlenir.
+function _ilTurAlanlariniGuncelle() {
+  const tur = egitimTuruGetir(document.getElementById('ilTuruId').value);
+  document.getElementById('ilTarihEtiket').textContent = tur && tur.ikiGunluMu ? '1. Gün Tarihi' : 'Eğitim Tarihi';
+  document.getElementById('ilTarih2Satiri').style.display = tur && tur.ikiGunluMu ? '' : 'none';
+  document.getElementById('ilSaatSatiri').style.display = tur && tur.saatliMi ? '' : 'none';
+}
+
 function imzaListesiModalAc() {
   _ilSeciliPersonelIdleri.clear();
   // egitimSayfasiniBaslat bu sayfada hiç çalışmadığından firmaya özel eğitim
@@ -81,6 +92,10 @@ function imzaListesiModalAc() {
   // burada tazelenir, aksi halde sadece sabit katalog görünürdü.
   egitimTurleriniAyarla(aktifFirmaGetir());
   document.getElementById('ilTuruId').innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${_prsKacir(t.ad)}</option>`).join('');
+  document.getElementById('ilTarih').value = _prsBugunIso();
+  document.getElementById('ilTarih2').value = '';
+  document.getElementById('ilSaat').value = '';
+  _ilTurAlanlariniGuncelle();
   document.getElementById('ilPersonelArama').value = '';
   _ilPersonelListesiCiz('');
   document.getElementById('imzaListesiModal').classList.add('acik');
@@ -93,13 +108,18 @@ function imzaListesiModalKapat() {
 async function imzaListesiOlusturTiklandi() {
   const tur = egitimTuruGetir(document.getElementById('ilTuruId').value);
   if (!tur) { alert('Eğitim/Sertifika türü seçin.'); return; }
+  const tarih = document.getElementById('ilTarih').value;
+  if (!tarih) { alert('Eğitim tarihi zorunludur.'); return; }
+  const tarih2 = tur.ikiGunluMu ? document.getElementById('ilTarih2').value : '';
+  if (tur.ikiGunluMu && !tarih2) { alert('2. gün tarihi zorunludur.'); return; }
+  const saat = tur.saatliMi ? document.getElementById('ilSaat').value : '';
   if (!_ilSeciliPersonelIdleri.size) { alert('En az bir personel seçin.'); return; }
 
   const secilenler = personelleriGetir('', false).filter(p => _ilSeciliPersonelIdleri.has(p.id)).sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
   const dugme = document.getElementById('ilOlusturBtn');
   dugme.disabled = true;
   try {
-    await imzaListesiPdfOlustur(tur.ad, secilenler);
+    await imzaListesiPdfOlustur(tur.ad, secilenler, { tarih, tarih2, saat });
     imzaListesiModalKapat();
   } catch (hata) {
     console.error(hata);
@@ -119,6 +139,7 @@ function personelSayfasiniBaslat() {
   document.getElementById('sekmeArsiv').addEventListener('click', () => sekmeDegistir(true));
 
   document.getElementById('imzaListesiBtn').addEventListener('click', () => imzaListesiModalAc());
+  document.getElementById('ilTuruId').addEventListener('change', _ilTurAlanlariniGuncelle);
   document.getElementById('ilIptalBtn').addEventListener('click', imzaListesiModalKapat);
   document.getElementById('ilKapatBtn').addEventListener('click', imzaListesiModalKapat);
   document.getElementById('ilOlusturBtn').addEventListener('click', imzaListesiOlusturTiklandi);
