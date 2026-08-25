@@ -1,10 +1,11 @@
-// KKD depolama katmanı. Firma bazlı izole (tenantAnahtar) — üç ayrı koleksiyon:
-// envanter (stok), zimmet (personele verilen KKD) ve ihlal (KKD kullanım
-// ihlali tespitleri).
+// KKD depolama katmanı. Firma bazlı izole (tenantAnahtar) — dört ayrı
+// koleksiyon: envanter (stok), zimmet (personele verilen KKD), ihlal (KKD
+// kullanım ihlali tespitleri) ve numune (satın alma öncesi deneme/onay).
 
 function _kkdEnvanterAnahtari() { return tenantAnahtar('kkd_envanter'); }
 function _kkdZimmetAnahtari() { return tenantAnahtar('kkd_zimmetler'); }
 function _kkdIhlalAnahtari() { return tenantAnahtar('kkd_ihlaller'); }
+function _kkdNumuneAnahtari() { return tenantAnahtar('kkd_numuneler'); }
 
 function envanterTumunuGetir() { return oku(_kkdEnvanterAnahtari(), []); }
 function _envanterKaydet(liste) { yaz(_kkdEnvanterAnahtari(), liste); }
@@ -85,4 +86,31 @@ function ihlalSilRepo(id) {
 
 function ihlalIdIleGetirRepo(id) {
   return ihlalTumunuGetir().find(k => k.id === id) || null;
+}
+
+function numuneTumunuGetir() { return oku(_kkdNumuneAnahtari(), []); }
+function _numuneKaydet(liste) { yaz(_kkdNumuneAnahtari(), liste); }
+
+function numuneEkleRepo(kayit) {
+  const liste = numuneTumunuGetir();
+  liste.push(kayit);
+  _numuneKaydet(liste);
+  return kayit;
+}
+
+function numuneGuncelleRepo(id, veriler) {
+  const liste = numuneTumunuGetir();
+  const index = liste.findIndex(k => k.id === id);
+  if (index === -1) return null;
+  liste[index] = Object.assign({}, liste[index], veriler);
+  _numuneKaydet(liste);
+  return liste[index];
+}
+
+function numuneSilRepo(id) {
+  _numuneKaydet(numuneTumunuGetir().filter(k => k.id !== id));
+}
+
+function numuneIdIleGetirRepo(id) {
+  return numuneTumunuGetir().find(k => k.id === id) || null;
 }

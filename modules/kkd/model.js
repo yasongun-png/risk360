@@ -127,6 +127,14 @@ const KKD_KONDISYONLARI = ['Yeni', 'Kullanılabilir', 'Hasarlı', 'Hurda / Kulla
 const IHLAL_TURLERI = ['Kullanmama', 'Yanlış Kullanım', 'Eksik Kullanım', 'Hasarlı KKD Kullanımı', 'Uygun Olmayan KKD', 'KKD Bulundurmama'];
 const IHLAL_ISLEMLERI = ['Sözlü Uyarı', 'Yazılı Uyarı', 'Tutanak', 'Eğitim Tekrarı', 'Sahadan Uzaklaştırma', 'Amire Bildirim'];
 
+// Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim, nihayetinde
+// çalışan ve İSG imzalı Numune Değerlendirme Formu" — yeni bir KKD satın
+// alınmadan/toplu zimmetlenmeden önce bir personele saha koşullarında
+// denetilip hem kullanan çalışanın hem İSG uzmanının kaşe/imzasıyla onay
+// verdiği deneme kaydı (Tespit Öneri/Uygunsuzluk modülleriyle aynı dijital
+// imza deseni, bkz. ui.js).
+const NUMUNE_SONUC_SECENEKLERI = ['Uygun', 'Şartlı Uygun', 'Uygun Değil'];
+
 function _kkdSiraNoUret(onEk, mevcutListe, alanAdi) {
   let maks = 0;
   mevcutListe.forEach(item => {
@@ -144,6 +152,10 @@ function envanterSonrakiNoUret(mevcutListe) {
 
 function zimmetSonrakiNoUret(mevcutListe) {
   return _kkdSiraNoUret('ZIM', mevcutListe, 'zimmetNo');
+}
+
+function numuneSonrakiNoUret(mevcutListe) {
+  return _kkdSiraNoUret('NUM', mevcutListe, 'numuneNo');
 }
 
 // Eski uygulamadaki ihlal numaralandırması: "KKD-YIL-SIRA" (ör. KKD-2026-001);
@@ -264,6 +276,32 @@ function ihlalTekrarBilgisiHesapla(sicil, adSoyad, digerKayitlar, haricTutulanId
     .sort((a, b) => `${b.tarih || ''} ${b.saat || ''}`.localeCompare(`${a.tarih || ''} ${a.saat || ''}`));
   if (!eslesenler.length) return { tekrar: 'Hayır', sonIhlalTarihi: '' };
   return { tekrar: 'Evet', sonIhlalTarihi: eslesenler[0].tarih || '' };
+}
+
+function numuneImzaVeriUret(ad, imzaUrl) {
+  return { ad: (ad || '').trim(), imzaUrl: imzaUrl || '', tarih: new Date().toISOString() };
+}
+
+function numuneKaydiOlustur(veriler) {
+  const v = veriler || {};
+  return {
+    id: v.id || rastgeleId(),
+    numuneNo: v.numuneNo || '',
+    kkdTuru: KKD_TURLERI.includes(v.kkdTuru) ? v.kkdTuru : '',
+    kkdAdi: (v.kkdAdi || '').trim(),
+    marka: (v.marka || '').trim(),
+    model: (v.model || '').trim(),
+    personelId: v.personelId || '',
+    bolum: (v.bolum || '').trim(),
+    deneyBaslangic: v.deneyBaslangic || bugunIso(),
+    deneyBitis: v.deneyBitis || '',
+    calisanGorusu: (v.calisanGorusu || '').trim(),
+    isgDegerlendirmesi: (v.isgDegerlendirmesi || '').trim(),
+    sonuc: NUMUNE_SONUC_SECENEKLERI.includes(v.sonuc) ? v.sonuc : '',
+    // Tespit Öneri/Uygunsuzluk ile aynı kaşe/imza deseni: { calisan, isgUzmani }.
+    imzalar: v.imzalar || {},
+    olusturmaTarihi: v.olusturmaTarihi || new Date().toISOString()
+  };
 }
 
 function ihlalOlustur(veriler) {

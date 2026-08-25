@@ -31,6 +31,7 @@
       <button type="button" data-sekme="envanter">Envanter</button>
       <button type="button" data-sekme="zimmet" class="sekme-seciliDegil">Zimmet</button>
       <button type="button" data-sekme="ihlal" class="sekme-seciliDegil">İhlal Takibi</button>
+      <button type="button" data-sekme="numune" class="sekme-seciliDegil">Numune Değerlendirme</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
     </div>
 
@@ -107,6 +108,29 @@
         </table>
       </div>
       <div class="bos-durum" id="ihlalBosDurum"></div>
+    </div>
+
+    <!-- NUMUNE DEĞERLENDİRME -->
+    <!-- Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim,
+         nihayetinde çalışan ve İSG imzalı Numune Değerlendirme Formu" -->
+    <div id="bolum-numune" style="display:none;">
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin-top:-4px;">
+        Toplu satın alma/zimmetleme öncesi bir KKD numunesi bir personele saha koşullarında denetilir; hem denemeyi yapan çalışan hem İSG uzmanı görüşünü yazıp kaşe/imza ile onaylar.
+      </p>
+      <div class="arac-cubugu">
+        <input type="text" id="numuneAramaKutusu" class="arama-kutusu" placeholder="Numune no, KKD adı, marka veya personele göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="numuneSonucFiltre" style="width:auto; margin:0;"><option value="">Tüm Sonuçlar</option></select>
+          <button type="button" class="birincil" id="yeniNumuneBtn" style="width:auto;">+ Yeni Numune Denemesi</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Numune No</th><th>KKD Adı</th><th>Marka / Model</th><th>Deneyen</th><th>Bölüm</th><th>Deney Tarihi</th><th>Sonuç</th><th>İmzalar</th><th>İşlemler</th></tr></thead>
+          <tbody id="numuneTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="numuneBosDurum"></div>
     </div>
 
     <!-- ÖZET -->
@@ -369,6 +393,99 @@
         </div>
       </form>
       <button type="button" class="tablo-buton" id="ihlalModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- NUMUNE DEĞERLENDİRME MODAL -->
+  <div class="modal-katman" id="numuneModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="numuneModalBaslik">Yeni Numune Denemesi</h3>
+      <form id="numuneForm">
+        <label for="numuneKkdAdi">KKD Adı</label>
+        <input type="text" id="numuneKkdAdi" list="kkdKatalogListesi">
+        <div class="alan-hatasi" id="numuneKkdAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="numuneKkdTuru">KKD Türü</label>
+            <select id="numuneKkdTuru"></select>
+          </div>
+          <div>
+            <label for="numuneMarka">Marka / Model</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="numuneMarka" placeholder="Marka" style="flex:1;">
+              <input type="text" id="numuneModel" placeholder="Model" style="flex:1;">
+            </div>
+          </div>
+        </div>
+
+        <label for="numunePersonelAdi">Deneyen Personel</label>
+        <input type="text" id="numunePersonelAdi" list="kkdPersonelListesi">
+        <div class="alan-hatasi" id="numunePersonelIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="numuneBolum">Bölüm</label>
+        <input type="text" id="numuneBolum">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="numuneDeneyBaslangic">Deney Başlangıç</label>
+            <input type="date" id="numuneDeneyBaslangic">
+            <div class="alan-hatasi" id="numuneDeneyBaslangicHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="numuneDeneyBitis">Deney Bitiş <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+            <input type="date" id="numuneDeneyBitis">
+          </div>
+        </div>
+
+        <label for="numuneCalisanGorusu">Çalışan Görüşü</label>
+        <textarea id="numuneCalisanGorusu" rows="3" placeholder="Konfor, uyum, kullanım kolaylığı hakkında görüş..."></textarea>
+
+        <label for="numuneIsgDegerlendirmesi">İSG Uzmanı Değerlendirmesi</label>
+        <textarea id="numuneIsgDegerlendirmesi" rows="3" placeholder="Standart uygunluğu, saha koşullarına uygunluk değerlendirmesi..."></textarea>
+
+        <label for="numuneSonuc">Sonuç</label>
+        <select id="numuneSonuc"><option value="">— Seçilmedi —</option></select>
+
+        <div class="form-bolum-baslik" style="margin-top:14px;">Kaşe / İmza</div>
+        <div class="uc-imza-rol-satir">
+          <span><b>Çalışan</b><br><small id="calisanImzaDurum" style="color:var(--metin-soluk);">Henüz imzalanmadı</small></span>
+          <button type="button" class="tablo-buton" id="numuneCalisanImzaBtn" disabled>✍️ İmzala</button>
+        </div>
+        <div class="uc-imza-rol-satir">
+          <span><b>İSG Uzmanı</b><br><small id="isgUzmaniImzaDurum" style="color:var(--metin-soluk);">Henüz imzalanmadı</small></span>
+          <button type="button" class="tablo-buton" id="numuneIsgImzaBtn" disabled>✍️ İmzala</button>
+        </div>
+        <p style="font-size:11.5px; color:var(--metin-soluk); margin-top:4px;">İmzalamak için önce kaydı bir kez kaydedin.</p>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="numuneModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="numuneModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- NUMUNE İMZA MODAL — modules/tespit-oneri/index.html imzaKatmani ile
+       aynı desen (bkz. ui.js _numImzaPaduBagla). -->
+  <div class="modal-katman" id="numImzaKatmani">
+    <div class="modal-kutu" style="max-width:440px;">
+      <h3>Kaşe / İmza</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;" id="numImzaRolEtiketi"></p>
+      <label for="numImzaAdSoyad">Ad Soyad</label>
+      <input type="text" id="numImzaAdSoyad">
+      <canvas id="numImzaCanvas" class="uc-imza-canvas"></canvas>
+      <div class="uc-imza-arac">
+        <span class="uc-imza-ipucu">Fare/parmakla imzalayın</span>
+        <button type="button" class="uc-imza-temizle" id="numImzaTemizleBtn">Temizle</button>
+      </div>
+      <div class="alan-hatasi" id="numImzaHata" style="color:var(--hata); font-size:12px; margin-top:8px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="numImzaIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="numImzaKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="numImzaKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 

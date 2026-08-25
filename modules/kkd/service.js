@@ -173,6 +173,76 @@ function personelinAktifZimmetleriGetir(personelId, personelAdi) {
 
 // ==================== İHLAL ====================
 
+// ==================== NUMUNE DEĞERLENDİRME ====================
+
+function _numuneZenginlestir(kayit) {
+  const personel = kayit.personelId ? personelIdIleGetirRepo(kayit.personelId) : null;
+  return Object.assign({}, kayit, { personelAdSoyad: personel ? personel.adSoyad : '', personelSicilNo: personel ? personel.sicilNo : '' });
+}
+
+function numuneleriGetir(aramaMetni, filtreler) {
+  const f = filtreler || {};
+  let liste = numuneTumunuGetir().map(_numuneZenginlestir);
+
+  if (f.sonuc) liste = liste.filter(k => k.sonuc === f.sonuc);
+  if (f.kkdTuru) liste = liste.filter(k => k.kkdTuru === f.kkdTuru);
+
+  if (aramaMetni) {
+    const kucuk = aramaMetni.trim().toLowerCase();
+    liste = liste.filter(k =>
+      (k.numuneNo || '').toLowerCase().includes(kucuk) ||
+      k.kkdAdi.toLowerCase().includes(kucuk) ||
+      (k.marka || '').toLowerCase().includes(kucuk) ||
+      k.personelAdSoyad.toLowerCase().includes(kucuk) ||
+      (k.bolum || '').toLowerCase().includes(kucuk)
+    );
+  }
+
+  return liste.sort((a, b) => (b.olusturmaTarihi || '').localeCompare(a.olusturmaTarihi || ''));
+}
+
+function numuneIdIleGetir(id) {
+  const kayit = numuneIdIleGetirRepo(id);
+  return kayit ? _numuneZenginlestir(kayit) : null;
+}
+
+function numuneEkle(veriler) {
+  const dogrulama = numuneDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const numuneNo = numuneSonrakiNoUret(numuneTumunuGetir());
+  const kayit = numuneKaydiOlustur(Object.assign({}, veriler, { numuneNo }));
+  numuneEkleRepo(kayit);
+  return { basarili: true, kayit };
+}
+
+function numuneGuncelle(id, veriler) {
+  const dogrulama = numuneDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const mevcut = numuneIdIleGetirRepo(id);
+  const birlesik = numuneKaydiOlustur(Object.assign({}, mevcut, veriler, { id, numuneNo: mevcut ? mevcut.numuneNo : '' }));
+  const guncellenen = numuneGuncelleRepo(id, birlesik);
+  return { basarili: true, kayit: guncellenen };
+}
+
+function numuneSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  numuneSilRepo(id);
+  return { basarili: true };
+}
+
+// Kaşe/imza — Tespit Öneri/Uygunsuzluk modülleriyle aynı desen (bkz.
+// modules/tespit-oneri/service.js tespitOneriImzaVer).
+function numuneImzaVer(id, rol, ad, imzaUrl) {
+  if (!['calisan', 'isgUzmani'].includes(rol)) return { basarili: false, hata: 'Geçersiz imza rolü.' };
+  const kayit = numuneIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Kayıt bulunamadı.' };
+  const imzalar = Object.assign({}, kayit.imzalar, { [rol]: numuneImzaVeriUret(ad, imzaUrl) });
+  const guncellenen = numuneGuncelleRepo(id, { imzalar });
+  return { basarili: true, kayit: guncellenen };
+}
+
 function ihlalleriGetir(aramaMetni, filtreler) {
   const f = filtreler || {};
   let liste = ihlalTumunuGetir();

@@ -247,3 +247,68 @@ async function kkdIhlalTutanagiPdfOlustur(ihlalId) {
 
   await _kkdPdfUret(`KKD_Tutanak_${(k.ihlalNo || ihlalId).replace(/[\\/]/g, '-')}.pdf`, govde);
 }
+
+// ==================== NUMUNE DEĞERLENDİRME FORMU ====================
+// Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim, nihayetinde
+// çalışan ve İSG imzalı Numune Değerlendirme Formu".
+
+function _kkdNumuneImzaHucresi(baslik, imza, adFallback) {
+  const gorsel = imza && imza.imzaUrl ? `<img src="${imza.imzaUrl}" style="max-width:100%; max-height:16mm; margin:1mm 0;">` : '<div style="height:16mm;"></div>';
+  const ad = imza ? imza.ad : (adFallback || '-');
+  const tarih = imza && imza.tarih ? gunAyYil(imza.tarih.slice(0, 10)) : '-';
+  return `
+    <td>
+      <div class="imza-baslik">${_kkdKacir(baslik)}</div>
+      <div class="imza-satir">Ad Soyad: ${_kkdKacir(ad)}</div>
+      <div class="imza-satir">Tarih: ${_kkdKacir(tarih)}</div>
+      ${gorsel}
+    </td>
+  `;
+}
+
+async function kkdNumuneFormuPdfOlustur(numuneId) {
+  const k = numuneIdIleGetir(numuneId);
+  if (!k) return;
+
+  const govde = `
+    <div class="kkd-ustbilgi">
+      <div class="kkd-logo">${_kkdLogoHtml()}</div>
+      <div class="kkd-baslik">KKD NUMUNE DEĞERLENDİRME FORMU
+        <small>Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik kapsamında, satın alma/toplu zimmet öncesi saha denemesi değerlendirmesidir.</small>
+      </div>
+      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd')}</div>
+    </div>
+
+    <div class="kkd-bolum">
+      <h2>Numune Bilgileri</h2>
+      <table>
+        <tr><td class="kkd-etiket">Numune No</td><td>${_kkdKacir(k.numuneNo)}</td><td class="kkd-etiket">KKD Türü</td><td>${_kkdKacir(k.kkdTuru) || '-'}</td></tr>
+        <tr><td class="kkd-etiket">KKD Adı</td><td>${_kkdKacir(k.kkdAdi)}</td><td class="kkd-etiket">Marka / Model</td><td>${_kkdKacir([k.marka, k.model].filter(Boolean).join(' / ')) || '-'}</td></tr>
+        <tr><td class="kkd-etiket">Deneyen Personel</td><td>${_kkdKacir(k.personelAdSoyad) || '-'}</td><td class="kkd-etiket">Bölüm</td><td>${_kkdKacir(k.bolum) || '-'}</td></tr>
+        <tr><td class="kkd-etiket">Deney Başlangıç</td><td>${_kkdKacir(gunAyYil(k.deneyBaslangic)) || '-'}</td><td class="kkd-etiket">Deney Bitiş</td><td>${_kkdKacir(gunAyYil(k.deneyBitis)) || '-'}</td></tr>
+        <tr><td class="kkd-etiket">Sonuç</td><td colspan="3">${_kkdKacir(k.sonuc) || '-'}</td></tr>
+      </table>
+    </div>
+
+    <div class="kkd-bolum">
+      <h2>Çalışan Görüşü</h2>
+      <table><tr><td style="font-size:9pt; white-space:pre-wrap;">${_kkdKacir(k.calisanGorusu) || '-'}</td></tr></table>
+    </div>
+
+    <div class="kkd-bolum">
+      <h2>İSG Uzmanı Değerlendirmesi</h2>
+      <table><tr><td style="font-size:9pt; white-space:pre-wrap;">${_kkdKacir(k.isgDegerlendirmesi) || '-'}</td></tr></table>
+    </div>
+
+    <table class="kkd-imza">
+      <tr>
+        ${_kkdNumuneImzaHucresi('Deneyen Çalışan', k.imzalar && k.imzalar.calisan, k.personelAdSoyad)}
+        ${_kkdNumuneImzaHucresi('İSG Uzmanı', k.imzalar && k.imzalar.isgUzmani)}
+      </tr>
+    </table>
+
+    <div class="kkd-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
+  `;
+
+  await _kkdPdfUret(`KKD_Numune_Degerlendirme_${(k.numuneNo || numuneId).replace(/[\\/]/g, '-')}.pdf`, govde);
+}

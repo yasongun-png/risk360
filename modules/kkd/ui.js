@@ -4,6 +4,7 @@ let _kkdGorunum = 'envanter';
 let _duzenlenenEnvanterId = null;
 let _duzenlenenZimmetId = null;
 let _duzenlenenIhlalId = null;
+let _duzenlenenNumuneId = null;
 
 function kkdRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
@@ -20,13 +21,14 @@ function kkdSayfasiniBaslat() {
   _kkdEnvanterBaslat();
   _kkdZimmetBaslat();
   _kkdIhlalBaslat();
+  _kkdNumuneBaslat();
 
   kkdGorunumDegistir('envanter');
 }
 
 function kkdGorunumDegistir(gorunum) {
   _kkdGorunum = gorunum;
-  ['envanter', 'zimmet', 'ihlal', 'ozet'].forEach(g => {
+  ['envanter', 'zimmet', 'ihlal', 'numune', 'ozet'].forEach(g => {
     document.querySelector(`[data-sekme="${g}"]`).classList.toggle('sekme-seciliDegil', g !== gorunum);
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
@@ -34,6 +36,7 @@ function kkdGorunumDegistir(gorunum) {
   if (gorunum === 'envanter') envanterleriCiz(document.getElementById('envanterAramaKutusu').value);
   else if (gorunum === 'zimmet') zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value);
   else if (gorunum === 'ihlal') ihlalleriCiz(document.getElementById('ihlalAramaKutusu').value);
+  else if (gorunum === 'numune') numuneleriCiz(document.getElementById('numuneAramaKutusu').value);
   else ozetiCiz();
 }
 
@@ -589,6 +592,274 @@ function ihlalFormGonderildi(e) {
 
   ihlalModalKapat();
   ihlalleriCiz(document.getElementById('ihlalAramaKutusu').value);
+}
+
+// ==================== NUMUNE DEĞERLENDİRME ====================
+// Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim, nihayetinde
+// çalışan ve İSG imzalı Numune Değerlendirme Formu" — imza pad'i
+// modules/acil-durum/ui.js _kfImzaPaduBagla/_kfImzaKirp ile birebir aynı
+// desen (bkz. o dosyadaki not: her modül kendi önekiyle tekrarlar, ortak
+// yardımcı yok). İmza butonları kayıt Firestore'a bir kez kaydedilene kadar
+// disabled kalır çünkü imza doğrudan kalıcı kayda (numuneImzaVer) yazılır.
+
+function _kkdNumuneBaslat() {
+  document.getElementById('numuneSonucFiltre').innerHTML += NUMUNE_SONUC_SECENEKLERI.map(s => `<option>${s}</option>`).join('');
+
+  document.getElementById('yeniNumuneBtn').addEventListener('click', () => numuneModalAc());
+  document.getElementById('numuneModalKapatBtn').addEventListener('click', numuneModalKapat);
+  document.getElementById('numuneModalIptalBtn').addEventListener('click', numuneModalKapat);
+  document.getElementById('numuneForm').addEventListener('submit', numuneFormGonderildi);
+  document.getElementById('numuneAramaKutusu').addEventListener('input', e => numuneleriCiz(e.target.value));
+  document.getElementById('numuneSonucFiltre').addEventListener('change', () => numuneleriCiz(document.getElementById('numuneAramaKutusu').value));
+  _kkdKatalogOtomatikDoldur('numuneKkdAdi', 'numuneKkdTuru', 'numuneMarka');
+
+  document.getElementById('numunePersonelAdi').addEventListener('input', e => {
+    const personel = personelleriGetir('', false).find(p => p.adSoyad === e.target.value);
+    document.getElementById('numunePersonelAdi').dataset.personelId = personel ? personel.id : '';
+    if (!personel) return;
+    document.getElementById('numuneBolum').value = personel.bolum || '';
+  });
+
+  document.getElementById('numuneCalisanImzaBtn').addEventListener('click', () => numImzaModalAc('calisan'));
+  document.getElementById('numuneIsgImzaBtn').addEventListener('click', () => numImzaModalAc('isgUzmani'));
+  document.getElementById('numImzaIptalBtn').addEventListener('click', numImzaModalKapat);
+  document.getElementById('numImzaKapatBtn').addEventListener('click', numImzaModalKapat);
+  document.getElementById('numImzaTemizleBtn').addEventListener('click', () => { if (_numImzaPad) _numImzaPad.temizle(); });
+  document.getElementById('numImzaKaydetBtn').addEventListener('click', numImzaKaydetTiklandi);
+}
+
+function numuneleriCiz(aramaMetni) {
+  const govde = document.getElementById('numuneTabloGovde');
+  const bosDurum = document.getElementById('numuneBosDurum');
+  const filtreler = { sonuc: document.getElementById('numuneSonucFiltre').value };
+  const liste = numuneleriGetir(aramaMetni, filtreler);
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Eşleşen numune denemesi bulunamadı.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(k => {
+    const satir = document.createElement('tr');
+    const sonucRozet = k.sonuc ? `<span class="genel-rozet rozet-${kkdRozetSinifAdi(k.sonuc)}">${k.sonuc}</span>` : '-';
+    const imzaDurumu = [
+      k.imzalar && k.imzalar.calisan ? 'Çalışan ✓' : 'Çalışan —',
+      k.imzalar && k.imzalar.isgUzmani ? 'İSG ✓' : 'İSG —'
+    ].join(' / ');
+    satir.innerHTML = `
+      <td>${k.numuneNo}</td>
+      <td>${k.kkdAdi}</td>
+      <td>${[k.marka, k.model].filter(Boolean).join(' / ') || '-'}</td>
+      <td>${k.personelAdSoyad || '-'}</td>
+      <td>${k.bolum || '-'}</td>
+      <td>${gunAyYil(k.deneyBaslangic) || '-'}</td>
+      <td>${sonucRozet}</td>
+      <td style="font-size:11.5px;">${imzaDurumu}</td>
+      <td>
+        <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
+        <button class="tablo-buton" data-form="${k.id}">PDF</button>
+        <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => numuneModalAc(numuneIdIleGetir(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {
+    try { await kkdNumuneFormuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
+  }));
+  govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu numune denemesini silmek istediğinize emin misiniz?', 'Sil')) { numuneSil(btn.getAttribute('data-sil')); numuneleriCiz(document.getElementById('numuneAramaKutusu').value); }
+  }));
+}
+
+function _numuneImzaButonlariniGuncelle(kayit) {
+  const dolu = !!_duzenlenenNumuneId;
+  document.getElementById('numuneCalisanImzaBtn').disabled = !dolu;
+  document.getElementById('numuneIsgImzaBtn').disabled = !dolu;
+
+  const calisanImza = kayit && kayit.imzalar ? kayit.imzalar.calisan : null;
+  const isgImza = kayit && kayit.imzalar ? kayit.imzalar.isgUzmani : null;
+  document.getElementById('calisanImzaDurum').textContent = calisanImza ? `İmzalandı: ${calisanImza.ad} (${gunAyYil(calisanImza.tarih.slice(0, 10))})` : 'Henüz imzalanmadı';
+  document.getElementById('isgUzmaniImzaDurum').textContent = isgImza ? `İmzalandı: ${isgImza.ad} (${gunAyYil(isgImza.tarih.slice(0, 10))})` : 'Henüz imzalanmadı';
+}
+
+function numuneModalAc(kayit) {
+  _duzenlenenNumuneId = kayit ? kayit.id : null;
+  document.getElementById('numuneModalBaslik').textContent = kayit ? (kayit.numuneNo + ' Kaydını Düzenle') : 'Yeni Numune Denemesi';
+
+  document.getElementById('numuneKkdAdi').value = kayit ? kayit.kkdAdi : '';
+  document.getElementById('numuneKkdTuru').innerHTML = '<option value="">Seçiniz</option>' + KKD_TURLERI.map(t => `<option ${kayit && kayit.kkdTuru === t ? 'selected' : ''}>${t}</option>`).join('');
+  document.getElementById('numuneMarka').value = kayit ? kayit.marka : '';
+  document.getElementById('numuneModel').value = kayit ? kayit.model : '';
+  document.getElementById('numunePersonelAdi').value = kayit ? kayit.personelAdSoyad : '';
+  document.getElementById('numunePersonelAdi').dataset.personelId = kayit ? kayit.personelId : '';
+  document.getElementById('numuneBolum').value = kayit ? kayit.bolum : '';
+  document.getElementById('numuneDeneyBaslangic').value = kayit ? kayit.deneyBaslangic : bugunIso();
+  document.getElementById('numuneDeneyBitis').value = kayit ? kayit.deneyBitis : '';
+  document.getElementById('numuneCalisanGorusu').value = kayit ? kayit.calisanGorusu : '';
+  document.getElementById('numuneIsgDegerlendirmesi').value = kayit ? kayit.isgDegerlendirmesi : '';
+  document.getElementById('numuneSonuc').innerHTML = '<option value="">— Seçilmedi —</option>' + NUMUNE_SONUC_SECENEKLERI.map(s => `<option ${kayit && kayit.sonuc === s ? 'selected' : ''}>${s}</option>`).join('');
+
+  document.querySelectorAll('#numuneForm .alan-hatasi').forEach(el => el.textContent = '');
+  _numuneImzaButonlariniGuncelle(kayit);
+  document.getElementById('numuneModalKatman').classList.add('acik');
+}
+
+function numuneModalKapat() {
+  document.getElementById('numuneModalKatman').classList.remove('acik');
+  _duzenlenenNumuneId = null;
+}
+
+function numuneFormGonderildi(e) {
+  e.preventDefault();
+  document.querySelectorAll('#numuneForm .alan-hatasi').forEach(el => el.textContent = '');
+
+  const personelAdiInput = document.getElementById('numunePersonelAdi');
+  const veriler = {
+    kkdAdi: document.getElementById('numuneKkdAdi').value,
+    kkdTuru: document.getElementById('numuneKkdTuru').value,
+    marka: document.getElementById('numuneMarka').value,
+    model: document.getElementById('numuneModel').value,
+    personelId: personelAdiInput.dataset.personelId || '',
+    bolum: document.getElementById('numuneBolum').value,
+    deneyBaslangic: document.getElementById('numuneDeneyBaslangic').value,
+    deneyBitis: document.getElementById('numuneDeneyBitis').value,
+    calisanGorusu: document.getElementById('numuneCalisanGorusu').value,
+    isgDegerlendirmesi: document.getElementById('numuneIsgDegerlendirmesi').value,
+    sonuc: document.getElementById('numuneSonuc').value
+  };
+
+  const sonuc = _duzenlenenNumuneId ? numuneGuncelle(_duzenlenenNumuneId, veriler) : numuneEkle(veriler);
+  if (!sonuc.basarili) {
+    Object.keys(sonuc.hatalar || {}).forEach(alan => {
+      const hataEl = document.getElementById('numune' + alan.charAt(0).toUpperCase() + alan.slice(1) + 'Hata');
+      if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
+    });
+    return;
+  }
+
+  // Yeni kayıt ilk kez kaydedildiğinde imza butonlarının hemen açılması için
+  // formu kapatmadan modalı kaydedilen kayıtla yeniden aç.
+  _duzenlenenNumuneId = sonuc.kayit.id;
+  _numuneImzaButonlariniGuncelle(numuneIdIleGetir(sonuc.kayit.id));
+  numuneModalKapat();
+  numuneleriCiz(document.getElementById('numuneAramaKutusu').value);
+}
+
+// ---- İmza modalı (canvas pad) ----
+// modules/acil-durum/ui.js _kfImzaPaduBagla/_kfImzaKirp ile aynı; bu modül
+// diğerlerinin ui.js'ini yüklemediğinden kendi önekiyle (_numImza) tekrarlanır.
+let _numImzaPad = null;
+let _numImzaBekleyenRol = null;
+
+function _numImzaPaduBagla(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+
+  function boyutlandir() {
+    const oran = window.devicePixelRatio || 1;
+    const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 120;
+    canvas.width = genislik * oran;
+    canvas.height = yukseklik * oran;
+    ctx.scale(oran, oran);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a';
+  }
+  boyutlandir();
+
+  function konum(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+    const y = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+    return { x: x - r.left, y: y - r.top };
+  }
+  function basla(e) { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; }
+  function ciz(e) {
+    if (!ciziliyor) return;
+    e.preventDefault();
+    const p = konum(e);
+    ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    sonX = p.x; sonY = p.y;
+  }
+  function bitir() { ciziliyor = false; }
+
+  canvas.addEventListener('pointerdown', basla);
+  canvas.addEventListener('pointermove', ciz);
+  window.addEventListener('pointerup', bitir);
+
+  return {
+    temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+    doluMu: () => dolu,
+    canvasElemani: canvas
+  };
+}
+
+function _numImzaKirp(canvas) {
+  const ctx = canvas.getContext('2d');
+  const genislik = canvas.width, yukseklik = canvas.height;
+  const veri = ctx.getImageData(0, 0, genislik, yukseklik).data;
+  let minX = genislik, minY = yukseklik, maxX = 0, maxY = 0, doluVarMi = false;
+  for (let y = 0; y < yukseklik; y++) {
+    for (let x = 0; x < genislik; x++) {
+      if (veri[(y * genislik + x) * 4 + 3] > 10) {
+        doluVarMi = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!doluVarMi) return canvas;
+  const bosluk = Math.round(genislik * 0.02);
+  minX = Math.max(0, minX - bosluk);
+  minY = Math.max(0, minY - bosluk);
+  maxX = Math.min(genislik, maxX + bosluk);
+  maxY = Math.min(yukseklik, maxY + bosluk);
+
+  const kirpilmis = document.createElement('canvas');
+  kirpilmis.width = maxX - minX;
+  kirpilmis.height = maxY - minY;
+  kirpilmis.getContext('2d').drawImage(canvas, minX, minY, kirpilmis.width, kirpilmis.height, 0, 0, kirpilmis.width, kirpilmis.height);
+  return kirpilmis;
+}
+
+function numImzaModalAc(rol) {
+  if (!_duzenlenenNumuneId) { alert('İmzalamak için önce kaydı bir kez kaydedin.'); return; }
+  _numImzaBekleyenRol = rol;
+  document.getElementById('numImzaRolEtiketi').textContent = rol === 'calisan' ? 'Denemeyi Yapan Çalışan' : 'İSG Uzmanı';
+  document.getElementById('numImzaAdSoyad').value = rol === 'calisan' ? (document.getElementById('numunePersonelAdi').value || '') : '';
+  document.getElementById('numImzaHata').textContent = '';
+  document.getElementById('numImzaKatmani').classList.add('acik');
+  requestAnimationFrame(() => {
+    if (!_numImzaPad) _numImzaPad = _numImzaPaduBagla('numImzaCanvas'); else _numImzaPad.temizle();
+  });
+}
+
+function numImzaModalKapat() {
+  document.getElementById('numImzaKatmani').classList.remove('acik');
+  _numImzaBekleyenRol = null;
+}
+
+async function numImzaKaydetTiklandi() {
+  if (!_numImzaBekleyenRol || !_duzenlenenNumuneId) return;
+  const ad = document.getElementById('numImzaAdSoyad').value.trim();
+  if (!ad) { document.getElementById('numImzaHata').textContent = 'Ad soyad zorunludur.'; return; }
+  if (!_numImzaPad || !_numImzaPad.doluMu()) { document.getElementById('numImzaHata').textContent = 'Lütfen imzalayın.'; return; }
+
+  const dataUrl = _numImzaKirp(_numImzaPad.canvasElemani).toDataURL('image/png');
+  const sonuc = numuneImzaVer(_duzenlenenNumuneId, _numImzaBekleyenRol, ad, dataUrl);
+  if (!sonuc.basarili) { document.getElementById('numImzaHata').textContent = sonuc.hata || 'İmza kaydedilemedi.'; return; }
+
+  _numuneImzaButonlariniGuncelle(sonuc.kayit);
+  numImzaModalKapat();
+  numuneleriCiz(document.getElementById('numuneAramaKutusu').value);
 }
 
 // ==================== ÖZET ====================
