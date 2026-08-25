@@ -206,7 +206,7 @@ async function kazaRaporuPdfOlustur(id) {
     <div class="ok-form-ustbilgi">
       <div class="ok-form-logo">${firma && firmaLogoGetir(firma.id) ? `<img src="${firmaLogoGetir(firma.id)}">` : 'LOGO YOK'}</div>
       <div class="ok-form-baslik">OLAY ARAŞTIRMA RAPORU</div>
-      <div class="ok-form-fa">${formAyarlariKutusuHtml('olay-kaza')}</div>
+      <div class="ok-form-fa">${formAyarlariKutusuHtml('olay-kaza', null, false, null, true)}</div>
     </div>
 
     <table class="ok-tablo">

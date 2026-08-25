@@ -129,7 +129,7 @@ async function kkdZimmetFormuPdfOlustur(zimmetId) {
       <div class="kkd-baslik">KKD ZİMMET VE TESLİM FORMU
         <small>Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik (RG 02.07.2013/28695) uyarınca düzenlenmiştir.</small>
       </div>
-      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd')}</div>
+      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd', null, false, null, true)}</div>
     </div>
 
     <div class="kkd-bolum">
@@ -191,7 +191,7 @@ async function kkdIhlalTutanagiPdfOlustur(ihlalId) {
       <div class="kkd-baslik">KKD İHLAL TUTANAĞI
         <small>6331 Sayılı İş Sağlığı ve Güvenliği Kanunu ve Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik kapsamında düzenlenmiştir.</small>
       </div>
-      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd')}</div>
+      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd', null, false, null, true)}</div>
     </div>
 
     <p style="text-align:right; font-size:9pt; margin:0 0 2mm;">Tarih: ${_kkdKacir(gunAyYil(k.tarih))}</p>

@@ -277,7 +277,7 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
     <style>${_RSK_PDF_STIL}</style>
 
     <div class="rsk-kapak">
-      <div class="rsk-kapak-fa">${formAyarlariKutusuHtml('risk')}</div>
+      <div class="rsk-kapak-fa">${formAyarlariKutusuHtml('risk', null, false, null, true)}</div>
       <div class="rsk-kapak-kutu">
         <div class="rsk-firma">${_riskCiktiKacir(firma ? firma.ad : '')}</div>
         <h1>RİSK DEĞERLENDİRME RAPORU${filtreler.bolum ? '<br><span style="font-size:12pt;">' + _riskCiktiKacir(filtreler.bolum) + '</span>' : ''}</h1>

@@ -35,14 +35,23 @@ function _faKacir(v) {
 // 2. sayfada da 1/1" -- ikisi de aynı sabit değeri gösteriyordu), çağıran
 // taraf gerçek "mevcut sayfa/toplam sayfa" değerini (ör. "1/2", "2/2")
 // buradan geçebilir.
-function formAyarlariKutusuHtml(modulAdi, sinifAdi, dokumanNoGizle, sayfaSayisiGoruntu) {
+// sayfaSayisiGizle (opsiyonel): true verilirse "Sayfa Sayısı" satırı hiç
+// basılmaz -- kullanıcı ekran görüntüsüyle bildirdi: JSA raporunda kutu
+// "2/2" gösterirken sayfa altındaki dinamik damga "1/1" diyordu. Bu tutarsızlık
+// kaçınılmaz: bu modüller gerçek sayfa sayısını html2pdf üretiminden SONRA
+// öğrenip pdf.setPage() ile alt bilgiye damgalıyor (bkz. modules/jsa/cikti.js
+// vb.), ama üst bilgi kutusu üretimden ÖNCE tek seferlik basılan bir canvas
+// görüntüsü olduğundan gerçek sayısı asla bilemez -- kalan tek doğru kaynak
+// olan alt bilgi damgasıyla çelişmemesi için üst bilgideki (elle girilen/
+// bayat kalabilen) satır tamamen gizlenir.
+function formAyarlariKutusuHtml(modulAdi, sinifAdi, dokumanNoGizle, sayfaSayisiGoruntu, sayfaSayisiGizle) {
   const a = formAyarlariGetir(modulAdi);
   return `
     <table class="${sinifAdi || 'fa-kutu'}">
       ${dokumanNoGizle ? '' : `<tr><td>Doküman No</td><td>: ${_faKacir(a.dokumanNo) || '-'}</td></tr>`}
       <tr><td>Sürüm Tarihi</td><td>: ${_faKacir(a.surumTarihi) || '-'}</td></tr>
       <tr><td>Sürüm No</td><td>: ${_faKacir(a.surumNo) || '-'}</td></tr>
-      <tr><td>Sayfa Sayısı</td><td>: ${_faKacir(sayfaSayisiGoruntu || a.sayfaSayisi) || '-'}</td></tr>
+      ${sayfaSayisiGizle ? '' : `<tr><td>Sayfa Sayısı</td><td>: ${_faKacir(sayfaSayisiGoruntu || a.sayfaSayisi) || '-'}</td></tr>`}
     </table>
   `;
 }

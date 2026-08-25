@@ -36,7 +36,7 @@ async function periyodikEkipmanGecmisiniYazdir(ekipmanId) {
       <div class="pk-baslik">PERİYODİK KONTROL GEÇMİŞİ
         <small>Ekipman No: ${_pkKacir(ekipman.ekipmanNo)} — ${_pkKacir(ekipman.ad)}</small>
       </div>
-      <div class="pk-fa">${formAyarlariKutusuHtml('periyodik-kontrol')}</div>
+      <div class="pk-fa">${formAyarlariKutusuHtml('periyodik-kontrol', null, false, null, true)}</div>
     </div>
 
     <div class="pk-bolum">

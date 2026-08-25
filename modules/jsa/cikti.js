@@ -98,7 +98,7 @@ async function jsaRaporuPdfOlustur(kayit, firma) {
     <div class="jr-form-ustbilgi">
       <div class="jr-form-logo">${firma && firmaLogoGetir(firma.id) ? `<img src="${firmaLogoGetir(firma.id)}">` : 'LOGO YOK'}</div>
       <div class="jr-form-baslik">İŞ GÜVENLİĞİ ANALİZİ (JSA)</div>
-      <div class="jr-form-fa">${formAyarlariKutusuHtml('jsa')}</div>
+      <div class="jr-form-fa">${formAyarlariKutusuHtml('jsa', null, false, null, true)}</div>
     </div>
 
     <table class="jr-tablo">

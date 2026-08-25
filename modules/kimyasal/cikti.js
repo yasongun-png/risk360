@@ -37,7 +37,7 @@ async function kimyasalFormunuPdfOlustur(id) {
       <div class="kim-baslik">KİMYASAL BİLGİ FORMU
         <small>Kimyasal No: ${_kimKacir(k.kimyasalNo)}</small>
       </div>
-      <div class="kim-fa">${formAyarlariKutusuHtml('kimyasal')}</div>
+      <div class="kim-fa">${formAyarlariKutusuHtml('kimyasal', null, false, null, true)}</div>
     </div>
 
     <div class="kim-bolum">

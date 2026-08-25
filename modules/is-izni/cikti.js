@@ -19,7 +19,7 @@ function _izUstbilgiHtml(k, logoDataUrl) {
       <div class="iz-baslik">İŞ İZNİ FORMU
         <small>İzin No: ${_izKacir(k.izinNo)}</small>
       </div>
-      <div class="iz-fa">${formAyarlariKutusuHtml('is-izni')}</div>
+      <div class="iz-fa">${formAyarlariKutusuHtml('is-izni', null, false, null, true)}</div>
     </div>
   `;
 }
