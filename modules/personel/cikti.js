@@ -23,6 +23,10 @@ function _prsBugunIso() {
 }
 
 const _PRS_IMZA_SATIR_SAYFA_BASI = 22;
+// Son katılımcı sayfasında en fazla bu kadar satır varsa, Eğitimci/İşveren
+// Vekili imza bloğu ayrı bir sayfa açmadan aynı sayfanın altına eklenir
+// (297mm sayfada tablo+imza bloğu rahatça sığar).
+const _PRS_IMZA_SON_SAYFA_ESIK = 14;
 
 // Kullanıcı isteği: "eğitimci ve işveren vekili imza kısmı yok", sonra
 // "eğitim veren her zaman neden Koray Şahbaz" — Eğitim modülündeki Temel
@@ -97,7 +101,12 @@ function _prsEgitimTarihiGoruntu(egitimBilgi) {
   return tarihMetni;
 }
 
-function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilgi, baslangicNo, sayfaNo, toplamSayfa) {
+// imzaBlokEklensin: true ise Eğitimci/İşveren Vekili imza satırı bu
+// sayfanın (katılımcı tablosunun) ALTINA eklenir — kullanıcı isteği: "hala
+// gereksiz ikinci sayfaya geçiyor" — az sayıda katılımcıda (bkz.
+// _PRS_IMZA_SON_SAYFA_ESIK) ayrı bir sayfa açmak yerine boşluk zaten
+// varken aynı sayfaya sığdırılır.
+function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilgi, baslangicNo, sayfaNo, toplamSayfa, imzaBlokEklensin) {
   const logo = firma && firmaLogoGetir(firma.id);
   const satirlar = katilimcilar.map((p, i) => `
     <tr>
@@ -125,6 +134,11 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilg
         <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İşyeri Sicili</th><th>İmza</th></tr></thead>
         <tbody>${satirlar}</tbody>
       </table>
+      ${imzaBlokEklensin ? `
+      <div class="eil-imzalar">
+        <div><span>${_prsSertKacir(egitimBilgi.egitimci) || '&nbsp;'}</span><b>Eğitimi Veren (Eğitimci)</b><em>İmza</em></div>
+        <div><span>${_prsSertKacir(egitimBilgi.isverenVekili) || '&nbsp;'}</span><b>İşveren Vekili</b><em>İmza</em></div>
+      </div>` : ''}
       ${toplamSayfa > 1 ? `<div class="eil-altbilgi">Sayfa ${sayfaNo} / ${toplamSayfa}</div>` : ''}
     </section>
   `;
@@ -147,11 +161,16 @@ async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar, egitimBilgi) {
 
   const sayfalar = [];
   for (let i = 0; i < katilimcilar.length; i += _PRS_IMZA_SATIR_SAYFA_BASI) sayfalar.push(katilimcilar.slice(i, i + _PRS_IMZA_SATIR_SAYFA_BASI));
-  const toplamSayfa = sayfalar.length + 1;
+
+  // Son sayfa yeterince boşsa (bkz. _PRS_IMZA_SON_SAYFA_ESIK) imza bloğu
+  // ayrı bir sayfa yerine o sayfanın altına eklenir; doluysa (veya tam
+  // eşiğin üzerindeyse) eskisi gibi kendi ayrı sayfasında basılır.
+  const sonSayfaBosMu = sayfalar[sayfalar.length - 1].length <= _PRS_IMZA_SON_SAYFA_ESIK;
+  const toplamSayfa = sonSayfaBosMu ? sayfalar.length : sayfalar.length + 1;
 
   const html = `<div id="prsImzaListesiPdf">${_prsImzaListesiStilHtml('#prsImzaListesiPdf')}${
-    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, toplamSayfa)).join('')
-  }${_prsImzaSayfasiHtml(egitimTuruAdi, firma, bilgi, toplamSayfa, toplamSayfa)}</div>`;
+    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, toplamSayfa, sonSayfaBosMu && i === sayfalar.length - 1)).join('')
+  }${sonSayfaBosMu ? '' : _prsImzaSayfasiHtml(egitimTuruAdi, firma, bilgi, toplamSayfa, toplamSayfa)}</div>`;
 
   const mount = document.getElementById('yazdirmaAlani');
   mount.innerHTML = html;
