@@ -695,6 +695,9 @@ function numuneModalAc(kayit) {
   document.getElementById('numuneKkdTuru').innerHTML = '<option value="">Seçiniz</option>' + KKD_TURLERI.map(t => `<option ${kayit && kayit.kkdTuru === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('numuneMarka').value = kayit ? kayit.marka : '';
   document.getElementById('numuneModel').value = kayit ? kayit.model : '';
+  document.getElementById('numuneGonderenFirma').value = kayit ? kayit.gonderenFirma : '';
+  document.getElementById('numuneIlgiliKisi').value = kayit ? kayit.ilgiliKisi : '';
+  document.getElementById('numuneIlgiliKisiTel').value = kayit ? kayit.ilgiliKisiTel : '';
   document.getElementById('numunePersonelAdi').value = kayit ? kayit.personelAdSoyad : '';
   document.getElementById('numunePersonelAdi').dataset.personelId = kayit ? kayit.personelId : '';
   document.getElementById('numuneBolum').value = kayit ? kayit.bolum : '';
@@ -724,6 +727,9 @@ function numuneFormGonderildi(e) {
     kkdTuru: document.getElementById('numuneKkdTuru').value,
     marka: document.getElementById('numuneMarka').value,
     model: document.getElementById('numuneModel').value,
+    gonderenFirma: document.getElementById('numuneGonderenFirma').value,
+    ilgiliKisi: document.getElementById('numuneIlgiliKisi').value,
+    ilgiliKisiTel: document.getElementById('numuneIlgiliKisiTel').value,
     personelId: personelAdiInput.dataset.personelId || '',
     bolum: document.getElementById('numuneBolum').value,
     deneyBaslangic: document.getElementById('numuneDeneyBaslangic').value,

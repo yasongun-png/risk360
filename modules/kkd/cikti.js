@@ -284,6 +284,8 @@ async function kkdNumuneFormuPdfOlustur(numuneId) {
       <table>
         <tr><td class="kkd-etiket">Numune No</td><td>${_kkdKacir(k.numuneNo)}</td><td class="kkd-etiket">KKD Türü</td><td>${_kkdKacir(k.kkdTuru) || '-'}</td></tr>
         <tr><td class="kkd-etiket">KKD Adı</td><td>${_kkdKacir(k.kkdAdi)}</td><td class="kkd-etiket">Marka / Model</td><td>${_kkdKacir([k.marka, k.model].filter(Boolean).join(' / ')) || '-'}</td></tr>
+        <tr><td class="kkd-etiket">Numuneyi Gönderen Firma</td><td>${_kkdKacir(k.gonderenFirma) || '-'}</td><td class="kkd-etiket">İlgili Kişi</td><td>${_kkdKacir(k.ilgiliKisi) || '-'}</td></tr>
+        <tr><td class="kkd-etiket">İlgili Kişi Telefon</td><td colspan="3">${_kkdKacir(k.ilgiliKisiTel) || '-'}</td></tr>
         <tr><td class="kkd-etiket">Deneyen Personel</td><td>${_kkdKacir(k.personelAdSoyad) || '-'}</td><td class="kkd-etiket">Bölüm</td><td>${_kkdKacir(k.bolum) || '-'}</td></tr>
         <tr><td class="kkd-etiket">Deney Başlangıç</td><td>${_kkdKacir(gunAyYil(k.deneyBaslangic)) || '-'}</td><td class="kkd-etiket">Deney Bitiş</td><td>${_kkdKacir(gunAyYil(k.deneyBitis)) || '-'}</td></tr>
         <tr><td class="kkd-etiket">Sonuç</td><td colspan="3">${_kkdKacir(k.sonuc) || '-'}</td></tr>
