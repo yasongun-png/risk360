@@ -459,6 +459,33 @@
         <label for="numuneSonuc">Sonuç</label>
         <select id="numuneSonuc"><option value="">— Seçilmedi —</option></select>
 
+        <!-- Kullanıcı isteği: "numune değerlendirme formlarına ikişer adet
+             fotoğraf ta eklenebilsin" — modules/acil-durum/index.html
+             ekipmanFoto ile aynı desen (Fotoğraf Çek/Galeriden Seç). -->
+        <div class="form-bolum-baslik" style="margin-top:14px;">Fotoğraflar</div>
+        <div class="form-satir-ikili">
+          <div>
+            <label>Fotoğraf 1</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="tablo-buton" id="numuneFoto1CekBtn">📷 Çek</button>
+              <button type="button" class="tablo-buton" id="numuneFoto1SecBtn">🖼️ Seç</button>
+            </div>
+            <input type="file" id="numuneFoto1CekDosya" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="numuneFoto1SecDosya" accept="image/*" style="display:none;">
+            <div id="numuneFoto1Onizleme" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <label>Fotoğraf 2</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="tablo-buton" id="numuneFoto2CekBtn">📷 Çek</button>
+              <button type="button" class="tablo-buton" id="numuneFoto2SecBtn">🖼️ Seç</button>
+            </div>
+            <input type="file" id="numuneFoto2CekDosya" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="numuneFoto2SecDosya" accept="image/*" style="display:none;">
+            <div id="numuneFoto2Onizleme" style="margin-top:6px;"></div>
+          </div>
+        </div>
+
         <div class="form-bolum-baslik" style="margin-top:14px;">Kaşe / İmza</div>
         <div class="uc-imza-rol-satir">
           <span><b>Çalışan</b><br><small id="calisanImzaDurum" style="color:var(--metin-soluk);">Henüz imzalanmadı</small></span>

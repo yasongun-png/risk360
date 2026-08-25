@@ -303,6 +303,12 @@ function numuneKaydiOlustur(veriler) {
     sonuc: NUMUNE_SONUC_SECENEKLERI.includes(v.sonuc) ? v.sonuc : '',
     // Tespit Öneri/Uygunsuzluk ile aynı kaşe/imza deseni: { calisan, isgUzmani }.
     imzalar: v.imzalar || {},
+    // Kullanıcı isteği: "numune değerlendirme formlarına ikişer adet
+    // fotoğraf ta eklenebilsin" — acil-durum/ui.js ekipman fotoğrafıyla
+    // aynı fotoSikistir + fotoBuyukKaydet deseni (bkz. ui.js), CORS'tan
+    // kaçınmak için "fotoref:<id>" dolaylı referansı olarak saklanır.
+    foto1: v.foto1 || '',
+    foto2: v.foto2 || '',
     olusturmaTarihi: v.olusturmaTarihi || new Date().toISOString()
   };
 }

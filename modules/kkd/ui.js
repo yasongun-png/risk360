@@ -624,6 +624,15 @@ function _kkdNumuneBaslat() {
     document.getElementById('numuneBolum').value = personel.bolum || '';
   });
 
+  document.getElementById('numuneFoto1CekBtn').addEventListener('click', () => document.getElementById('numuneFoto1CekDosya').click());
+  document.getElementById('numuneFoto1SecBtn').addEventListener('click', () => document.getElementById('numuneFoto1SecDosya').click());
+  document.getElementById('numuneFoto1CekDosya').addEventListener('change', e => _numuneFotoSecildi(e, 1));
+  document.getElementById('numuneFoto1SecDosya').addEventListener('change', e => _numuneFotoSecildi(e, 1));
+  document.getElementById('numuneFoto2CekBtn').addEventListener('click', () => document.getElementById('numuneFoto2CekDosya').click());
+  document.getElementById('numuneFoto2SecBtn').addEventListener('click', () => document.getElementById('numuneFoto2SecDosya').click());
+  document.getElementById('numuneFoto2CekDosya').addEventListener('change', e => _numuneFotoSecildi(e, 2));
+  document.getElementById('numuneFoto2SecDosya').addEventListener('change', e => _numuneFotoSecildi(e, 2));
+
   document.getElementById('numuneCalisanImzaBtn').addEventListener('click', () => numImzaModalAc('calisan'));
   document.getElementById('numuneIsgImzaBtn').addEventListener('click', () => numImzaModalAc('isgUzmani'));
   document.getElementById('numImzaIptalBtn').addEventListener('click', numImzaModalKapat);
@@ -680,6 +689,47 @@ function numuneleriCiz(aramaMetni) {
   }));
 }
 
+// ---- Fotoğraflar ----
+// modules/acil-durum/ui.js _ekipmanFotoSecildi/_ekipmanFotoOnizlemeCiz ile
+// aynı desen (fotoSikistir + fotoBuyukKaydet, Storage/CORS'tan kaçınmak
+// için "fotoref:<id>" dolaylı referansı olarak saklanır).
+let _numuneFoto1Url = '';
+let _numuneFoto2Url = '';
+
+async function _numuneFotoSecildi(e, index) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  try {
+    const dataUrl = await fotoSikistir(dosya, 900, 0.6);
+    const firma = aktifFirmaGetir();
+    const referans = await fotoBuyukKaydet(dataUrl, firma ? firma.slug : '');
+    if (index === 1) _numuneFoto1Url = referans; else _numuneFoto2Url = referans;
+    _numuneFotoOnizlemeCiz(index);
+  } catch (hata) {
+    alert(hata.message || 'Fotoğraf yüklenemedi.');
+  }
+}
+
+function _numuneFotoOnizlemeCiz(index) {
+  const kutu = document.getElementById('numuneFoto' + index + 'Onizleme');
+  if (!kutu) return;
+  const url = index === 1 ? _numuneFoto1Url : _numuneFoto2Url;
+  kutu.innerHTML = url
+    ? `<div style="display:flex; align-items:center; gap:10px;">
+         <img data-foto-ref="${url}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+         <button type="button" class="tablo-buton sil">Kaldır</button>
+       </div>`
+    : '<div style="font-size:12px; color:var(--metin-soluk);">Henüz fotoğraf eklenmedi.</div>';
+  if (url) {
+    kutu.querySelector('button').addEventListener('click', () => {
+      if (index === 1) _numuneFoto1Url = ''; else _numuneFoto2Url = '';
+      _numuneFotoOnizlemeCiz(index);
+    });
+    fotoReferanslariCoz(kutu);
+  }
+}
+
 function _numuneImzaButonlariniGuncelle(kayit) {
   const dolu = !!_duzenlenenNumuneId;
   document.getElementById('numuneCalisanImzaBtn').disabled = !dolu;
@@ -711,6 +761,15 @@ function numuneModalAc(kayit) {
   document.getElementById('numuneIsgDegerlendirmesi').value = kayit ? kayit.isgDegerlendirmesi : '';
   document.getElementById('numuneSonuc').innerHTML = '<option value="">— Seçilmedi —</option>' + NUMUNE_SONUC_SECENEKLERI.map(s => `<option ${kayit && kayit.sonuc === s ? 'selected' : ''}>${s}</option>`).join('');
 
+  _numuneFoto1Url = kayit ? (kayit.foto1 || '') : '';
+  _numuneFoto2Url = kayit ? (kayit.foto2 || '') : '';
+  document.getElementById('numuneFoto1CekDosya').value = '';
+  document.getElementById('numuneFoto1SecDosya').value = '';
+  document.getElementById('numuneFoto2CekDosya').value = '';
+  document.getElementById('numuneFoto2SecDosya').value = '';
+  _numuneFotoOnizlemeCiz(1);
+  _numuneFotoOnizlemeCiz(2);
+
   document.querySelectorAll('#numuneForm .alan-hatasi').forEach(el => el.textContent = '');
   _numuneImzaButonlariniGuncelle(kayit);
   document.getElementById('numuneModalKatman').classList.add('acik');
@@ -740,7 +799,9 @@ function numuneFormGonderildi(e) {
     deneyBitis: document.getElementById('numuneDeneyBitis').value,
     calisanGorusu: document.getElementById('numuneCalisanGorusu').value,
     isgDegerlendirmesi: document.getElementById('numuneIsgDegerlendirmesi').value,
-    sonuc: document.getElementById('numuneSonuc').value
+    sonuc: document.getElementById('numuneSonuc').value,
+    foto1: _numuneFoto1Url,
+    foto2: _numuneFoto2Url
   };
 
   const sonuc = _duzenlenenNumuneId ? numuneGuncelle(_duzenlenenNumuneId, veriler) : numuneEkle(veriler);

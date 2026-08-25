@@ -261,7 +261,7 @@ async function kkdIhlalTutanagiPdfOlustur(ihlalId) {
 // basılır (kullanıcının "numuneFormAyarlariBtn" ile girdiği değerler,
 // bkz. ui.js _kkdNumuneBaslat).
 
-function _kkdNumImzaGorseliVerisiGetir(dataUrl) {
+function _kkdNumImzaGorseliVerisiGetir(dataUrl, maksGenislik) {
   if (!dataUrl) return Promise.resolve(null);
   return fetch(dataUrl)
     .then(yanit => yanit.blob())
@@ -275,11 +275,11 @@ function _kkdNumImzaGorseliVerisiGetir(dataUrl) {
       })
     ]))
     .then(([arrayBuffer, olcu]) => {
-      const MAKS_GENISLIK = 220;
+      const MAKS_GENISLIK = maksGenislik || 220;
       const oran = olcu.genislik > MAKS_GENISLIK ? MAKS_GENISLIK / olcu.genislik : 1;
       return { veri: new Uint8Array(arrayBuffer), genislik: Math.round(olcu.genislik * oran), yukseklik: Math.round(olcu.yukseklik * oran) };
     })
-    .catch(e => { console.error('İmza görseli Word belgesine eklenemedi:', e); return null; });
+    .catch(e => { console.error('Görsel Word belgesine eklenemedi:', e); return null; });
 }
 
 function _kkdNumBaslik(metin) {
@@ -328,6 +328,17 @@ async function _kkdNumImzaHucresi(baslik, imza, adFallback) {
   });
 }
 
+// Kullanıcı isteği: "numune değerlendirme formlarına ikişer adet fotoğraf
+// ta eklenebilsin" — foto1/foto2 alanları "fotoref:<id>" dolaylı referansı
+// (bkz. model.js), önce fotoBuyukCoz ile gerçek data URL'e çözülür, sonra
+// _kkdNumImzaGorseliVerisiGetir ile aynı yöntemle docx ImageRun'a çevrilir.
+async function _kkdNumFotoVerisiGetir(referans) {
+  if (!referans) return null;
+  const url = await fotoBuyukCoz(referans);
+  if (!url) return null;
+  return _kkdNumImzaGorseliVerisiGetir(url, 260);
+}
+
 async function kkdNumuneFormuWordOlustur(numuneId) {
   const k = numuneIdIleGetir(numuneId);
   if (!k) return;
@@ -358,6 +369,18 @@ async function kkdNumuneFormuWordOlustur(numuneId) {
     ['Bölüm', k.bolum || '-', 'Sonuç', k.sonuc || '-'],
     ['Deney Başlangıç', gunAyYil(k.deneyBaslangic) || '-', 'Deney Bitiş', gunAyYil(k.deneyBitis) || '-']
   ]));
+
+  const [foto1, foto2] = await Promise.all([_kkdNumFotoVerisiGetir(k.foto1), _kkdNumFotoVerisiGetir(k.foto2)]);
+  if (foto1 || foto2) {
+    cocuklar.push(_kkdNumBaslik('Fotoğraflar'));
+    cocuklar.push(new docx.Paragraph({
+      spacing: { after: 200 },
+      children: [foto1, foto2].filter(Boolean).flatMap((f, i) => [
+        new docx.ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } }),
+        ...(i === 0 && foto1 && foto2 ? [new docx.TextRun({ text: '   ' })] : [])
+      ])
+    }));
+  }
 
   cocuklar.push(_kkdNumBaslik('Çalışan Görüşü'));
   cocuklar.push(new docx.Paragraph({ spacing: { after: 200 }, children: [new docx.TextRun({ text: k.calisanGorusu || '-' })] }));
