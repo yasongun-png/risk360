@@ -43,7 +43,7 @@ let _ilSeciliPersonelIdleri = new Set();
 
 function _ilPersonelListesiCiz(aramaMetni) {
   const kutu = document.getElementById('ilPersonelListesi');
-  const personeller = personelleriGetir(aramaMetni, false);
+  const personeller = personelleriGetir(aramaMetni, false).slice().sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
 
   if (!personeller.length) {
     kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px;">Eşleşen personel bulunamadı.</div>';
@@ -95,7 +95,7 @@ async function imzaListesiOlusturTiklandi() {
   if (!tur) { alert('Eğitim/Sertifika türü seçin.'); return; }
   if (!_ilSeciliPersonelIdleri.size) { alert('En az bir personel seçin.'); return; }
 
-  const secilenler = personelleriGetir('', false).filter(p => _ilSeciliPersonelIdleri.has(p.id));
+  const secilenler = personelleriGetir('', false).filter(p => _ilSeciliPersonelIdleri.has(p.id)).sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
   const dugme = document.getElementById('ilOlusturBtn');
   dugme.disabled = true;
   try {
