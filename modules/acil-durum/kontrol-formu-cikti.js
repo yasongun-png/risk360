@@ -196,7 +196,7 @@ function _kfBolumleraGrupla(kayitlar) {
 // içinde kayıtlar YİNE bölüm (departman) adına göre alt başlıklara
 // ayrılır (kullanıcı isteği: "kontrol formunu bölüm bazında yapabileyim" /
 // "bölüm filtresi de olsun ve buna göre rapor hazırlanabilsin").
-async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imzalar) {
+async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imzalar, gorus) {
   let tumEkipman = ekipmanlariTumunuGetir();
   if (bolumFiltre) tumEkipman = tumEkipman.filter(e => (e.bolum || '').trim() === bolumFiltre);
   const turler = turFiltre ? [turFiltre] : EKIPMAN_TURLERI.filter(t => tumEkipman.some(e => e.tur === t));
@@ -233,6 +233,17 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imz
         ilkEkipmanBuTurde = false;
       }
     }
+  }
+
+  // Kullanıcı isteği: "PDF/Word raporlarına serbest bir bölüm ekleyelim,
+  // İş Güvenliği Uzmanının görüşlerini yazdığı bir yer olsun" — doldurulup
+  // doldurulmadığına bakılmaksızın (boşsa hiç eklenmez) Kontrol Onayı'ndan
+  // hemen önce, kendi sayfasında basılır.
+  if ((gorus || '').trim()) {
+    cocuklar.push(_kfBaslik('İSG Uzmanı Görüşü', docx.HeadingLevel.HEADING_1, true));
+    (gorus || '').trim().split(/\n+/).filter(Boolean).forEach(paragraf => {
+      cocuklar.push(_kfParagraf(paragraf, { spacing: { after: 120 } }));
+    });
   }
 
   // İmza kutusu her ekipmanın altında değil, kullanıcı isteğiyle yalnızca

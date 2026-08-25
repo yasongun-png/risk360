@@ -1354,6 +1354,7 @@ function kfImzaModalAc(tur, bolum) {
   _kfImzaBekleyenIstek = { tur, bolum };
   document.getElementById('kfImzaAd1').value = '';
   document.getElementById('kfImzaAd2').value = '';
+  document.getElementById('kfGorus').value = '';
   document.getElementById('kfImzaModalKatman').classList.add('acik');
   requestAnimationFrame(() => {
     if (!_kfImzaPad1) _kfImzaPad1 = _kfImzaPaduBagla('kfImzaCanvas1'); else _kfImzaPad1.temizle();
@@ -1382,10 +1383,11 @@ async function kfImzaOnaylaTiklandi() {
     'Kontrolü Yapan': _kfImzaKaydiOku('kfImzaAd1', _kfImzaPad1),
     'Bölüm Sorumlusu': _kfImzaKaydiOku('kfImzaAd2', _kfImzaPad2)
   };
+  const gorus = document.getElementById('kfGorus').value.trim();
   const dugme = document.getElementById('kfImzaOnaylaBtn');
   dugme.disabled = true;
   try {
-    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, bolum, imzalar);
+    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, bolum, imzalar, gorus);
     kfImzaModalKapat();
   } catch (hata) {
     console.error(hata);
