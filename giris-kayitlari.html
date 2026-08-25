@@ -50,9 +50,11 @@
     <h2 style="margin-top:14px;">Giriş Kayıtları</h2>
     <p style="color:#6b7280; font-size:13px;">
       Kimin kaç defa giriş yaptığı ve her oturumun ne kadar açık kaldığı.
-      "Kapatılmadı" ibaresi, o oturumda "Çıkış Yap" butonuna basılmadan
-      tarayıcının kapatılmış olabileceği anlamına gelir — bu durumda gerçek
-      süre bilinemez.
+      Bir oturum 30 dakika işlem yapılmadan bırakılırsa otomatik olarak
+      kapatılır ("otomatik" ibaresiyle işaretlenir). "Kapatılmadı" yalnızca
+      hâlâ gerçekten açık olan (veya tarayıcının bu 30 dakikalık eşiğe
+      ulaşmadan aniden kapatıldığı, en fazla birkaç dakikalık) oturumlar
+      için görünür.
     </p>
 
     <div class="gk-ozet-grid" id="ozetGrid"></div>
@@ -142,12 +144,13 @@
         bosDurum.classList.remove('gorunur');
 
         govde.innerHTML = kayitlar.slice(0, 500).map(k => {
-          const sure = k.cikisZamani ? _gkSureFormatla(new Date(k.cikisZamani) - new Date(k.girisZamani)) : '<span class="gk-acik-etiket">Kapatılmadı</span>';
+          const otomatikEtiket = k.otomatikKapandi ? ' <span style="color:var(--metin-soluk); font-size:11px;">(otomatik)</span>' : '';
+          const sure = k.cikisZamani ? _gkSureFormatla(new Date(k.cikisZamani) - new Date(k.girisZamani)) + otomatikEtiket : '<span class="gk-acik-etiket">Kapatılmadı</span>';
           return `
             <tr>
               <td>${_gkKacir(k.adSoyad || k.kullaniciAdi)} <span style="color:var(--metin-soluk);">(@${_gkKacir(k.kullaniciAdi)})</span></td>
               <td>${_gkTarihFormatla(k.girisZamani)}</td>
-              <td>${k.cikisZamani ? _gkTarihFormatla(k.cikisZamani) : '<span class="gk-acik-etiket">—</span>'}</td>
+              <td>${k.cikisZamani ? _gkTarihFormatla(k.cikisZamani) + otomatikEtiket : '<span class="gk-acik-etiket">—</span>'}</td>
               <td>${sure}</td>
             </tr>
           `;

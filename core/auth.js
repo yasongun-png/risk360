@@ -17,7 +17,38 @@ function _sifreOzetiGibiMi(deger) {
   return typeof deger === 'string' && /^[0-9a-f]{64}$/.test(deger);
 }
 
+// Kullanıcı isteği: "kapatılmadı yazanlar var, eğer uygulama
+// kullanılmıyorsa otomatik kapatılmalı, örneğin 30 dk sonra" — sunucu
+// tarafı oturum takibi olmadığından (bkz. cikisYap yorumu) tarayıcı
+// aniden kapatılan/çöken oturumlar "Kapatılmadı" olarak kalıyordu. Artık
+// her açık oturum kaydı periyodik olarak sonAktivite'sini günceller (bkz.
+// dosya sonundaki kalp atışı) ve BAŞKA BİR oturum açıldığında (girisYap),
+// sonAktivite'si 30 dakikadan eski, hâlâ "açık" görünen TÜM kayıtlar
+// otomatik kapatılmış sayılır (cikisZamani = sonAktivite). Bu kesin değil
+// (son kalp atışı ile gerçek kapanış arasında birkaç dakikalık fark
+// olabilir) ama "Kapatılmadı" listesini gerçekçi bir süreye indirger.
+const OTURUM_OTOMATIK_KAPANMA_DK = 30;
+
+function _oturumEskiAcikKayitlariKapat() {
+  const gecmis = oku('isg_oturum_gecmisi', []);
+  const esikMs = OTURUM_OTOMATIK_KAPANMA_DK * 60 * 1000;
+  const simdi = Date.now();
+  let degistiMi = false;
+  gecmis.forEach(kayit => {
+    if (kayit.cikisZamani) return;
+    const sonAktiviteMs = new Date(kayit.sonAktivite || kayit.girisZamani).getTime();
+    if (!Number.isFinite(sonAktiviteMs)) return;
+    if (simdi - sonAktiviteMs >= esikMs) {
+      kayit.cikisZamani = new Date(sonAktiviteMs).toISOString();
+      kayit.otomatikKapandi = true;
+      degistiMi = true;
+    }
+  });
+  if (degistiMi) yaz('isg_oturum_gecmisi', gecmis);
+}
+
 async function girisYap(kullaniciAdi, sifre) {
+  _oturumEskiAcikKayitlariKapat();
   const kullanicilar = oku('isg_kullanicilar', []);
   const bulunan = kullanicilar.find(
     k => k.kullaniciAdi.toLowerCase() === (kullaniciAdi || '').trim().toLowerCase()
@@ -56,6 +87,7 @@ async function girisYap(kullaniciAdi, sifre) {
     kullaniciAdi: bulunan.kullaniciAdi,
     adSoyad: bulunan.adSoyad,
     girisZamani: new Date().toISOString(),
+    sonAktivite: new Date().toISOString(),
     cikisZamani: null
   });
   yaz('isg_oturum_gecmisi', gecmis.slice(-1000));
@@ -471,6 +503,51 @@ function cikisYap() {
 function girisGecmisiGetir() {
   return oku('isg_oturum_gecmisi', []).slice().reverse();
 }
+
+function _oturumAktiviteGuncelle() {
+  const oturum = oku('isg_oturum', null);
+  if (!oturum || !oturum.oturumKayitId) return;
+  const gecmis = oku('isg_oturum_gecmisi', []);
+  const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
+  if (kayit && !kayit.cikisZamani) {
+    kayit.sonAktivite = new Date().toISOString();
+    yaz('isg_oturum_gecmisi', gecmis);
+  }
+}
+
+// Kullanıcı isteği: "eğer uygulama kullanılmıyorsa otomatik kapatılmalı
+// örneğin 30 dk sonra" — core/auth.js'i yükleyen HER sayfada (tüm
+// modüller) kendiliğinden devreye girer. İki mekanizma birlikte çalışır:
+// 1) Gerçek fare/klavye/dokunma etkileşimi OTURUM_OTOMATIK_KAPANMA_DK
+//    dakika boyunca hiç olmazsa oturum gerçekten kapatılır (cikisYap +
+//    giriş sayfasına yönlendirme).
+// 2) Sayfa açık kaldığı sürece birkaç dakikada bir "kalp atışı" ile
+//    sonAktivite tazelenir — bu, tarayıcı aniden kapatılırsa (idle
+//    zamanlayıcısı hiç tetiklenmeden) _oturumEskiAcikKayitlariKapat'ın
+//    (bkz. girisYap) kaydı gerçeğe yakın bir sürede kapatabilmesi içindir.
+(function _oturumIzlemeyiBaslat() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (!oku('isg_oturum', null)) return;
+
+  let idleZamanlayici = null;
+  function idleSuresiniSifirla() {
+    if (idleZamanlayici) clearTimeout(idleZamanlayici);
+    idleZamanlayici = setTimeout(() => {
+      if (!oku('isg_oturum', null)) return;
+      cikisYap();
+      alert(`${OTURUM_OTOMATIK_KAPANMA_DK} dakika işlem yapılmadığı için oturumunuz otomatik olarak kapatıldı.`);
+      window.location.href = _authKokYolu + 'index.html';
+    }, OTURUM_OTOMATIK_KAPANMA_DK * 60 * 1000);
+  }
+
+  ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(olay => {
+    document.addEventListener(olay, idleSuresiniSifirla, { passive: true });
+  });
+
+  idleSuresiniSifirla();
+  _oturumAktiviteGuncelle();
+  setInterval(_oturumAktiviteGuncelle, 3 * 60 * 1000);
+})();
 
 // Aktif firmaya göre izole edilmiş bir localStorage anahtarı üretir.
 // Örnek: tenantAnahtar('personel') -> 'isg_akme-sanayi_personel'
