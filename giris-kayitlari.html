@@ -116,7 +116,7 @@
         // girisYap() bunu tetikliyordu). Artık sayfa her açıldığında önce
         // süresi geçmiş açık kayıtları kapatıp öyle listeliyor.
         await _oturumEskiAcikKayitlariKapat();
-        const kayitlar = girisGecmisiGetir();
+        const kayitlar = await girisGecmisiGetir();
 
         // ---- Özet (kullanıcı başına giriş sayısı + toplam süre) ----
         const ozet = {};
