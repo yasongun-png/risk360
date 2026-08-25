@@ -62,11 +62,11 @@ function _sjOrtakStilHtml(kokSelector) {
       ${kokSelector} .egt-imzalar em{ display:block; font-size:7.5pt; color:#94a3b8; font-style:normal; margin-top:1mm; }
       ${kokSelector} .egt-altbilgi{ position:absolute; bottom:6mm; left:12mm; right:12mm; text-align:center; font-size:7.5pt; color:#94a3b8; }
       ${kokSelector} table.egt-konu{ width:100%; border-collapse:collapse; }
-      ${kokSelector} table.egt-konu th{ background:#0b2c52; color:#fff; font-size:8.5pt; padding:2mm 3mm; text-transform:uppercase; text-align:left; }
+      ${kokSelector} table.egt-konu th{ background:#5b82ab; color:#fff; font-size:8.5pt; padding:2mm 3mm; text-transform:uppercase; text-align:left; }
       ${kokSelector} table.egt-konu td{ font-size:8.5pt; padding:1.6mm 3mm; border-bottom:1px solid #e2e8f0; }
       ${kokSelector} .egt-konu-baslik td{ font-weight:700; background:#f1f5f9; color:#0b2c52; }
       ${kokSelector} .egt-konu-toplam td{ font-weight:700; border-top:1.5px solid #0b2c52; }
-      ${kokSelector} .egt-genel-toplam td{ font-weight:800; font-size:10pt; background:#0b2c52; color:#fff; }
+      ${kokSelector} .egt-genel-toplam td{ font-weight:800; font-size:10pt; background:#5b82ab; color:#fff; }
       ${kokSelector} .center{ text-align:center; }
     </style>
   `;
