@@ -84,7 +84,7 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -103,6 +103,7 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Alarm / Siren': 'ALS',
   'Acil Aydınlatma': 'AAY',
   'Döküntü Kiti': 'DKT',
+  'Ekipman Dolabı': 'ED',
   'Yangın Tüpü': 'YSC'
 };
 
@@ -214,6 +215,20 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'icerikEksiksiz', soru: 'İçerik eksiksiz (emici, eldiven, gözlük, torba vb.)' },
     { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok' },
     { id: 'talimat', soru: 'Kullanım talimatı mevcut' }
+  ],
+  // Kullanıcı isteği: "acil durum ekipman dolabı ekle" — Yangın Dolabı'ndan
+  // (yalnızca hortum/lans) farklı olarak, çok amaçlı acil durum
+  // malzemelerinin (KKD, ilk yardım, iletişim, aydınlatma vb.) topluca
+  // muhafaza edildiği dolap/kabin.
+  'Ekipman Dolabı': [
+    { id: 'erisim', soru: 'Dolaba erişim engelsiz' },
+    { id: 'onundeEngelYok', soru: 'Önünde engel yok' },
+    { id: 'kapiSaglam', soru: 'Dolap kapısı/gövdesi sağlam' },
+    { id: 'kilit', soru: 'Kilit/mandal düzgün çalışıyor' },
+    { id: 'envanterListesi', soru: 'Dolap içi envanter listesi güncel ve mevcut' },
+    { id: 'icerikEksiksiz', soru: 'İçerik envanter listesine göre eksiksiz' },
+    { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok' },
+    { id: 'isaretleme', soru: 'Dolap üzerinde tabela/işaretleme görünür' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
