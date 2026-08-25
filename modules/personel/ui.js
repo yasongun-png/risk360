@@ -95,6 +95,13 @@ function imzaListesiModalAc() {
   document.getElementById('ilTarih').value = _prsBugunIso();
   document.getElementById('ilTarih2').value = '';
   document.getElementById('ilSaat').value = '';
+  // Kullanıcı isteği: "eğitim veren her zaman neden Koray Şahbaz" — önceden
+  // eğitimci otomatik ve DEĞİŞTİRİLEMEZ şekilde her seferinde aynı (en
+  // güncel) İSG Uzmanı hizmet sözleşmesinden basılıyordu; artık sadece bir
+  // varsayılan ÖNERİ olarak dolduruluyor, kullanıcı ihtiyaç halinde
+  // (eğitimi başka biri verdiyse) değiştirebiliyor.
+  document.getElementById('ilEgitimci').value = _prsGorevliAdiGetir('İSG Uzmanı');
+  document.getElementById('ilIsverenVekili').value = '';
   _ilTurAlanlariniGuncelle();
   document.getElementById('ilPersonelArama').value = '';
   _ilPersonelListesiCiz('');
@@ -113,13 +120,15 @@ async function imzaListesiOlusturTiklandi() {
   const tarih2 = tur.ikiGunluMu ? document.getElementById('ilTarih2').value : '';
   if (tur.ikiGunluMu && !tarih2) { alert('2. gün tarihi zorunludur.'); return; }
   const saat = tur.saatliMi ? document.getElementById('ilSaat').value : '';
+  const egitimci = document.getElementById('ilEgitimci').value.trim();
+  const isverenVekili = document.getElementById('ilIsverenVekili').value.trim();
   if (!_ilSeciliPersonelIdleri.size) { alert('En az bir personel seçin.'); return; }
 
   const secilenler = personelleriGetir('', false).filter(p => _ilSeciliPersonelIdleri.has(p.id)).sort((a, b) => a.adSoyad.localeCompare(b.adSoyad, 'tr'));
   const dugme = document.getElementById('ilOlusturBtn');
   dugme.disabled = true;
   try {
-    await imzaListesiPdfOlustur(tur.ad, secilenler, { tarih, tarih2, saat });
+    await imzaListesiPdfOlustur(tur.ad, secilenler, { tarih, tarih2, saat, egitimci, isverenVekili });
     imzaListesiModalKapat();
   } catch (hata) {
     console.error(hata);

@@ -24,12 +24,13 @@ function _prsBugunIso() {
 
 const _PRS_IMZA_SATIR_SAYFA_BASI = 22;
 
-// Kullanıcı isteği: "eğitimci ve işveren vekili imza kısmı yok" — Eğitim
-// modülündeki Temel İSG sertifikasıyla aynı desen (bkz. egitim/cikti.js
-// _egitimGorevliAdiGetir/_egitimImzaSatirlariHtml): eğitimi veren en güncel,
-// feshedilmemiş İSG Uzmanı hizmet sözleşmesi kaydından otomatik doldurulur;
-// İşveren Vekili için kaynak olmadığından sahada elle imzalanacak boş
-// bırakılır.
+// Kullanıcı isteği: "eğitimci ve işveren vekili imza kısmı yok", sonra
+// "eğitim veren her zaman neden Koray Şahbaz" — Eğitim modülündeki Temel
+// İSG sertifikasıyla aynı sorguyla (en güncel, feshedilmemiş İSG Uzmanı
+// hizmet sözleşmesi) SADECE bir varsayılan ÖNERİ üretir; ui.js
+// imzaListesiModalAc bunu forma önceden doldurur ama kullanıcı serbestçe
+// değiştirebilir/silebilir — eğitimBilgi.egitimci/isverenVekili (bkz.
+// _prsImzaSayfasiHtml) gerçekte formda ne yazıyorsa onu basar.
 function _prsGorevliAdiGetir(gorevTuru) {
   const liste = (typeof hizmetSozlesmeleriTumunuGetir === 'function' ? hizmetSozlesmeleriTumunuGetir() : [])
     .filter(k => k.gorevTuru === gorevTuru && k.durum !== 'Feshedildi')
@@ -41,7 +42,6 @@ function _prsGorevliAdiGetir(gorevTuru) {
 // olabilir, .eil-sayfa overflow:hidden kırpardı) kendi ayrı sayfasında basılır.
 function _prsImzaSayfasiHtml(egitimTuruAdi, firma, egitimBilgi, sayfaNo, toplamSayfa) {
   const logo = firma && firmaLogoGetir(firma.id);
-  const egitimci = _prsGorevliAdiGetir('İSG Uzmanı');
   return `
     <section class="eil-sayfa">
       <div class="eil-ustbilgi">
@@ -54,8 +54,8 @@ function _prsImzaSayfasiHtml(egitimTuruAdi, firma, egitimBilgi, sayfaNo, toplamS
         <span><b>Tarih:</b> ${_prsSertKacir(_prsEgitimTarihiGoruntu(egitimBilgi))}</span>
       </div>
       <div class="eil-imzalar">
-        <div><span>${_prsSertKacir(egitimci) || '&nbsp;'}</span><b>Eğitimi Veren (Eğitimci)</b><em>İmza</em></div>
-        <div><span>&nbsp;</span><b>İşveren Vekili</b><em>İmza</em></div>
+        <div><span>${_prsSertKacir(egitimBilgi.egitimci) || '&nbsp;'}</span><b>Eğitimi Veren (Eğitimci)</b><em>İmza</em></div>
+        <div><span>${_prsSertKacir(egitimBilgi.isverenVekili) || '&nbsp;'}</span><b>İşveren Vekili</b><em>İmza</em></div>
       </div>
       ${toplamSayfa > 1 ? `<div class="eil-altbilgi">Sayfa ${sayfaNo} / ${toplamSayfa}</div>` : ''}
     </section>
