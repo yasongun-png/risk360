@@ -23,7 +23,6 @@ function numuneDogrula(veriler) {
   const hatalar = {};
 
   if (!veriler.kkdAdi || !veriler.kkdAdi.trim()) hatalar.kkdAdi = 'KKD adı zorunludur.';
-  if (!veriler.personelId) hatalar.personelId = 'Deneyen personel zorunludur.';
   if (!veriler.deneyBaslangic) hatalar.deneyBaslangic = 'Deney başlangıç tarihi zorunludur.';
 
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
