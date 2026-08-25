@@ -239,6 +239,12 @@
 
   <div id="yazdirmaAlani"></div>
 
+  <!-- Kullanıcı isteği: "eğitimcinin ismini yazdım ama yine Koray yazıyordu"
+       -- kod düzeltilmiş olsa da tarayıcı önbelleği yüzünden eski JS
+       gösterilmeye devam ediyordu (art arda birkaç kez yaşandı). Bu
+       modülün kendi dosyalarına ?v=N eklendi -- her düzenlemede N
+       artırılmalı, böylece tarayıcı önbellekteki eski sürümü kullanmayı
+       bırakır (dosya adı değiştiği için yeniden indirir). -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -252,18 +258,18 @@
   <!-- İmza Listesi (Eğitim Katılım Formu) eğitim türü kataloğu ve imza
        için hizmet sözleşmesi verisine ihtiyaç duyar; sadece veri katmanı
        yüklenir (ui.js hariç) — bkz. cikti.js/ui.js imza listesi bölümü. -->
-  <script src="../hizmet-sozlesmesi/repository.js"></script>
-  <script src="../egitim/model.js"></script>
-  <script src="../egitim/validation.js"></script>
-  <script src="../egitim/repository.js"></script>
-  <script src="../egitim/service.js"></script>
-  <script src="model.js"></script>
-  <script src="validation.js"></script>
-  <script src="repository.js"></script>
-  <script src="org-repository.js"></script>
-  <script src="service.js"></script>
-  <script src="ui.js"></script>
-  <script src="cikti.js"></script>
+  <script src="../hizmet-sozlesmesi/repository.js?v=2"></script>
+  <script src="../egitim/model.js?v=2"></script>
+  <script src="../egitim/validation.js?v=2"></script>
+  <script src="../egitim/repository.js?v=2"></script>
+  <script src="../egitim/service.js?v=2"></script>
+  <script src="model.js?v=2"></script>
+  <script src="validation.js?v=2"></script>
+  <script src="repository.js?v=2"></script>
+  <script src="org-repository.js?v=2"></script>
+  <script src="service.js?v=2"></script>
+  <script src="ui.js?v=2"></script>
+  <script src="cikti.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('personel');
 
