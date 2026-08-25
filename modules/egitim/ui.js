@@ -6,6 +6,7 @@ let _duzenlenenKayitId = null;
 let _seciliKayitIdleri = new Set();
 let _sertifikaKayitId = null;
 let _topluSeciliPersonelIdleri = new Set();
+let _egtBelgeDosyasi = '';
 
 function _egKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -560,6 +561,7 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitTablosunuCiz(e.target.value));
   document.getElementById('egitimTuruId').addEventListener('change', turAlanlariniGuncelle);
   document.getElementById('suresizMi').addEventListener('change', turAlanlariniGuncelle);
+  document.getElementById('belgeDosyasi').addEventListener('change', _egtBelgeDosyasiSecildi);
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeDurum').addEventListener('click', () => gorunumDegistir('durum'));
 
@@ -778,10 +780,15 @@ function kayitTablosunuCiz(aramaMetni) {
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
+        ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}">📄 Belge</button>` : ''}
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
     `;
     govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-belge-ac]').forEach(btn => {
+    btn.addEventListener('click', () => _egtBelgeAc(btn.getAttribute('data-belge-ac')));
   });
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => {
@@ -882,6 +889,71 @@ function mykKaydiModalAc() {
   turAlanlariniGuncelle();
 }
 
+// ---- Belge (PDF) ekleme ----
+// Kullanıcı isteği: "myk belgesi girişinde pdf ekleme de olsun, belgeyi
+// ekleyip daha sonra indirebileyim veya tıkladığımda açılsın" — core/data.js
+// fotoSikistir/fotoYukle SADECE görsel (jpeg/png/webp) kabul ettiğinden PDF
+// için kullanılamaz; dosya doğrudan data URL'e okunup mevcut "fotoref:<id>"
+// dolaylı referans sistemine (fotoBuyukKaydet) aynen bir fotoğrafmış gibi
+// yazılır — bu sistem içerik türünü kontrol etmez, yalnızca boyut sorunundan
+// (Firestore ~1MB belge sınırı) kaçınmak için her PDF kendi küçük belgesine
+// yazılır.
+function _pdfDosyasiniDataUrlOku(dosya) {
+  return new Promise((coz, red) => {
+    const okuyucu = new FileReader();
+    okuyucu.onload = () => coz(okuyucu.result);
+    okuyucu.onerror = () => red(new Error('Dosya okunamadı.'));
+    okuyucu.readAsDataURL(dosya);
+  });
+}
+
+async function _egtBelgeDosyasiSecildi(e) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  if (dosya.type !== 'application/pdf') { alert('Lütfen bir PDF dosyası seçin.'); return; }
+  // Firestore belge başına ~1MB sınırı var; base64 kodlama ham boyutu ~%37
+  // büyüttüğünden 2MB üzerindeki dosyalar güvenli aralığın dışında kalır.
+  if (dosya.size > 2 * 1024 * 1024) { alert('PDF dosyası çok büyük (maks. 2 MB). Lütfen daha küçük bir dosya seçin.'); return; }
+  try {
+    const dataUrl = await _pdfDosyasiniDataUrlOku(dosya);
+    _egtBelgeDosyasi = await fotoBuyukKaydet(dataUrl, _aktifFirma ? _aktifFirma.slug : '');
+    _egtBelgeOnizlemeCiz();
+  } catch (hata) {
+    alert(hata.message || 'PDF yüklenemedi.');
+  }
+}
+
+function _egtBelgeOnizlemeCiz() {
+  const kutu = document.getElementById('belgeDosyasiOnizleme');
+  if (!kutu) return;
+  if (!_egtBelgeDosyasi) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Henüz belge eklenmedi.</div>';
+    return;
+  }
+  kutu.innerHTML = `
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:12px; color:#16a34a; font-weight:600;">✓ Belge eklendi</span>
+      <a href="#" id="belgeDosyasiAcLink" style="font-size:12px;">Aç / İndir</a>
+      <button type="button" class="tablo-buton sil">Kaldır</button>
+    </div>
+  `;
+  kutu.querySelector('#belgeDosyasiAcLink').addEventListener('click', async e => {
+    e.preventDefault();
+    const url = await fotoBuyukCoz(_egtBelgeDosyasi);
+    if (url) window.open(url, '_blank');
+  });
+  kutu.querySelector('button.sil').addEventListener('click', () => { _egtBelgeDosyasi = ''; _egtBelgeOnizlemeCiz(); });
+}
+
+// Kayıt tablosundaki "Belge" bağlantısı (bkz. kayitTablosunuCiz) — aynı
+// aç/indir mantığı, sadece kayıt id'sinden okunmuş kaydın belgeDosyasi'nı kullanır.
+async function _egtBelgeAc(referans) {
+  const url = await fotoBuyukCoz(referans);
+  if (url) window.open(url, '_blank');
+  else alert('Belge açılamadı.');
+}
+
 function modalAc(kayit) {
   _duzenlenenKayitId = kayit ? kayit.id : null;
   document.getElementById('modalBaslik').textContent = kayit ? 'Eğitim/Sertifika Kaydını Düzenle' : 'Yeni Eğitim/Sertifika Kaydı';
@@ -899,6 +971,9 @@ function modalAc(kayit) {
   document.getElementById('tarih2').value = kayit ? kayit.tarih2 : '';
   document.getElementById('saat').value = kayit ? kayit.saat : '';
   document.getElementById('aciklama').value = kayit ? (kayit.aciklama || '') : '';
+  _egtBelgeDosyasi = kayit ? (kayit.belgeDosyasi || '') : '';
+  document.getElementById('belgeDosyasi').value = '';
+  _egtBelgeOnizlemeCiz();
   temizleFormHatalari();
   document.getElementById('modalKatman').classList.add('acik');
 }
@@ -923,7 +998,8 @@ function formGonderildi(e) {
     tarih2: document.getElementById('tarih2').value,
     saat: document.getElementById('saat').value,
     aciklama: document.getElementById('aciklama').value,
-    suresizMi: document.getElementById('suresizMi').checked
+    suresizMi: document.getElementById('suresizMi').checked,
+    belgeDosyasi: _egtBelgeDosyasi
   };
 
   const sonuc = _duzenlenenKayitId ? egitimKaydiGuncelle(_duzenlenenKayitId, veriler) : egitimKaydiEkle(veriler);

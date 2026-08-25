@@ -75,6 +75,12 @@ function egitimKaydiOlustur(veriler) {
     tarih2: veriler.tarih2 || '',
     saat: veriler.saat || '',
     aciklama: veriler.aciklama || '',
+    // Kullanıcı isteği: "myk belgesi girişinde pdf ekleme de olsun, belgeyi
+    // ekleyip daha sonra indirebileyim veya tıkladığımda açılsın" — "fotoref:
+    // <id>" dolaylı referansı (bkz. core/data.js fotoBuyukKaydet); yalnızca
+    // belgeAdiVarMi=true olan türlerde (şu an sadece MYK) form üzerinde
+    // gösterilir ama alanın kendisi her kayıt türünde saklanabilir.
+    belgeDosyasi: veriler.belgeDosyasi || '',
     suresizMi: !!veriler.suresizMi,
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
     // Kayıt listesi bununla sıralanır (kullanıcı isteği: "eğitimler

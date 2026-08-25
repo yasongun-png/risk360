@@ -101,6 +101,13 @@
           <label style="display:flex; align-items:center; gap:6px; font-weight:normal;">
             <input type="checkbox" id="suresizMi" style="width:auto;"> Süresiz (bitiş tarihi yok)
           </label>
+
+          <!-- Kullanıcı isteği: "myk belgesi girişinde pdf ekleme de olsun,
+               belgeyi ekleyip daha sonra indirebileyim veya tıkladığımda
+               açılsın" -->
+          <label for="belgeDosyasi">Belge (PDF)</label>
+          <input type="file" id="belgeDosyasi" accept="application/pdf">
+          <div id="belgeDosyasiOnizleme" style="margin-top:6px; margin-bottom:14px;"></div>
         </div>
 
         <div class="form-satir-ikili">

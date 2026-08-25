@@ -94,6 +94,7 @@ function egitimKaydiGuncelle(id, veriler) {
     saat: veriler.saat || '',
     aciklama: veriler.aciklama || '',
     suresizMi: !!veriler.suresizMi,
+    belgeDosyasi: veriler.belgeDosyasi || '',
     guncellemeTarihi: new Date().toISOString()
   });
   if (!guncellenen) return { basarili: false, hatalar: { genel: 'Kayıt bulunamadı.' } };
