@@ -453,7 +453,7 @@ function _btDetayIcerikOlustur(k, kullanici) {
       <div style="display:flex; gap:8px; margin-top:10px;">
         <button type="button" class="ikincil" id="btBkKaydetBtn">Taslak Kaydet</button>
         ${k.durum !== 'İSG İlave Önlem İstedi'
-          ? '<button type="button" class="birincil" id="btBkGonderBtn">İSG\'ye Gönder</button>'
+          ? '<button type="button" class="birincil" id="btBkGonderBtn">Kaydet</button>'
           : '<button type="button" class="birincil" id="btBkTekrarGonderBtn">İlave Önlemle Tekrar Gönder</button>'}
         <button type="button" class="ikincil" id="btBkReddetBtn" style="color:var(--hata);">Reddet</button>
       </div>
