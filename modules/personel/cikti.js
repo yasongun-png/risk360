@@ -13,6 +13,15 @@ function _prsSertKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// bugunIso, core/data.js'te DEĞİL her modülün kendi model.js'inde ayrı ayrı
+// tanımlanan bir yardımcı (bkz. modules/*/model.js) — personel/model.js'te
+// yok ve bu sayfada egitim/model.js de sadece veri katmanı olarak yüklü
+// (bkz. index.html), o da bunu tanımlamıyor. Global bir tanıma güvenmek
+// yerine burada yerel bir kopya tutuluyor.
+function _prsBugunIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 const _PRS_IMZA_SATIR_SAYFA_BASI = 22;
 
 function _prsImzaListesiStilHtml(kokSelector) {
@@ -60,7 +69,7 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, baslangicN
       </div>
       <div class="eil-bilgi">
         <span><b>Eğitim/Sertifika Türü:</b> ${_prsSertKacir(egitimTuruAdi)}</span>
-        <span><b>Tarih:</b> ${gunAyYil(bugunIso())}</span>
+        <span><b>Tarih:</b> ${gunAyYil(_prsBugunIso())}</span>
       </div>
       <table class="eil-tablo">
         <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İmza</th></tr></thead>
