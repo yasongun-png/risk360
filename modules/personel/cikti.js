@@ -24,6 +24,44 @@ function _prsBugunIso() {
 
 const _PRS_IMZA_SATIR_SAYFA_BASI = 22;
 
+// Kullanıcı isteği: "eğitimci ve işveren vekili imza kısmı yok" — Eğitim
+// modülündeki Temel İSG sertifikasıyla aynı desen (bkz. egitim/cikti.js
+// _egitimGorevliAdiGetir/_egitimImzaSatirlariHtml): eğitimi veren en güncel,
+// feshedilmemiş İSG Uzmanı hizmet sözleşmesi kaydından otomatik doldurulur;
+// İşveren Vekili için kaynak olmadığından sahada elle imzalanacak boş
+// bırakılır.
+function _prsGorevliAdiGetir(gorevTuru) {
+  const liste = (typeof hizmetSozlesmeleriTumunuGetir === 'function' ? hizmetSozlesmeleriTumunuGetir() : [])
+    .filter(k => k.gorevTuru === gorevTuru && k.durum !== 'Feshedildi')
+    .sort((a, b) => (b.sozlesmeBaslangicTarihi || '').localeCompare(a.sozlesmeBaslangicTarihi || ''));
+  return liste[0] ? liste[0].adSoyad : '';
+}
+
+// Katılımcı tablosuyla aynı sayfaya sığmayabileceğinden (sayfa zaten dolu
+// olabilir, .eil-sayfa overflow:hidden kırpardı) kendi ayrı sayfasında basılır.
+function _prsImzaSayfasiHtml(egitimTuruAdi, firma, egitimBilgi, sayfaNo, toplamSayfa) {
+  const logo = firma && firmaLogoGetir(firma.id);
+  const egitimci = _prsGorevliAdiGetir('İSG Uzmanı');
+  return `
+    <section class="eil-sayfa">
+      <div class="eil-ustbilgi">
+        <div class="eil-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
+        <div class="eil-baslik">EĞİTİM KATILIM FORMU</div>
+        <div class="eil-fa">${formAyarlariKutusuHtml('egitim')}</div>
+      </div>
+      <div class="eil-bilgi">
+        <span><b>Eğitim/Sertifika Türü:</b> ${_prsSertKacir(egitimTuruAdi)}</span>
+        <span><b>Tarih:</b> ${_prsSertKacir(_prsEgitimTarihiGoruntu(egitimBilgi))}</span>
+      </div>
+      <div class="eil-imzalar">
+        <div><span>${_prsSertKacir(egitimci) || '&nbsp;'}</span><b>Eğitimi Veren (Eğitimci)</b><em>İmza</em></div>
+        <div><span>&nbsp;</span><b>İşveren Vekili</b><em>İmza</em></div>
+      </div>
+      ${toplamSayfa > 1 ? `<div class="eil-altbilgi">Sayfa ${sayfaNo} / ${toplamSayfa}</div>` : ''}
+    </section>
+  `;
+}
+
 function _prsImzaListesiStilHtml(kokSelector) {
   return `
     <style>
@@ -45,6 +83,11 @@ function _prsImzaListesiStilHtml(kokSelector) {
       ${kokSelector} table.eil-tablo th{ background:#f1f5f9; color:#0b2c52; font-size:9pt; font-weight:700; padding:2.5mm 3mm; border:1px solid #94a3b8; text-align:left; }
       ${kokSelector} table.eil-tablo td{ font-size:9.5pt; color:#111827; padding:2.5mm 3mm; border:1px solid #94a3b8; height:11mm; }
       ${kokSelector} .eil-altbilgi{ position:absolute; bottom:6mm; left:12mm; right:12mm; text-align:center; font-size:8pt; color:#6b7280; }
+      ${kokSelector} .eil-imzalar{ display:flex; justify-content:space-between; gap:10mm; margin-top:14mm; }
+      ${kokSelector} .eil-imzalar > div{ flex:1; text-align:center; border-top:1px solid #94a3b8; padding-top:3mm; }
+      ${kokSelector} .eil-imzalar span{ display:block; font-weight:700; font-size:11pt; min-height:7mm; }
+      ${kokSelector} .eil-imzalar b{ display:block; font-size:9.5pt; color:#374151; margin-top:1.5mm; }
+      ${kokSelector} .eil-imzalar em{ display:block; font-size:8.5pt; color:#94a3b8; font-style:normal; margin-top:1.5mm; }
     </style>
   `;
 }
@@ -104,10 +147,11 @@ async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar, egitimBilgi) {
 
   const sayfalar = [];
   for (let i = 0; i < katilimcilar.length; i += _PRS_IMZA_SATIR_SAYFA_BASI) sayfalar.push(katilimcilar.slice(i, i + _PRS_IMZA_SATIR_SAYFA_BASI));
+  const toplamSayfa = sayfalar.length + 1;
 
   const html = `<div id="prsImzaListesiPdf">${_prsImzaListesiStilHtml('#prsImzaListesiPdf')}${
-    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, sayfalar.length)).join('')
-  }</div>`;
+    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, toplamSayfa)).join('')
+  }${_prsImzaSayfasiHtml(egitimTuruAdi, firma, bilgi, toplamSayfa, toplamSayfa)}</div>`;
 
   const mount = document.getElementById('yazdirmaAlani');
   mount.innerHTML = html;

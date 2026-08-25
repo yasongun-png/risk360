@@ -140,6 +140,13 @@ function personelSayfasiniBaslat() {
 
   document.getElementById('imzaListesiBtn').addEventListener('click', () => imzaListesiModalAc());
   document.getElementById('ilTuruId').addEventListener('change', _ilTurAlanlariniGuncelle);
+  // Kullanıcı isteği: "imza listesi form ayarlarını yapamıyorum" -- form
+  // PDF'inin sağ üst köşesindeki Doküman No/Sürüm Tarihi vb. kutusu
+  // (formAyarlariKutusuHtml('egitim'), bkz. cikti.js) daha önce hiçbir
+  // ekrandan düzenlenemiyordu; bu düğme genel formAyarlariModalAc'i açar.
+  document.getElementById('ilFormAyarlariBtn').addEventListener('click', () => {
+    formAyarlariModalAc('egitim', 'Eğitim Katılım Formu (İmza Listesi)');
+  });
   document.getElementById('ilIptalBtn').addEventListener('click', imzaListesiModalKapat);
   document.getElementById('ilKapatBtn').addEventListener('click', imzaListesiModalKapat);
   document.getElementById('ilOlusturBtn').addEventListener('click', imzaListesiOlusturTiklandi);
