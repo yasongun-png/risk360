@@ -508,6 +508,82 @@ async function topluFormGonderildi(e) {
   }
 }
 
+// ==================== İMZA LİSTESİ OLUŞTUR ====================
+// Kullanıcı isteği: "herhangi bir eğitim için imza listesi oluştur butonu,
+// eğitim türü ve katılımcıları seçip sicil no, ad soyad, imza olsun" — Toplu
+// Eğitim Girişi'yle aynı arama+çoklu seçim deseni, ama kayıt oluşturmaz,
+// sadece boş imza haneli bir PDF üretir (bkz. cikti.js
+// egitimImzaListesiPdfOlustur) — katılımcılara uygulama dışında ıslak imza
+// ile de imzalatılabilsin diye.
+let _ilSeciliPersonelIdleri = new Set();
+
+function _ilPersonelListesiCiz(aramaMetni) {
+  const kutu = document.getElementById('ilPersonelListesi');
+  const kucuk = (aramaMetni || '').trim().toLocaleLowerCase('tr-TR');
+  const personeller = _personelSirali().filter(p =>
+    !kucuk || p.adSoyad.toLocaleLowerCase('tr-TR').includes(kucuk) || p.sicilNo.toLowerCase().includes(kucuk)
+  );
+
+  if (!personeller.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px;">Eşleşen personel bulunamadı.</div>';
+  } else {
+    kutu.innerHTML = personeller.map(p => `
+      <label style="display:flex; align-items:center; gap:8px; padding:4px 2px; cursor:pointer;">
+        <input type="checkbox" data-il-personel="${p.id}" style="width:auto;" ${_ilSeciliPersonelIdleri.has(p.id) ? 'checked' : ''}>
+        <span>${_egKacir(p.adSoyad)} (${_egKacir(p.sicilNo)})${p.isveren ? ' — ' + _egKacir(p.isveren) : ''}</span>
+      </label>
+    `).join('');
+    kutu.querySelectorAll('[data-il-personel]').forEach(kutucuk => {
+      kutucuk.addEventListener('change', () => {
+        const id = kutucuk.getAttribute('data-il-personel');
+        if (kutucuk.checked) _ilSeciliPersonelIdleri.add(id);
+        else _ilSeciliPersonelIdleri.delete(id);
+        _ilSeciliSayisiGuncelle(personeller);
+      });
+    });
+  }
+  _ilSeciliSayisiGuncelle(personeller);
+}
+
+function _ilSeciliSayisiGuncelle(gorunenler) {
+  document.getElementById('ilSeciliSayisi').textContent = `${_ilSeciliPersonelIdleri.size} kişi seçildi`;
+  const tumunuSec = document.getElementById('ilTumunuSecCheckbox');
+  const gorunenSecili = gorunenler.length > 0 && gorunenler.every(p => _ilSeciliPersonelIdleri.has(p.id));
+  tumunuSec.checked = gorunenSecili;
+  tumunuSec.indeterminate = !gorunenSecili && gorunenler.some(p => _ilSeciliPersonelIdleri.has(p.id));
+}
+
+function imzaListesiModalAc() {
+  _ilSeciliPersonelIdleri.clear();
+  document.getElementById('ilTuruId').innerHTML = egitimTurleriTumu().map(t => `<option value="${t.id}">${_egKacir(t.ad)}</option>`).join('');
+  document.getElementById('ilPersonelArama').value = '';
+  _ilPersonelListesiCiz('');
+  document.getElementById('imzaListesiModal').classList.add('acik');
+}
+
+function imzaListesiModalKapat() {
+  document.getElementById('imzaListesiModal').classList.remove('acik');
+}
+
+async function imzaListesiOlusturTiklandi() {
+  const tur = egitimTuruGetir(document.getElementById('ilTuruId').value);
+  if (!tur) { alert('Eğitim/Sertifika türü seçin.'); return; }
+  if (!_ilSeciliPersonelIdleri.size) { alert('En az bir personel seçin.'); return; }
+
+  const secilenler = _personelSirali().filter(p => _ilSeciliPersonelIdleri.has(p.id));
+  const dugme = document.getElementById('ilOlusturBtn');
+  dugme.disabled = true;
+  try {
+    await egitimImzaListesiPdfOlustur(tur.ad, secilenler);
+    imzaListesiModalKapat();
+  } catch (hata) {
+    console.error(hata);
+    alert('İmza listesi oluşturulamadı: ' + (hata.message || hata));
+  } finally {
+    dugme.disabled = false;
+  }
+}
+
 // ==================== EĞİTİM TÜRLERİNİ YÖNET ====================
 // Kullanıcı isteği: "yeni eğitim türü de ekleyebilmem lazım" — standart
 // kataloğa (EGITIM_TURLERI) ek olarak firmaya özel tür tanımlar
@@ -652,6 +728,20 @@ function egitimSayfasiniBaslat(firma) {
   });
 
   document.getElementById('topluGirisBtn').addEventListener('click', () => topluModalAc());
+  document.getElementById('imzaListesiBtn').addEventListener('click', () => imzaListesiModalAc());
+  document.getElementById('ilIptalBtn').addEventListener('click', imzaListesiModalKapat);
+  document.getElementById('ilKapatBtn').addEventListener('click', imzaListesiModalKapat);
+  document.getElementById('ilOlusturBtn').addEventListener('click', imzaListesiOlusturTiklandi);
+  document.getElementById('ilPersonelArama').addEventListener('input', e => _ilPersonelListesiCiz(e.target.value));
+  document.getElementById('ilTumunuSecCheckbox').addEventListener('change', e => {
+    const kucuk = (document.getElementById('ilPersonelArama').value || '').trim().toLocaleLowerCase('tr-TR');
+    const gorunenler = _personelSirali().filter(p =>
+      !kucuk || p.adSoyad.toLocaleLowerCase('tr-TR').includes(kucuk) || p.sicilNo.toLowerCase().includes(kucuk)
+    );
+    if (e.target.checked) gorunenler.forEach(p => _ilSeciliPersonelIdleri.add(p.id));
+    else gorunenler.forEach(p => _ilSeciliPersonelIdleri.delete(p.id));
+    _ilPersonelListesiCiz(document.getElementById('ilPersonelArama').value);
+  });
   document.getElementById('topluIptalBtn').addEventListener('click', topluModalKapat);
   document.getElementById('topluKapatBtn').addEventListener('click', topluModalKapat);
   document.getElementById('topluForm').addEventListener('submit', topluFormGonderildi);
