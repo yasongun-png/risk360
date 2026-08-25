@@ -611,6 +611,10 @@ function _kkdNumuneBaslat() {
   document.getElementById('numuneForm').addEventListener('submit', numuneFormGonderildi);
   document.getElementById('numuneAramaKutusu').addEventListener('input', e => numuneleriCiz(e.target.value));
   document.getElementById('numuneSonucFiltre').addEventListener('change', () => numuneleriCiz(document.getElementById('numuneAramaKutusu').value));
+  // Kullanıcı isteği: "form no larını nereye gireceğim" — Doküman No/Sürüm
+  // Tarihi/Sürüm No buradan girilir, Word belgesinin üst bilgisinde basılır
+  // (bkz. modules/personel/ui.js ilFormAyarlariBtn ile aynı desen).
+  document.getElementById('numuneFormAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('kkd', 'KKD Numune Değerlendirme Formu'));
   _kkdKatalogOtomatikDoldur('numuneKkdAdi', 'numuneKkdTuru', 'numuneMarka');
 
   document.getElementById('numunePersonelAdi').addEventListener('input', e => {
@@ -660,7 +664,7 @@ function numuneleriCiz(aramaMetni) {
       <td style="font-size:11.5px;">${imzaDurumu}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
-        <button class="tablo-buton" data-form="${k.id}">PDF</button>
+        <button class="tablo-buton" data-form="${k.id}">Word</button>
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
     `;
@@ -669,7 +673,7 @@ function numuneleriCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => numuneModalAc(numuneIdIleGetir(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {
-    try { await kkdNumuneFormuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
+    try { await kkdNumuneFormuWordOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('Belge üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu numune denemesini silmek istediğinize emin misiniz?', 'Sil')) { numuneSil(btn.getAttribute('data-sil')); numuneleriCiz(document.getElementById('numuneAramaKutusu').value); }

@@ -248,69 +248,136 @@ async function kkdIhlalTutanagiPdfOlustur(ihlalId) {
   await _kkdPdfUret(`KKD_Tutanak_${(k.ihlalNo || ihlalId).replace(/[\\/]/g, '-')}.pdf`, govde);
 }
 
-// ==================== NUMUNE DEĞERLENDİRME FORMU ====================
-// Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim, nihayetinde
-// çalışan ve İSG imzalı Numune Değerlendirme Formu".
+// ==================== NUMUNE DEĞERLENDİRME FORMU (WORD) ====================
+// Kullanıcı isteği: "kkd değerlendirme formu çok güzel ama word de ver,
+// form no larını nereye gireceğim, başlığın altındaki açıklamaları kaldır"
+// + "lacivert başlık arka planını kaldır daha sade form olsun, uygunsuzluk
+// formu gibi mesela" — modules/acil-durum/kontrol-formu-cikti.js ile aynı
+// docx.js kalıbı (imza görseli: _kfImzaGorseliVerisiGetir ile birebir aynı
+// yöntem, bu modül diğerlerinin cikti.js'ini yüklemediğinden kendi
+// önekiyle tekrarlanır); başlık lacivert dolgu YERİNE modules/uygunsuzluk
+// çıktısındaki gibi sade, dolgusuz siyah/beyaz düzen kullanılır. Doküman
+// No/Sürüm Tarihi/Sürüm No artık üst bilgide sade bir metin satırı olarak
+// basılır (kullanıcının "numuneFormAyarlariBtn" ile girdiği değerler,
+// bkz. ui.js _kkdNumuneBaslat).
 
-function _kkdNumuneImzaHucresi(baslik, imza, adFallback) {
-  const gorsel = imza && imza.imzaUrl ? `<img src="${imza.imzaUrl}" style="max-width:100%; max-height:16mm; margin:1mm 0;">` : '<div style="height:16mm;"></div>';
-  const ad = imza ? imza.ad : (adFallback || '-');
-  const tarih = imza && imza.tarih ? gunAyYil(imza.tarih.slice(0, 10)) : '-';
-  return `
-    <td>
-      <div class="imza-baslik">${_kkdKacir(baslik)}</div>
-      <div class="imza-satir">Ad Soyad: ${_kkdKacir(ad)}</div>
-      <div class="imza-satir">Tarih: ${_kkdKacir(tarih)}</div>
-      ${gorsel}
-    </td>
-  `;
+function _kkdNumImzaGorseliVerisiGetir(dataUrl) {
+  if (!dataUrl) return Promise.resolve(null);
+  return fetch(dataUrl)
+    .then(yanit => yanit.blob())
+    .then(blob => Promise.all([
+      blob.arrayBuffer(),
+      new Promise((coz, red) => {
+        const img = new Image();
+        img.onload = () => coz({ genislik: img.naturalWidth, yukseklik: img.naturalHeight });
+        img.onerror = red;
+        img.src = URL.createObjectURL(blob);
+      })
+    ]))
+    .then(([arrayBuffer, olcu]) => {
+      const MAKS_GENISLIK = 220;
+      const oran = olcu.genislik > MAKS_GENISLIK ? MAKS_GENISLIK / olcu.genislik : 1;
+      return { veri: new Uint8Array(arrayBuffer), genislik: Math.round(olcu.genislik * oran), yukseklik: Math.round(olcu.yukseklik * oran) };
+    })
+    .catch(e => { console.error('İmza görseli Word belgesine eklenemedi:', e); return null; });
 }
 
-async function kkdNumuneFormuPdfOlustur(numuneId) {
+function _kkdNumBaslik(metin) {
+  return new docx.Paragraph({ heading: docx.HeadingLevel.HEADING_2, spacing: { before: 260, after: 120 }, children: [new docx.TextRun({ text: metin, bold: true, color: '000000' })] });
+}
+
+function _kkdNumHucre(metin, baslikMi) {
+  return new docx.TableCell({
+    shading: baslikMi ? { fill: 'E5E7EB' } : undefined,
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(metin ?? '') || '-', bold: !!baslikMi, size: 18 })] })]
+  });
+}
+
+function _kkdNumBilgiTablosu(satirlar) {
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: satirlar.map(s => new docx.TableRow({ children: [_kkdNumHucre(s[0], true), _kkdNumHucre(s[1]), _kkdNumHucre(s[2], true), _kkdNumHucre(s[3])] }))
+  });
+}
+
+const _KKD_NUM_IMZA_KENARLIK = { style: docx.BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
+
+async function _kkdNumImzaHucresi(baslik, imza, adFallback) {
+  const gorsel = imza && imza.imzaUrl ? await _kkdNumImzaGorseliVerisiGetir(imza.imzaUrl) : null;
+  const ad = (imza && imza.ad) || adFallback || '-';
+  const tarih = imza && imza.tarih ? gunAyYil(imza.tarih.slice(0, 10)) : '';
+  const govde = gorsel
+    ? [
+        new docx.Paragraph({ spacing: { after: 40 }, children: [new docx.TextRun({ text: `Ad Soyad: ${ad}`, size: 18 })] }),
+        new docx.Paragraph({ spacing: { after: 100 }, children: [new docx.TextRun({ text: `Tarih: ${tarih || '-'}`, size: 18 })] }),
+        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: gorsel.veri, transformation: { width: gorsel.genislik, height: gorsel.yukseklik } })] })
+      ]
+    : [
+        new docx.Paragraph({ spacing: { after: 60 }, children: [new docx.TextRun({ text: `Ad Soyad: ${ad !== '-' ? ad : '________________________'}`, size: 18 })] }),
+        new docx.Paragraph({ spacing: { after: 220 }, children: [new docx.TextRun({ text: 'Tarih: ________________', size: 18 })] }),
+        new docx.Paragraph({ children: [new docx.TextRun({ text: 'İmza:', size: 18 })] })
+      ];
+  return new docx.TableCell({
+    borders: { top: _KKD_NUM_IMZA_KENARLIK, bottom: _KKD_NUM_IMZA_KENARLIK, left: _KKD_NUM_IMZA_KENARLIK, right: _KKD_NUM_IMZA_KENARLIK },
+    margins: { top: 100, bottom: 100, left: 120, right: 120 },
+    children: [
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 80 }, children: [new docx.TextRun({ text: baslik.toLocaleUpperCase('tr'), bold: true, size: 18 })] }),
+      ...govde
+    ]
+  });
+}
+
+async function kkdNumuneFormuWordOlustur(numuneId) {
   const k = numuneIdIleGetir(numuneId);
   if (!k) return;
 
-  const govde = `
-    <div class="kkd-ustbilgi">
-      <div class="kkd-logo">${_kkdLogoHtml()}</div>
-      <div class="kkd-baslik">KKD NUMUNE DEĞERLENDİRME FORMU
-        <small>Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik kapsamında, satın alma/toplu zimmet öncesi saha denemesi değerlendirmesidir.</small>
-      </div>
-      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd')}</div>
-    </div>
+  const firma = aktifFirmaGetir();
+  const fa = formAyarlariGetir('kkd');
+  const bugun = gunAyYil(bugunIso());
+  const dokumanSatiri = [
+    fa.dokumanNo ? `Doküman No: ${fa.dokumanNo}` : '',
+    fa.surumNo ? `Sürüm No: ${fa.surumNo}` : '',
+    fa.surumTarihi ? `Sürüm Tarihi: ${fa.surumTarihi}` : ''
+  ].filter(Boolean).join('   |   ');
 
-    <div class="kkd-bolum">
-      <h2>Numune Bilgileri</h2>
-      <table>
-        <tr><td class="kkd-etiket">Numune No</td><td>${_kkdKacir(k.numuneNo)}</td><td class="kkd-etiket">KKD Türü</td><td>${_kkdKacir(k.kkdTuru) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">KKD Adı</td><td>${_kkdKacir(k.kkdAdi)}</td><td class="kkd-etiket">Marka / Model</td><td>${_kkdKacir([k.marka, k.model].filter(Boolean).join(' / ')) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Numuneyi Gönderen Firma</td><td>${_kkdKacir(k.gonderenFirma) || '-'}</td><td class="kkd-etiket">İlgili Kişi</td><td>${_kkdKacir(k.ilgiliKisi) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">İlgili Kişi Telefon</td><td colspan="3">${_kkdKacir(k.ilgiliKisiTel) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Deneyen Personel</td><td>${_kkdKacir(k.personelAdSoyad) || '-'}</td><td class="kkd-etiket">Bölüm</td><td>${_kkdKacir(k.bolum) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Deney Başlangıç</td><td>${_kkdKacir(gunAyYil(k.deneyBaslangic)) || '-'}</td><td class="kkd-etiket">Deney Bitiş</td><td>${_kkdKacir(gunAyYil(k.deneyBitis)) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Sonuç</td><td colspan="3">${_kkdKacir(k.sonuc) || '-'}</td></tr>
-      </table>
-    </div>
+  const cocuklar = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 60 }, children: [new docx.TextRun({ text: 'KKD NUMUNE DEĞERLENDİRME FORMU', bold: true, size: 30, color: '000000' })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: dokumanSatiri ? 60 : 260 }, children: [new docx.TextRun({ text: `${firma ? firma.ad : ''}   |   Düzenleme Tarihi: ${bugun}`, size: 18, color: '374151' })] })
+  ];
+  if (dokumanSatiri) {
+    cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 260 }, children: [new docx.TextRun({ text: dokumanSatiri, size: 16, color: '6B7280' })] }));
+  }
 
-    <div class="kkd-bolum">
-      <h2>Çalışan Görüşü</h2>
-      <table><tr><td style="font-size:9pt; white-space:pre-wrap;">${_kkdKacir(k.calisanGorusu) || '-'}</td></tr></table>
-    </div>
+  cocuklar.push(_kkdNumBaslik('Numune Bilgileri'));
+  cocuklar.push(_kkdNumBilgiTablosu([
+    ['Numune No', k.numuneNo, 'KKD Türü', k.kkdTuru || '-'],
+    ['KKD Adı', k.kkdAdi, 'Marka / Model', [k.marka, k.model].filter(Boolean).join(' / ') || '-'],
+    ['Numuneyi Gönderen Firma', k.gonderenFirma || '-', 'İlgili Kişi', k.ilgiliKisi || '-'],
+    ['İlgili Kişi Telefon', k.ilgiliKisiTel || '-', 'Deneyen Personel', k.personelAdSoyad || '-'],
+    ['Bölüm', k.bolum || '-', 'Sonuç', k.sonuc || '-'],
+    ['Deney Başlangıç', gunAyYil(k.deneyBaslangic) || '-', 'Deney Bitiş', gunAyYil(k.deneyBitis) || '-']
+  ]));
 
-    <div class="kkd-bolum">
-      <h2>İSG Uzmanı Değerlendirmesi</h2>
-      <table><tr><td style="font-size:9pt; white-space:pre-wrap;">${_kkdKacir(k.isgDegerlendirmesi) || '-'}</td></tr></table>
-    </div>
+  cocuklar.push(_kkdNumBaslik('Çalışan Görüşü'));
+  cocuklar.push(new docx.Paragraph({ spacing: { after: 200 }, children: [new docx.TextRun({ text: k.calisanGorusu || '-' })] }));
 
-    <table class="kkd-imza">
-      <tr>
-        ${_kkdNumuneImzaHucresi('Deneyen Çalışan', k.imzalar && k.imzalar.calisan, k.personelAdSoyad)}
-        ${_kkdNumuneImzaHucresi('İSG Uzmanı', k.imzalar && k.imzalar.isgUzmani)}
-      </tr>
-    </table>
+  cocuklar.push(_kkdNumBaslik('İSG Uzmanı Değerlendirmesi'));
+  cocuklar.push(new docx.Paragraph({ spacing: { after: 240 }, children: [new docx.TextRun({ text: k.isgDegerlendirmesi || '-' })] }));
 
-    <div class="kkd-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
-  `;
+  cocuklar.push(_kkdNumBaslik('Onay'));
+  cocuklar.push(new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [new docx.TableRow({
+      height: { value: 1360, rule: docx.HeightRule.ATLEAST },
+      children: [
+        await _kkdNumImzaHucresi('Deneyen Çalışan', k.imzalar && k.imzalar.calisan, k.personelAdSoyad),
+        await _kkdNumImzaHucresi('İSG Uzmanı', k.imzalar && k.imzalar.isgUzmani)
+      ]
+    })]
+  }));
 
-  await _kkdPdfUret(`KKD_Numune_Degerlendirme_${(k.numuneNo || numuneId).replace(/[\\/]/g, '-')}.pdf`, govde);
+  const dokuman = new docx.Document({ sections: [{ properties: {}, children: cocuklar }] });
+  const blob = await docx.Packer.toBlob(dokuman);
+  saveAs(blob, `KKD_Numune_Degerlendirme_${(k.numuneNo || numuneId).replace(/[\\/]/g, '-')}.docx`);
 }

@@ -114,13 +114,11 @@
     <!-- Kullanıcı isteği: "kkd modülüne numune deneme kısmı ekleyelim,
          nihayetinde çalışan ve İSG imzalı Numune Değerlendirme Formu" -->
     <div id="bolum-numune" style="display:none;">
-      <p style="font-size:12.5px; color:var(--metin-soluk); margin-top:-4px;">
-        Toplu satın alma/zimmetleme öncesi bir KKD numunesi bir personele saha koşullarında denetilir; hem denemeyi yapan çalışan hem İSG uzmanı görüşünü yazıp kaşe/imza ile onaylar.
-      </p>
       <div class="arac-cubugu">
         <input type="text" id="numuneAramaKutusu" class="arama-kutusu" placeholder="Numune no, KKD adı, marka veya personele göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="numuneSonucFiltre" style="width:auto; margin:0;"><option value="">Tüm Sonuçlar</option></select>
+          <button type="button" class="ikincil" id="numuneFormAyarlariBtn" style="width:auto; white-space:nowrap;">Form Ayarları</button>
           <button type="button" class="birincil" id="yeniNumuneBtn" style="width:auto;">+ Yeni Numune Denemesi</button>
         </div>
       </div>
@@ -506,6 +504,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="../../core/data.js"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
