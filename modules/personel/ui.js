@@ -51,7 +51,7 @@ function _ilPersonelListesiCiz(aramaMetni) {
     kutu.innerHTML = personeller.map(p => `
       <label style="display:flex; align-items:center; gap:8px; padding:4px 2px; cursor:pointer;">
         <input type="checkbox" data-il-personel="${p.id}" style="width:auto;" ${_ilSeciliPersonelIdleri.has(p.id) ? 'checked' : ''}>
-        <span>${_prsKacir(p.adSoyad)} (${_prsKacir(p.sicilNo)})</span>
+        <span>${_prsKacir(p.adSoyad)} (${_prsKacir(p.sicilNo)})${p.isveren ? ' — ' + _prsKacir(p.isveren) : ''}</span>
       </label>
     `).join('');
     kutu.querySelectorAll('[data-il-personel]').forEach(kutucuk => {

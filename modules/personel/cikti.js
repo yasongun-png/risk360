@@ -53,9 +53,10 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, baslangicN
   const logo = firma && firmaLogoGetir(firma.id);
   const satirlar = katilimcilar.map((p, i) => `
     <tr>
-      <td style="text-align:center; width:8%;">${baslangicNo + i}</td>
-      <td style="width:20%;">${_prsSertKacir(p.sicilNo)}</td>
-      <td style="width:37%;">${_prsSertKacir(p.adSoyad)}</td>
+      <td style="text-align:center; width:7%;">${baslangicNo + i}</td>
+      <td style="width:16%;">${_prsSertKacir(p.sicilNo)}</td>
+      <td style="width:29%;">${_prsSertKacir(p.adSoyad)}</td>
+      <td style="width:22%;">${_prsSertKacir(p.isveren) || '-'}</td>
       <td></td>
     </tr>
   `).join('');
@@ -72,7 +73,7 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, baslangicN
         <span><b>Tarih:</b> ${gunAyYil(_prsBugunIso())}</span>
       </div>
       <table class="eil-tablo">
-        <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İmza</th></tr></thead>
+        <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İşyeri Sicili</th><th>İmza</th></tr></thead>
         <tbody>${satirlar}</tbody>
       </table>
       ${toplamSayfa > 1 ? `<div class="eil-altbilgi">Sayfa ${sayfaNo} / ${toplamSayfa}</div>` : ''}
