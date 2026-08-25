@@ -29,26 +29,70 @@ function _sifreOzetiGibiMi(deger) {
 // olabilir) ama "Kapatılmadı" listesini gerçekçi bir süreye indirger.
 const OTURUM_OTOMATIK_KAPANMA_DK = 30;
 
+// Kullanıcı raporu: "giriş kayıtları doğru çalışmıyor" (kayıtlar eksik/hiç
+// görünmüyor) — kök neden, isg_oturum_gecmisi'nin TEK bir Firestore
+// belgesinde dizi olarak tutulması ve girisYap/cikisYap/kalp atışı/otomatik
+// kapatma'nın hepsinin "oku (yerel/olası bir miktar eski) -> diziyi mutasyona
+// uğrat -> TÜM diziyi geri yaz" deseniyle çalışmasıydı. Bir şirkette birden
+// çok kullanıcı aynı anda giriş yapıp/kalp atışı gönderdiğinde, iki cihaz
+// neredeyse eşzamanlı olarak diziyi okuyup kendi eklediği kaydı yazınca,
+// SONRA yazan öncekini tamamen SİLEREK üzerine yazabiliyordu (Firestore
+// .set() tüm belgeyi değiştirir, birleştirmez) — bu da bazı girişlerin
+// kalıcı olarak kaybolmasına yol açıyordu. Çözüm: buluttayken bu dört işlem
+// artık bir Firestore TRANSACTION içinde çalışır (sunucudan EN GÜNCEL
+// diziyi okuyup üzerine yazar); bulut kapalıyken (yerel-sadece mod) eskisi
+// gibi doğrudan oku/yaz kullanılır (tek cihaz olduğundan yarış durumu yok).
+function _oturumGecmisiTransactionIleGuncelle(mutateFn) {
+  if (!_bulutAktif) {
+    const gecmis = oku('isg_oturum_gecmisi', []);
+    const yeni = mutateFn(gecmis);
+    if (yeni) yaz('isg_oturum_gecmisi', yeni);
+    return Promise.resolve(yeni || gecmis);
+  }
+
+  const anahtar = 'isg_oturum_gecmisi';
+  _bulutYaziBeklemedeSayaci[anahtar] = (_bulutYaziBeklemedeSayaci[anahtar] || 0) + 1;
+  const ref = _bulutDb.collection('kucuk_veri').doc(anahtar);
+  return _bulutDb.runTransaction(async tx => {
+    const belge = await tx.get(ref);
+    const mevcut = (belge.exists && belge.data().deger) || [];
+    const yeni = mutateFn(mevcut.slice());
+    if (!yeni) return mevcut;
+    tx.set(ref, { deger: yeni });
+    return yeni;
+  }).then(yeni => {
+    _yerelYazDene(anahtar, JSON.stringify(yeni));
+    return yeni;
+  }).catch(e => {
+    console.error('Giriş kaydı güncellenemedi (transaction):', e);
+    return null;
+  }).finally(() => {
+    _bulutYaziBeklemedeSayaci[anahtar]--;
+    if (_bulutYaziBeklemedeSayaci[anahtar] <= 0) delete _bulutYaziBeklemedeSayaci[anahtar];
+  });
+}
+
 function _oturumEskiAcikKayitlariKapat() {
-  const gecmis = oku('isg_oturum_gecmisi', []);
   const esikMs = OTURUM_OTOMATIK_KAPANMA_DK * 60 * 1000;
   const simdi = Date.now();
-  let degistiMi = false;
-  gecmis.forEach(kayit => {
-    if (kayit.cikisZamani) return;
-    const sonAktiviteMs = new Date(kayit.sonAktivite || kayit.girisZamani).getTime();
-    if (!Number.isFinite(sonAktiviteMs)) return;
-    if (simdi - sonAktiviteMs >= esikMs) {
-      kayit.cikisZamani = new Date(sonAktiviteMs).toISOString();
-      kayit.otomatikKapandi = true;
-      degistiMi = true;
-    }
+  return _oturumGecmisiTransactionIleGuncelle(gecmis => {
+    let degistiMi = false;
+    gecmis.forEach(kayit => {
+      if (kayit.cikisZamani) return;
+      const sonAktiviteMs = new Date(kayit.sonAktivite || kayit.girisZamani).getTime();
+      if (!Number.isFinite(sonAktiviteMs)) return;
+      if (simdi - sonAktiviteMs >= esikMs) {
+        kayit.cikisZamani = new Date(sonAktiviteMs).toISOString();
+        kayit.otomatikKapandi = true;
+        degistiMi = true;
+      }
+    });
+    return degistiMi ? gecmis : null;
   });
-  if (degistiMi) yaz('isg_oturum_gecmisi', gecmis);
 }
 
 async function girisYap(kullaniciAdi, sifre) {
-  _oturumEskiAcikKayitlariKapat();
+  await _oturumEskiAcikKayitlariKapat();
   const kullanicilar = oku('isg_kullanicilar', []);
   const bulunan = kullanicilar.find(
     k => k.kullaniciAdi.toLowerCase() === (kullaniciAdi || '').trim().toLowerCase()
@@ -80,17 +124,18 @@ async function girisYap(kullaniciAdi, sifre) {
   // kaldığını görmek istiyorum"). Kayıt id'si isg_oturum'a da yazılır ki
   // cikisYap() hangi kaydı kapatacağını bilsin.
   const oturumKayitId = rastgeleId();
-  const gecmis = oku('isg_oturum_gecmisi', []);
-  gecmis.push({
-    id: oturumKayitId,
-    kullaniciId: bulunan.id,
-    kullaniciAdi: bulunan.kullaniciAdi,
-    adSoyad: bulunan.adSoyad,
-    girisZamani: new Date().toISOString(),
-    sonAktivite: new Date().toISOString(),
-    cikisZamani: null
+  await _oturumGecmisiTransactionIleGuncelle(gecmis => {
+    gecmis.push({
+      id: oturumKayitId,
+      kullaniciId: bulunan.id,
+      kullaniciAdi: bulunan.kullaniciAdi,
+      adSoyad: bulunan.adSoyad,
+      girisZamani: new Date().toISOString(),
+      sonAktivite: new Date().toISOString(),
+      cikisZamani: null
+    });
+    return gecmis.slice(-1000);
   });
-  yaz('isg_oturum_gecmisi', gecmis.slice(-1000));
 
   yaz('isg_oturum', { kullaniciId: bulunan.id, oturumKayitId });
   return { basarili: true, kullanici: bulunan };
@@ -487,12 +532,16 @@ function cikisYap() {
   // client-only bir uygulamanın doğal sınırıdır.
   const oturum = oku('isg_oturum', null);
   if (oturum && oturum.oturumKayitId) {
-    const gecmis = oku('isg_oturum_gecmisi', []);
-    const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
-    if (kayit && !kayit.cikisZamani) {
+    // Fire-and-forget: sayfa çoğunlukla bu çağrıdan hemen sonra
+    // window.location.href ile başka bir sayfaya yönlendiriyor, transaction'ın
+    // bitmesini beklemek girişi kilitlemez (Firestore yazımı arka planda
+    // tamamlanır, aynı önceki yaz()'ın fire-and-forget davranışı gibi).
+    _oturumGecmisiTransactionIleGuncelle(gecmis => {
+      const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
+      if (!kayit || kayit.cikisZamani) return null;
       kayit.cikisZamani = new Date().toISOString();
-      yaz('isg_oturum_gecmisi', gecmis);
-    }
+      return gecmis;
+    });
   }
   localStorage.removeItem('isg_oturum');
   localStorage.removeItem('isg_aktif_firma');
@@ -507,12 +556,12 @@ function girisGecmisiGetir() {
 function _oturumAktiviteGuncelle() {
   const oturum = oku('isg_oturum', null);
   if (!oturum || !oturum.oturumKayitId) return;
-  const gecmis = oku('isg_oturum_gecmisi', []);
-  const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
-  if (kayit && !kayit.cikisZamani) {
+  _oturumGecmisiTransactionIleGuncelle(gecmis => {
+    const kayit = gecmis.find(g => g.id === oturum.oturumKayitId);
+    if (!kayit || kayit.cikisZamani) return null;
     kayit.sonAktivite = new Date().toISOString();
-    yaz('isg_oturum_gecmisi', gecmis);
-  }
+    return gecmis;
+  });
 }
 
 // Kullanıcı isteği: "eğer uygulama kullanılmıyorsa otomatik kapatılmalı

@@ -109,7 +109,13 @@
         window.location.href = 'index.html';
       });
 
-      bulutHazirOlduğunda(() => {
+      bulutHazirOlduğunda(async () => {
+        // Kullanıcı raporu: "giriş kayıtları doğru çalışmıyor" — bu sayfa
+        // önceden sadece mevcut veriyi okuyordu, 30 dk'yı aşan hâlâ "açık"
+        // görünen kayıtları burada hiç kapatmıyordu (yalnızca bir SONRAKİ
+        // girisYap() bunu tetikliyordu). Artık sayfa her açıldığında önce
+        // süresi geçmiş açık kayıtları kapatıp öyle listeliyor.
+        await _oturumEskiAcikKayitlariKapat();
         const kayitlar = girisGecmisiGetir();
 
         // ---- Özet (kullanıcı başına giriş sayısı + toplam süre) ----
