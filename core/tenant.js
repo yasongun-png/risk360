@@ -238,6 +238,41 @@ function firmaOzelEgitimTuruSil(firmaId, turId) {
   return { basarili: true, firma };
 }
 
+// Kullanıcı isteği: "acil durum ekipman kontrolünde bölüme yardımcı
+// işletmeler ekle" -> "sen buraya bölüm ekleme ve silme ekle" -> "sadece
+// bu listeye eklediklerimi liste olarak göster" — Ekipman formundaki
+// Bölüm listesi artık personel bölümlerinden DEĞİL, bu firmaya özel,
+// kullanıcının kendi ekleyip sildiği sabit bir listeden geliyor (bkz.
+// modules/acil-durum/ui.js). firma.isverenler (yukarıdaki
+// firmaIsverenleriAyarla) ile aynı basit "düz metin dizisi" deseni.
+function firmaEkipmanBolumuEkle(firmaId, ad) {
+  const temizAd = String(ad || '').trim();
+  if (!temizAd) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };
+
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  const liste = Array.isArray(firma.ekipmanBolumleri) ? firma.ekipmanBolumleri : [];
+  if (liste.some(b => b.toLocaleLowerCase('tr-TR') === temizAd.toLocaleLowerCase('tr-TR'))) {
+    return { basarili: false, hata: 'Bu isimde bir bölüm zaten tanımlı.' };
+  }
+
+  firma.ekipmanBolumleri = liste.concat([temizAd]);
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
+function firmaEkipmanBolumuSil(firmaId, ad) {
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  firma.ekipmanBolumleri = (Array.isArray(firma.ekipmanBolumleri) ? firma.ekipmanBolumleri : []).filter(b => b !== ad);
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
 // Logo AYRI bir anahtarda tutulur (isg_firmalar'ın içine gömülmez): isg_firmalar
 // "küçük senkron" anahtarlardan biridir ve her kayıtta değişmeden localStorage'a
 // da yazılır (bkz. core/data.js) -- bir logo (sıkıştırılmış görsel bile olsa)

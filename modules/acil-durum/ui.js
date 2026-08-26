@@ -74,6 +74,15 @@ function acilDurumSayfasiniBaslat(firma) {
   ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
   ekipmanTurFiltreEl.addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
   document.getElementById('ekipmanBolumFiltre').addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
+  document.getElementById('ekipmanBolumYonetBtn').addEventListener('click', ekipmanBolumYonetModalAc);
+  document.getElementById('ekipmanBolumYonetKapatBtn').addEventListener('click', ekipmanBolumYonetModalKapat);
+  document.getElementById('ekipmanBolumEkleBtn').addEventListener('click', () => {
+    const sonuc = firmaEkipmanBolumuEkle(_adFirma.id, document.getElementById('yeniEkipmanBolumAdi').value);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    _adFirma = sonuc.firma;
+    document.getElementById('yeniEkipmanBolumAdi').value = '';
+    _ekipmanBolumYonetListesiCiz();
+  });
 
   // Yangın Tüpü
   document.getElementById('yeniYanginTupuBtn').addEventListener('click', () => yanginTupuModalAc());
@@ -538,6 +547,66 @@ function _ekipmanBolumFiltreDoldur() {
   if (bolumler.includes(oncekiSecim)) secim.value = oncekiSecim;
 }
 
+// ==================== EKİPMAN BÖLÜMLERİNİ YÖNET ====================
+// Kullanıcı isteği: "acil durum ekipman kontrolünde bölüme yardımcı
+// işletmeler ekle" -> "sen buraya bölüm ekleme ve silme ekle" -> "sadece
+// bu listeye eklediklerimi liste olarak göster" — modules/egitim/ui.js
+// "Eğitim Türlerini Yönet" ile aynı ekle/sil deseni (bkz. core/tenant.js
+// firmaEkipmanBolumuEkle/Sil).
+
+// Ekipman formundaki (ve yönetim modalındaki) #ekipmanBolum <select>'ini
+// SADECE firma.ekipmanBolumleri listesinden doldurur — seciliDeger o an
+// düzenlenen kaydın bölümüyse (liste dışında kalmış eski/serbest veri de
+// olsa) kaybolmasın diye seçeneklere eklenir.
+function _ekipmanBolumSeceneklerDoldur(secimEl, seciliDeger) {
+  if (!secimEl) return;
+  const bolumler = (_adFirma && Array.isArray(_adFirma.ekipmanBolumleri) ? _adFirma.ekipmanBolumleri : []).slice().sort((a, b) => a.localeCompare(b, 'tr'));
+  const temizSecili = (seciliDeger || '').trim();
+  if (temizSecili && !bolumler.includes(temizSecili)) bolumler.push(temizSecili);
+  secimEl.innerHTML = '<option value="">— Bölüm seçiniz —</option>' +
+    bolumler.map(b => `<option ${temizSecili === b ? 'selected' : ''}>${_adKacir(b)}</option>`).join('');
+}
+
+function _ekipmanBolumYonetListesiCiz() {
+  const kutu = document.getElementById('ekipmanBolumListesi');
+  if (!kutu) return;
+  const bolumler = (_adFirma && Array.isArray(_adFirma.ekipmanBolumleri) ? _adFirma.ekipmanBolumleri : []).slice().sort((a, b) => a.localeCompare(b, 'tr'));
+  if (!bolumler.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Henüz bölüm tanımlanmadı.</div>';
+    return;
+  }
+  kutu.innerHTML = bolumler.map(b => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
+      <span>${_adKacir(b)}</span>
+      <button type="button" class="tablo-buton sil" data-ekipman-bolum-sil="${_adKacir(b)}">Sil</button>
+    </div>
+  `).join('');
+  kutu.querySelectorAll('[data-ekipman-bolum-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    const ad = btn.getAttribute('data-ekipman-bolum-sil');
+    if (!(await onayModali(`"${ad}" bölümünü listeden kaldırmak istediğinize emin misiniz? (Bu bölümle daha önce girilmiş ekipman kayıtları etkilenmez.)`, 'Kaldır'))) return;
+    const sonuc = firmaEkipmanBolumuSil(_adFirma.id, ad);
+    if (sonuc.basarili) {
+      _adFirma = sonuc.firma;
+      _ekipmanBolumYonetListesiCiz();
+    }
+  }));
+}
+
+function ekipmanBolumYonetModalAc() {
+  _ekipmanBolumYonetListesiCiz();
+  document.getElementById('yeniEkipmanBolumAdi').value = '';
+  document.getElementById('ekipmanBolumYonetModal').classList.add('acik');
+}
+
+function ekipmanBolumYonetModalKapat() {
+  document.getElementById('ekipmanBolumYonetModal').classList.remove('acik');
+  // Modal kapatılırken form açık olabilir (ekipmanModalKatman altında
+  // gösteriliyor) — yeni eklenen/silinen bölümler formdaki seçim listesine
+  // hemen yansısın.
+  const secim = document.getElementById('ekipmanBolum');
+  if (secim) _ekipmanBolumSeceneklerDoldur(secim, secim.value);
+}
+
 // Arama kutusu + tür/bölüm filtrelerinin hepsini birlikte uygular — tabloyu
 // çizen ekipmanlariCiz ile barkod yazdırma gibi "ekranda görüneni bas"
 // işlemlerinin AYNI filtrelenmiş listeyi kullanması için ortak yardımcı.
@@ -789,23 +858,13 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanModalBaslik').textContent = ekipman ? 'Ekipmanı Düzenle' : 'Yeni Ekipman';
   document.getElementById('ekipmanTur').innerHTML = EKIPMAN_TURLERI.map(t => `<option ${ekipman && ekipman.tur === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('ekipmanNo').value = ekipman ? ekipman.ekipmanNo : '';
-  // Kullanıcı isteği: "bölümler ise listeden seçilsin" — personel
-  // modülündeki kayıtlı bölüm adlarından oluşan listeden seçiliyor (serbest
-  // metin girişi değil). Kaydın mevcut bölümü bu listede yoksa (eski/serbest
-  // girilmiş veri) kaybolmasın diye seçeneklere ekleniyor.
-  // Kullanıcı isteği: "acil durum ekipman kontrolünde bölüme yardımcı
-  // işletmeler ekle" — ekipman lokasyonları her zaman bir personel
-  // bölümüyle birebir örtüşmeyebilir (ör. kazan dairesi/yardımcı tesisler
-  // gibi fiziksel alanlar), bu yüzden personel bölümlerine ek olarak her
-  // zaman seçilebilir sabit bir bölüm burada tanımlanır.
-  const EKIPMAN_SABIT_BOLUMLER = ['Yardımcı İşletmeler'];
-  const mevcutBolumler = Array.from(new Set(
-    personelleriGetir('', false).map(p => (p.bolum || '').trim()).filter(Boolean).concat(EKIPMAN_SABIT_BOLUMLER)
-  )).sort((a, b) => a.localeCompare(b, 'tr'));
-  const ekipmanBolumu = ekipman ? (ekipman.bolum || '').trim() : '';
-  if (ekipmanBolumu && !mevcutBolumler.includes(ekipmanBolumu)) mevcutBolumler.push(ekipmanBolumu);
-  document.getElementById('ekipmanBolum').innerHTML = '<option value="">— Bölüm seçiniz —</option>' +
-    mevcutBolumler.map(b => `<option ${ekipmanBolumu === b ? 'selected' : ''}>${_adKacir(b)}</option>`).join('');
+  // Kullanıcı isteği: "bölümler ise listeden seçilsin" -> "acil durum
+  // ekipman kontrolünde bölüme yardımcı işletmeler ekle" -> "sen buraya
+  // bölüm ekleme ve silme ekle" -> "sadece bu listeye eklediklerimi liste
+  // olarak göster" — Bölüm artık firmaya özel, kullanıcının "Bölümleri
+  // Yönet" modalından kendi ekleyip sildiği bir listeden seçiliyor (bkz.
+  // firma.ekipmanBolumleri, core/tenant.js firmaEkipmanBolumuEkle/Sil).
+  _ekipmanBolumSeceneklerDoldur(document.getElementById('ekipmanBolum'), ekipman ? ekipman.bolum : '');
   document.getElementById('ekipmanLokasyon').value = ekipman ? ekipman.lokasyon : '';
   document.getElementById('ekipmanPeriyot').value = ekipman ? ekipman.periyotGun : 90;
   document.getElementById('ekipmanSonKontrol').value = ekipman ? ekipman.sonKontrol : '';

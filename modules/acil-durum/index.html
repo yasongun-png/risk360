@@ -86,6 +86,7 @@
           <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
           <select id="ekipmanTurFiltre" style="width:auto;"><option value="">Tüm Türler (birleşik liste)</option></select>
           <select id="ekipmanBolumFiltre" style="width:auto;"><option value="">Tüm Bölümler</option></select>
+          <button type="button" class="ikincil" id="ekipmanBolumYonetBtn" style="width:auto; white-space:nowrap;">Bölümleri Yönet</button>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="ikincil" id="ekipmanSablonIndirBtn">Şablon İndir</button>
@@ -224,6 +225,33 @@
   </div>
 
   <!-- EKİPMAN MODAL -->
+  <!-- Kullanıcı isteği: "acil durum ekipman kontrolünde bölüme yardımcı
+       işletmeler ekle" -> "sen buraya bölüm ekleme ve silme ekle" -> "sadece
+       bu listeye eklediklerimi liste olarak göster" -- modules/egitim/
+       index.html turYonetModal ile aynı ekle/sil desen. -->
+  <div class="modal-katman" id="ekipmanBolumYonetModal">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3>Ekipman Bölümlerini Yönet</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Ekipman formundaki Bölüm listesinde sadece burada tanımladığınız bölümler görünür.
+      </p>
+
+      <div id="ekipmanBolumListesi" style="margin-bottom:14px;"></div>
+
+      <div style="display:flex; gap:8px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label for="yeniEkipmanBolumAdi">Yeni Bölüm Adı</label>
+          <input type="text" id="yeniEkipmanBolumAdi" placeholder="Örn: Yardımcı İşletmeler">
+        </div>
+        <button type="button" class="birincil" id="ekipmanBolumEkleBtn" style="width:auto; margin-bottom:14px;">Ekle</button>
+      </div>
+
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ekipmanBolumYonetKapatBtn">Kapat</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-katman" id="ekipmanModalKatman">
     <div class="modal-kutu" style="max-width:600px;">
       <h3 id="ekipmanModalBaslik">Yeni Ekipman</h3>
