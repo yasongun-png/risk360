@@ -260,12 +260,15 @@
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
   <script src="../hizmet-sozlesmesi/repository.js"></script>
-  <script src="model.js"></script>
-  <script src="validation.js"></script>
-  <script src="repository.js"></script>
-  <script src="service.js"></script>
-  <script src="ui.js"></script>
-  <script src="cikti.js"></script>
+  <!-- ?v= tarayıcı JS önbelleğini kırmak için (bkz. modules/personel/
+       index.html'deki aynı çözüm) — bu dosyaların içeriği değiştikçe
+       sürüm numarası artırılmalı. -->
+  <script src="model.js?v=2"></script>
+  <script src="validation.js?v=2"></script>
+  <script src="repository.js?v=2"></script>
+  <script src="service.js?v=2"></script>
+  <script src="ui.js?v=2"></script>
+  <script src="cikti.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('egitim');
 

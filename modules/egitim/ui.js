@@ -938,20 +938,43 @@ function _egtBelgeOnizlemeCiz() {
       <button type="button" class="tablo-buton sil">Kaldır</button>
     </div>
   `;
-  kutu.querySelector('#belgeDosyasiAcLink').addEventListener('click', async e => {
+  kutu.querySelector('#belgeDosyasiAcLink').addEventListener('click', e => {
     e.preventDefault();
-    const url = await fotoBuyukCoz(_egtBelgeDosyasi);
-    if (url) window.open(url, '_blank');
+    _egtBelgeAc(_egtBelgeDosyasi);
   });
   kutu.querySelector('button.sil').addEventListener('click', () => { _egtBelgeDosyasi = ''; _egtBelgeOnizlemeCiz(); });
 }
 
 // Kayıt tablosundaki "Belge" bağlantısı (bkz. kayitTablosunuCiz) — aynı
 // aç/indir mantığı, sadece kayıt id'sinden okunmuş kaydın belgeDosyasi'nı kullanır.
+//
+// Kullanıcı raporu: "aç indir değince myk da belgeyi göremiyor" — ekran
+// görüntüsü, yeni sekmenin "data:application/pdf;base64,..." adresine
+// gittiğini ama TAMAMEN BOŞ kaldığını gösterdi. İki ayrı sorun vardı:
+// 1) window.open(...) fotoBuyukCoz'un (Firestore'dan okuyan) await'inden
+//    SONRA çağrılıyordu -- tıklamanın doğrudan tetiklediği senkron kullanıcı
+//    hareketi zinciri kopuyor, çoğu tarayıcı bunu popup engelleyici ile
+//    sessizce engelliyor (bu yüzden önce BOŞ bir sekme senkron açılır).
+// 2) Chrome, üst düzey (adres çubuğu) bir sekmenin data: URL'ine
+//    YÖNLENDİRİLMESİNİ güvenlik gereği reddeder/boş bırakır -- data URL
+//    önce bir Blob'a, sonra kısa ömürlü bir blob: URL'ine çevrilip sekme
+//    ORAYA yönlendirilir (tarayıcıların PDF gösterdiği standart yöntem).
 async function _egtBelgeAc(referans) {
-  const url = await fotoBuyukCoz(referans);
-  if (url) window.open(url, '_blank');
-  else alert('Belge açılamadı.');
+  if (!referans) { alert('Belge bulunamadı.'); return; }
+  const yeniSekme = window.open('', '_blank');
+  try {
+    const dataUrl = await fotoBuyukCoz(referans);
+    if (!dataUrl) { if (yeniSekme) yeniSekme.close(); alert('Belge açılamadı.'); return; }
+    const yanit = await fetch(dataUrl);
+    const blob = await yanit.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    if (yeniSekme) yeniSekme.location.href = blobUrl;
+    else window.open(blobUrl, '_blank');
+  } catch (hata) {
+    console.error(hata);
+    if (yeniSekme) yeniSekme.close();
+    alert('Belge açılamadı: ' + (hata.message || hata));
+  }
 }
 
 function modalAc(kayit) {
