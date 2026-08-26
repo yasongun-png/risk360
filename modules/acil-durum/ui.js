@@ -793,7 +793,15 @@ function ekipmanModalAc(ekipman) {
   // modülündeki kayıtlı bölüm adlarından oluşan listeden seçiliyor (serbest
   // metin girişi değil). Kaydın mevcut bölümü bu listede yoksa (eski/serbest
   // girilmiş veri) kaybolmasın diye seçeneklere ekleniyor.
-  const mevcutBolumler = Array.from(new Set(personelleriGetir('', false).map(p => (p.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
+  // Kullanıcı isteği: "acil durum ekipman kontrolünde bölüme yardımcı
+  // işletmeler ekle" — ekipman lokasyonları her zaman bir personel
+  // bölümüyle birebir örtüşmeyebilir (ör. kazan dairesi/yardımcı tesisler
+  // gibi fiziksel alanlar), bu yüzden personel bölümlerine ek olarak her
+  // zaman seçilebilir sabit bir bölüm burada tanımlanır.
+  const EKIPMAN_SABIT_BOLUMLER = ['Yardımcı İşletmeler'];
+  const mevcutBolumler = Array.from(new Set(
+    personelleriGetir('', false).map(p => (p.bolum || '').trim()).filter(Boolean).concat(EKIPMAN_SABIT_BOLUMLER)
+  )).sort((a, b) => a.localeCompare(b, 'tr'));
   const ekipmanBolumu = ekipman ? (ekipman.bolum || '').trim() : '';
   if (ekipmanBolumu && !mevcutBolumler.includes(ekipmanBolumu)) mevcutBolumler.push(ekipmanBolumu);
   document.getElementById('ekipmanBolum').innerHTML = '<option value="">— Bölüm seçiniz —</option>' +
