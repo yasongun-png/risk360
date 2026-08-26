@@ -155,10 +155,16 @@ async function _kfFotoVerisiGetir(url, maksGenislik) {
 async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
   // Kullanıcı isteği: "acil durum ekipman kontrollerine her bir kontrol
   // için 3 adet fotoğraf ekleyebilmek istiyorum" -> "diğer fotolarda yan
-  // yana rapora eklensin, word'e" — üç fotoğraf da (varsa) tek satırda yan
-  // yana basılır; sığdırmak için tek fotoğraftakinden daha dar ölçeklenir.
+  // yana rapora eklensin, word'e" -> "fotoğraf ekleyince worddeki fotolar
+  // çok küçüldü" — sabit 170px HER zaman (tek fotoğrafta bile) küçük
+  // kalıyordu; artık genişlik gerçekte kaç fotoğraf DOLU olduğuna göre
+  // belirlenir (1 fotoğrafta eskisi kadar büyük, 2/3 fotoğrafta sayfaya
+  // sığacak şekilde orantılı küçülür).
+  const fotoUrlleri = [ekipman.fotoUrl, ekipman.fotoUrl2, ekipman.fotoUrl3].filter(Boolean);
+  const FOTO_GENISLIK_SAYIYA_GORE = { 1: 320, 2: 260, 3: 190 };
+  const fotoGenislik = FOTO_GENISLIK_SAYIYA_GORE[fotoUrlleri.length] || 190;
   const fotolar = (await Promise.all(
-    [ekipman.fotoUrl, ekipman.fotoUrl2, ekipman.fotoUrl3].map(u => _kfFotoVerisiGetir(u, 170))
+    fotoUrlleri.map(u => _kfFotoVerisiGetir(u, fotoGenislik))
   )).filter(Boolean);
   return [
     new docx.Paragraph({
