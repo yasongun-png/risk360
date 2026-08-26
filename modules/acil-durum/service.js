@@ -84,7 +84,11 @@ function uygunlukDegerlendirmesiHesapla(firma) {
 // ---- Ekipman ----
 
 function _ekipmanZenginlestir(ek) {
-  return Object.assign({}, ek, { durumGoruntu: durumTuret(ek.sonrakiKontrol, ek.durum, ['İptal', 'Pasif']) });
+  // "Eksik" (fiziksel olarak hiç kurulu olmayan ekipman, bkz. ui.js) de
+  // terminal durumlar arasında — sonrakiKontrol tarihine göre Gecikmiş/
+  // Yaklaşıyor türetilmez, çünkü kurulu olmayan bir ekipmanın "kontrol
+  // tarihi" anlamsızdır.
+  return Object.assign({}, ek, { durumGoruntu: durumTuret(ek.sonrakiKontrol, ek.durum, ['İptal', 'Pasif', 'Eksik']) });
 }
 
 function ekipmanlariGetir(aramaMetni) {

@@ -659,6 +659,8 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
 /* KKD Takibi rozetleri */
 .genel-rozet.rozet-degisim-yaklasiyor, .genel-rozet.rozet-stok-yok, .genel-rozet.rozet-kontrol-bekliyor, .genel-rozet.rozet-degisim-bekliyor, .genel-rozet.rozet-bakimda, .genel-rozet.rozet-sartli-uygun { background: #fef3c7; color: #b45309; }
 .genel-rozet.rozet-degisim-suresi-gecti, .genel-rozet.rozet-kayip, .genel-rozet.rozet-hasarli { background: #fee2e2; color: #b91c1c; }
+/* Acil Durum Ekipmanları: fiziksel olarak kurulu olmayan/eksik ekipman */
+.genel-rozet.rozet-eksik { background: #fee2e2; color: #b91c1c; }
 .genel-rozet.rozet-kirmizi { background: #fee2e2; color: #b91c1c; }
 .genel-rozet.rozet-normal { background: #f3f4f6; color: var(--metin-soluk); }
 

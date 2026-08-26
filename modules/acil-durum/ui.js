@@ -803,7 +803,13 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanSonKontrol').value = ekipman ? ekipman.sonKontrol : '';
   document.getElementById('ekipmanSonrakiKontrol').value = ekipman ? ekipman.sonrakiKontrol : '';
   document.getElementById('ekipmanSorumlu').value = ekipman ? ekipman.sorumlu : '';
-  document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  // Kullanıcı isteği: "bir yerde örneğin kimyasal var, orada göz duşu
+  // olması gerekiyor ama şu anda yok, bu eksikliği de yazabilmem lazım" —
+  // fiziksel olarak hiç kurulu OLMAYAN gerekli bir ekipman için "Eksik"
+  // durumu: normal 90 günlük kontrol döngüsüne girmez (bkz. service.js
+  // _ekipmanZenginlestir), sadece bir eksiklik kaydı olarak listede/
+  // raporlarda görünür.
+  document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'Eksik', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
   _ekipmanFotoUrl = ekipman ? (ekipman.fotoUrl || '') : '';
