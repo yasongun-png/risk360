@@ -573,7 +573,11 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="../../core/data.js"></script>
   <script src="../../core/auth.js"></script>
-  <script src="../../core/tenant.js"></script>
+  <!-- ?v= tarayıcı JS önbelleğini kırmak için (kullanıcı raporu: "değişiklik
+       görünmüyor" — tarayıcı eski script'i önbellekten okuyordu, bkz.
+       modules/personel/index.html'deki aynı çözüm). Bu dosyaların içeriği
+       değiştikçe sürüm numarası artırılmalı. -->
+  <script src="../../core/tenant.js?v=2"></script>
   <script src="../../core/excel.js"></script>
   <script src="../../core/rapor.js"></script>
   <script src="../../core/metin-istem.js"></script>
@@ -582,13 +586,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js"></script>
-  <script src="validation.js"></script>
-  <script src="repository.js"></script>
-  <script src="service.js"></script>
-  <script src="kontrol-formu-cikti.js"></script>
-  <script src="gorevlendirme-cikti.js"></script>
-  <script src="ui.js"></script>
+  <script src="model.js?v=2"></script>
+  <script src="validation.js?v=2"></script>
+  <script src="repository.js?v=2"></script>
+  <script src="service.js?v=2"></script>
+  <script src="kontrol-formu-cikti.js?v=2"></script>
+  <script src="gorevlendirme-cikti.js?v=2"></script>
+  <script src="ui.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
