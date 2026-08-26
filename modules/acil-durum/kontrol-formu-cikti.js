@@ -118,7 +118,7 @@ async function _kfImzaTablosu(basliklar, imzalar) {
 // deseni) docx.js ImageRun'ın kabul ettiği ham byte dizisine + gerçek
 // en/boy oranını koruyan ölçülere çevirir. Fotoğraf yoksa/çözülemezse
 // null döner, çağıran taraf o durumda görsel eklemeden devam eder.
-async function _kfFotoVerisiGetir(url) {
+async function _kfFotoVerisiGetir(url, maksGenislik) {
   if (!url) return null;
   try {
     const cozulmus = await fotoBuyukCoz(url);
@@ -132,7 +132,7 @@ async function _kfFotoVerisiGetir(url) {
       img.onerror = red;
       img.src = URL.createObjectURL(blob);
     });
-    const MAKS_GENISLIK = 320;
+    const MAKS_GENISLIK = maksGenislik || 320;
     const oran = olcu.genislik > MAKS_GENISLIK ? MAKS_GENISLIK / olcu.genislik : 1;
     return {
       veri: new Uint8Array(arrayBuffer),
@@ -153,7 +153,13 @@ async function _kfFotoVerisiGetir(url) {
 // gösterilsin" -- sayfaSonuOncesi true ise (belgenin en başındaki ekipman
 // hariç) bu blok yeni bir sayfada başlar.
 async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
-  const foto = await _kfFotoVerisiGetir(ekipman.fotoUrl);
+  // Kullanıcı isteği: "acil durum ekipman kontrollerine her bir kontrol
+  // için 3 adet fotoğraf ekleyebilmek istiyorum" -> "diğer fotolarda yan
+  // yana rapora eklensin, word'e" — üç fotoğraf da (varsa) tek satırda yan
+  // yana basılır; sığdırmak için tek fotoğraftakinden daha dar ölçeklenir.
+  const fotolar = (await Promise.all(
+    [ekipman.fotoUrl, ekipman.fotoUrl2, ekipman.fotoUrl3].map(u => _kfFotoVerisiGetir(u, 170))
+  )).filter(Boolean);
   return [
     new docx.Paragraph({
       pageBreakBefore: !!sayfaSonuOncesi,
@@ -170,10 +176,13 @@ async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
       { spacing: { after: 120 } }
     ),
     _kfKontrolTablosu(sorular, ekipman.kontrolCevaplari || {}),
-    _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: foto ? 80 : 200 } }),
-    ...(foto ? [new docx.Paragraph({
+    _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: fotolar.length ? 80 : 200 } }),
+    ...(fotolar.length ? [new docx.Paragraph({
       spacing: { after: 200 },
-      children: [new docx.ImageRun({ data: foto.veri, transformation: { width: foto.genislik, height: foto.yukseklik } })]
+      children: fotolar.flatMap((f, i) => [
+        new docx.ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } }),
+        ...(i < fotolar.length - 1 ? [new docx.TextRun({ text: '   ' })] : [])
+      ])
     })] : [])
   ];
 }

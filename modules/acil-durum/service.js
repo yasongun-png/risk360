@@ -150,6 +150,8 @@ function ekipmanGuncelle(id, veriler) {
     }, {}),
     notlar: (veriler.notlar || '').trim(),
     fotoUrl: veriler.fotoUrl || '',
+    fotoUrl2: veriler.fotoUrl2 || '',
+    fotoUrl3: veriler.fotoUrl3 || '',
     kontrolEden: (veriler.kontrolEden || '').trim()
   });
   return { basarili: true, ekipman: guncellenen };

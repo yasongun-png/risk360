@@ -12,7 +12,11 @@ let _duzenlenenYanginTupuId = null;
 // eklenir. Düzenlemede kullanılmaz.
 let _bekleyenHaritaKonum = null;
 let _duzenlenenTatbikatId = null;
-let _ekipmanFotoUrl = '';
+// Kullanıcı isteği: "acil durum ekipman kontrollerine her bir kontrol için
+// 3 adet fotoğraf ekleyebilmek istiyorum" — tek fotoğraf (_ekipmanFotoUrl)
+// yerine 3 slot; alan adları (fotoUrl/fotoUrl2/fotoUrl3) geriye dönük
+// uyumluluk için korunuyor (bkz. model.js).
+let _ekipmanFotoUrlleri = ['', '', ''];
 
 function _adKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -65,10 +69,12 @@ function acilDurumSayfasiniBaslat(firma) {
   // mobil tarayıcılarda capture="environment" olan bir input SADECE kamerayı
   // açıp galeri seçimini gizleyebiliyor, bu yüzden tek input yerine iki ayrı
   // düğme/gizli input kullanılır; ikisi de aynı yükleme mantığına bağlanır.
-  document.getElementById('ekipmanFotoCekBtn').addEventListener('click', () => document.getElementById('ekipmanFotoCekDosya').click());
-  document.getElementById('ekipmanFotoSecBtn').addEventListener('click', () => document.getElementById('ekipmanFotoSecDosya').click());
-  document.getElementById('ekipmanFotoCekDosya').addEventListener('change', _ekipmanFotoSecildi);
-  document.getElementById('ekipmanFotoSecDosya').addEventListener('change', _ekipmanFotoSecildi);
+  [1, 2, 3].forEach(i => {
+    document.getElementById('ekipmanFoto' + i + 'CekBtn').addEventListener('click', () => document.getElementById('ekipmanFoto' + i + 'CekDosya').click());
+    document.getElementById('ekipmanFoto' + i + 'SecBtn').addEventListener('click', () => document.getElementById('ekipmanFoto' + i + 'SecDosya').click());
+    document.getElementById('ekipmanFoto' + i + 'CekDosya').addEventListener('change', e => _ekipmanFotoSecildi(e, i));
+    document.getElementById('ekipmanFoto' + i + 'SecDosya').addEventListener('change', e => _ekipmanFotoSecildi(e, i));
+  });
   document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
   const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
   ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -879,10 +885,12 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'Eksik', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
-  _ekipmanFotoUrl = ekipman ? (ekipman.fotoUrl || '') : '';
-  document.getElementById('ekipmanFotoCekDosya').value = '';
-  document.getElementById('ekipmanFotoSecDosya').value = '';
-  _ekipmanFotoOnizlemeCiz();
+  _ekipmanFotoUrlleri = ekipman ? [ekipman.fotoUrl || '', ekipman.fotoUrl2 || '', ekipman.fotoUrl3 || ''] : ['', '', ''];
+  [1, 2, 3].forEach(i => {
+    document.getElementById('ekipmanFoto' + i + 'CekDosya').value = '';
+    document.getElementById('ekipmanFoto' + i + 'SecDosya').value = '';
+    _ekipmanFotoOnizlemeCiz(i);
+  });
   _ekipmanKontrolListesiCiz(ekipman);
   document.getElementById('ekipmanTur').onchange = () => _ekipmanKontrolListesiCiz(ekipman);
   _ekipmanKonumAlaniCiz(ekipman);
@@ -924,15 +932,17 @@ function _ekipmanKonumAlaniCiz(ekipman) {
 // "Fotoğraf Çek" (kamera) ve "Galeriden/Dosyadan Seç" düğmelerinin ortak
 // yükleme mantığı -- Storage/CORS sorunundan kaçınmak için doğrudan
 // fotoSikistir + fotoBuyukKaydet kullanılır (bkz. yukarıdaki wiring
-// yorumu ve is-izni/ui.js _izImzaYukle ile aynı gerekçe).
-async function _ekipmanFotoSecildi(e) {
+// yorumu ve is-izni/ui.js _izImzaYukle ile aynı gerekçe). index (1/2/3)
+// hangi fotoğraf slotunun doldurulduğunu belirtir (bkz. dosya başı
+// _ekipmanFotoUrlleri yorumu).
+async function _ekipmanFotoSecildi(e, index) {
   const dosya = e.target.files[0];
   e.target.value = '';
   if (!dosya) return;
   try {
     const dataUrl = await fotoSikistir(dosya, 900, 0.6);
-    _ekipmanFotoUrl = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
-    _ekipmanFotoOnizlemeCiz();
+    _ekipmanFotoUrlleri[index - 1] = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
+    _ekipmanFotoOnizlemeCiz(index);
   } catch (hata) {
     alert(hata.message || 'Fotoğraf yüklenemedi.');
   }
@@ -940,20 +950,18 @@ async function _ekipmanFotoSecildi(e) {
 
 // Kontrol/bulgu fotoğrafı önizlemesi -- modules/kimyasal/ui.js
 // _sdsGorseliOnizlemeCiz ile aynı desen (fotoYukle + fotoReferanslariCoz).
-function _ekipmanFotoOnizlemeCiz() {
-  const kutu = document.getElementById('ekipmanFotoOnizleme');
+function _ekipmanFotoOnizlemeCiz(index) {
+  const kutu = document.getElementById('ekipmanFoto' + index + 'Onizleme');
   if (!kutu) return;
-  kutu.innerHTML = _ekipmanFotoUrl
-    ? `<div style="display:flex; align-items:center; gap:10px;">
-         <img data-foto-ref="${_ekipmanFotoUrl}" style="width:72px; height:72px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
-         <div>
-           <div style="font-size:12px; color:#16a34a; font-weight:600;">✓ Fotoğraf eklendi</div>
-           <button type="button" class="tablo-buton sil" style="margin-top:4px;">Fotoğrafı Kaldır</button>
-         </div>
+  const url = _ekipmanFotoUrlleri[index - 1];
+  kutu.innerHTML = url
+    ? `<div style="display:flex; align-items:center; gap:8px;">
+         <img data-foto-ref="${url}" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+         <button type="button" class="tablo-buton sil" style="font-size:11px;">Kaldır</button>
        </div>`
     : '<div style="font-size:12px; color:var(--metin-soluk);">Henüz fotoğraf eklenmedi.</div>';
-  if (_ekipmanFotoUrl) {
-    kutu.querySelector('button').addEventListener('click', () => { _ekipmanFotoUrl = ''; _ekipmanFotoOnizlemeCiz(); });
+  if (url) {
+    kutu.querySelector('button').addEventListener('click', () => { _ekipmanFotoUrlleri[index - 1] = ''; _ekipmanFotoOnizlemeCiz(index); });
     fotoReferanslariCoz(kutu);
   }
 }
@@ -1008,7 +1016,9 @@ function ekipmanFormGonderildi(e) {
     bulgular: document.getElementById('ekipmanBulgular').value,
     kontrolCevaplari: _ekipmanKontrolListesiTopla(),
     notlar: document.getElementById('ekipmanNotlar').value,
-    fotoUrl: _ekipmanFotoUrl
+    fotoUrl: _ekipmanFotoUrlleri[0],
+    fotoUrl2: _ekipmanFotoUrlleri[1],
+    fotoUrl3: _ekipmanFotoUrlleri[2]
   };
 
   if (!_duzenlenenEkipmanId && _bekleyenHaritaKonum) {

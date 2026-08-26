@@ -306,14 +306,38 @@
         <label for="ekipmanBulgular">Bulgular</label>
         <textarea id="ekipmanBulgular"></textarea>
 
-        <label>Fotoğraf <span style="color:var(--metin-soluk); font-weight:400;">(kontrol/bulgu kanıtı, opsiyonel)</span></label>
-        <div style="display:flex; gap:8px; margin-bottom:6px;">
-          <button type="button" class="tablo-buton" id="ekipmanFotoCekBtn">📷 Fotoğraf Çek</button>
-          <button type="button" class="tablo-buton" id="ekipmanFotoSecBtn">🖼️ Galeriden/Dosyadan Seç</button>
+        <!-- Kullanıcı isteği: "acil durum ekipman kontrollerine her bir
+             kontrol için 3 adet fotoğraf ekleyebilmek istiyorum" -->
+        <label>Fotoğraflar <span style="color:var(--metin-soluk); font-weight:400;">(kontrol/bulgu kanıtı, en fazla 3 adet, opsiyonel)</span></label>
+        <div class="form-satir-ikili" style="grid-template-columns: repeat(3, 1fr);">
+          <div>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <button type="button" class="tablo-buton" id="ekipmanFoto1CekBtn">📷 Çek</button>
+              <button type="button" class="tablo-buton" id="ekipmanFoto1SecBtn">🖼️ Seç</button>
+            </div>
+            <input type="file" id="ekipmanFoto1CekDosya" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="ekipmanFoto1SecDosya" accept="image/*" style="display:none;">
+            <div id="ekipmanFoto1Onizleme" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <button type="button" class="tablo-buton" id="ekipmanFoto2CekBtn">📷 Çek</button>
+              <button type="button" class="tablo-buton" id="ekipmanFoto2SecBtn">🖼️ Seç</button>
+            </div>
+            <input type="file" id="ekipmanFoto2CekDosya" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="ekipmanFoto2SecDosya" accept="image/*" style="display:none;">
+            <div id="ekipmanFoto2Onizleme" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              <button type="button" class="tablo-buton" id="ekipmanFoto3CekBtn">📷 Çek</button>
+              <button type="button" class="tablo-buton" id="ekipmanFoto3SecBtn">🖼️ Seç</button>
+            </div>
+            <input type="file" id="ekipmanFoto3CekDosya" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="ekipmanFoto3SecDosya" accept="image/*" style="display:none;">
+            <div id="ekipmanFoto3Onizleme" style="margin-top:6px;"></div>
+          </div>
         </div>
-        <input type="file" id="ekipmanFotoCekDosya" accept="image/*" capture="environment" style="display:none;">
-        <input type="file" id="ekipmanFotoSecDosya" accept="image/*" style="display:none;">
-        <div id="ekipmanFotoOnizleme" style="margin-top:6px; margin-bottom:10px;"></div>
 
         <label for="ekipmanNotlar">Notlar</label>
         <textarea id="ekipmanNotlar"></textarea>
@@ -586,13 +610,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=2"></script>
+  <script src="model.js?v=3"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=2"></script>
-  <script src="service.js?v=2"></script>
-  <script src="kontrol-formu-cikti.js?v=2"></script>
+  <script src="service.js?v=3"></script>
+  <script src="kontrol-formu-cikti.js?v=3"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=2"></script>
+  <script src="ui.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

@@ -84,7 +84,7 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -104,6 +104,7 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Acil Aydınlatma': 'AAY',
   'Döküntü Kiti': 'DKT',
   'Ekipman Dolabı': 'ED',
+  'Yangın Pompa İstasyonu': 'YPI',
   'Yangın Tüpü': 'YSC'
 };
 
@@ -228,6 +229,25 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'icerikEksiksiz', soru: 'İçerik envanter listesine göre eksiksiz' },
     { id: 'sonKullanma', soru: 'Son kullanma tarihi geçmiş malzeme yok' },
     { id: 'isaretleme', soru: 'Dolap üzerinde tabela/işaretleme görünür' }
+  ],
+  // Kullanıcı isteği: "yangın pompa istasyonu, joker pompa, elektrikli ve
+  // dizel pompa var bunu da acil durum ekipman kontrollerine ekleyelim
+  // uygun soru listesi olsun" — NFPA 20 tipi yangın pompa istasyonu:
+  // jokey (basınç tutucu) + elektrikli ana pompa + dizel (yedek/enerji
+  // kesintisinde) ana pompa üçlüsü tek istasyon kaydında değerlendirilir.
+  'Yangın Pompa İstasyonu': [
+    { id: 'erisim', soru: 'Pompa dairesine erişim engelsiz' },
+    { id: 'jokeyOtomatik', soru: 'Jokey pompa otomatik devreye giriyor/basıncı tutuyor' },
+    { id: 'elektrikliOtomatik', soru: 'Elektrikli pompa otomatik devreye giriyor' },
+    { id: 'dizelOtomatik', soru: 'Dizel pompa otomatik devreye giriyor' },
+    { id: 'dizelYakit', soru: 'Dizel pompa yakıt seviyesi yeterli' },
+    { id: 'dizelAku', soru: 'Dizel pompa akü/marş bataryası dolu ve şarj cihazı çalışıyor' },
+    { id: 'manometreler', soru: 'Basınç göstergeleri (manometreler) çalışıyor ve normal aralıkta' },
+    { id: 'vanalarAcik', soru: 'Emiş ve basma vanaları açık/mühürlü' },
+    { id: 'sizinti', soru: 'Pompa gövdesi ve boru bağlantılarında sızıntı yok' },
+    { id: 'kontrolPaneli', soru: 'Kontrol paneli/alarm göstergeleri normal' },
+    { id: 'ortamKosullari', soru: 'Pompa dairesi ısıtma/havalandırması yeterli' },
+    { id: 'egzoz', soru: 'Dizel pompa egzoz sistemi sağlam' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
@@ -481,8 +501,13 @@ function ekipmanOlustur(veriler) {
       return acc;
     }, {}),
     notlar: (veriler.notlar || '').trim(),
-    // Kontrol sırasında çekilen kanıt/bulgu fotoğrafı (opsiyonel).
+    // Kontrol sırasında çekilen kanıt/bulgu fotoğrafları (opsiyonel, en
+    // fazla 3 adet — kullanıcı isteği: "her bir kontrol için 3 adet
+    // fotoğraf ekleyebilmek istiyorum"). fotoUrl adı geriye dönük uyumluluk
+    // için korunuyor (eski kayıtlardaki tek fotoğraf kaybolmasın).
     fotoUrl: veriler.fotoUrl || '',
+    fotoUrl2: veriler.fotoUrl2 || '',
+    fotoUrl3: veriler.fotoUrl3 || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
 
     // Saha Dijital Haritası köprüsü — bkz. modules/harita.
