@@ -172,6 +172,7 @@
           <input type="file" id="yanginTupuIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="yanginTupuDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="yanginTupuYazdirBtn">Yazdır</button>
+          <button type="button" class="ikincil" id="yanginTupuBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
           <button type="button" class="birincil" id="yeniYanginTupuBtn" style="width:auto;">+ Yangın Tüpü Ekle</button>
           <button type="button" class="ikincil" id="yanginTupuSeciliSilBtn">Seçilenleri Sil</button>
         </div>
@@ -444,6 +445,27 @@
     </div>
   </div>
 
+  <!-- YANGIN TÜPÜ BARKOD TARAMA MODAL -- kullanıcı isteği: "bu yangın
+       tüpelerin üzerinde firmanın yaptığı barkod sistemi var" -> "ben
+       bunu bu uygulama içinde aynı barkodları kullanabilir miyim" --
+       ekipmanBarkodTaramaKatman ile AYNI desen: firmanın tüpler üzerine
+       ZATEN bastığı barkodlar (Tüp No veya Seri Numarası olarak kayıtlıysa)
+       doğrudan taranıp eşleşen tüpün kayıt/kontrol formu açılır -- yeni bir
+       barkod basmaya gerek yok. formatsToSupport KISITLANMAZ (bkz. ui.js
+       yanginTupuBarkodTaramaBaslat) çünkü firmanın kendi barkodu CODE128
+       dışında bir format olabilir. -->
+  <div class="modal-katman" id="yanginTupuBarkodTaramaKatman">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3>Barkod Tara</h3>
+      <p style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;">Tüp üzerindeki (firmanızın mevcut) barkodu kameraya gösterin.</p>
+      <div id="yanginTupuBarkodTaramaOkuyucu" style="width:100%; min-height:260px; border-radius:8px; overflow:hidden; background:#000;"></div>
+      <div id="yanginTupuBarkodTaramaDurum" class="hata-mesaji" style="margin-top:10px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="yanginTupuBarkodTaramaKapatBtn">Kapat</button>
+      </div>
+    </div>
+  </div>
+
   <!-- (Kontrol Formu imza modali kaldırıldı — kullanıcı isteği: "imzaları
        da word dışında attırmalısın" / "genel değerlendirmeyi o bölüme
        özel". İmza + Genel Değerlendirme artık Word oluşturmadan bağımsız,
@@ -652,7 +674,7 @@
   <script src="service.js?v=7"></script>
   <script src="kontrol-formu-cikti.js?v=9"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=11"></script>
+  <script src="ui.js?v=12"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

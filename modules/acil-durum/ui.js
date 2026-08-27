@@ -117,6 +117,8 @@ function acilDurumSayfasiniBaslat(firma) {
     document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
   document.getElementById('yanginTupuSeciliSilBtn').addEventListener('click', yanginTupuSeciliSil);
+  document.getElementById('yanginTupuBarkodTaraBtn').addEventListener('click', yanginTupuBarkodTaramaBaslat);
+  document.getElementById('yanginTupuBarkodTaramaKapatBtn').addEventListener('click', yanginTupuBarkodTaramaDurdur);
 
   // Tatbikat
   document.getElementById('yeniTatbikatBtn').addEventListener('click', () => tatbikatModalAc());
@@ -909,6 +911,65 @@ function ekipmanBarkodTaramaDurdur() {
   if (_ekBarkodTarayici) {
     const tarayici = _ekBarkodTarayici;
     _ekBarkodTarayici = null;
+    tarayici.stop().then(() => tarayici.clear()).catch(() => {});
+  }
+}
+
+// ==================== YANGIN TÜPÜ — KAMERA İLE BARKOD TARAMA ====================
+// Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı barkod
+// sistemi var" -> "ben bunu bu uygulasma içinde aynı barkodları
+// nkulalanabilir miyim" — ekipmanBarkodTaramaBaslat/_ekBarkodOkundu ile
+// AYNI desen, ama firmanın tüpler üzerine ZATEN bastığı barkodlar (yeni
+// bir barkod basmaya gerek yok) taranır: okunan kod, kayıtlı Tüp No VEYA
+// Seri Numarası ile eşleştirilir (ör. firma Seri No alanına kendi barkod
+// numarasını girmiş olabilir). formatsToSupport BİLEREK kısıtlanmaz —
+// firmanın kendi barkodu CODE128 dışında bir format olabilir (Code39,
+// EAN vb.), Html5Qrcode varsayılan olarak birçok formatı birden tarar.
+let _ytBarkodTarayici = null;
+
+function yanginTupuBarkodTaramaBaslat() {
+  if (typeof Html5Qrcode === 'undefined') { alert('Barkod tarama bileşeni yüklenemedi.'); return; }
+  const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
+  durum.textContent = '';
+  durum.classList.remove('gorunur');
+  document.getElementById('yanginTupuBarkodTaramaKatman').classList.add('acik');
+
+  _ytBarkodTarayici = new Html5Qrcode('yanginTupuBarkodTaramaOkuyucu', { verbose: false });
+  _ytBarkodTarayici.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 260, height: 120 } },
+    _ytBarkodOkundu,
+    () => {}
+  ).catch(hata => {
+    durum.textContent = 'Kamera açılamadı: ' + (hata.message || hata);
+    durum.classList.add('gorunur');
+  });
+}
+
+function _ytBarkodOkundu(kod) {
+  const temizKod = kod.trim().toLowerCase();
+  const tup = yanginTupleriTumunuGetir().find(t =>
+    (t.tupNo || '').trim().toLowerCase() === temizKod ||
+    (t.seriNumarasi || '').trim().toLowerCase() === temizKod ||
+    t.id === kod.trim()
+  );
+  if (!tup) {
+    const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
+    if (durum) {
+      durum.textContent = `"${kod}" koduyla eşleşen yangın tüpü bulunamadı, taramaya devam ediliyor…`;
+      durum.classList.add('gorunur');
+    }
+    return;
+  }
+  yanginTupuBarkodTaramaDurdur();
+  yanginTupuModalAc(tup);
+}
+
+function yanginTupuBarkodTaramaDurdur() {
+  document.getElementById('yanginTupuBarkodTaramaKatman').classList.remove('acik');
+  if (_ytBarkodTarayici) {
+    const tarayici = _ytBarkodTarayici;
+    _ytBarkodTarayici = null;
     tarayici.stop().then(() => tarayici.clear()).catch(() => {});
   }
 }
