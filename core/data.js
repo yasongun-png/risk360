@@ -683,7 +683,10 @@ async function fotoReferanslariCoz(kokEleman) {
     const referans = img.getAttribute('data-foto-ref');
     img.removeAttribute('data-foto-ref');
     const url = await fotoBuyukCoz(referans);
-    if (url) img.src = url;
+    if (url) {
+      img.src = url;
+      _fotoBuyutmeTiklamasiEkle(img, url);
+    }
   });
   const linkler = Array.from(kok.querySelectorAll('a[data-foto-ref-href]')).map(async a => {
     const referans = a.getAttribute('data-foto-ref-href');
@@ -692,6 +695,52 @@ async function fotoReferanslariCoz(kokEleman) {
     if (url) a.href = url;
   });
   await Promise.all(imgler.concat(linkler));
+}
+
+// Kullanıcı isteği: "uygulamaya yüklediğimiz fotoları tıkladığımda
+// büyüsün, uygulamanın tüm fotoğraf eklenen modülleri için yap" —
+// fotoReferanslariCoz TÜM modüllerdeki (KKD, Kimyasal, Acil Durum,
+// Uygunsuzluk, Tespit Öneri, Risk, JSA, Olay/Kaza, Periyodik Kontrol,
+// Hizmet Sözleşmesi, Bakım Talep, Harita, Kurul vb.) küçük önizleme
+// resimlerini aynı `<img data-foto-ref="...">` deseniyle doldurduğundan,
+// büyütme davranışı TEK bu merkezi fonksiyona eklenerek her modülü aynı
+// anda kapsar — her modülün kendi ui.js'ine ayrı ayrı dokunmaya gerek
+// kalmaz.
+let _fotoLightboxKatmani = null;
+
+function _fotoLightboxGoster(url) {
+  if (!_fotoLightboxKatmani) {
+    const katman = document.createElement('div');
+    katman.id = 'fotoLightboxKatmani';
+    katman.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:24px; cursor:zoom-out;';
+    katman.innerHTML = `
+      <img id="fotoLightboxGorsel" style="max-width:92vw; max-height:92vh; object-fit:contain; border-radius:6px; box-shadow:0 8px 32px rgba(0,0,0,0.5); cursor:default;">
+      <button type="button" id="fotoLightboxKapatBtn" aria-label="Kapat" style="position:fixed; top:16px; right:20px; background:rgba(255,255,255,0.15); color:#fff; border:none; border-radius:50%; width:40px; height:40px; font-size:22px; line-height:1; cursor:pointer;">✕</button>
+    `;
+    document.body.appendChild(katman);
+    const gizle = () => { katman.style.display = 'none'; };
+    katman.addEventListener('click', gizle);
+    katman.querySelector('#fotoLightboxGorsel').addEventListener('click', e => e.stopPropagation());
+    katman.querySelector('#fotoLightboxKapatBtn').addEventListener('click', gizle);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') gizle(); });
+    _fotoLightboxKatmani = katman;
+  }
+  _fotoLightboxKatmani.querySelector('#fotoLightboxGorsel').src = url;
+  _fotoLightboxKatmani.style.display = 'flex';
+}
+
+// Küçük önizleme <img>'ine tıklanınca büyütülmüş hâlini gösterir. Bazı
+// modüllerde bu <img>, yeni sekmede açan bir `<a data-foto-ref-href>`
+// bağlantısının içine sarılıdır (bkz. modules/acil-durum/ui.js ekipman
+// tablosu) — stopPropagation/preventDefault, sekme açılması yerine
+// uygulama içi büyütmenin önceliği olmasını sağlar.
+function _fotoBuyutmeTiklamasiEkle(img, url) {
+  img.style.cursor = 'zoom-in';
+  img.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    _fotoLightboxGoster(url);
+  });
 }
 
 // dosya: <input type="file"> ile seçilen dosya. yol: Storage içindeki klasör
