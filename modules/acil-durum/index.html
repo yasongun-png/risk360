@@ -181,7 +181,14 @@
                yanginTupuBarkodFotografSecildi (Html5Qrcode.scanFile). -->
           <button type="button" class="ikincil" id="yanginTupuBarkodFotoBtn">🖼️ Fotoğraftan Barkod Oku</button>
           <input type="file" id="yanginTupuBarkodFotoDosya" accept="image/*" capture="environment" style="display:none;">
-          <div id="yanginTupuBarkodDosyaOkuyucu" style="display:none;"></div>
+          <!-- Kullanıcı raporu: "barkod okuyamadı" (fotoğraftan okuma da
+               dahil) — kök neden muhtemelen bu konteynerin display:none
+               olması: Html5Qrcode.scanFile içeride görüntüyü ölçeklemek
+               için konteynerin GERÇEK genişlik/yükseklik değerlerine
+               bakıyor, display:none'da bunlar 0 döner ve tarama sessizce
+               bozuluyor. Ekrandan gizlemek için display:none yerine
+               gerçek bir boyut verip ekran dışına taşındı. -->
+          <div id="yanginTupuBarkodDosyaOkuyucu" style="position:absolute; left:-9999px; top:-9999px; width:300px; height:300px;"></div>
           <button type="button" class="birincil" id="yeniYanginTupuBtn" style="width:auto;">+ Yangın Tüpü Ekle</button>
           <button type="button" class="ikincil" id="yanginTupuSeciliSilBtn">Seçilenleri Sil</button>
         </div>
