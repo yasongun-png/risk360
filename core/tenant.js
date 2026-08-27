@@ -273,6 +273,35 @@ function firmaEkipmanBolumuSil(firmaId, ad) {
   return { basarili: true, firma };
 }
 
+// Kullanıcı isteği: "onun yerine hem kendim için hem bölüm sorumlusu için
+// imza alıp ve genel değerlendirme yazdıktan sonra yazdırma aşamasına
+// geçmek istiyorum ... içinde o bölüm için imza ve genel değerlendirme
+// olacak" ve sonra "imzaları da word dışında attırmalısın" / "genel
+// değerlendirmeyi o bölüme özel" — imza + genel değerlendirme artık Word
+// oluşturma modalında GEÇİCİ olarak alınmıyor; her bölüm sekmesinin kendi
+// panelinde ayrıca kaydedilip firma.ekipmanBolumImzalari[bolum] altında
+// KALICI olarak saklanıyor. Word çıktısı (ve barkod/liste raporları) bu
+// kayıtlı imzayı kullanır.
+function firmaEkipmanBolumImzasiKaydet(firmaId, bolum, veriler) {
+  const temizBolum = String(bolum || '').trim();
+  if (!temizBolum) return { basarili: false, hata: 'Bölüm belirtilmedi.' };
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  if (!firma.ekipmanBolumImzalari || typeof firma.ekipmanBolumImzalari !== 'object') firma.ekipmanBolumImzalari = {};
+  firma.ekipmanBolumImzalari[temizBolum] = {
+    kontrolEdenAd: veriler.kontrolEdenAd || '',
+    kontrolEdenImza: veriler.kontrolEdenImza || '',
+    bolumSorumlusuAd: veriler.bolumSorumlusuAd || '',
+    bolumSorumlusuImza: veriler.bolumSorumlusuImza || '',
+    genelDegerlendirme: veriler.genelDegerlendirme || '',
+    tarih: new Date().toISOString().slice(0, 10)
+  };
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
 // Logo AYRI bir anahtarda tutulur (isg_firmalar'ın içine gömülmez): isg_firmalar
 // "küçük senkron" anahtarlardan biridir ve her kayıtta değişmeden localStorage'a
 // da yazılır (bkz. core/data.js) -- bir logo (sıkıştırılmış görsel bile olsa)

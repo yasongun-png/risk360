@@ -262,18 +262,18 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // formu hazırlayıp word çıktısı alabileyim" — tür filtresi seçiliyse
   // yalnız o türün, seçili değilse kaydı olan HER türün ayrı bölüm/sayfa
   // olarak basıldığı tek bir Word belgesi üretilir.
-  document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
-    kfImzaModalAc(document.getElementById('ekipmanTurFiltre').value, _ekipmanAktifBolum);
-  });
-  document.getElementById('kfImzaIptalBtn').addEventListener('click', kfImzaModalKapat);
-  document.getElementById('kfImzaKapatBtn').addEventListener('click', kfImzaModalKapat);
-  document.getElementById('kfImzaOnaylaBtn').addEventListener('click', kfImzaOnaylaTiklandi);
-  document.querySelectorAll('[data-kf-imza-temizle]').forEach(btn => {
+  // Kullanıcı isteği: "imzaları da word dışında attırmalısın" — imza artık
+  // bu düğmeye tıklanınca AÇILAN bir modalda değil, aktif bölüm sekmesinin
+  // kendi panelinde önceden alınıp kaydedilmiş olarak kullanılır (bkz.
+  // _ekipmanImzaPaneliCiz / firmaEkipmanBolumImzasiKaydet).
+  document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', _ekipmanKontrolFormuWordBtnTiklandi);
+  document.querySelectorAll('[data-ekipman-imza-temizle]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const pad = btn.getAttribute('data-kf-imza-temizle') === '1' ? _kfImzaPad1 : _kfImzaPad2;
+      const pad = btn.getAttribute('data-ekipman-imza-temizle') === '1' ? _ekipmanImzaPad1 : _ekipmanImzaPad2;
       if (pad) pad.temizle();
     });
   });
+  document.getElementById('ekipmanImzaKaydetBtn').addEventListener('click', _ekipmanImzaKaydetTiklandi);
   // Kullanıcı isteği: "acil durum ekipman kontrolünde word raporu kalsın
   // bir de liste şeklinde rapor olsun" — yukarıdaki (her ekipman ayrı
   // sayfada) detaylı Word raporunun yanında, aynı filtrelerle çalışan,
@@ -565,6 +565,7 @@ function _ekipmanBolumSekmeleriCiz() {
     _ekipmanBolumSekmeleriCiz();
     ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
   }));
+  _ekipmanImzaPaneliCiz();
 }
 
 // ==================== EKİPMAN BÖLÜMLERİNİ YÖNET ====================
@@ -1372,15 +1373,16 @@ function tatbikatFormGonderildi(e) {
   tatbikatlariCiz(document.getElementById('tatbikatAramaKutusu').value);
 }
 
-// ==================== KONTROL FORMU (WORD) İMZA MODAL ====================
+// ==================== EKİPMAN KONTROL FORMU İMZA PAD'LERİ ====================
 // Kullanıcı isteği: "acil durum ekipman kontrol formları word imza aynı
 // tespit öneri kaşe imza gibi imzalansın" — modules/tespit-oneri/ui.js
 // _toImzaPaduBagla/_toImzaKirp ile birebir aynı canvas imza pad'i deseni;
 // bu modül diğer modüllerin ui.js'ini yüklemediğinden kendi önekiyle (_kf)
 // tekrarlanır (aynı ilke modules/uygunsuzluk/cikti.js dosya başında da
-// açıklanır). Storage'a hiç yüklenmez — Word üretimi zaten aynı sayfada
-// (client-side) yapıldığından canvas'tan doğrudan dataURL alınıp
-// kontrol-formu-cikti.js'e geçirilir (bkz. kfImzaOnaylaBtn handler'ı).
+// açıklanır). Bu iki genel yardımcı (_kfImzaPaduBagla/_kfImzaKirp), bölüm
+// sekmesindeki kalıcı imza panelinde kullanılır (bkz. aşağıda
+// _ekipmanImzaPaneliCiz) — artık Word oluşturma anında açılan bir modal
+// yok, imza doğrudan firma.ekipmanBolumImzalari altında saklanır.
 function _kfImzaPaduBagla(canvasId) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
@@ -1459,48 +1461,90 @@ function _kfImzaKirp(canvas) {
   return kirpilmis;
 }
 
-let _kfImzaPad1 = null, _kfImzaPad2 = null;
-let _kfImzaBekleyenIstek = null;
+// Kullanıcı isteği: "imzaları da word dışında attırmalısın" / "genel
+// değerlendirmeyi o bölüme özel" — imza + Genel Değerlendirme artık Word
+// oluşturma anında AÇILAN bir modalda değil, seçili bölüm sekmesinin
+// panelinde alınıp firma.ekipmanBolumImzalari[bölüm] altında KALICI olarak
+// saklanır (bkz. core/tenant.js firmaEkipmanBolumImzasiKaydet). Word
+// oluşturma ve liste raporu düğmeleri bu kayıtlı imzayı doğrudan kullanır.
+let _ekipmanImzaPad1 = null, _ekipmanImzaPad2 = null;
 
-function kfImzaModalAc(tur, bolum) {
-  _kfImzaBekleyenIstek = { tur, bolum };
-  document.getElementById('kfImzaAd1').value = '';
-  document.getElementById('kfImzaAd2').value = '';
-  document.getElementById('kfGorus').value = '';
-  document.getElementById('kfImzaModalKatman').classList.add('acik');
+// Sekme değiştikçe (bkz. _ekipmanBolumSekmeleriCiz) çağrılır — "Tümü"
+// sekmesinde (tek bir bölüm seçili olmadığından) panel tamamen gizlenir.
+function _ekipmanImzaPaneliCiz() {
+  const blok = document.getElementById('ekipmanImzaBolumBlok');
+  if (!blok) return;
+  if (!_ekipmanAktifBolum) { blok.style.display = 'none'; return; }
+  blok.style.display = '';
+
+  document.getElementById('ekipmanImzaBolumAdi').textContent = _ekipmanAktifBolum;
+  const kayit = (_adFirma && _adFirma.ekipmanBolumImzalari && _adFirma.ekipmanBolumImzalari[_ekipmanAktifBolum]) || null;
+  document.getElementById('ekipmanImzaAd1').value = kayit ? kayit.kontrolEdenAd || '' : '';
+  document.getElementById('ekipmanImzaAd2').value = kayit ? kayit.bolumSorumlusuAd || '' : '';
+  document.getElementById('ekipmanGenelDegerlendirme').value = kayit ? kayit.genelDegerlendirme || '' : '';
+  document.getElementById('ekipmanImzaDurum').textContent = (kayit && (kayit.kontrolEdenImza || kayit.bolumSorumlusuImza || kayit.genelDegerlendirme))
+    ? `Bu bölüm için son kayıt: ${gunAyYil(kayit.tarih)}. Yeniden imzalamak istemiyorsanız imza alanlarını boş bırakabilirsiniz.`
+    : 'Bu bölüm için henüz kayıtlı imza/değerlendirme yok.';
+
+  // Canvas'lar sadece panel görünür olduktan sonra doğru boyutlanabildiği
+  // için requestAnimationFrame ile ertelenir (bkz. eski kfImzaModalAc ile
+  // aynı gerekçe). Sekme her değiştiğinde önceki çizim temizlenir — kayıtlı
+  // imza korunur, sadece BOŞ bırakılan pad kaydedince eski değeri korur
+  // (bkz. _ekipmanImzaKaydetTiklandi / _kfImzaKaydiOku ile aynı ilke).
   requestAnimationFrame(() => {
-    if (!_kfImzaPad1) _kfImzaPad1 = _kfImzaPaduBagla('kfImzaCanvas1'); else _kfImzaPad1.temizle();
-    if (!_kfImzaPad2) _kfImzaPad2 = _kfImzaPaduBagla('kfImzaCanvas2'); else _kfImzaPad2.temizle();
+    if (!_ekipmanImzaPad1) _ekipmanImzaPad1 = _kfImzaPaduBagla('ekipmanImzaCanvas1'); else _ekipmanImzaPad1.temizle();
+    if (!_ekipmanImzaPad2) _ekipmanImzaPad2 = _kfImzaPaduBagla('ekipmanImzaCanvas2'); else _ekipmanImzaPad2.temizle();
   });
 }
 
-function kfImzaModalKapat() {
-  document.getElementById('kfImzaModalKatman').classList.remove('acik');
-  _kfImzaBekleyenIstek = null;
-}
-
-// Ad girilmiş VE imza pad'i doluysa {ad, dataUrl} döner, aksi halde null
-// (boş bırakılan taraf kontrol-formu-cikti.js'te elle imzalanacak boş
-// çizgilerle basılır).
-function _kfImzaKaydiOku(adInputId, pad) {
+// Ad girilmiş VE imza pad'i doluysa yeni dataURL, pad boşsa (kullanıcı
+// yeniden imzalamadıysa) mevcut kayıtlı imzayı korur.
+function _ekipmanImzaKaydiOku(adInputId, pad, mevcutDataUrl) {
   const ad = document.getElementById(adInputId).value.trim();
-  if (!ad || !pad || !pad.doluMu()) return null;
-  return { ad, dataUrl: _kfImzaKirp(pad.canvasElemani).toDataURL('image/png') };
+  if (pad && pad.doluMu()) return { ad, dataUrl: _kfImzaKirp(pad.canvasElemani).toDataURL('image/png') };
+  return { ad, dataUrl: mevcutDataUrl || '' };
 }
 
-async function kfImzaOnaylaTiklandi() {
-  if (!_kfImzaBekleyenIstek) return;
-  const { tur, bolum } = _kfImzaBekleyenIstek;
-  const imzalar = {
-    'Kontrolü Yapan': _kfImzaKaydiOku('kfImzaAd1', _kfImzaPad1),
-    'Bölüm Sorumlusu': _kfImzaKaydiOku('kfImzaAd2', _kfImzaPad2)
+function _ekipmanImzaKaydetTiklandi() {
+  if (!_ekipmanAktifBolum) return;
+  const mevcut = (_adFirma.ekipmanBolumImzalari && _adFirma.ekipmanBolumImzalari[_ekipmanAktifBolum]) || {};
+  const kontrolEden = _ekipmanImzaKaydiOku('ekipmanImzaAd1', _ekipmanImzaPad1, mevcut.kontrolEdenImza);
+  const bolumSorumlusu = _ekipmanImzaKaydiOku('ekipmanImzaAd2', _ekipmanImzaPad2, mevcut.bolumSorumlusuImza);
+  const sonuc = firmaEkipmanBolumImzasiKaydet(_adFirma.id, _ekipmanAktifBolum, {
+    kontrolEdenAd: kontrolEden.ad,
+    kontrolEdenImza: kontrolEden.dataUrl,
+    bolumSorumlusuAd: bolumSorumlusu.ad,
+    bolumSorumlusuImza: bolumSorumlusu.dataUrl,
+    genelDegerlendirme: document.getElementById('ekipmanGenelDegerlendirme').value.trim()
+  });
+  if (!sonuc.basarili) { alert(sonuc.hata); return; }
+  _adFirma = sonuc.firma;
+  _ekipmanImzaPaneliCiz();
+  alert('İmza ve Genel Değerlendirme kaydedildi.');
+}
+
+// Kayıtlı imza/genel değerlendirmeyi kontrol-formu-cikti.js'in beklediği
+// {'Kontrolü Yapan': {ad,dataUrl}|null, 'Bölüm Sorumlusu': {ad,dataUrl}|null}
+// biçimine çevirir — boş taraf belgede elle imzalanacak boş çizgilerle basılır.
+function _ekipmanImzaKaydindanBicimlendir(bolum) {
+  const kayit = (_adFirma.ekipmanBolumImzalari && _adFirma.ekipmanBolumImzalari[bolum]) || null;
+  if (!kayit) return { imzalar: { 'Kontrolü Yapan': null, 'Bölüm Sorumlusu': null }, gorus: '' };
+  return {
+    imzalar: {
+      'Kontrolü Yapan': (kayit.kontrolEdenAd && kayit.kontrolEdenImza) ? { ad: kayit.kontrolEdenAd, dataUrl: kayit.kontrolEdenImza } : null,
+      'Bölüm Sorumlusu': (kayit.bolumSorumlusuAd && kayit.bolumSorumlusuImza) ? { ad: kayit.bolumSorumlusuAd, dataUrl: kayit.bolumSorumlusuImza } : null
+    },
+    gorus: kayit.genelDegerlendirme || ''
   };
-  const gorus = document.getElementById('kfGorus').value.trim();
-  const dugme = document.getElementById('kfImzaOnaylaBtn');
+}
+
+async function _ekipmanKontrolFormuWordBtnTiklandi() {
+  const tur = document.getElementById('ekipmanTurFiltre').value;
+  const { imzalar, gorus } = _ekipmanImzaKaydindanBicimlendir(_ekipmanAktifBolum);
+  const dugme = document.getElementById('ekipmanKontrolFormuWordBtn');
   dugme.disabled = true;
   try {
-    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, bolum, imzalar, gorus);
-    kfImzaModalKapat();
+    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, _ekipmanAktifBolum, imzalar, gorus);
   } catch (hata) {
     console.error(hata);
     alert('Kontrol formu oluşturulamadı: ' + (hata.message || hata));

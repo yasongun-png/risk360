@@ -88,6 +88,47 @@
            barkod üretimi hep aktif sekmeye ("_ekipmanAktifBolum") göre
            filtrelenir; imza + Genel Değerlendirme de o sekmeye özel alınır. -->
       <div class="sekme-cubugu" id="ekipmanBolumSekmeleri" style="margin-bottom:10px;"></div>
+
+      <!-- Kullanıcı isteği: "imzaları da word dışında attırmalısın" / "genel
+           değerlendirmeyi o bölüme özel" — İmza + Genel Değerlendirme, Word
+           oluşturma anından bağımsız olarak burada, seçili bölüm sekmesine
+           özel şekilde alınıp KALICI kaydedilir (bkz. ui.js
+           _ekipmanImzaPaneliCiz, core/tenant.js firmaEkipmanBolumImzasiKaydet).
+           "Tümü" sekmesinde (tek bir bölüm seçili olmadığından) gizlenir. -->
+      <div id="ekipmanImzaBolumBlok" style="display:none;">
+      <div class="form-bolum-baslik" style="margin-top:0;">İmza ve Genel Değerlendirme — <span id="ekipmanImzaBolumAdi"></span></div>
+      <div id="ekipmanImzaPaneli" style="border:1px solid var(--kenarlik); border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div id="ekipmanImzaDurum" style="font-size:12px; color:var(--metin-soluk); margin-bottom:10px;"></div>
+
+        <div class="uc-imza-rol-satir" style="display:block; border-bottom:1px solid var(--kenarlik); padding-bottom:14px; margin-bottom:14px;">
+          <label for="ekipmanImzaAd1">Kontrolü Yapan — Ad Soyad</label>
+          <input type="text" id="ekipmanImzaAd1">
+          <canvas id="ekipmanImzaCanvas1" class="uc-imza-canvas"></canvas>
+          <div class="uc-imza-arac">
+            <span class="uc-imza-ipucu">Fare/parmakla imzalayın (değiştirmek istemiyorsanız boş bırakabilirsiniz)</span>
+            <button type="button" class="uc-imza-temizle" data-ekipman-imza-temizle="1">Temizle</button>
+          </div>
+        </div>
+
+        <div style="display:block; border-bottom:1px solid var(--kenarlik); padding-bottom:14px; margin-bottom:14px;">
+          <label for="ekipmanImzaAd2">Bölüm Sorumlusu — Ad Soyad</label>
+          <input type="text" id="ekipmanImzaAd2">
+          <canvas id="ekipmanImzaCanvas2" class="uc-imza-canvas"></canvas>
+          <div class="uc-imza-arac">
+            <span class="uc-imza-ipucu">Fare/parmakla imzalayın (değiştirmek istemiyorsanız boş bırakabilirsiniz)</span>
+            <button type="button" class="uc-imza-temizle" data-ekipman-imza-temizle="2">Temizle</button>
+          </div>
+        </div>
+
+        <label for="ekipmanGenelDegerlendirme">Genel Değerlendirme <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı, serbest metin)</span></label>
+        <textarea id="ekipmanGenelDegerlendirme" rows="4" placeholder="Genel değerlendirme, tespit edilen eksiklikler, öneriler..."></textarea>
+
+        <div style="margin-top:10px;">
+          <button type="button" class="birincil" id="ekipmanImzaKaydetBtn" style="width:auto;">İmza ve Genel Değerlendirmeyi Kaydet</button>
+        </div>
+      </div>
+      </div>
+
       <div class="arac-cubugu">
         <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
           <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
@@ -378,49 +419,13 @@
     </div>
   </div>
 
-  <!-- KONTROL FORMU (WORD) İMZA MODAL -- kullanıcı isteği: "acil durum
-       ekipman kontrol formları word imza aynı tespit öneri kaşe imza gibi
-       imzalansın" -- Word oluşturulmadan önce "Kontrolü Yapan" ve "Bölüm
-       Sorumlusu" burada dijital olarak imzalayabilir (boş bırakılan taraf
-       belgede sahada elle imzalanacak boş çizgilerle basılır, bkz.
-       kontrol-formu-cikti.js _kfImzaHucresi). -->
-  <div class="modal-katman" id="kfImzaModalKatman">
-    <div class="modal-kutu" style="max-width:460px;">
-      <h3>Kontrol Formu İmzaları</h3>
-      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
-        İsterseniz imzalayın; boş bıraktığınız taraf belgede kağıda elle imzalanacak şekilde boş satırlarla basılır.
-      </p>
-
-      <div class="uc-imza-rol-satir" style="display:block; border-bottom:1px solid var(--kenarlik); padding-bottom:14px; margin-bottom:14px;">
-        <label for="kfImzaAd1">Kontrolü Yapan — Ad Soyad</label>
-        <input type="text" id="kfImzaAd1">
-        <canvas id="kfImzaCanvas1" class="uc-imza-canvas"></canvas>
-        <div class="uc-imza-arac">
-          <span class="uc-imza-ipucu">Fare/parmakla imzalayın</span>
-          <button type="button" class="uc-imza-temizle" data-kf-imza-temizle="1">Temizle</button>
-        </div>
-      </div>
-
-      <div style="display:block;">
-        <label for="kfImzaAd2">Bölüm Sorumlusu — Ad Soyad</label>
-        <input type="text" id="kfImzaAd2">
-        <canvas id="kfImzaCanvas2" class="uc-imza-canvas"></canvas>
-        <div class="uc-imza-arac">
-          <span class="uc-imza-ipucu">Fare/parmakla imzalayın</span>
-          <button type="button" class="uc-imza-temizle" data-kf-imza-temizle="2">Temizle</button>
-        </div>
-      </div>
-
-      <label for="kfGorus" style="margin-top:4px;">Genel Değerlendirme <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı, serbest metin)</span></label>
-      <textarea id="kfGorus" rows="4" placeholder="Genel değerlendirme, tespit edilen eksiklikler, öneriler..."></textarea>
-
-      <div class="modal-eylemler">
-        <button type="button" class="ikincil" id="kfImzaIptalBtn">İptal</button>
-        <button type="button" class="birincil" id="kfImzaOnaylaBtn">Word Oluştur</button>
-      </div>
-      <button type="button" class="tablo-buton" id="kfImzaKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
-    </div>
-  </div>
+  <!-- (Kontrol Formu imza modali kaldırıldı — kullanıcı isteği: "imzaları
+       da word dışında attırmalısın" / "genel değerlendirmeyi o bölüme
+       özel". İmza + Genel Değerlendirme artık Word oluşturmadan bağımsız,
+       her bölüm sekmesinin kendi panelinde alınıp KALICI olarak saklanıyor
+       (bkz. bolum-ekipman içindeki #ekipmanImzaPaneli ve ui.js
+       _ekipmanImzaPaneliCiz / _ekipmanImzaKaydetTiklandi /
+       core/tenant.js firmaEkipmanBolumImzasiKaydet). -->
 
   <!-- YANGIN TÜPÜ MODAL -->
   <div class="modal-katman" id="yanginTupuModalKatman">
@@ -607,7 +612,7 @@
        görünmüyor" — tarayıcı eski script'i önbellekten okuyordu, bkz.
        modules/personel/index.html'deki aynı çözüm). Bu dosyaların içeriği
        değiştikçe sürüm numarası artırılmalı. -->
-  <script src="../../core/tenant.js?v=2"></script>
+  <script src="../../core/tenant.js?v=3"></script>
   <script src="../../core/excel.js"></script>
   <script src="../../core/rapor.js"></script>
   <script src="../../core/metin-istem.js"></script>
@@ -622,7 +627,7 @@
   <script src="service.js?v=3"></script>
   <script src="kontrol-formu-cikti.js?v=5"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=5"></script>
+  <script src="ui.js?v=6"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
