@@ -255,6 +255,7 @@ function yanginTupuGuncelle(id, veriler) {
     bolum: (veriler.bolum || '').trim(),
     lokasyon: veriler.lokasyon.trim(),
     seriNumarasi: (veriler.seriNumarasi || '').trim(),
+    barkodDegeri: (veriler.barkodDegeri || '').trim(),
     uretici: (veriler.uretici || '').trim(),
     uretimTarihi: (veriler.uretimTarihi || '').trim(),
     doluTarihi: veriler.doluTarihi || '',

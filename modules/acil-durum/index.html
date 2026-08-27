@@ -469,6 +469,16 @@
       <p style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;">Tüp üzerindeki (firmanızın mevcut) barkodu kameraya gösterin.</p>
       <div id="yanginTupuBarkodTaramaOkuyucu" style="width:100%; min-height:260px; border-radius:8px; overflow:hidden; background:#000;"></div>
       <div id="yanginTupuBarkodTaramaDurum" class="hata-mesaji" style="margin-top:10px;"></div>
+      <!-- Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı
+           barkod sistemi var" -- firmanın QR kodu (Tüp No/Seri No DEĞİL,
+           kendi sistem URL'si) hiçbir kayıtla eşleşmediğinde, kullanıcı
+           bunu buradan doğrudan mevcut bir tüpe bağlayabilir (bkz. ui.js
+           _ytBarkodEslestir) -- bir sonraki taramada o tüp otomatik açılır. -->
+      <div id="yanginTupuBarkodEslesmePaneli" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--kenarlik);">
+        <label for="yanginTupuBarkodEslesTupSecim" style="font-size:12px;">Bu barkodu hangi tüpe bağlamak istiyorsunuz?</label>
+        <select id="yanginTupuBarkodEslesTupSecim" style="margin-bottom:8px;"></select>
+        <button type="button" class="birincil" id="yanginTupuBarkodEslesBtn" style="width:100%;">Bu Tüpe Bağla</button>
+      </div>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="yanginTupuBarkodTaramaKapatBtn">Kapat</button>
       </div>
@@ -526,6 +536,20 @@
           </div>
         </div>
         <div class="alan-hatasi" id="yanginTupuSeriNumarasiUyari" style="color:#b45309; font-size:12px; margin-top:-10px; margin-bottom:10px;"></div>
+
+        <!-- Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın
+             yaptığı barkod sistemi var" -- kullanıcının ekran görüntüsü
+             gösterdi ki firmanın QR kodu Tüp No/Seri No DEĞİL, kendi
+             sistemine ait bir URL taşıyor (ör.
+             http://buyuksehiryangin.sab.cloud/ysc/ysc?ysc=...). Bu yüzden
+             taranan ham değer ayrı bir alanda saklanır; barkod tarama
+             (kamera veya fotoğraftan) artık Tüp No/Seri No'nun yanında bu
+             alanla da eşleştirir (bkz. ui.js
+             _yanginTupuBarkodEslesenTupuBul). Eşleşme bulunamazsa tarama
+             ekranından doğrudan mevcut bir tüpe bağlanabilir (bkz.
+             _ytBarkodEslestir). -->
+        <label for="yanginTupuBarkodDegeri">Barkod Değeri <span style="color:var(--metin-soluk); font-weight:400;">(firmanın kendi barkod/QR sistemindeki ham kod, genelde taramayla otomatik dolar)</span></label>
+        <input type="text" id="yanginTupuBarkodDegeri">
 
         <label for="yanginTupuUretimTarihi">Üretim Tarihi <span style="color:var(--metin-soluk); font-weight:400;">(etikette genelde sadece yıl yazar)</span></label>
         <input type="text" id="yanginTupuUretimTarihi" placeholder="örn. 2024">
@@ -677,13 +701,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=6"></script>
+  <script src="model.js?v=7"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=4"></script>
-  <script src="service.js?v=7"></script>
+  <script src="service.js?v=8"></script>
   <script src="kontrol-formu-cikti.js?v=9"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=15"></script>
+  <script src="ui.js?v=16"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

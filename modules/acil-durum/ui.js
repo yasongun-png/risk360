@@ -121,6 +121,7 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuBarkodTaramaKapatBtn').addEventListener('click', yanginTupuBarkodTaramaDurdur);
   document.getElementById('yanginTupuBarkodFotoBtn').addEventListener('click', () => document.getElementById('yanginTupuBarkodFotoDosya').click());
   document.getElementById('yanginTupuBarkodFotoDosya').addEventListener('change', yanginTupuBarkodFotografSecildi);
+  document.getElementById('yanginTupuBarkodEslesBtn').addEventListener('click', _ytBarkodEslestir);
 
   // Tatbikat
   document.getElementById('yeniTatbikatBtn').addEventListener('click', () => tatbikatModalAc());
@@ -931,6 +932,7 @@ let _ytBarkodTarayici = null;
 
 function yanginTupuBarkodTaramaBaslat() {
   if (typeof Html5Qrcode === 'undefined') { alert('Barkod tarama bileşeni yüklenemedi.'); return; }
+  _ytBarkodEslesmePaneliGizle();
   const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
   durum.textContent = '';
   durum.classList.remove('gorunur');
@@ -968,7 +970,11 @@ async function yanginTupuBarkodFotografSecildi(e) {
   try {
     const kod = await dosyaTarayici.scanFile(dosya, false);
     const tup = _yanginTupuBarkodEslesenTupuBul(kod);
-    if (!tup) { alert(`"${kod}" koduyla eşleşen yangın tüpü bulunamadı.`); return; }
+    // Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı
+    // barkod sistemi var" — eşleşme yoksa (fotoğraftan okunan kod da,
+    // canlı taramadaki gibi) kullanıcı doğrudan mevcut bir tüpe bağlayabilsin
+    // diye eşleşme paneli açılır, sadece alert ile geçiştirilmez.
+    if (!tup) { _ytBarkodEslesmePaneliGoster(kod); return; }
     yanginTupuModalAc(tup);
   } catch (hata) {
     alert('Fotoğrafta okunabilir bir barkod/QR bulunamadı. Etikete daha yakından, net bir fotoğraf çekmeyi deneyin.');
@@ -982,31 +988,78 @@ function _yanginTupuBarkodEslesenTupuBul(kod) {
   return yanginTupleriTumunuGetir().find(t =>
     (t.tupNo || '').trim().toLowerCase() === temizKod ||
     (t.seriNumarasi || '').trim().toLowerCase() === temizKod ||
+    // Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı
+    // barkod sistemi var" — firmanın kendi QR'ı (barkodDegeri) Tüp No/Seri
+    // No'dan tamamen farklı bir değer (ör. URL) olabilir, bkz. model.js.
+    (t.barkodDegeri || '').trim().toLowerCase() === temizKod ||
     t.id === kod.trim()
   ) || null;
 }
 
+// Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı barkod
+// sistemi var" -- firmanın QR'ı hiçbir kayıtla eşleşmediğinde (bkz.
+// _yanginTupuBarkodEslesenTupuBul), kamerayı sonsuz döngüde aynı sonucu
+// tekrar tekrar bildirmesin diye DURDURULUR ve bunun yerine bu kodu
+// mevcut bir tüpe bağlama paneli gösterilir (bkz. _ytBarkodEslestir).
+let _ytBarkodBekleyenKod = null;
+
 function _ytBarkodOkundu(kod) {
   const tup = _yanginTupuBarkodEslesenTupuBul(kod);
   if (!tup) {
-    const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
-    if (durum) {
-      durum.textContent = `"${kod}" koduyla eşleşen yangın tüpü bulunamadı, taramaya devam ediliyor…`;
-      durum.classList.add('gorunur');
-    }
+    _ytBarkodKamerayiDurdur();
+    _ytBarkodEslesmePaneliGoster(kod);
     return;
   }
   yanginTupuBarkodTaramaDurdur();
   yanginTupuModalAc(tup);
 }
 
-function yanginTupuBarkodTaramaDurdur() {
-  document.getElementById('yanginTupuBarkodTaramaKatman').classList.remove('acik');
+function _ytBarkodEslesmePaneliGoster(kod) {
+  _ytBarkodBekleyenKod = kod;
+  document.getElementById('yanginTupuBarkodTaramaKatman').classList.add('acik');
+  const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
+  if (durum) {
+    durum.textContent = `"${kod}" koduyla eşleşen yangın tüpü bulunamadı. İsterseniz aşağıdan mevcut bir tüpe bağlayabilirsiniz.`;
+    durum.classList.add('gorunur');
+  }
+  const tumu = yanginTupleriTumunuGetir().slice().sort((a, b) => (a.tupNo || '').localeCompare(b.tupNo || '', 'tr', { numeric: true }));
+  const secim = document.getElementById('yanginTupuBarkodEslesTupSecim');
+  secim.innerHTML = tumu.map(t => `<option value="${t.id}">${_adKacir(t.tupNo)} — ${_adKacir(t.lokasyon)}</option>`).join('');
+  document.getElementById('yanginTupuBarkodEslesmePaneli').style.display = tumu.length ? '' : 'none';
+}
+
+function _ytBarkodEslesmePaneliGizle() {
+  _ytBarkodBekleyenKod = null;
+  document.getElementById('yanginTupuBarkodEslesmePaneli').style.display = 'none';
+}
+
+// Eşleşme paneli düğmesi -- taranan (ama eşleşmeyen) barkodu kullanıcının
+// seçtiği mevcut tüpe kaydeder (barkodDegeri alanı, bkz. model.js); bir
+// sonraki taramada o tüp doğrudan açılır.
+async function _ytBarkodEslestir() {
+  if (!_ytBarkodBekleyenKod) return;
+  const id = document.getElementById('yanginTupuBarkodEslesTupSecim').value;
+  const tup = yanginTupuIdIleGetirRepo(id);
+  if (!tup) return;
+  const sonuc = yanginTupuGuncelle(id, Object.assign({}, tup, { barkodDegeri: _ytBarkodBekleyenKod }));
+  if (!sonuc.basarili) { alert('Bağlanamadı: ' + (Object.values(sonuc.hatalar || {})[0] || 'bilinmeyen hata')); return; }
+  yanginTupuBarkodTaramaDurdur();
+  yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
+  yanginTupuModalAc(sonuc.tup);
+}
+
+function _ytBarkodKamerayiDurdur() {
   if (_ytBarkodTarayici) {
     const tarayici = _ytBarkodTarayici;
     _ytBarkodTarayici = null;
     tarayici.stop().then(() => tarayici.clear()).catch(() => {});
   }
+}
+
+function yanginTupuBarkodTaramaDurdur() {
+  document.getElementById('yanginTupuBarkodTaramaKatman').classList.remove('acik');
+  _ytBarkodEslesmePaneliGizle();
+  _ytBarkodKamerayiDurdur();
 }
 
 function ekipmanModalAc(ekipman) {
@@ -1377,6 +1430,7 @@ function yanginTupuModalAc(tup) {
   document.getElementById('yanginTupuBolum').value = tup ? tup.bolum : '';
   document.getElementById('yanginTupuLokasyon').value = tup ? tup.lokasyon : '';
   document.getElementById('yanginTupuSeriNumarasi').value = tup ? tup.seriNumarasi : '';
+  document.getElementById('yanginTupuBarkodDegeri').value = tup ? tup.barkodDegeri || '' : '';
   document.getElementById('yanginTupuUretici').value = tup ? tup.uretici : '';
   document.getElementById('yanginTupuUretimTarihi').value = tup ? tup.uretimTarihi : '';
   document.getElementById('yanginTupuDoluTarihi').value = tup ? tup.doluTarihi : '';
@@ -1484,6 +1538,7 @@ function yanginTupuFormGonderildi(e) {
     bolum: document.getElementById('yanginTupuBolum').value,
     lokasyon: document.getElementById('yanginTupuLokasyon').value,
     seriNumarasi: document.getElementById('yanginTupuSeriNumarasi').value,
+    barkodDegeri: document.getElementById('yanginTupuBarkodDegeri').value,
     uretici: document.getElementById('yanginTupuUretici').value,
     uretimTarihi: document.getElementById('yanginTupuUretimTarihi').value,
     doluTarihi: document.getElementById('yanginTupuDoluTarihi').value,

@@ -565,6 +565,13 @@ function yanginTupuOlustur(veriler) {
     // numaramız) farklı, aynı tüpün tekrar kaydedilmesini engellemek için
     // kullanılır (bkz. yanginTupuSeriNumarasiIleBul).
     seriNumarasi: (veriler.seriNumarasi || '').trim(),
+    // Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı
+    // barkod sistemi var" — firmanın etiketindeki QR kodu Tüp No/Seri
+    // No'dan tamamen farklı, kendi sistemine ait bir URL (ör.
+    // http://buyuksehiryangin.sab.cloud/ysc/ysc?ysc=...) taşıyabiliyor; bu
+    // ham değer burada saklanır ve barkod taramada da eşleştirilir (bkz.
+    // ui.js _yanginTupuBarkodEslesenTupuBul).
+    barkodDegeri: (veriler.barkodDegeri || '').trim(),
     uretici: (veriler.uretici || '').trim(),
     uretimTarihi: (veriler.uretimTarihi || '').trim(),
     doluTarihi: veriler.doluTarihi || '',
