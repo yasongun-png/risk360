@@ -281,6 +281,51 @@ function yanginTupuSil(id) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "yangın tüplerini içe aktarıyorum 281 adet, sayfa
+// yenilediğimde sayı azalıyor" — kök neden: Excel içe aktarma daha önce
+// her satır için AYRI bir yanginTupuEkle/yanginTupuGuncelle çağırıyordu;
+// bu da yüzlerce arka arkaya "fire-and-forget" Firestore yazımı demekti
+// (her biri o ana kadarki TÜM diziyi yeniden gönderen ayrı bir yaz()
+// çağrısı). Bunlardan biri (veya çoğu) sessizce başarısız olunca, sayfada
+// 281 görünse de sunucuda daha az kayıt kalıyor, yenilemede bu ortaya
+// çıkıyordu. yanginTupuToplusil'deki "N ayrı yazım yerine TEK oku+yaz"
+// ilkesiyle AYNI çözüm, ama bu kez yazVeSonucuGetir ile gerçekten
+// Firestore'a ulaştığından da emin olunuyor (bkz. repository.js
+// yanginTupuListesiKaydetRepoVeBekle).
+async function yanginTupuTopluIceAktar(satirlar) {
+  const liste = yanginTupleriTumunuGetir();
+  let basarili = 0;
+  const hatalar = [];
+
+  satirlar.forEach((satir, index) => {
+    const dogrulama = yanginTupuDogrula(satir);
+    if (!dogrulama.gecerli) {
+      hatalar.push(`Satır ${index + 2}: ${Object.values(dogrulama.hatalar)[0]}`);
+      return;
+    }
+    // _yanginTupuIceAktarSatiriUpsert (eski, ui.js) ile aynı eşleştirme
+    // mantığı: Tüp No (yoksa Seri Numarası) envanterde zaten varsa GÜNCELLE,
+    // yoksa YENİ ekle — ama artık her adımda BU ÇALIŞMA KOPYASI (liste)
+    // üzerinde, henüz yazılmadan.
+    const tupNo = (satir.tupNo || '').trim().toLowerCase();
+    const seri = (satir.seriNumarasi || '').trim().toLowerCase();
+    const mevcutIndex = liste.findIndex(t =>
+      (tupNo && (t.tupNo || '').trim().toLowerCase() === tupNo) ||
+      (seri && (t.seriNumarasi || '').trim().toLowerCase() === seri)
+    );
+    if (mevcutIndex !== -1) {
+      liste[mevcutIndex] = yanginTupuOlustur(Object.assign({}, liste[mevcutIndex], satir, { id: liste[mevcutIndex].id }));
+    } else {
+      const otoTupNo = (satir.tupNo && satir.tupNo.trim()) || yanginTupuSonrakiNoUret(liste);
+      liste.push(yanginTupuOlustur(Object.assign({}, satir, { tupNo: otoTupNo })));
+    }
+    basarili++;
+  });
+
+  const yazimSonucu = await yanginTupuListesiKaydetRepoVeBekle(liste);
+  return { basarili, basarisizSayisi: hatalar.length, hatalar, yazimBasarili: yazimSonucu.basarili, yazimHatasi: yazimSonucu.hata };
+}
+
 // Kullanıcı isteği: "toplu silme olması lazım" — bkz. modules/yuklenici/
 // service.js yukleniciKayitlariToplusil ile aynı desen: N ayrı silme
 // çağrısı yerine tek oku+filtrele+yaz.

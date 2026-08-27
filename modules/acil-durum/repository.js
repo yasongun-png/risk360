@@ -40,6 +40,18 @@ function _genelGuncelleVeBekle(anahtarFn, id, veriler) {
   l[i] = Object.assign({}, l[i], veriler);
   return yazVeSonucuGetir(anahtarFn(), l).then(() => l[i]);
 }
+// Kullanıcı isteği: "yangın tüplerini içe aktarıyorum 281 adet, sayfa
+// yenilediğimde sayı azalıyor" — kök neden: Excel içe aktarma satır satır
+// N ayrı yaz() çağrısı yapıyordu (her biri o ana kadarki TÜM diziyi yeniden
+// gönderen, sonucu doğrulanmayan "fire-and-forget" bir yazım); yüzlerce
+// arka arkaya yazımdan biri (veya birçoğu) sessizce başarısız olunca
+// sayfada 281 görünse de Firestore'a gerçekte daha az kayıt işleniyordu,
+// yenilemede bu ortaya çıkıyordu. Çözüm: "toplu silme" (yanginTupuToplusil)
+// ile AYNI ilke -- N ayrı yazım yerine TEK oku + TEK yaz, ve bu kez
+// yazVeSonucuGetir ile gerçekten Firestore'a ulaştığından emin olunur.
+function _genelListeKaydetVeBekle(anahtarFn, liste) {
+  return yazVeSonucuGetir(anahtarFn(), liste);
+}
 
 function ekipUyeleriTumunuGetir() { return _genelListeGetir(_ekipAnahtari); }
 function ekipUyesiEkleRepo(k) { return _genelEkle(_ekipAnahtari, k); }
@@ -69,6 +81,8 @@ function yanginTupuIdIleGetirRepo(id) { return yanginTupleriTumunuGetir().find(x
 // oku/yaz yerine (bkz. modules/yuklenici/service.js aynı desen) tek
 // oku+filtrele+yaz.
 function yanginTupuListesiKaydetRepo(liste) { _genelListeKaydet(_yanginTupuAnahtari, liste); }
+// Excel içe aktarma için — bkz. _genelListeKaydetVeBekle yorumu.
+function yanginTupuListesiKaydetRepoVeBekle(liste) { return _genelListeKaydetVeBekle(_yanginTupuAnahtari, liste); }
 
 function tatbikatlariTumunuGetir() { return _genelListeGetir(_tatbikatAnahtari); }
 function tatbikatEkleRepo(k) { return _genelEkle(_tatbikatAnahtari, k); }

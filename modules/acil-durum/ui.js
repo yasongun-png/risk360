@@ -219,21 +219,6 @@ const TATBIKAT_EXPORT_KOLONLARI = [
   { anahtar: 'durumGoruntu', baslik: 'Durum' }
 ];
 
-// Kullanıcı isteği: "yeniden yüklediğimde eski hali kalıyor, güncellenmesi
-// lazım" — normal içe aktarma her satırı hep YENİ kayıt olarak ekliyordu;
-// aynı listeyi düzeltip tekrar yüklediğinde bu, aynı tüpler için ikinci bir
-// kopya oluşturuyordu. Bunun yerine: satırda Tüp No (veya yoksa Seri
-// Numarası) envanterde zaten varsa o kayıt GÜNCELLENİR, yoksa yeni eklenir.
-function _yanginTupuIceAktarSatiriUpsert(satir) {
-  const tumu = yanginTupleriTumunuGetir();
-  const tupNo = (satir.tupNo || '').trim().toLowerCase();
-  const seri = (satir.seriNumarasi || '').trim().toLowerCase();
-  const mevcut = (tupNo && tumu.find(t => (t.tupNo || '').trim().toLowerCase() === tupNo))
-    || (seri && tumu.find(t => (t.seriNumarasi || '').trim().toLowerCase() === seri))
-    || null;
-  return mevcut ? yanginTupuGuncelle(mevcut.id, satir) : yanginTupuEkle(satir);
-}
-
 function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipSablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(EKIP_IMPORT_KOLONLARI, 'acil_durum_ekip_sablonu.xlsx');
@@ -339,9 +324,9 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     raporListesiYazdir('Yangın Tüpleri', altBilgi, YANGIN_TUPU_EXPORT_KOLONLARI, liste);
   });
   document.getElementById('yanginTupuIceAktarBtn').addEventListener('click', () => document.getElementById('yanginTupuIceAktarDosya').click());
-  document.getElementById('yanginTupuIceAktarDosya').addEventListener('change', e => {
+  document.getElementById('yanginTupuIceAktarDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
-    excelIceAktar(dosya, YANGIN_TUPU_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+    excelIceAktar(dosya, YANGIN_TUPU_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
       satirlar.forEach(satir => {
@@ -352,8 +337,23 @@ function _acilDurumExcelRaporBaglantilariniKur() {
         satir.sonrakiHidrostatikTest = excelTarihiNormallestir(satir.sonrakiHidrostatikTest);
         if (!['Aktif', 'Pasif', 'İptal'].includes(satir.durum)) satir.durum = 'Aktif';
       });
-      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, _yanginTupuIceAktarSatiriUpsert);
-      alert(excelIceAktarOzetMesaji(sonuc));
+      // Kullanıcı isteği: "yangın tüplerini içe aktarıyorum 281 adet, sayfa
+      // yenilediğimde sayı azalıyor" — bkz. service.js
+      // yanginTupuTopluIceAktar yorumu: artık satır satır yazmak yerine TEK
+      // yazımla kaydedilir ve gerçekten yazılıp yazılmadığı burada
+      // (yazimBasarili) doğrulanıp kullanıcıya açıkça bildirilir.
+      const dugme = document.getElementById('yanginTupuIceAktarBtn');
+      dugme.disabled = true;
+      try {
+        const sonuc = await yanginTupuTopluIceAktar(satirlar);
+        if (!sonuc.yazimBasarili) {
+          alert('İçe aktarılan kayıtlar sunucuya KAYDEDİLEMEDİ, lütfen tekrar deneyin: ' + (sonuc.yazimHatasi ? (sonuc.yazimHatasi.message || sonuc.yazimHatasi) : 'bilinmeyen hata'));
+        } else {
+          alert(excelIceAktarOzetMesaji(sonuc));
+        }
+      } finally {
+        dugme.disabled = false;
+      }
       yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
     });
   });
