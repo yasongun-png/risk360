@@ -1098,12 +1098,19 @@ function _ekipmanKontrolListesiCiz(ekipman) {
   const tur = document.getElementById('ekipmanTur').value;
   const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
   const cevaplar = ekipman ? ekipman.kontrolCevaplari || {} : {};
+  // Kullanıcı isteği: "acil ekipman kontrol formlarından bundan sonra yeni
+  // ekleyeceğim ekipmanlarda da uygun seçili gelsin eskiler aynı kalsın" —
+  // yalnızca YENİ ekipman eklerken (ekipman parametresi yok/null) her
+  // madde varsayılan olarak "Uygun" seçili gelir; mevcut bir ekipman
+  // düzenlenirken (ekipman verilmişse, barkodla yeniden kontrol başlatma
+  // dahil) davranış DEĞİŞMEDİ — cevapsız maddeler eskisi gibi "— Seçilmedi —" kalır.
+  const yeniEkipmanMi = !ekipman;
   kutu.innerHTML = sorular.map(s => `
     <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
       <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
       <select data-kontrol-soru="${s.id}" style="width:auto; min-width:150px;">
         <option value="">— Seçilmedi —</option>
-        ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${cevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
+        ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${(cevaplar[s.id] || (yeniEkipmanMi ? 'Uygun' : '')) === o ? 'selected' : ''}>${o}</option>`).join('')}
       </select>
     </div>
   `).join('');
