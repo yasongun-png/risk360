@@ -79,7 +79,12 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th><th>İşlemler</th><th>No / Tarih</th><th>Bölüm / Tespit Eden</th><th>Tespit</th><th>Öneri</th><th>Öncelik</th><th>Tebliğ</th><th>Fotoğraf</th><th>Durum</th></tr>
+            <!-- Kullanıcı isteği: "tespit öneri modülü tabloda tespit
+                 sütununu iki katına çıkar genişlet yani" — diğer sütunlar
+                 otomatik genişlikte kaldığından, Tespit sütununa açık bir
+                 genişlik verilerek (auto-layout tabloda diğerlerinin
+                 yaklaşık iki katı kadar) genişletildi. -->
+            <tr><th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th><th>İşlemler</th><th>No / Tarih</th><th>Bölüm / Tespit Eden</th><th style="width:22%;">Tespit</th><th>Öneri</th><th>Öncelik</th><th>Tebliğ</th><th>Fotoğraf</th><th>Durum</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>
