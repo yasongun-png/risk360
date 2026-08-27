@@ -255,7 +255,7 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imz
   // doldurulmadığına bakılmaksızın (boşsa hiç eklenmez) Kontrol Onayı'ndan
   // hemen önce, kendi sayfasında basılır.
   if ((gorus || '').trim()) {
-    cocuklar.push(_kfBaslik('İG Uzmanı Görüşü', docx.HeadingLevel.HEADING_1, true));
+    cocuklar.push(_kfBaslik('Genel Değerlendirme', docx.HeadingLevel.HEADING_1, true));
     (gorus || '').trim().split(/\n+/).filter(Boolean).forEach(paragraf => {
       cocuklar.push(_kfParagraf(paragraf, { spacing: { after: 120 } }));
     });
