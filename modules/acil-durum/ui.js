@@ -1359,12 +1359,16 @@ function yanginTupuModalAc(tup) {
 function _yanginTupuKontrolListesiCiz(tup) {
   const kutu = document.getElementById('yanginTupuKontrolListesi');
   const cevaplar = tup ? tup.kontrolCevaplari || {} : {};
+  // Kullanıcı isteği: "yangın tüplerinde kontrol listesi uygun seçili
+  // gelsin" — daha önce hiç cevaplanmamış maddeler artık boş ("—
+  // Seçilmedi —") değil, varsayılan olarak "Uygun" seçili açılır; daha
+  // önce cevaplanmış bir madde varsa o cevap korunur.
   kutu.innerHTML = YANGIN_TUPU_KONTROL_SORULARI.map(s => `
     <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
       <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
       <select data-kontrol-soru="${s.id}" style="width:auto; min-width:150px;">
         <option value="">— Seçilmedi —</option>
-        ${YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${cevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
+        ${YANGIN_TUPU_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${(cevaplar[s.id] || 'Uygun') === o ? 'selected' : ''}>${o}</option>`).join('')}
       </select>
     </div>
   `).join('');
