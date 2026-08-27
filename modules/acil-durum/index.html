@@ -89,14 +89,43 @@
            filtrelenir; imza + Genel Değerlendirme de o sekmeye özel alınır. -->
       <div class="sekme-cubugu" id="ekipmanBolumSekmeleri" style="margin-bottom:10px;"></div>
 
+      <div class="arac-cubugu">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
+          <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
+          <select id="ekipmanTurFiltre" style="width:auto;"><option value="">Tüm Türler (birleşik liste)</option></select>
+          <button type="button" class="ikincil" id="ekipmanBolumYonetBtn" style="width:auto; white-space:nowrap;">Bölümleri Yönet</button>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="ekipmanSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="ekipmanIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="ekipmanIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="ekipmanDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="ekipmanYazdirBtn">Yazdır</button>
+          <button type="button" class="ikincil" id="ekipmanKontrolFormuWordBtn">📄 Kontrol Formu (Word)</button>
+          <button type="button" class="ikincil" id="ekipmanListeRaporuWordBtn">📋 Ekipman Kontrol Listesi (Word)</button>
+          <button type="button" class="ikincil" id="ekipmanBarkodYazdirBtn">🏷️ Barkod (PDF)</button>
+          <button type="button" class="ikincil" id="ekipmanKontrolBarkoduAcBtn">📷 Barkodla Kontrol Formu</button>
+          <button type="button" class="ikincil" id="ekipmanBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
+          <button type="button" class="birincil" id="yeniEkipmanBtn" style="width:auto;">+ Ekipman Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
+          <tbody id="ekipmanTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="ekipmanBosDurum"></div>
+
       <!-- Kullanıcı isteği: "imzaları da word dışında attırmalısın" / "genel
-           değerlendirmeyi o bölüme özel" — İmza + Genel Değerlendirme, Word
-           oluşturma anından bağımsız olarak burada, seçili bölüm sekmesine
-           özel şekilde alınıp KALICI kaydedilir (bkz. ui.js
-           _ekipmanImzaPaneliCiz, core/tenant.js firmaEkipmanBolumImzasiKaydet).
-           "Tümü" sekmesinde (tek bir bölüm seçili olmadığından) gizlenir. -->
+           değerlendirmeyi o bölüme özel" / "imza ve genel değerlendirme en
+           altta olsun" — İmza + Genel Değerlendirme, Word oluşturma anından
+           bağımsız olarak burada, seçili bölüm sekmesine özel şekilde
+           alınıp KALICI kaydedilir (bkz. ui.js _ekipmanImzaPaneliCiz,
+           core/tenant.js firmaEkipmanBolumImzasiKaydet). "Tümü" sekmesinde
+           (tek bir bölüm seçili olmadığından) gizlenir. -->
       <div id="ekipmanImzaBolumBlok" style="display:none;">
-      <div class="form-bolum-baslik" style="margin-top:0;">İmza ve Genel Değerlendirme — <span id="ekipmanImzaBolumAdi"></span></div>
+      <div class="form-bolum-baslik">İmza ve Genel Değerlendirme — <span id="ekipmanImzaBolumAdi"></span></div>
       <div id="ekipmanImzaPaneli" style="border:1px solid var(--kenarlik); border-radius:8px; padding:14px; margin-bottom:14px;">
         <div id="ekipmanImzaDurum" style="font-size:12px; color:var(--metin-soluk); margin-bottom:10px;"></div>
 
@@ -128,34 +157,6 @@
         </div>
       </div>
       </div>
-
-      <div class="arac-cubugu">
-        <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
-          <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
-          <select id="ekipmanTurFiltre" style="width:auto;"><option value="">Tüm Türler (birleşik liste)</option></select>
-          <button type="button" class="ikincil" id="ekipmanBolumYonetBtn" style="width:auto; white-space:nowrap;">Bölümleri Yönet</button>
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="ikincil" id="ekipmanSablonIndirBtn">Şablon İndir</button>
-          <button type="button" class="ikincil" id="ekipmanIceAktarBtn">İçe Aktar</button>
-          <input type="file" id="ekipmanIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
-          <button type="button" class="ikincil" id="ekipmanDisaAktarBtn">Dışa Aktar</button>
-          <button type="button" class="ikincil" id="ekipmanYazdirBtn">Yazdır</button>
-          <button type="button" class="ikincil" id="ekipmanKontrolFormuWordBtn">📄 Kontrol Formu (Word)</button>
-          <button type="button" class="ikincil" id="ekipmanListeRaporuWordBtn">📋 Ekipman Kontrol Listesi (Word)</button>
-          <button type="button" class="ikincil" id="ekipmanBarkodYazdirBtn">🏷️ Barkod (PDF)</button>
-          <button type="button" class="ikincil" id="ekipmanKontrolBarkoduAcBtn">📷 Barkodla Kontrol Formu</button>
-          <button type="button" class="ikincil" id="ekipmanBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
-          <button type="button" class="birincil" id="yeniEkipmanBtn" style="width:auto;">+ Ekipman Ekle</button>
-        </div>
-      </div>
-      <div class="tablo-scroll">
-        <table class="veri-tablosu">
-          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
-          <tbody id="ekipmanTabloGovde"></tbody>
-        </table>
-      </div>
-      <div class="bos-durum" id="ekipmanBosDurum"></div>
     </div>
 
     <!-- YANGIN TÜPÜ -->
