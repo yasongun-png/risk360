@@ -42,75 +42,11 @@ function _kfKontrolTablosu(sorular, cevaplar) {
   });
 }
 
-const _KF_IMZA_KENARLIK = { style: docx.BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
-
-// Bir imza pad'inin canvas.toDataURL() çıktısını (data:image/png;base64,...)
-// docx.js ImageRun'ın kabul ettiği ham byte dizisine + en/boy oranını koruyan
-// ölçülere çevirir — _kfFotoVerisiGetir ile aynı desen, ama fotoBuyukCoz
-// çözümlemesi gerekmez (dataURL zaten elde hazır, Storage/CORS devreye
-// girmez, bkz. is-izni-bildir.html _iiImzaYukle'deki aynı CORS notu).
-async function _kfImzaGorseliVerisiGetir(dataUrl) {
-  if (!dataUrl) return null;
-  try {
-    const yanit = await fetch(dataUrl);
-    const blob = await yanit.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    const olcu = await new Promise((coz, red) => {
-      const img = new Image();
-      img.onload = () => coz({ genislik: img.naturalWidth, yukseklik: img.naturalHeight });
-      img.onerror = red;
-      img.src = URL.createObjectURL(blob);
-    });
-    const MAKS_GENISLIK = 220;
-    const oran = olcu.genislik > MAKS_GENISLIK ? MAKS_GENISLIK / olcu.genislik : 1;
-    return { veri: new Uint8Array(arrayBuffer), genislik: Math.round(olcu.genislik * oran), yukseklik: Math.round(olcu.yukseklik * oran) };
-  } catch (e) {
-    console.error('İmza görseli Word belgesine eklenemedi:', e);
-    return null;
-  }
-}
-
-// İş İzni modülünün belge çıktısındaki (bkz. modules/is-izni/cikti.js
-// _izImzaHucre — başlık/ad/boşluk/tarih düzeni) ile aynı görsel kalıptaki
-// imza kutusu. Kullanıcı isteği: "acil durum ekipman kontrol formları word
-// imza aynı tespit öneri kaşe imza gibi imzalansın" — imzaKaydi ({ad,
-// dataUrl}) verilmişse (bkz. ui.js _adKontrolFormuImzaModalAc imza pad'i)
-// Tespit Öneri PDF'indeki gibi dijital imza görseli + ad + bugünün tarihi
-// basılır; verilmemişse (ör. kullanıcı o an imzalamadıysa) sahada elle
-// imzalanacak boş Ad/Tarih/İmza satırları basılır — böylece bu belge hem
-// masaüstünde imzalanıp hem de kağıda basılıp elle imzalanabilir kalır.
-async function _kfImzaHucresi(baslik, imzaKaydi) {
-  const gorsel = imzaKaydi && imzaKaydi.dataUrl ? await _kfImzaGorseliVerisiGetir(imzaKaydi.dataUrl) : null;
-  const govde = gorsel
-    ? [
-        new docx.Paragraph({ spacing: { after: 40 }, children: [new docx.TextRun({ text: `Ad Soyad: ${imzaKaydi.ad || '-'}`, size: 18 })] }),
-        new docx.Paragraph({ spacing: { after: 100 }, children: [new docx.TextRun({ text: `Tarih: ${gunAyYil(bugunIso())}`, size: 18 })] }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 0 }, children: [new docx.ImageRun({ data: gorsel.veri, transformation: { width: gorsel.genislik, height: gorsel.yukseklik } })] })
-      ]
-    : [
-        new docx.Paragraph({ spacing: { after: 60 }, children: [new docx.TextRun({ text: 'Ad Soyad: ________________________', size: 18 })] }),
-        new docx.Paragraph({ spacing: { after: 220 }, children: [new docx.TextRun({ text: 'Tarih: ________________', size: 18 })] }),
-        new docx.Paragraph({ spacing: { after: 0 }, children: [new docx.TextRun({ text: 'İmza:', size: 18 })] }),
-        new docx.Paragraph({ spacing: { after: 0 }, children: [new docx.TextRun({ text: '' })] })
-      ];
-  return new docx.TableCell({
-    borders: { top: _KF_IMZA_KENARLIK, bottom: _KF_IMZA_KENARLIK, left: _KF_IMZA_KENARLIK, right: _KF_IMZA_KENARLIK },
-    margins: { top: 100, bottom: 100, left: 120, right: 120 },
-    children: [
-      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 80 }, children: [new docx.TextRun({ text: baslik.toLocaleUpperCase('tr'), bold: true, size: 18 })] }),
-      ...govde
-    ]
-  });
-}
-
-// imzalar (opsiyonel): { [baslik]: {ad, dataUrl} } — bkz. _kfImzaHucresi.
-async function _kfImzaTablosu(basliklar, imzalar) {
-  const hucreler = await Promise.all(basliklar.map(b => _kfImzaHucresi(b, imzalar && imzalar[b])));
-  return new docx.Table({
-    width: { size: 100, type: docx.WidthType.PERCENTAGE },
-    rows: [new docx.TableRow({ height: { value: 1360, rule: docx.HeightRule.ATLEAST }, children: hucreler })]
-  });
-}
+// Kullanıcı isteği: "Kontrol Onayı word den bulunu çıkar" — Word'e basılan
+// imza tablosu (Kontrol Onayı bölümü) ve onu üreten yardımcılar
+// (_kfImzaGorseliVerisiGetir/_kfImzaHucresi/_kfImzaTablosu) kaldırıldı;
+// imzalar artık yalnızca uygulama içinde bölüm bazlı kalıcı olarak
+// tutuluyor (bkz. ui.js _ekipmanImzaPaneliCiz).
 
 // Kayıttaki fotoUrl'i (Storage https URL ya da fotoBuyukKaydet'in
 // "fotoref:<id>" referansı olabilir -- bkz. modules/acil-durum/ui.js
@@ -220,7 +156,7 @@ function _kfBolumleraGrupla(kayitlar) {
 // içinde kayıtlar YİNE bölüm (departman) adına göre alt başlıklara
 // ayrılır (kullanıcı isteği: "kontrol formunu bölüm bazında yapabileyim" /
 // "bölüm filtresi de olsun ve buna göre rapor hazırlanabilsin").
-async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imzalar, gorus) {
+async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, gorus) {
   let tumEkipman = ekipmanlariTumunuGetir();
   if (bolumFiltre) tumEkipman = tumEkipman.filter(e => (e.bolum || '').trim() === bolumFiltre);
   const turler = turFiltre ? [turFiltre] : EKIPMAN_TURLERI.filter(t => tumEkipman.some(e => e.tur === t));
@@ -261,8 +197,8 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imz
 
   // Kullanıcı isteği: "PDF/Word raporlarına serbest bir bölüm ekleyelim,
   // İş Güvenliği Uzmanının görüşlerini yazdığı bir yer olsun" — doldurulup
-  // doldurulmadığına bakılmaksızın (boşsa hiç eklenmez) Kontrol Onayı'ndan
-  // hemen önce, kendi sayfasında basılır.
+  // doldurulmadığına bakılmaksızın (boşsa hiç eklenmez) belgenin sonunda,
+  // kendi sayfasında basılır.
   if ((gorus || '').trim()) {
     cocuklar.push(_kfBaslik('Genel Değerlendirme', docx.HeadingLevel.HEADING_1, true));
     (gorus || '').trim().split(/\n+/).filter(Boolean).forEach(paragraf => {
@@ -270,10 +206,9 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, imz
     });
   }
 
-  // İmza kutusu her ekipmanın altında değil, kullanıcı isteğiyle yalnızca
-  // belgenin en sonunda TEK sefer basılıyor.
-  cocuklar.push(_kfBaslik('Kontrol Onayı', docx.HeadingLevel.HEADING_1, true));
-  cocuklar.push(await _kfImzaTablosu(['Kontrolü Yapan', 'Bölüm Sorumlusu'], imzalar));
+  // Kullanıcı isteği: "Kontrol Onayı word den bulunu çıkar" — imza kutusu
+  // artık Word'e basılmıyor (imzalar zaten uygulama içinde bölüm bazlı
+  // olarak kalıcı tutuluyor, bkz. ui.js _ekipmanImzaPaneliCiz).
 
   const dokuman = new docx.Document({ sections: [{ properties: {}, children: cocuklar }] });
   const blob = await docx.Packer.toBlob(dokuman);

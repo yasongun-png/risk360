@@ -1651,28 +1651,22 @@ function _ekipmanImzaKaydetTiklandi() {
   alert('İmza ve Genel Değerlendirme kaydedildi.');
 }
 
-// Kayıtlı imza/genel değerlendirmeyi kontrol-formu-cikti.js'in beklediği
-// {'Kontrolü Yapan': {ad,dataUrl}|null, 'Bölüm Sorumlusu': {ad,dataUrl}|null}
-// biçimine çevirir — boş taraf belgede elle imzalanacak boş çizgilerle basılır.
-function _ekipmanImzaKaydindanBicimlendir(bolum) {
+// Kayıtlı bölüm bazlı Genel Değerlendirme metnini döner — kullanıcı isteği:
+// "Kontrol Onayı word den bulunu çıkar" sonrası imzalar artık Word'e
+// basılmıyor (yalnızca uygulama içinde kalıcı tutuluyor, bkz.
+// _ekipmanImzaPaneliCiz), bu yüzden burada yalnızca gorus taşınır.
+function _ekipmanGenelDegerlendirmeGetir(bolum) {
   const kayit = (_adFirma.ekipmanBolumImzalari && _adFirma.ekipmanBolumImzalari[bolum]) || null;
-  if (!kayit) return { imzalar: { 'Kontrolü Yapan': null, 'Bölüm Sorumlusu': null }, gorus: '' };
-  return {
-    imzalar: {
-      'Kontrolü Yapan': (kayit.kontrolEdenAd && kayit.kontrolEdenImza) ? { ad: kayit.kontrolEdenAd, dataUrl: kayit.kontrolEdenImza } : null,
-      'Bölüm Sorumlusu': (kayit.bolumSorumlusuAd && kayit.bolumSorumlusuImza) ? { ad: kayit.bolumSorumlusuAd, dataUrl: kayit.bolumSorumlusuImza } : null
-    },
-    gorus: kayit.genelDegerlendirme || ''
-  };
+  return kayit ? (kayit.genelDegerlendirme || '') : '';
 }
 
 async function _ekipmanKontrolFormuWordBtnTiklandi() {
   const tur = document.getElementById('ekipmanTurFiltre').value;
-  const { imzalar, gorus } = _ekipmanImzaKaydindanBicimlendir(_ekipmanAktifBolum);
+  const gorus = _ekipmanGenelDegerlendirmeGetir(_ekipmanAktifBolum);
   const dugme = document.getElementById('ekipmanKontrolFormuWordBtn');
   dugme.disabled = true;
   try {
-    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, _ekipmanAktifBolum, imzalar, gorus);
+    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, _ekipmanAktifBolum, gorus);
   } catch (hata) {
     console.error(hata);
     alert('Kontrol formu oluşturulamadı: ' + (hata.message || hata));
