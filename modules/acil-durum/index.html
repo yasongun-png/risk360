@@ -81,14 +81,6 @@
 
     <!-- EKİPMAN -->
     <div id="bolum-ekipman" style="display:none;">
-      <!-- Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" — Bölüm
-           artık bir <select> filtresi değil, firma.ekipmanBolumleri
-           listesinden türetilen bir sekme çubuğu (bkz. ui.js
-           _ekipmanBolumSekmeleriCiz). Ekipman listesi, Word raporları ve
-           barkod üretimi hep aktif sekmeye ("_ekipmanAktifBolum") göre
-           filtrelenir; imza + Genel Değerlendirme de o sekmeye özel alınır. -->
-      <div class="sekme-cubugu" id="ekipmanBolumSekmeleri" style="margin-bottom:10px;"></div>
-
       <div class="arac-cubugu">
         <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
           <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
@@ -109,6 +101,17 @@
           <button type="button" class="birincil" id="yeniEkipmanBtn" style="width:auto;">+ Ekipman Ekle</button>
         </div>
       </div>
+
+      <!-- Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" ->
+           "bölüm sekmelerini de ekipman kontrol tablosunun hemen üstünde
+           göster" — Bölüm artık bir <select> filtresi değil,
+           firma.ekipmanBolumleri listesinden türetilen ve doğrudan
+           tablonun üstünde duran bir sekme çubuğu (bkz. ui.js
+           _ekipmanBolumSekmeleriCiz). Ekipman listesi, Word raporları ve
+           barkod üretimi hep aktif sekmeye ("_ekipmanAktifBolum") göre
+           filtrelenir; imza + Genel Değerlendirme de o sekmeye özel alınır. -->
+      <div class="sekme-cubugu" id="ekipmanBolumSekmeleri" style="margin-bottom:10px;"></div>
+
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead><tr><th>Ekipman No</th><th>Tür</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
