@@ -328,6 +328,23 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
         _kfHucre(e.sonKontrol), _kfHucre(e.sonrakiKontrol), _kfHucre(e.bulgular)
       ]
     }));
+    // Kullanıcı isteği: "dolap malzeme listesi word de görünmeli" —
+    // detaylı Kontrol Formu (Word) raporunda zaten gösteriliyordu (bkz.
+    // _kfEkipmanBlogu); bu kompakt liste raporunda da Ekipman Dolabı
+    // satırının hemen altına, malzeme adı/adedi/durumunu tek satırda
+    // özetleyen ek bir satır eklendi.
+    if (Array.isArray(e.malzemeListesi) && e.malzemeListesi.length) {
+      const cevaplar = e.malzemeKontrolleri || {};
+      const ozet = e.malzemeListesi
+        .map(m => `${m.ad} (${m.adet || 1} adet): ${cevaplar[m.id] || '—'}`)
+        .join('   |   ');
+      satirlar.push(new docx.TableRow({
+        children: [new docx.TableCell({
+          columnSpan: SUTUN_SAYISI,
+          children: [new docx.Paragraph({ children: [new docx.TextRun({ text: 'Malzeme Listesi: ' + ozet, italics: true, size: 16 })] })]
+        })]
+      }));
+    }
   });
   const tablo = new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: satirlar });
 
