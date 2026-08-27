@@ -1,13 +1,19 @@
-// Tespit ve Öneri Defteri — kayıt bazlı, tek sayfalık "Tespit ve Öneri Formu"
-// PDF'i. Kullanıcı isteği: "uygunsuzluk formu benzeri bir form hazırla" /
-// "o yüzden formatlar aynı olsun" -- modules/uygunsuzluk/cikti.js
+// Tespit ve Öneri Defteri — kayıt bazlı "Tespit ve Öneri Formu" PDF'i.
+// Kullanıcı isteği: "uygunsuzluk formu benzeri bir form hazırla" / "o
+// yüzden formatlar aynı olsun" -- modules/uygunsuzluk/cikti.js
 // uygunsuzlukKayitPdfOlustur ile birebir aynı görsel kalıp (üst bantta solda
 // logo/ortada başlık/sağda Form Ayarları kutusu — Form No/Sürüm Tarihi/
-// Sürüm No/Sayfa Sayısı, bölüm tabloları, kaşe/imza onay kutuları, her
-// sayfa kendi gerçek "mevcut/toplam" sayfa numarasını basar). Tespit ve
-// Öneri kaydı uygunsuzluktan daha az alan içerdiğinden (öncesi/sonrası foto
-// çifti yok, tek "defter sayfası" fotoğrafı var, konum krokisi yok) TEK
-// sayfaya sığar; TO_TOPLAM_SAYFA yine de aynı mekanizmayla hesaplanır.
+// Sürüm No, bölüm tabloları, kaşe/imza onay kutuları, her sayfa kendi
+// gerçek "mevcut/toplam" sayfa numarasını basar).
+// Kullanıcı raporu: "tespit öneri formu çok uzun yazında bir sayfayı geçti
+// ve form almadı ikinci sayfa oluşturulmadı" -- form TEK sayfaya sığar
+// varsayımıyla yazılmıştı (tek büyük html2canvas görüntüsü tek A4 sayfasına
+// basılıyordu); Tespit/Öneri/Bulgular gibi serbest metin alanları uzun
+// olduğunda içerik sayfa sınırını aşıp kesiliyordu. Artık modules/egitim/
+// cikti.js _egtGrubuPdfeEkle ile AYNI "kendi doğal yüksekliğini PİKSEL
+// BAZINDA A4 sayfa yüksekliğine göre dilimleyip PDF'e sayfa sayfa ekleme"
+// yöntemi kullanılıyor (bkz. aşağıda _toKayitPdfeSayfalaEkle) — sayfa
+// sayısı önceden VARSAYILMAZ, gerçek içerik yüksekliğinden hesaplanır.
 
 function _toPdfKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -87,6 +93,35 @@ const _TO_KAYIT_STIL = `
       #toKayitPdf .uc-onay-imza-baslik{ font-size:7.5pt; color:#64748b; margin-top:1mm; }
 `;
 
+// Kök elemanı yakalayıp, kendi doğal (sayfadan uzun olabilen) yüksekliğini
+// gerçek A4 sayfa yüksekliğine göre PİKSEL BAZINDA dilimleyip PDF'e sayfa
+// sayfa ekler -- modules/egitim/cikti.js _egtGrubuPdfeEkle ile birebir aynı
+// yöntem (bkz. dosya başı yorum). Kaç parça/sayfa gerektiğini geri döner ki
+// çağıran taraf her sayfaya doğru "mevcut/toplam" numarasını basabilsin.
+async function _toKayitPdfeSayfalaEkle(pdf, kokEleman, icerikGenislikMm, kenarBosluguMm, sayfaYukseklikMm) {
+  const canvas = await html2canvas(kokEleman, { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
+  const pxPerMm = canvas.width / icerikGenislikMm;
+  const kullanilabilirYukseklikMm = sayfaYukseklikMm - kenarBosluguMm * 2;
+  const sayfaYukseklikPx = Math.floor(kullanilabilirYukseklikMm * pxPerMm);
+  const toplamParca = Math.max(1, Math.ceil(canvas.height / sayfaYukseklikPx));
+
+  for (let i = 0; i < toplamParca; i++) {
+    const parcaYukseklikPx = Math.min(sayfaYukseklikPx, canvas.height - i * sayfaYukseklikPx);
+    const parcaCanvas = document.createElement('canvas');
+    parcaCanvas.width = canvas.width;
+    parcaCanvas.height = parcaYukseklikPx;
+    const ctx = parcaCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, parcaCanvas.width, parcaCanvas.height);
+    ctx.drawImage(canvas, 0, i * sayfaYukseklikPx, canvas.width, parcaYukseklikPx, 0, 0, canvas.width, parcaYukseklikPx);
+
+    if (i > 0) pdf.addPage('a4', 'p');
+    const parcaYukseklikMm = parcaYukseklikPx / pxPerMm;
+    pdf.addImage(parcaCanvas.toDataURL('image/jpeg', 0.9), 'JPEG', kenarBosluguMm, kenarBosluguMm, icerikGenislikMm, parcaYukseklikMm);
+  }
+  return toplamParca;
+}
+
 async function tespitOneriKaydiPdfOlustur(id) {
   const k = tespitOneriIdIleGetirRepo(id);
   if (!k) return;
@@ -103,12 +138,13 @@ async function tespitOneriKaydiPdfOlustur(id) {
   // defterSayfasiFotografi'ni göstermiyor (kayıt/form/tablo/Excel'de foto
   // yükleme özelliği aynen duruyor, sadece bu PDF'te basılmıyor).
   //
-  // Bu form her zaman TEK sayfa üretir (öncesi/sonrası foto çifti veya
-  // konum krokisi yok) -- yine de formAyarlariKutusuHtml'in 4. parametresi
-  // aynı mekanizmayla ("mevcut/toplam") geçilir, bkz. modules/uygunsuzluk
-  // /cikti.js aynı notu ("1. sayfa 1/1, 2. sayfada da 1/1" hatasının çözümü).
-  const TO_TOPLAM_SAYFA = 1;
-
+  // Kullanıcı raporu: "form çok uzun oldu, bir sayfayı geçti, ikinci sayfa
+  // oluşturulmadı" -- sayfa sayısı artık ÖNCEDEN varsayılmıyor; gerçek
+  // içerik yüksekliğinden hesaplanıp her sayfanın altbilgisine dinamik
+  // olarak basılıyor (bkz. _toKayitPdfeSayfalaEkle). Bu yüzden üstbilgideki
+  // statik "Sayfa Sayısı" alanı GİZLENİR (bkz. modules/jsa/cikti.js aynı
+  // desen) -- ikisi çelişirse (statik 1/1 vs gerçek 1/2) kullanıcı raporu
+  // "2/2 hatalı bir sayfa var 1/1 olmalı" ile aynı soruna geri dönülür.
   const html = `
   <div id="toKayitPdf">
     <style>${_TO_KAYIT_STIL}</style>
@@ -116,7 +152,7 @@ async function tespitOneriKaydiPdfOlustur(id) {
     <div class="uc-form-ustbilgi">
       <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
       <div class="uc-form-baslik">TESPİT VE ÖNERİ FORMU</div>
-      <div class="uc-form-fa">${formAyarlariKutusuHtml('tespit-oneri', null, false, `1/${TO_TOPLAM_SAYFA}`)}</div>
+      <div class="uc-form-fa">${formAyarlariKutusuHtml('tespit-oneri', null, false, null, true)}</div>
     </div>
 
     <div class="uc-form-bolum">
@@ -172,14 +208,19 @@ async function tespitOneriKaydiPdfOlustur(id) {
     });
   }));
 
-  const canvas = await html2canvas(document.getElementById('toKayitPdf'), { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
   const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
   const genislikMm = 210;
-  const yukseklikMm = canvas.height * (genislikMm / canvas.width);
-  pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, genislikMm, yukseklikMm);
-  pdf.setFontSize(8);
-  pdf.setTextColor(100);
-  pdf.text(`Sayfa 1 / ${TO_TOPLAM_SAYFA}`, genislikMm / 2, 297 - 5, { align: 'center' });
+  // Kullanıcı raporu: "form çok uzun oldu, bir sayfayı geçti, ikinci sayfa
+  // oluşturulmadı" -- eskiden tek büyük görüntü tek sayfaya sığdırılmaya
+  // çalışılıyordu (uzun metinlerde taşıp kesiliyordu); artık gerçek içerik
+  // yüksekliğine göre gereken kadar sayfaya dilimlenip ekleniyor.
+  const toplamSayfa = await _toKayitPdfeSayfalaEkle(pdf, document.getElementById('toKayitPdf'), genislikMm, 0, 297);
+  for (let i = 0; i < toplamSayfa; i++) {
+    pdf.setPage(i + 1);
+    pdf.setFontSize(8);
+    pdf.setTextColor(100);
+    pdf.text(`Sayfa ${i + 1} / ${toplamSayfa}`, genislikMm / 2, 297 - 5, { align: 'center' });
+  }
   pdf.save(`Tespit_Oneri_${(k.kayitNo || id).replace(/[\\/]/g, '-')}.pdf`);
 
   mount.innerHTML = '';
