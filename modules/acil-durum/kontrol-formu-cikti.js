@@ -307,3 +307,51 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
   const bolumAdi = bolumFiltre ? '_' + bolumFiltre.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
   saveAs(blob, `Acil_Durum_Ekipman_Kontrol_Listesi_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
+
+// Kullanıcı isteği: "acil durum malzeme dolapları envanter listesini
+// çıktı alıp asmak da istiyorum word olarak bu listeyi de indirebileyim
+// ekipman bazında" — kontrol sonuçlarından bağımsız, dolabın İÇİNDE NE
+// OLMASI GEREKTİĞİNİ gösteren, kapıya/dolaba asılabilecek sade bir
+// envanter listesi. Her "Ekipman Dolabı" kendi sayfasında; malzeme +
+// adet + fiziksel kontrol için boş bir "✓" sütunu (asıldıktan sonra elle
+// işaretlenebilsin diye).
+async function ekipmanMalzemeEnvanteriWordOlustur(firma, bolumFiltre) {
+  let dolaplar = ekipmanlariTumunuGetir().filter(e => e.tur === 'Ekipman Dolabı' && Array.isArray(e.malzemeListesi) && e.malzemeListesi.length);
+  if (bolumFiltre) dolaplar = dolaplar.filter(e => (e.bolum || '').trim() === bolumFiltre);
+  dolaplar.sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true }));
+
+  if (!dolaplar.length) {
+    alert('Malzeme envanteri üretebilmek için önce en az bir Ekipman Dolabı kaydına malzeme listesi ekleyin.');
+    return;
+  }
+
+  const bugun = gunAyYil(bugunIso());
+  const cocuklar = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMAN DOLABI MALZEME ENVANTERİ', bold: true, size: 32, color: '000000' })] }),
+    new docx.Paragraph({
+      alignment: docx.AlignmentType.CENTER,
+      spacing: { after: 300 },
+      children: [new docx.TextRun({
+        text: `${firma.ad || ''}${bolumFiltre ? ' — ' + bolumFiltre + ' Bölümü' : ''}   |   Düzenleme Tarihi: ${bugun}`,
+        size: 20
+      })]
+    })
+  ];
+
+  dolaplar.forEach((dolap, index) => {
+    cocuklar.push(_kfBaslik(`${dolap.ekipmanNo || '-'} — ${dolap.lokasyon || ''}`, docx.HeadingLevel.HEADING_1, index > 0));
+    cocuklar.push(_kfParagraf(`Bölüm: ${_kfTireVeyaDeger(dolap.bolum)}`, { spacing: { after: 160 } }));
+    const satirlar = [
+      new docx.TableRow({ children: [_kfHucre('Malzeme', true), _kfHucre('Adet', true), _kfHucre('Kontrol', true)] }),
+      ...dolap.malzemeListesi.map(m => new docx.TableRow({
+        children: [_kfHucre(m.ad), _kfHucre(m.adet || 1), _kfHucre('☐')]
+      }))
+    ];
+    cocuklar.push(new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: satirlar }));
+  });
+
+  const dokuman = new docx.Document({ sections: [{ properties: {}, children: cocuklar }] });
+  const blob = await docx.Packer.toBlob(dokuman);
+  const bolumAdi = bolumFiltre ? '_' + bolumFiltre.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
+  saveAs(blob, `Ekipman_Dolabi_Malzeme_Envanteri${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
+}

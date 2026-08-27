@@ -95,6 +95,13 @@
           <button type="button" class="ikincil" id="ekipmanYazdirBtn">Yazdır</button>
           <button type="button" class="ikincil" id="ekipmanKontrolFormuWordBtn">📄 Kontrol Formu (Word)</button>
           <button type="button" class="ikincil" id="ekipmanListeRaporuWordBtn">📋 Ekipman Kontrol Listesi (Word)</button>
+          <!-- Kullanıcı isteği: "acil durım malzeme dolapları envanter
+               lşstesini çıktı alıp aşmak da istiyorum word olarak bu
+               listeyi de indirebileyim ekşpman bazında" — kontrol
+               sonucundan bağımsız, dolaba/kapıya asılabilecek sade bir
+               malzeme envanteri (bkz. kontrol-formu-cikti.js
+               ekipmanMalzemeEnvanteriWordOlustur). -->
+          <button type="button" class="ikincil" id="ekipmanMalzemeEnvanteriWordBtn">🗂️ Malzeme Envanteri (Word)</button>
           <button type="button" class="ikincil" id="ekipmanBarkodYazdirBtn">🏷️ Barkod (PDF)</button>
           <button type="button" class="ikincil" id="ekipmanKontrolBarkoduAcBtn">📷 Barkodla Kontrol Formu</button>
           <button type="button" class="ikincil" id="ekipmanBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
@@ -712,9 +719,9 @@
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=4"></script>
   <script src="service.js?v=8"></script>
-  <script src="kontrol-formu-cikti.js?v=9"></script>
+  <script src="kontrol-formu-cikti.js?v=10"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=16"></script>
+  <script src="ui.js?v=17"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

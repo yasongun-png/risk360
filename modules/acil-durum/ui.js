@@ -284,6 +284,13 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanListeRaporuWordBtn').addEventListener('click', () => {
     ekipmanKontrolFormuListeWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, _ekipmanAktifBolum);
   });
+  // Kullanıcı isteği: "acil durım malzeme dolapları envanter lşstesini
+  // çıktı alıp aşmak da istiyorum word olarak bu listeyi de indirebileyim
+  // ekşpman bazında" — aktif bölüm sekmesindeki (veya "Tümü"yse hepsi)
+  // Ekipman Dolabı kayıtları için malzeme envanteri.
+  document.getElementById('ekipmanMalzemeEnvanteriWordBtn').addEventListener('click', () => {
+    ekipmanMalzemeEnvanteriWordOlustur(_adFirma, _ekipmanAktifBolum);
+  });
   // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
   // alayım" / "barkod pdf olarak olsun" — o an ekranda görünen (arama +
   // tür + bölüm filtreli) listedeki her ekipman için ekipmanNo'yu
