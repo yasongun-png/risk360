@@ -171,6 +171,22 @@ function ekipmanGuncelle(id, veriler) {
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
       return acc;
     }, {}),
+    // Kullanıcı isteği: "acil durum malzeme dolaplarında kontrol yaparken
+    // bir envanter listesi yapalım ... dolap içerisindeki malzemeler
+    // girsin ilk etapta sonrasında liste oluşsun kontrollerde de bu
+    // kontrol yapılır" — bkz. model.js ekipmanOlustur ile aynı sanitizasyon.
+    malzemeListesi: Array.isArray(veriler.malzemeListesi)
+      ? veriler.malzemeListesi.map(m => ({ id: (m && m.id) || rastgeleId(), ad: (m && m.ad || '').trim() })).filter(m => m.ad)
+      : [],
+    malzemeKontrolleri: (function () {
+      const gecerliIdler = new Set((Array.isArray(veriler.malzemeListesi) ? veriler.malzemeListesi : []).map(m => m && m.id).filter(Boolean));
+      const kaynak = veriler.malzemeKontrolleri || {};
+      const sonuc = {};
+      gecerliIdler.forEach(id => {
+        if (EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(kaynak[id])) sonuc[id] = kaynak[id];
+      });
+      return sonuc;
+    })(),
     notlar: (veriler.notlar || '').trim(),
     fotoUrl: veriler.fotoUrl || '',
     fotoUrl2: veriler.fotoUrl2 || '',

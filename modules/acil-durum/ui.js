@@ -17,6 +17,15 @@ let _duzenlenenTatbikatId = null;
 // yerine 3 slot; alan adları (fotoUrl/fotoUrl2/fotoUrl3) geriye dönük
 // uyumluluk için korunuyor (bkz. model.js).
 let _ekipmanFotoUrlleri = ['', '', ''];
+// Kullanıcı isteği: "acil durum malzeme dolaplarında kontrol yaparken bir
+// envanter listesi yapalım ... dolap içerisindeki malzemeler girsin ilk
+// etapta sonrasında liste oluşsun kontrollerde de bu kontrol yapılır" —
+// yalnızca "Ekipman Dolabı" türünde kullanılan çalışma kopyaları (bkz.
+// _ekipmanMalzemeBolumuCiz). _ekipmanMalzemeListesi: {id,ad}[] (kalıcı
+// envanter). _ekipmanMalzemeKontrolleri: {[malzemeId]: 'Uygun'|'Uygun Değil'|''}
+// (son kontroldeki tik/çarpı işaretleri).
+let _ekipmanMalzemeListesi = [];
+let _ekipmanMalzemeKontrolleri = {};
 // Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" — Ekipman
 // listesindeki Bölüm <select> filtresi yerine firma.ekipmanBolumleri'nden
 // türeyen bir sekme çubuğu (bkz. _ekipmanBolumSekmeleriCiz). '' = "Tümü".
@@ -78,6 +87,10 @@ function acilDurumSayfasiniBaslat(firma) {
     document.getElementById('ekipmanFoto' + i + 'SecBtn').addEventListener('click', () => document.getElementById('ekipmanFoto' + i + 'SecDosya').click());
     document.getElementById('ekipmanFoto' + i + 'CekDosya').addEventListener('change', e => _ekipmanFotoSecildi(e, i));
     document.getElementById('ekipmanFoto' + i + 'SecDosya').addEventListener('change', e => _ekipmanFotoSecildi(e, i));
+  });
+  document.getElementById('ekipmanMalzemeEkleBtn').addEventListener('click', _ekipmanMalzemeEkleTiklandi);
+  document.getElementById('ekipmanMalzemeAdi').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); _ekipmanMalzemeEkleTiklandi(); }
   });
   document.getElementById('ekipmanAramaKutusu').addEventListener('input', e => ekipmanlariCiz(e.target.value));
   const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
@@ -884,6 +897,9 @@ function _ekipmanBarkodIleKontrolBaslat(ekipman) {
   ekipmanModalAc(Object.assign({}, ekipman, {
     sonKontrol: bugunIso(),
     kontrolCevaplari: {},
+    // malzemeListesi (dolabın kalıcı envanteri) KORUNUR — yalnızca önceki
+    // kontrolün tik/çarpı işaretleri (malzemeKontrolleri) temizlenir.
+    malzemeKontrolleri: {},
     bulgular: ''
   }));
 }
@@ -930,7 +946,10 @@ function ekipmanModalAc(ekipman) {
     _ekipmanFotoOnizlemeCiz(i);
   });
   _ekipmanKontrolListesiCiz(ekipman);
-  document.getElementById('ekipmanTur').onchange = () => _ekipmanKontrolListesiCiz(ekipman);
+  _ekipmanMalzemeListesi = ekipman && Array.isArray(ekipman.malzemeListesi) ? ekipman.malzemeListesi.slice() : [];
+  _ekipmanMalzemeKontrolleri = ekipman && ekipman.malzemeKontrolleri ? Object.assign({}, ekipman.malzemeKontrolleri) : {};
+  _ekipmanMalzemeBolumuCiz();
+  document.getElementById('ekipmanTur').onchange = () => { _ekipmanKontrolListesiCiz(ekipman); _ekipmanMalzemeBolumuCiz(); };
   _ekipmanKonumAlaniCiz(ekipman);
   temizleFormHatalari('ekipmanForm');
   document.getElementById('ekipmanModalKatman').classList.add('acik');
@@ -1037,6 +1056,94 @@ function _ekipmanKontrolListesiTopla() {
   return cevaplar;
 }
 
+// ==================== EKİPMAN DOLABI — MALZEME LİSTESİ ====================
+// Kullanıcı isteği: "acil durum malzeme dolaplarında kontrol yaparken bir
+// envanter listesi yapalım. envanter listesine bir çekiş tarzında tıklamalı
+// olsun. uygun uygun değil gibi yani tik ve çarpı olabilir. dolap
+// içerisindeki malzemeler girsin ilk etapta. sonrasında liste oluşsun.
+// kontrollerde de. bu kontrol yapılır" — bölüm görünürlüğü seçilen türe
+// göre (yalnızca "Ekipman Dolabı"), tür değiştikçe yeniden çizilir (bkz.
+// ekipmanModalAc'taki onchange).
+function _ekipmanMalzemeBolumuCiz() {
+  const bolum = document.getElementById('ekipmanMalzemeBolumu');
+  if (!bolum) return;
+  const gorunurMu = document.getElementById('ekipmanTur').value === 'Ekipman Dolabı';
+  bolum.style.display = gorunurMu ? '' : 'none';
+  if (!gorunurMu) return;
+  _ekipmanMalzemeYonetimListesiCiz();
+  _ekipmanMalzemeKontrolListesiCiz();
+}
+
+// Dolabın kalıcı envanterini yönetir (ekleme/silme) — kontrol sonucundan
+// bağımsız, bir kez tanımlanır ve her kontrolde aynı liste kullanılır.
+function _ekipmanMalzemeYonetimListesiCiz() {
+  const kutu = document.getElementById('ekipmanMalzemeYonetimListesi');
+  if (!kutu) return;
+  if (!_ekipmanMalzemeListesi.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Henüz malzeme eklenmedi.</div>';
+    return;
+  }
+  kutu.innerHTML = _ekipmanMalzemeListesi.map(m => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--kenarlik); font-size:13px;">
+      <span>${_adKacir(m.ad)}</span>
+      <button type="button" class="tablo-buton sil" style="font-size:11px;" data-ekipman-malzeme-sil="${_adKacir(m.id)}">Sil</button>
+    </div>
+  `).join('');
+  kutu.querySelectorAll('[data-ekipman-malzeme-sil]').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.getAttribute('data-ekipman-malzeme-sil');
+    _ekipmanMalzemeListesi = _ekipmanMalzemeListesi.filter(m => m.id !== id);
+    delete _ekipmanMalzemeKontrolleri[id];
+    _ekipmanMalzemeYonetimListesiCiz();
+    _ekipmanMalzemeKontrolListesiCiz();
+  }));
+}
+
+function _ekipmanMalzemeEkleTiklandi() {
+  const girdi = document.getElementById('ekipmanMalzemeAdi');
+  const ad = girdi.value.trim();
+  if (!ad) return;
+  _ekipmanMalzemeListesi.push({ id: rastgeleId(), ad });
+  girdi.value = '';
+  _ekipmanMalzemeYonetimListesiCiz();
+  _ekipmanMalzemeKontrolListesiCiz();
+}
+
+// "Çekiş tarzında tıklamalı" tik/çarpı: her dokunuşta Seçilmedi -> Uygun(✓)
+// -> Uygun Değil(✗) -> Seçilmedi olarak döner (EKIPMAN_KONTROL_CEVAP_SECENEKLERI
+// ile aynı iki durumu kullanır, "İlgili Değil" burada anlamsız olduğu için
+// dahil edilmez).
+function _ekipmanMalzemeDurumButonuHtml(durum) {
+  if (durum === 'Uygun') return { etiket: '✓ Uygun', stil: 'background:#dcfce7; color:#15803d; border-color:#86efac;' };
+  if (durum === 'Uygun Değil') return { etiket: '✗ Uygun Değil', stil: 'background:#fee2e2; color:#b91c1c; border-color:#fca5a5;' };
+  return { etiket: '— Seçilmedi —', stil: 'background:#f3f4f6; color:var(--metin-soluk); border-color:var(--kenarlik);' };
+}
+
+function _ekipmanMalzemeKontrolListesiCiz() {
+  const kutu = document.getElementById('ekipmanMalzemeKontrolListesi');
+  if (!kutu) return;
+  if (!_ekipmanMalzemeListesi.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Kontrol edilecek malzeme yok — önce yukarıdan malzeme ekleyin.</div>';
+    return;
+  }
+  kutu.innerHTML = _ekipmanMalzemeListesi.map(m => {
+    const durum = _ekipmanMalzemeKontrolleri[m.id] || '';
+    const { etiket, stil } = _ekipmanMalzemeDurumButonuHtml(durum);
+    return `
+      <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
+        <span style="flex:1; font-size:13px;">${_adKacir(m.ad)}</span>
+        <button type="button" data-ekipman-malzeme-durum="${_adKacir(m.id)}" style="width:auto; min-width:130px; border:1.5px solid; border-radius:8px; padding:6px 10px; font-size:12.5px; font-weight:600; cursor:pointer; ${stil}">${etiket}</button>
+      </div>
+    `;
+  }).join('');
+  kutu.querySelectorAll('[data-ekipman-malzeme-durum]').forEach(btn => btn.addEventListener('click', () => {
+    const id = btn.getAttribute('data-ekipman-malzeme-durum');
+    const mevcut = _ekipmanMalzemeKontrolleri[id] || '';
+    const sonraki = mevcut === '' ? 'Uygun' : mevcut === 'Uygun' ? 'Uygun Değil' : '';
+    if (sonraki) _ekipmanMalzemeKontrolleri[id] = sonraki; else delete _ekipmanMalzemeKontrolleri[id];
+    _ekipmanMalzemeKontrolListesiCiz();
+  }));
+}
+
 function ekipmanFormGonderildi(e) {
   e.preventDefault();
   temizleFormHatalari('ekipmanForm');
@@ -1053,6 +1160,8 @@ function ekipmanFormGonderildi(e) {
     durum: document.getElementById('ekipmanDurum').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     kontrolCevaplari: _ekipmanKontrolListesiTopla(),
+    malzemeListesi: _ekipmanMalzemeListesi,
+    malzemeKontrolleri: _ekipmanMalzemeKontrolleri,
     notlar: document.getElementById('ekipmanNotlar').value,
     fotoUrl: _ekipmanFotoUrlleri[0],
     fotoUrl2: _ekipmanFotoUrlleri[1],

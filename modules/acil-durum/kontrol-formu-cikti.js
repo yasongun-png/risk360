@@ -182,6 +182,15 @@ async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
       { spacing: { after: 120 } }
     ),
     _kfKontrolTablosu(sorular, ekipman.kontrolCevaplari || {}),
+    // Kullanıcı isteği: "acil durum malzeme dolaplarında kontrol yaparken
+    // bir envanter listesi yapalım ... kontrollerde de bu kontrol yapılır"
+    // — dolabın envanterinde malzeme varsa, aynı tablo biçimiyle (Kriter/
+    // Sonuç) her malzemenin en son kontroldeki Uygun/Uygun Değil işareti de
+    // basılır.
+    ...((Array.isArray(ekipman.malzemeListesi) && ekipman.malzemeListesi.length) ? [
+      _kfParagraf('Dolap İçi Malzeme Kontrolü:', { spacing: { before: 120, after: 80 } }),
+      _kfKontrolTablosu(ekipman.malzemeListesi.map(m => ({ id: m.id, soru: m.ad })), ekipman.malzemeKontrolleri || {})
+    ] : []),
     _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: fotolar.length ? 80 : 200 } }),
     ...(fotolar.length ? [new docx.Paragraph({
       spacing: { after: 200 },

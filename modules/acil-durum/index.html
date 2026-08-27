@@ -354,6 +354,26 @@
         <label>Kontrol Kriterleri <span style="color:var(--metin-soluk); font-weight:400;">(seçilen türe göre)</span></label>
         <div id="ekipmanKontrolListesi" style="margin-bottom:14px;"></div>
 
+        <!-- Kullanıcı isteği: "acil durum malzeme dolaplarında kontrol
+             yaparken bir envanter listesi yapalım ... dolap içerisindeki
+             malzemeler girsin ilk etapta sonrasında liste oluşsun
+             kontrollerde de bu kontrol yapılır" -- yalnızca "Ekipman
+             Dolabı" türünde görünür (bkz. ui.js _ekipmanMalzemeBolumuCiz).
+             İki alt bölüm: (1) dolabın içindeki malzeme listesini
+             tanımlama/yönetme, (2) her kontrolde bu listedeki her malzeme
+             için tek dokunuşla Uygun(✓)/Uygun Değil(✗) işaretleme. -->
+        <div id="ekipmanMalzemeBolumu" style="display:none; margin-bottom:14px;">
+          <label>Dolap İçi Malzeme Listesi</label>
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <input type="text" id="ekipmanMalzemeAdi" placeholder="Malzeme adı (ör. El Feneri)" style="flex:1;">
+            <button type="button" class="ikincil" id="ekipmanMalzemeEkleBtn" style="width:auto; white-space:nowrap;">+ Ekle</button>
+          </div>
+          <div id="ekipmanMalzemeYonetimListesi" style="margin-bottom:10px;"></div>
+
+          <label>Malzeme Kontrolü <span style="color:var(--metin-soluk); font-weight:400;">(her malzemeye dokunarak Uygun/Uygun Değil işaretleyin)</span></label>
+          <div id="ekipmanMalzemeKontrolListesi"></div>
+        </div>
+
         <label for="ekipmanBulgular">Bulgular</label>
         <textarea id="ekipmanBulgular"></textarea>
 
@@ -625,13 +645,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=4"></script>
+  <script src="model.js?v=5"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=3"></script>
-  <script src="service.js?v=4"></script>
-  <script src="kontrol-formu-cikti.js?v=5"></script>
+  <script src="service.js?v=5"></script>
+  <script src="kontrol-formu-cikti.js?v=6"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=7"></script>
+  <script src="ui.js?v=8"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

@@ -509,6 +509,27 @@ function ekipmanOlustur(veriler) {
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';
       return acc;
     }, {}),
+    // Kullanıcı isteği: "acil durum malzeme dolaplarında kontrol yaparken
+    // bir envanter listesi yapalım ... dolap içerisindeki malzemeler
+    // girsin ilk etapta sonrasında liste oluşsun kontrollerde de bu
+    // kontrol yapılır" — yalnızca "Ekipman Dolabı" türünde kullanılır (bkz.
+    // ui.js _ekipmanMalzemeBolumuCiz), ama alan her türde saklanabilir
+    // (tür sonradan değiştirilirse liste kaybolmasın diye filtrelenmez).
+    // malzemeListesi: dolabın içeriği ({id, ad}[]) — kalıcı envanter.
+    // malzemeKontrolleri: en son kontroldeki Uygun/Uygun Değil işaretleri,
+    // yalnızca hâlâ listede olan malzeme id'leri için tutulur.
+    malzemeListesi: Array.isArray(veriler.malzemeListesi)
+      ? veriler.malzemeListesi.map(m => ({ id: (m && m.id) || rastgeleId(), ad: (m && m.ad || '').trim() })).filter(m => m.ad)
+      : [],
+    malzemeKontrolleri: (function () {
+      const gecerliIdler = new Set((Array.isArray(veriler.malzemeListesi) ? veriler.malzemeListesi : []).map(m => m && m.id).filter(Boolean));
+      const kaynak = veriler.malzemeKontrolleri || {};
+      const sonuc = {};
+      gecerliIdler.forEach(id => {
+        if (EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(kaynak[id])) sonuc[id] = kaynak[id];
+      });
+      return sonuc;
+    })(),
     notlar: (veriler.notlar || '').trim(),
     // Kontrol sırasında çekilen kanıt/bulgu fotoğrafları (opsiyonel, en
     // fazla 3 adet — kullanıcı isteği: "her bir kontrol için 3 adet
