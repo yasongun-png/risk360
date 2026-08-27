@@ -1084,11 +1084,18 @@ function _ekipmanMalzemeYonetimListesiCiz() {
     return;
   }
   kutu.innerHTML = _ekipmanMalzemeListesi.map(m => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--kenarlik); font-size:13px;">
-      <span>${_adKacir(m.ad)}</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid var(--kenarlik); font-size:13px;">
+      <span style="flex:1;">${_adKacir(m.ad)}</span>
+      <input type="number" min="1" value="${m.adet}" data-ekipman-malzeme-adet="${_adKacir(m.id)}" style="width:64px;" title="Adet">
       <button type="button" class="tablo-buton sil" style="font-size:11px;" data-ekipman-malzeme-sil="${_adKacir(m.id)}">Sil</button>
     </div>
   `).join('');
+  kutu.querySelectorAll('[data-ekipman-malzeme-adet]').forEach(girdi => girdi.addEventListener('change', () => {
+    const id = girdi.getAttribute('data-ekipman-malzeme-adet');
+    const kayit = _ekipmanMalzemeListesi.find(m => m.id === id);
+    if (kayit) kayit.adet = Math.max(1, Number(girdi.value) || 1);
+    _ekipmanMalzemeKontrolListesiCiz();
+  }));
   kutu.querySelectorAll('[data-ekipman-malzeme-sil]').forEach(btn => btn.addEventListener('click', () => {
     const id = btn.getAttribute('data-ekipman-malzeme-sil');
     _ekipmanMalzemeListesi = _ekipmanMalzemeListesi.filter(m => m.id !== id);
@@ -1098,12 +1105,16 @@ function _ekipmanMalzemeYonetimListesiCiz() {
   }));
 }
 
+// Kullanıcı isteği: "dolap içi malzemelerin adetlerini de girebileyim".
 function _ekipmanMalzemeEkleTiklandi() {
   const girdi = document.getElementById('ekipmanMalzemeAdi');
+  const adetGirdi = document.getElementById('ekipmanMalzemeAdet');
   const ad = girdi.value.trim();
   if (!ad) return;
-  _ekipmanMalzemeListesi.push({ id: rastgeleId(), ad });
+  const adet = Math.max(1, Number(adetGirdi.value) || 1);
+  _ekipmanMalzemeListesi.push({ id: rastgeleId(), ad, adet });
   girdi.value = '';
+  adetGirdi.value = '1';
   _ekipmanMalzemeYonetimListesiCiz();
   _ekipmanMalzemeKontrolListesiCiz();
 }
@@ -1130,7 +1141,7 @@ function _ekipmanMalzemeKontrolListesiCiz() {
     const { etiket, stil } = _ekipmanMalzemeDurumButonuHtml(durum);
     return `
       <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
-        <span style="flex:1; font-size:13px;">${_adKacir(m.ad)}</span>
+        <span style="flex:1; font-size:13px;">${_adKacir(m.ad)} <span style="color:var(--metin-soluk);">(${m.adet} adet)</span></span>
         <button type="button" data-ekipman-malzeme-durum="${_adKacir(m.id)}" style="width:auto; min-width:130px; border:1.5px solid; border-radius:8px; padding:6px 10px; font-size:12.5px; font-weight:600; cursor:pointer; ${stil}">${etiket}</button>
       </div>
     `;

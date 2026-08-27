@@ -176,7 +176,9 @@ function ekipmanGuncelle(id, veriler) {
     // girsin ilk etapta sonrasında liste oluşsun kontrollerde de bu
     // kontrol yapılır" — bkz. model.js ekipmanOlustur ile aynı sanitizasyon.
     malzemeListesi: Array.isArray(veriler.malzemeListesi)
-      ? veriler.malzemeListesi.map(m => ({ id: (m && m.id) || rastgeleId(), ad: (m && m.ad || '').trim() })).filter(m => m.ad)
+      ? veriler.malzemeListesi
+        .map(m => ({ id: (m && m.id) || rastgeleId(), ad: (m && m.ad || '').trim(), adet: Math.max(1, Number(m && m.adet) || 1) }))
+        .filter(m => m.ad)
       : [],
     malzemeKontrolleri: (function () {
       const gecerliIdler = new Set((Array.isArray(veriler.malzemeListesi) ? veriler.malzemeListesi : []).map(m => m && m.id).filter(Boolean));

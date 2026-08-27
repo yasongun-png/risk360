@@ -366,6 +366,7 @@
           <label>Dolap İçi Malzeme Listesi</label>
           <div style="display:flex; gap:8px; margin-bottom:8px;">
             <input type="text" id="ekipmanMalzemeAdi" placeholder="Malzeme adı (ör. El Feneri)" style="flex:1;">
+            <input type="number" id="ekipmanMalzemeAdet" placeholder="Adet" min="1" value="1" style="width:80px;">
             <button type="button" class="ikincil" id="ekipmanMalzemeEkleBtn" style="width:auto; white-space:nowrap;">+ Ekle</button>
           </div>
           <div id="ekipmanMalzemeYonetimListesi" style="margin-bottom:10px;"></div>
@@ -645,13 +646,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=5"></script>
+  <script src="model.js?v=6"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=3"></script>
-  <script src="service.js?v=5"></script>
-  <script src="kontrol-formu-cikti.js?v=6"></script>
+  <script src="service.js?v=6"></script>
+  <script src="kontrol-formu-cikti.js?v=7"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=8"></script>
+  <script src="ui.js?v=9"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
