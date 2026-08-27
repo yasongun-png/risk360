@@ -17,6 +17,10 @@ let _duzenlenenTatbikatId = null;
 // yerine 3 slot; alan adları (fotoUrl/fotoUrl2/fotoUrl3) geriye dönük
 // uyumluluk için korunuyor (bkz. model.js).
 let _ekipmanFotoUrlleri = ['', '', ''];
+// Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" — Ekipman
+// listesindeki Bölüm <select> filtresi yerine firma.ekipmanBolumleri'nden
+// türeyen bir sekme çubuğu (bkz. _ekipmanBolumSekmeleriCiz). '' = "Tümü".
+let _ekipmanAktifBolum = '';
 
 function _adKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -79,7 +83,6 @@ function acilDurumSayfasiniBaslat(firma) {
   const ekipmanTurFiltreEl = document.getElementById('ekipmanTurFiltre');
   ekipmanTurFiltreEl.innerHTML += EKIPMAN_TURLERI.map(t => `<option value="${t}">${t}</option>`).join('');
   ekipmanTurFiltreEl.addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
-  document.getElementById('ekipmanBolumFiltre').addEventListener('change', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value));
   document.getElementById('ekipmanBolumYonetBtn').addEventListener('click', ekipmanBolumYonetModalAc);
   document.getElementById('ekipmanBolumYonetKapatBtn').addEventListener('click', ekipmanBolumYonetModalKapat);
   document.getElementById('ekipmanBolumEkleBtn').addEventListener('click', () => {
@@ -260,7 +263,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // yalnız o türün, seçili değilse kaydı olan HER türün ayrı bölüm/sayfa
   // olarak basıldığı tek bir Word belgesi üretilir.
   document.getElementById('ekipmanKontrolFormuWordBtn').addEventListener('click', () => {
-    kfImzaModalAc(document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
+    kfImzaModalAc(document.getElementById('ekipmanTurFiltre').value, _ekipmanAktifBolum);
   });
   document.getElementById('kfImzaIptalBtn').addEventListener('click', kfImzaModalKapat);
   document.getElementById('kfImzaKapatBtn').addEventListener('click', kfImzaModalKapat);
@@ -276,7 +279,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // sayfada) detaylı Word raporunun yanında, aynı filtrelerle çalışan,
   // her ekipmanı tek satırda gösteren kompakt bir tablo raporu.
   document.getElementById('ekipmanListeRaporuWordBtn').addEventListener('click', () => {
-    ekipmanKontrolFormuListeWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, document.getElementById('ekipmanBolumFiltre').value);
+    ekipmanKontrolFormuListeWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, _ekipmanAktifBolum);
   });
   // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
   // alayım" / "barkod pdf olarak olsun" — o an ekranda görünen (arama +
@@ -306,7 +309,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
       satirlar.forEach(satir => { satir.sonKontrol = excelTarihiNormallestir(satir.sonKontrol); });
       const sonuc = excelToplulIceAktarSonucOzetle(satirlar, ekipmanEkle);
       alert(excelIceAktarOzetMesaji(sonuc));
-      _ekipmanBolumFiltreDoldur();
+      _ekipmanBolumSekmeleriCiz();
       ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
     });
   });
@@ -361,7 +364,7 @@ function gorunumDegistir(gorunum) {
 
   if (gorunum === 'ekipler') ekipleriCiz('');
   else if (gorunum === 'uygunluk') uygunlugCiz();
-  else if (gorunum === 'ekipman') { _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(''); }
+  else if (gorunum === 'ekipman') { _ekipmanBolumSekmeleriCiz(); ekipmanlariCiz(''); }
   else if (gorunum === 'yanginTupu') yanginTupleriniCiz('');
   else if (gorunum === 'tatbikat') tatbikatlariCiz('');
 }
@@ -541,16 +544,27 @@ function uygunlugCiz() {
 
 // ==================== EKİPMAN ====================
 
-// #ekipmanBolumFiltre seçeneklerini mevcut ekipman kayıtlarındaki bölümlerden
-// dinamik doldurur (bkz. modules/uygunsuzluk/ui.js _usBolumFiltreDoldur ile
-// aynı desen) — önceki seçim, hâlâ listede varsa korunur.
-function _ekipmanBolumFiltreDoldur() {
-  const secim = document.getElementById('ekipmanBolumFiltre');
-  if (!secim) return;
-  const oncekiSecim = secim.value;
-  const bolumler = Array.from(new Set(ekipmanlariTumunuGetir().map(e => (e.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
-  secim.innerHTML = '<option value="">Tüm Bölümler</option>' + bolumler.map(b => `<option value="${_adKacir(b)}">${_adKacir(b)}</option>`).join('');
-  if (bolumler.includes(oncekiSecim)) secim.value = oncekiSecim;
+// Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" — Bölüm
+// filtresi artık firma.ekipmanBolumleri (yönetilen liste, bkz.
+// _ekipmanBolumYonetListesiCiz) üzerinden bir sekme çubuğu olarak çizilir;
+// eski sürümde bu, ekipman kayıtlarındaki serbest metin bölüm değerlerinden
+// türetiliyordu. "Tümü" sekmesi (_ekipmanAktifBolum === '') her zaman ilk
+// sırada durur ve tüm bölümleri birlikte gösterir.
+function _ekipmanBolumSekmeleriCiz() {
+  const kutu = document.getElementById('ekipmanBolumSekmeleri');
+  if (!kutu) return;
+  const bolumler = (_adFirma && Array.isArray(_adFirma.ekipmanBolumleri) ? _adFirma.ekipmanBolumleri : []).slice().sort((a, b) => a.localeCompare(b, 'tr'));
+  // Aktif sekme bölümler listesinden silinmişse "Tümü"ne dön.
+  if (_ekipmanAktifBolum && !bolumler.includes(_ekipmanAktifBolum)) _ekipmanAktifBolum = '';
+  const sekmeler = [{ deger: '', etiket: 'Tümü' }].concat(bolumler.map(b => ({ deger: b, etiket: b })));
+  kutu.innerHTML = sekmeler.map(s => `
+    <button type="button" class="${s.deger === _ekipmanAktifBolum ? '' : 'sekme-seciliDegil'}" data-ekipman-bolum-sekme="${_adKacir(s.deger)}">${_adKacir(s.etiket)}</button>
+  `).join('');
+  kutu.querySelectorAll('[data-ekipman-bolum-sekme]').forEach(btn => btn.addEventListener('click', () => {
+    _ekipmanAktifBolum = btn.getAttribute('data-ekipman-bolum-sekme');
+    _ekipmanBolumSekmeleriCiz();
+    ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+  }));
 }
 
 // ==================== EKİPMAN BÖLÜMLERİNİ YÖNET ====================
@@ -611,6 +625,9 @@ function ekipmanBolumYonetModalKapat() {
   // hemen yansısın.
   const secim = document.getElementById('ekipmanBolum');
   if (secim) _ekipmanBolumSeceneklerDoldur(secim, secim.value);
+  // Sekme çubuğu da yeni eklenen/silinen bölümleri hemen yansıtsın.
+  _ekipmanBolumSekmeleriCiz();
+  ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
 }
 
 // Arama kutusu + tür/bölüm filtrelerinin hepsini birlikte uygular — tabloyu
@@ -618,15 +635,16 @@ function ekipmanBolumYonetModalKapat() {
 // işlemlerinin AYNI filtrelenmiş listeyi kullanması için ortak yardımcı.
 function _ekipmanFiltrelenmisListeGetir(aramaMetni) {
   const turFiltre = document.getElementById('ekipmanTurFiltre');
-  const bolumFiltre = document.getElementById('ekipmanBolumFiltre');
   let liste = ekipmanlariGetir(aramaMetni);
   // Kullanıcı isteği: "ayrı listeler olarak da görebileyim yani yangın
   // tüpleri listesi vb" — türe göre filtrelenmiş, tek ekipman türünün
   // listesi olarak görüntülenebilir.
   if (turFiltre && turFiltre.value) liste = liste.filter(e => e.tur === turFiltre.value);
-  // Kullanıcı isteği: "bölüm filtresi de olsun ve buna göre rapor
-  // hazırlanabilsin" — bölüme göre de filtrelenebiliyor.
-  if (bolumFiltre && bolumFiltre.value) liste = liste.filter(e => (e.bolum || '').trim() === bolumFiltre.value);
+  // Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" / "her
+  // bölüm için barkod oluşturma ayrı olacak" — aktif bölüm sekmesine göre
+  // filtrelenir (bkz. _ekipmanBolumSekmeleriCiz); "Tümü" sekmesinde
+  // (_ekipmanAktifBolum === '') hiç filtrelenmez.
+  if (_ekipmanAktifBolum) liste = liste.filter(e => (e.bolum || '').trim() === _ekipmanAktifBolum);
   return liste;
 }
 
@@ -661,7 +679,7 @@ function ekipmanlariCiz(aramaMetni) {
   fotoReferanslariCoz(govde);
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
-    if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumFiltreDoldur(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
+    if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumSekmeleriCiz(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
 }
 
@@ -787,7 +805,11 @@ function ekipmanBarkodlariPdfOlustur() {
     pdf.addImage(etiketTuval.toDataURL('image/png'), 'PNG', x, y, ETIKET_GENISLIK, ETIKET_YUKSEKLIK);
   });
 
-  pdf.save(`Ekipman_Barkodlari_${(_adFirma && _adFirma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.pdf`);
+  // Kullanıcı isteği: "her bölüm için barkod oluşturma ayrı olacak" —
+  // listede zaten aktif sekmenin (bölümün) ekipmanları var; dosya adı da
+  // hangi bölüme ait olduğunu göstersin.
+  const dosyaBolumEki = _ekipmanAktifBolum ? '_' + _ekipmanAktifBolum.replace(/[^\p{L}\p{N}]+/gu, '_') : '';
+  pdf.save(`Ekipman_Barkodlari_${(_adFirma && _adFirma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}${dosyaBolumEki}.pdf`);
 }
 
 // ==================== KAMERA İLE BARKOD TARAMA ====================

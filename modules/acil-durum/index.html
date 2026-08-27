@@ -81,11 +81,17 @@
 
     <!-- EKİPMAN -->
     <div id="bolum-ekipman" style="display:none;">
+      <!-- Kullanıcı isteği: "bölüm ekledikçe sekme olarak eklenecek" — Bölüm
+           artık bir <select> filtresi değil, firma.ekipmanBolumleri
+           listesinden türetilen bir sekme çubuğu (bkz. ui.js
+           _ekipmanBolumSekmeleriCiz). Ekipman listesi, Word raporları ve
+           barkod üretimi hep aktif sekmeye ("_ekipmanAktifBolum") göre
+           filtrelenir; imza + Genel Değerlendirme de o sekmeye özel alınır. -->
+      <div class="sekme-cubugu" id="ekipmanBolumSekmeleri" style="margin-bottom:10px;"></div>
       <div class="arac-cubugu">
         <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
           <input type="text" id="ekipmanAramaKutusu" class="arama-kutusu" placeholder="Ekipman adı, lokasyon veya bölüme göre ara..." style="flex:1; min-width:180px;">
           <select id="ekipmanTurFiltre" style="width:auto;"><option value="">Tüm Türler (birleşik liste)</option></select>
-          <select id="ekipmanBolumFiltre" style="width:auto;"><option value="">Tüm Bölümler</option></select>
           <button type="button" class="ikincil" id="ekipmanBolumYonetBtn" style="width:auto; white-space:nowrap;">Bölümleri Yönet</button>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -616,7 +622,7 @@
   <script src="service.js?v=3"></script>
   <script src="kontrol-formu-cikti.js?v=5"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=3"></script>
+  <script src="ui.js?v=4"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
