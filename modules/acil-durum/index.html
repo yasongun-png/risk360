@@ -121,7 +121,13 @@
 
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Ekipman No</th><th>Tür</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
+          <!-- Kullanıcı isteği: "barkod üretmek için tüm listede seçim
+               yapabileyim sadece seçtikleri barkod oluştursun diğer
+               özellikler yine kalsın" — Yangın Tüpü tablosundaki toplu seçim
+               (checkbox) deseniyle aynı; hiçbir satır seçilmezse eskisi
+               gibi TÜM (filtrelenmiş) liste için barkod üretilir, bkz.
+               ui.js ekipmanBarkodlariPdfOlustur. -->
+          <thead><tr><th style="width:36px;"><input type="checkbox" id="ekipmanTumunuSecCheckbox"></th><th>Ekipman No</th><th>Tür</th><th>Bölüm</th><th>Lokasyon</th><th>Son Kontrol</th><th>Sonraki Kontrol</th><th>Durum</th><th>Bulgular</th><th>İşlemler</th></tr></thead>
           <tbody id="ekipmanTabloGovde"></tbody>
         </table>
       </div>
@@ -721,7 +727,7 @@
   <script src="service.js?v=8"></script>
   <script src="kontrol-formu-cikti.js?v=10"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=17"></script>
+  <script src="ui.js?v=18"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

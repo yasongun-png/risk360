@@ -66,6 +66,11 @@ function acilDurumSayfasiniBaslat(firma) {
 
   // Ekipman
   document.getElementById('yeniEkipmanBtn').addEventListener('click', () => ekipmanModalAc());
+  // Kullanıcı isteği: "barkod üretmek için tüm listede seçim yapabileyim
+  // sadece seçtikleri barkod oluştursun" — bkz. ekipmanBarkodlariPdfOlustur.
+  document.getElementById('ekipmanTumunuSecCheckbox').addEventListener('change', e => {
+    document.querySelectorAll('#ekipmanTabloGovde [data-ekipman-sec]').forEach(cb => { cb.checked = e.target.checked; });
+  });
   document.getElementById('ekipmanModalKapatBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanModalIptalBtn').addEventListener('click', ekipmanModalKapat);
   document.getElementById('ekipmanForm').addEventListener('submit', ekipmanFormGonderildi);
@@ -705,6 +710,7 @@ function ekipmanlariCiz(aramaMetni) {
   liste.forEach(e => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td><input type="checkbox" data-ekipman-sec data-id="${e.id}"></td>
       <td>${_adKacir(e.ekipmanNo)}${e.fotoUrl ? ` <a data-foto-ref-href="${e.fotoUrl}" target="_blank" rel="noopener" title="Fotoğrafı büyüt"><img data-foto-ref="${e.fotoUrl}" style="width:22px; height:22px; object-fit:cover; border-radius:4px; vertical-align:middle; border:1px solid var(--kenarlik);"></a>` : ''}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
@@ -722,6 +728,7 @@ function ekipmanlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumSekmeleriCiz(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
+  document.getElementById('ekipmanTumunuSecCheckbox').checked = false;
 }
 
 // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
@@ -821,7 +828,15 @@ function _ekBarkodEtiketiCanvasOlustur(e, genislikMm, yukseklikMm) {
 }
 
 function ekipmanBarkodlariPdfOlustur() {
-  const liste = _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value);
+  let liste = _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value);
+  // Kullanıcı isteği: "barkod üretmek için tüm listede seçim yapabileyim
+  // sadece seçtikleri barkod oluştursun diğer özellikler yine kalsın yani
+  // bölüm içerisinde hepsinin barkodunun oluşturulması kısmı" — tablodan
+  // en az bir satır işaretlenmişse SADECE onlar için barkod üretilir; hiç
+  // işaretlenmemişse eskisi gibi (bölüm/tür/arama ile) filtrelenmiş TÜM
+  // liste için üretilir (davranış değişmedi).
+  const seciliIdler = new Set(Array.from(document.querySelectorAll('#ekipmanTabloGovde [data-ekipman-sec]:checked')).map(cb => cb.getAttribute('data-id')));
+  if (seciliIdler.size) liste = liste.filter(e => seciliIdler.has(e.id));
   if (!liste.length) { alert('Barkod basılacak ekipman bulunamadı.'); return; }
 
   const SAYFA_GENISLIK = 210, SAYFA_YUKSEKLIK = 297, KENAR = 10;
