@@ -119,6 +119,8 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuSeciliSilBtn').addEventListener('click', yanginTupuSeciliSil);
   document.getElementById('yanginTupuBarkodTaraBtn').addEventListener('click', yanginTupuBarkodTaramaBaslat);
   document.getElementById('yanginTupuBarkodTaramaKapatBtn').addEventListener('click', yanginTupuBarkodTaramaDurdur);
+  document.getElementById('yanginTupuBarkodFotoBtn').addEventListener('click', () => document.getElementById('yanginTupuBarkodFotoDosya').click());
+  document.getElementById('yanginTupuBarkodFotoDosya').addEventListener('change', yanginTupuBarkodFotografSecildi);
 
   // Tatbikat
   document.getElementById('yeniTatbikatBtn').addEventListener('click', () => tatbikatModalAc());
@@ -935,9 +937,13 @@ function yanginTupuBarkodTaramaBaslat() {
   document.getElementById('yanginTupuBarkodTaramaKatman').classList.add('acik');
 
   _ytBarkodTarayici = new Html5Qrcode('yanginTupuBarkodTaramaOkuyucu', { verbose: false });
+  // Kullanıcı raporu: "bu barkodu okumadı" — firmanın etiketlerindeki QR
+  // kare olduğundan, eski geniş/dar (260x120) dikdörtgen kılavuz kutusu QR
+  // için uygun değildi; daha kare bir kutu (230x230) hem QR hem de 1D
+  // barkodları daha iyi çerçeveler.
   _ytBarkodTarayici.start(
     { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 260, height: 120 } },
+    { fps: 10, qrbox: { width: 230, height: 230 } },
     _ytBarkodOkundu,
     () => {}
   ).catch(hata => {
@@ -946,13 +952,42 @@ function yanginTupuBarkodTaramaBaslat() {
   });
 }
 
-function _ytBarkodOkundu(kod) {
+// Kullanıcı raporu: "bu barkodu okumadı" — parlak/eğri metal etiket
+// üzerindeki yoğun QR kodu, canlı kamera akışından (otomatik odaklanma
+// zayıf olabiliyor) güvenilir okunamıyor. Yedek yol: telefonun KENDİ
+// kamera uygulamasıyla (zoom/netleme yapılmış) net bir fotoğraf çekilip
+// o sabit görüntüden Html5Qrcode.scanFile ile okunur — bu, canlı taramadan
+// çok daha güvenilirdir çünkü kullanıcı çekimden önce netleyip
+// yaklaşabilir.
+async function yanginTupuBarkodFotografSecildi(e) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  if (typeof Html5Qrcode === 'undefined') { alert('Barkod okuma bileşeni yüklenemedi.'); return; }
+  const dosyaTarayici = new Html5Qrcode('yanginTupuBarkodDosyaOkuyucu', { verbose: false });
+  try {
+    const kod = await dosyaTarayici.scanFile(dosya, false);
+    const tup = _yanginTupuBarkodEslesenTupuBul(kod);
+    if (!tup) { alert(`"${kod}" koduyla eşleşen yangın tüpü bulunamadı.`); return; }
+    yanginTupuModalAc(tup);
+  } catch (hata) {
+    alert('Fotoğrafta okunabilir bir barkod/QR bulunamadı. Etikete daha yakından, net bir fotoğraf çekmeyi deneyin.');
+  } finally {
+    dosyaTarayici.clear().catch(() => {});
+  }
+}
+
+function _yanginTupuBarkodEslesenTupuBul(kod) {
   const temizKod = kod.trim().toLowerCase();
-  const tup = yanginTupleriTumunuGetir().find(t =>
+  return yanginTupleriTumunuGetir().find(t =>
     (t.tupNo || '').trim().toLowerCase() === temizKod ||
     (t.seriNumarasi || '').trim().toLowerCase() === temizKod ||
     t.id === kod.trim()
-  );
+  ) || null;
+}
+
+function _ytBarkodOkundu(kod) {
+  const tup = _yanginTupuBarkodEslesenTupuBul(kod);
   if (!tup) {
     const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
     if (durum) {

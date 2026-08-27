@@ -173,6 +173,15 @@
           <button type="button" class="ikincil" id="yanginTupuDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="yanginTupuYazdirBtn">Yazdır</button>
           <button type="button" class="ikincil" id="yanginTupuBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
+          <!-- Kullanıcı raporu: "bu barkodu okumadı" — parlak/eğri metal
+               etiket üzerindeki yoğun QR kodu, canlı kamera görüntüsünden
+               (otomatik odaklanamayabilir) okunamayabiliyor. Yedek yol:
+               telefonun KENDİ kamera uygulamasıyla (netleşmiş) bir fotoğraf
+               çekilip o fotoğraftan barkod/QR okunur — bkz. ui.js
+               yanginTupuBarkodFotografSecildi (Html5Qrcode.scanFile). -->
+          <button type="button" class="ikincil" id="yanginTupuBarkodFotoBtn">🖼️ Fotoğraftan Barkod Oku</button>
+          <input type="file" id="yanginTupuBarkodFotoDosya" accept="image/*" capture="environment" style="display:none;">
+          <div id="yanginTupuBarkodDosyaOkuyucu" style="display:none;"></div>
           <button type="button" class="birincil" id="yeniYanginTupuBtn" style="width:auto;">+ Yangın Tüpü Ekle</button>
           <button type="button" class="ikincil" id="yanginTupuSeciliSilBtn">Seçilenleri Sil</button>
         </div>
@@ -674,7 +683,7 @@
   <script src="service.js?v=7"></script>
   <script src="kontrol-formu-cikti.js?v=9"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=14"></script>
+  <script src="ui.js?v=15"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
