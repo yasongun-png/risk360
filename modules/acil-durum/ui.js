@@ -645,6 +645,13 @@ function _ekipmanFiltrelenmisListeGetir(aramaMetni) {
   // filtrelenir (bkz. _ekipmanBolumSekmeleriCiz); "Tümü" sekmesinde
   // (_ekipmanAktifBolum === '') hiç filtrelenmez.
   if (_ekipmanAktifBolum) liste = liste.filter(e => (e.bolum || '').trim() === _ekipmanAktifBolum);
+  // Kullanıcı isteği: "ekipmanları da ekipman türü ve numaralarına göre
+  // sırala sekme içinde" — önce türe (alfabetik), sonra ekipman numarasına
+  // (ED-2 / ED-12 gibi sayısal kısmı doğru sıralasın diye numeric:true) göre.
+  liste = liste.slice().sort((a, b) =>
+    (a.tur || '').localeCompare(b.tur || '', 'tr') ||
+    (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true })
+  );
   return liste;
 }
 
