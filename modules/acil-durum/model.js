@@ -327,15 +327,23 @@ function gunFarkiHesapla(tarihStr, referansStr) {
   return Math.ceil((hedef - referans) / 86400000);
 }
 
-// Tarihe göre durum türetir: süresi geçmişse Gecikmiş, 30 gün içindeyse Yaklaşıyor,
-// aksi halde verilen temel durum korunur. Tamamlandı/İptal gibi "kapanmış" durumlar hiç değişmez.
-function durumTuret(tarihStr, temelDurum, kapanmisDurumlar) {
+// Tarihe göre durum türetir: süresi geçmişse Gecikmiş, eşik gün içindeyse
+// Yaklaşıyor (tam 1 gün kalmışsa özel olarak Yarın), aksi halde verilen
+// temel durum korunur. Tamamlandı/İptal gibi "kapanmış" durumlar hiç
+// değişmez. esikGun verilmezse varsayılan 30 (kullanıcı isteği: "3 gün
+// kala yaklaşıyor desin, daha önce değil" -- acil durum ekipmanları için
+// service.js'te esikGun=3 geçilir; diğer çağrılar 30 varsayılanını korur).
+function durumTuret(tarihStr, temelDurum, kapanmisDurumlar, esikGun) {
   const kapanmis = kapanmisDurumlar || ['Tamamlandı', 'İptal'];
   if (kapanmis.includes(temelDurum)) return temelDurum;
+  const esik = esikGun === undefined || esikGun === null ? 30 : esikGun;
   const fark = gunFarkiHesapla(tarihStr);
   if (fark === null) return temelDurum;
   if (fark < 0) return 'Gecikmiş';
-  if (fark <= 30) return 'Yaklaşıyor';
+  // Kullanıcı isteği: "1 gün kala yarın desin ve kırmızı olsun" -- bkz.
+  // assets/style.css .rozet-yarin (kırmızı).
+  if (fark === 1) return 'Yarın';
+  if (fark <= esik) return 'Yaklaşıyor';
   return temelDurum;
 }
 
@@ -471,8 +479,9 @@ function ekipUyesiOlustur(veriler) {
 }
 
 function ekipmanOlustur(veriler) {
-  // Kullanıcı isteği: "kontroller 3 aylık olsun" -- varsayılan periyot 90 gün.
-  const periyotGun = Number(veriler.periyotGun || 90);
+  // Kullanıcı isteği: "tüm ekipmanlarda kontrol periyodunu 30 gün yap" --
+  // varsayılan periyot 90 günden 30 güne düşürüldü.
+  const periyotGun = Number(veriler.periyotGun || 30);
   const sonKontrol = veriler.sonKontrol || '';
   const sonrakiKontrol = veriler.sonrakiKontrol || (sonKontrol ? gunEkle(sonKontrol, periyotGun) : '');
   const tur = veriler.tur || 'Diğer';

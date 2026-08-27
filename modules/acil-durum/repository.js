@@ -51,6 +51,11 @@ function ekipmanlariTumunuGetir() { return _genelListeGetir(_ekipmanAnahtari); }
 function ekipmanEkleRepo(k) { return _genelEkle(_ekipmanAnahtari, k); }
 function ekipmanGuncelleRepo(id, v) { return _genelGuncelle(_ekipmanAnahtari, id, v); }
 function ekipmanGuncelleRepoVeBekle(id, v) { return _genelGuncelleVeBekle(_ekipmanAnahtari, id, v); }
+// Kullanıcı isteği: "tüm ekipmanlarda kontrol periyodunu 30 gün yap mevcut
+// ekipmanlarda da bu süre değişsin yeniden hesaplansın" -- mevcut kayıtları
+// tek seferde (tek yazımla) güncellemek için toplu kaydetme (bkz. service.js
+// ekipmanlarPeriyotMigrasyonuUygula).
+function ekipmanlariTumunuKaydetRepo(liste) { return _genelListeKaydet(_ekipmanAnahtari, liste); }
 function ekipmanSilRepo(id) { _genelSil(_ekipmanAnahtari, id); }
 function ekipmanIdIleGetirRepo(id) { return ekipmanlariTumunuGetir().find(x => x.id === id) || null; }
 

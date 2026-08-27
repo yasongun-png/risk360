@@ -364,7 +364,15 @@ function gorunumDegistir(gorunum) {
 
   if (gorunum === 'ekipler') ekipleriCiz('');
   else if (gorunum === 'uygunluk') uygunlugCiz();
-  else if (gorunum === 'ekipman') { _ekipmanBolumSekmeleriCiz(); ekipmanlariCiz(''); }
+  else if (gorunum === 'ekipman') {
+    // Kullanıcı isteği: "tüm ekipmanlarda kontrol periyodunu 30 gün yap
+    // mevcut ekipmanlarda da bu süre değişsin yeniden hesaplansın" --
+    // mevcut kayıtlar sekmeye her girişte kontrol edilir (bkz. service.js
+    // ekipmanlarPeriyotMigrasyonuUygula, zaten güncel kayıtlar için no-op).
+    ekipmanlarPeriyotMigrasyonuUygula();
+    _ekipmanBolumSekmeleriCiz();
+    ekipmanlariCiz('');
+  }
   else if (gorunum === 'yanginTupu') yanginTupleriniCiz('');
   else if (gorunum === 'tatbikat') tatbikatlariCiz('');
 }

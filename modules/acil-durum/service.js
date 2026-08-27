@@ -88,7 +88,10 @@ function _ekipmanZenginlestir(ek) {
   // terminal durumlar arasında — sonrakiKontrol tarihine göre Gecikmiş/
   // Yaklaşıyor türetilmez, çünkü kurulu olmayan bir ekipmanın "kontrol
   // tarihi" anlamsızdır.
-  return Object.assign({}, ek, { durumGoruntu: durumTuret(ek.sonrakiKontrol, ek.durum, ['İptal', 'Pasif', 'Eksik']) });
+  // Kullanıcı isteği: "3 gün kala yaklaşıyor desin, daha önce değil" --
+  // diğer modüllerden farklı olarak ekipman kontrolleri için eşik 3 gün
+  // (bkz. model.js durumTuret esikGun parametresi).
+  return Object.assign({}, ek, { durumGoruntu: durumTuret(ek.sonrakiKontrol, ek.durum, ['İptal', 'Pasif', 'Eksik'], 3) });
 }
 
 function ekipmanlariGetir(aramaMetni) {
@@ -96,6 +99,25 @@ function ekipmanlariGetir(aramaMetni) {
   if (!aramaMetni) return liste;
   const kucuk = aramaMetni.trim().toLowerCase();
   return liste.filter(e => e.ad.toLowerCase().includes(kucuk) || e.lokasyon.toLowerCase().includes(kucuk) || e.bolum.toLowerCase().includes(kucuk));
+}
+
+// Kullanıcı isteği: "tüm ekipmanlarda kontrol periyodiknu 30 gün yap mevcut
+// ekipnlarda da bu süre değişsin yeniden hesaplansın kontrol tarihine göre"
+// -- mevcut kayıtların periyotGun'u 30'a çekilir ve sonrakiKontrol, Son
+// Kontrol tarihinden itibaren yeniden hesaplanır. Zaten 30 gün + doğru
+// sonrakiKontrol'e sahip kayıtlar değiştirilmez, bu yüzden Ekipman
+// sekmesine her girişte tek bir yazımla (gereksiz yere değil) çalıştırılabilir.
+function ekipmanlarPeriyotMigrasyonuUygula() {
+  const liste = ekipmanlariTumunuGetir();
+  let degisenVarMi = false;
+  const guncel = liste.map(e => {
+    const dogruSonrakiKontrol = e.sonKontrol ? gunEkle(e.sonKontrol, 30) : (e.sonrakiKontrol || '');
+    if (e.periyotGun === 30 && e.sonrakiKontrol === dogruSonrakiKontrol) return e;
+    degisenVarMi = true;
+    return Object.assign({}, e, { periyotGun: 30, sonrakiKontrol: dogruSonrakiKontrol });
+  });
+  if (degisenVarMi) ekipmanlariTumunuKaydetRepo(guncel);
+  return degisenVarMi;
 }
 
 // Ekipman türüne göre kayıt öneki — bkz. model.js EKIPMAN_TUR_ONEKLERI.
@@ -124,8 +146,9 @@ function ekipmanGuncelle(id, veriler) {
   const dogrulama = ekipmanDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  // Kullanıcı isteği: "kontroller 3 aylık olsun" -- varsayılan periyot 90 gün.
-  const periyotGun = Number(veriler.periyotGun || 90);
+  // Kullanıcı isteği: "tüm ekipmanlarda kontrol periyodunu 30 gün yap" --
+  // varsayılan periyot 90 günden 30 güne düşürüldü.
+  const periyotGun = Number(veriler.periyotGun || 30);
   const sonrakiKontrol = veriler.sonrakiKontrol || (veriler.sonKontrol ? gunEkle(veriler.sonKontrol, periyotGun) : '');
   const mevcut = ekipmanIdIleGetirRepo(id) || {};
   const sorular = EKIPMAN_KONTROL_SORULARI[veriler.tur] || [];
