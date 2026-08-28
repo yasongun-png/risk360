@@ -122,6 +122,10 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuZiyaretModalKapatBtn').addEventListener('click', yanginTupuZiyaretModalKapat);
   document.getElementById('yanginTupuZiyaretModalIptalBtn').addEventListener('click', yanginTupuZiyaretModalKapat);
   document.getElementById('yanginTupuZiyaretForm').addEventListener('submit', yanginTupuZiyaretFormGonderildi);
+  document.getElementById('ytzTutanakFotoCekBtn').addEventListener('click', () => document.getElementById('ytzTutanakFotoCekDosya').click());
+  document.getElementById('ytzTutanakFotoSecBtn').addEventListener('click', () => document.getElementById('ytzTutanakFotoSecDosya').click());
+  document.getElementById('ytzTutanakFotoCekDosya').addEventListener('change', _ytzTutanakFotoSecildi);
+  document.getElementById('ytzTutanakFotoSecDosya').addEventListener('change', _ytzTutanakFotoSecildi);
   document.getElementById('yanginTupuAramaKutusu').addEventListener('input', e => yanginTupleriniCiz(e.target.value));
   document.getElementById('yanginTupuSeriNumarasi').addEventListener('input', _yanginTupuSeriNumarasiUyariGuncelle);
   document.getElementById('yanginTupuTumunuSecCheckbox').addEventListener('change', e => {
@@ -1611,6 +1615,9 @@ function yanginTupuFormGonderildi(e) {
 // kontrolleri olarak" — tüp envanterinden AYRI, dış firmanın periyodik
 // kontrol ziyaretinin kendi kaydı (bkz. model.js yanginTupuZiyaretOlustur).
 let _duzenlenenYanginTupuZiyaretId = null;
+// Kullanıcı isteği: "teslim tutanağını foto olarak ekleyebilmeliyim" —
+// modules/acil-durum ekipman fotoğrafları ile aynı desen, tek slot.
+let _ytzTutanakFotoUrl = '';
 
 function yanginTupuZiyaretleriCiz() {
   const govde = document.getElementById('yanginTupuZiyaretTabloGovde');
@@ -1639,10 +1646,12 @@ function yanginTupuZiyaretleriCiz() {
       <td>${_adKacir(z.alinanTupCinsi) || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(z.teslimDurumu)}">${_adKacir(z.teslimDurumu)}</span></td>
       <td>${gunAyYil(z.teslimTarihi) || '-'}</td>
+      <td>${z.tutanakFotoUrl ? `<a data-foto-ref-href="${z.tutanakFotoUrl}" target="_blank" rel="noopener" title="Tutanağı büyüt"><img data-foto-ref="${z.tutanakFotoUrl}" style="width:32px; height:32px; object-fit:cover; border-radius:4px; vertical-align:middle; border:1px solid var(--kenarlik);"></a>` : '-'}</td>
       <td>${_adKacir(z.notlar) || '-'}</td>
     `;
     govde.appendChild(satir);
   });
+  fotoReferanslariCoz(govde);
 
   govde.querySelectorAll('[data-ytz-duzenle]').forEach(btn => btn.addEventListener('click', () => yanginTupuZiyaretModalAc(yanginTupuZiyaretiIdIleGetirRepo(btn.getAttribute('data-ytz-duzenle')))));
   govde.querySelectorAll('[data-ytz-sil]').forEach(btn => btn.addEventListener('click', async () => {
@@ -1661,11 +1670,46 @@ function yanginTupuZiyaretModalAc(ziyaret) {
   document.getElementById('ytzTarih').value = ziyaret ? ziyaret.tarih : bugunIso();
   document.getElementById('ytzAlinanTupSayisi').value = ziyaret ? ziyaret.alinanTupSayisi : 0;
   document.getElementById('ytzAlinanTupCinsi').value = ziyaret ? ziyaret.alinanTupCinsi || '' : '';
+  _ytzTutanakFotoUrl = ziyaret ? ziyaret.tutanakFotoUrl || '' : '';
+  document.getElementById('ytzTutanakFotoCekDosya').value = '';
+  document.getElementById('ytzTutanakFotoSecDosya').value = '';
+  _ytzTutanakFotoOnizlemeCiz();
   document.getElementById('ytzTeslimDurumu').innerHTML = YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.map(d => `<option ${ziyaret && ziyaret.teslimDurumu === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ytzTeslimTarihi').value = ziyaret ? ziyaret.teslimTarihi : '';
   document.getElementById('ytzNotlar').value = ziyaret ? ziyaret.notlar : '';
   temizleFormHatalari('yanginTupuZiyaretForm');
   document.getElementById('yanginTupuZiyaretModalKatman').classList.add('acik');
+}
+
+// Kullanıcı isteği: "teslim tutanağını foto olarak ekleyebilmeliyim" —
+// modules/acil-durum/ui.js _ekipmanFotoSecildi ile aynı desen (Storage/
+// CORS'a hiç uğramaz, bkz. orada yazılan gerekçe).
+async function _ytzTutanakFotoSecildi(e) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  try {
+    const dataUrl = await fotoSikistir(dosya, 1200, 0.6);
+    _ytzTutanakFotoUrl = await fotoBuyukKaydet(dataUrl, _adFirma ? _adFirma.slug : '');
+    _ytzTutanakFotoOnizlemeCiz();
+  } catch (hata) {
+    alert(hata.message || 'Fotoğraf yüklenemedi.');
+  }
+}
+
+function _ytzTutanakFotoOnizlemeCiz() {
+  const kutu = document.getElementById('ytzTutanakFotoOnizleme');
+  if (!kutu) return;
+  kutu.innerHTML = _ytzTutanakFotoUrl
+    ? `<div style="display:flex; align-items:center; gap:8px;">
+         <img data-foto-ref="${_ytzTutanakFotoUrl}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+         <button type="button" class="tablo-buton sil" style="font-size:11px;">Kaldır</button>
+       </div>`
+    : '<div style="font-size:12px; color:var(--metin-soluk);">Henüz fotoğraf eklenmedi.</div>';
+  if (_ytzTutanakFotoUrl) {
+    kutu.querySelector('button').addEventListener('click', () => { _ytzTutanakFotoUrl = ''; _ytzTutanakFotoOnizlemeCiz(); });
+    fotoReferanslariCoz(kutu);
+  }
 }
 
 function yanginTupuZiyaretModalKapat() {
@@ -1682,6 +1726,7 @@ function yanginTupuZiyaretFormGonderildi(e) {
     tarih: document.getElementById('ytzTarih').value,
     alinanTupSayisi: document.getElementById('ytzAlinanTupSayisi').value,
     alinanTupCinsi: document.getElementById('ytzAlinanTupCinsi').value,
+    tutanakFotoUrl: _ytzTutanakFotoUrl,
     teslimDurumu: document.getElementById('ytzTeslimDurumu').value,
     teslimTarihi: document.getElementById('ytzTeslimTarihi').value,
     notlar: document.getElementById('ytzNotlar').value

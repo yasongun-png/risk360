@@ -237,7 +237,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>İşlemler</th><th>Yapan Firma</th><th>Tarih</th><th>Alınan Tüp Sayısı</th><th>Cins ve Ağırlık</th><th>Teslim Durumu</th><th>Teslim Tarihi</th><th>Notlar</th></tr></thead>
+          <thead><tr><th>İşlemler</th><th>Yapan Firma</th><th>Tarih</th><th>Alınan Tüp Sayısı</th><th>Cins ve Ağırlık</th><th>Teslim Durumu</th><th>Teslim Tarihi</th><th>Tutanak</th><th>Notlar</th></tr></thead>
           <tbody id="yanginTupuZiyaretTabloGovde"></tbody>
         </table>
       </div>
@@ -580,10 +580,25 @@
         </div>
 
         <!-- Kullanıcı isteği: "hangi cins ve ağırlıkta yangın tüpü
-             alındı" -- ziyarette birden fazla tür/ağırlık karışık
-             alınabildiğinden serbest metin (ör. "6 KG KKT x 3, 5 KG CO2 x 2"). -->
-        <label for="ytzAlinanTupCinsi">Alınan Tüplerin Cinsi ve Ağırlığı</label>
-        <input type="text" id="ytzAlinanTupCinsi" placeholder="ör. 6 KG Kuru Kimyevi Toz (KKT) x 3, 5 KG CO2 x 2">
+             alındı" -> "bu faturadaki içeriği ekleyebilmeliyim" --
+             ziyarette çok sayıda kalem (ör. firmanın kağıt fişindeki gibi
+             "277 ad 6kg KKT Y.S.C - Bakım Kontrol" satır satır) girilebildiğinden
+             tek satırlık input yerine çok satırlı serbest metin. -->
+        <label for="ytzAlinanTupCinsi">Alınan Tüplerin Cinsi ve Ağırlığı <span style="color:var(--metin-soluk); font-weight:400;">(firmanın fişindeki gibi satır satır girebilirsiniz)</span></label>
+        <textarea id="ytzAlinanTupCinsi" rows="5" placeholder="ör.&#10;277 ad 6 KG KKT Y.S.C - Bakım Kontrol&#10;49 ad 5 KG CO2 - Bakım Kontrol&#10;14 ad 12 KG KKT Y.S.C - Bakım Kontrol"></textarea>
+
+        <!-- Kullanıcı isteği: "teslim tutanağını foto olarak
+             ekleyebilmeliyim" -- modules/acil-durum ekipman fotoğrafları
+             ile AYNI desen (fotoSikistir + fotoBuyukKaydet), tek slot
+             yeterli (fişin kendisinin fotoğrafı). -->
+        <label>Teslim Tutanağı Fotoğrafı <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <button type="button" class="tablo-buton" id="ytzTutanakFotoCekBtn">📷 Çek</button>
+          <button type="button" class="tablo-buton" id="ytzTutanakFotoSecBtn">🖼️ Seç</button>
+        </div>
+        <input type="file" id="ytzTutanakFotoCekDosya" accept="image/*" capture="environment" style="display:none;">
+        <input type="file" id="ytzTutanakFotoSecDosya" accept="image/*" style="display:none;">
+        <div id="ytzTutanakFotoOnizleme" style="margin-bottom:14px;"></div>
 
         <div class="form-satir-ikili">
           <div>
@@ -816,13 +831,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=11"></script>
+  <script src="model.js?v=12"></script>
   <script src="validation.js?v=3"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=12"></script>
+  <script src="service.js?v=13"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=22"></script>
+  <script src="ui.js?v=23"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

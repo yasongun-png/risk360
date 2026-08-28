@@ -633,6 +633,10 @@ function yanginTupuZiyaretOlustur(veriler) {
     // ziyarette birden fazla tür/ağırlık karışık alınabildiğinden yapılı
     // bir alan yerine serbest metin tercih edildi.
     alinanTupCinsi: (veriler.alinanTupCinsi || '').trim(),
+    // Kullanıcı isteği: "teslim tutanağını foto olarak ekleyebilmeliyim"
+    // — firmanın verdiği kağıt fişin/tutanağın fotoğrafı (fotoBuyukKaydet
+    // referansı, bkz. ui.js _ytzTutanakFotoSecildi).
+    tutanakFotoUrl: veriler.tutanakFotoUrl || '',
     teslimDurumu: YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.includes(veriler.teslimDurumu) ? veriler.teslimDurumu : 'Beklemede',
     teslimTarihi: veriler.teslimTarihi || '',
     notlar: (veriler.notlar || '').trim(),

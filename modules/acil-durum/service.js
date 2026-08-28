@@ -374,6 +374,9 @@ function yanginTupuZiyaretiGuncelle(id, veriler) {
     // Kullanıcı isteği: "hangi cins ve ağırlıkta yangın tüpü alındı" —
     // bkz. model.js yanginTupuZiyaretOlustur aynı notu.
     alinanTupCinsi: (veriler.alinanTupCinsi || '').trim(),
+    // Kullanıcı isteği: "teslim tutanağını foto olarak ekleyebilmeliyim"
+    // — bkz. model.js yanginTupuZiyaretOlustur aynı notu.
+    tutanakFotoUrl: veriler.tutanakFotoUrl || '',
     teslimDurumu: YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.includes(veriler.teslimDurumu) ? veriler.teslimDurumu : 'Beklemede',
     teslimTarihi: veriler.teslimTarihi || '',
     notlar: (veriler.notlar || '').trim()
