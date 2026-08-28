@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>İSG Platform - Kullanım Kılavuzu</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .kk-icerik { max-width: 980px; }
+  .kk-giris {
+    background: var(--kart-bg);
+    border: 1px solid var(--kenarlik);
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: var(--golge);
+    margin-bottom: 22px;
+    line-height: 1.65;
+  }
+  .kk-giris h1 { margin-top: 0; font-size: 22px; color: var(--celik-mavi-koyu); }
+  .kk-giris p { font-size: 14px; color: #374151; }
+  .kk-onemli {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+  .kk-toc {
+    background: var(--kart-bg);
+    border: 1px solid var(--kenarlik);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: var(--golge);
+    margin-bottom: 26px;
+  }
+  .kk-toc h2 { font-size: 15px; margin: 0 0 10px; color: var(--celik-mavi-koyu); }
+  .kk-toc-grup { margin-bottom: 10px; }
+  .kk-toc-grup b { font-size: 12.5px; color: var(--metin-soluk); text-transform: uppercase; letter-spacing: .03em; }
+  .kk-toc-grup ul { margin: 6px 0 0; padding-left: 18px; columns: 2; -webkit-columns: 2; }
+  .kk-toc-grup li { font-size: 13px; margin-bottom: 4px; break-inside: avoid; }
+  .kk-toc-grup a { color: var(--celik-mavi); text-decoration: none; }
+  .kk-toc-grup a:hover { text-decoration: underline; }
+
+  .kk-grup-baslik {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--celik-mavi-koyu);
+    padding: 8px 14px;
+    border-radius: 8px;
+    margin: 30px 0 14px;
+    display: inline-block;
+  }
+
+  .kk-modul {
+    background: var(--kart-bg);
+    border: 1px solid var(--kenarlik);
+    border-radius: 12px;
+    box-shadow: var(--golge);
+    margin-bottom: 16px;
+    scroll-margin-top: 16px;
+    overflow: hidden;
+  }
+  .kk-modul > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--celik-mavi-koyu);
+  }
+  .kk-modul > summary::-webkit-details-marker { display: none; }
+  .kk-modul > summary::before { content: '▸'; color: var(--celik-mavi); font-size: 13px; transition: transform .15s; }
+  .kk-modul[open] > summary::before { transform: rotate(90deg); }
+  .kk-modul-ikon { font-size: 19px; }
+  .kk-modul-govde { padding: 0 20px 18px; border-top: 1px solid var(--kenarlik); }
+  .kk-blok { margin-top: 14px; }
+  .kk-blok h4 {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--metin-soluk);
+    margin: 0 0 6px;
+  }
+  .kk-blok p, .kk-blok li { font-size: 13.5px; line-height: 1.55; color: #1f2937; }
+  .kk-blok ul { margin: 4px 0; padding-left: 20px; }
+  .kk-amac { font-size: 14px; color: #1f2937; line-height: 1.6; }
+  .kk-onem {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    color: #14532d;
+    line-height: 1.55;
+  }
+  .kk-baglanti {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    color: #78350f;
+    line-height: 1.55;
+  }
+  .kk-ust-donus {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background: var(--celik-mavi);
+    color: #fff;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 18px;
+    box-shadow: var(--golge);
+    z-index: 50;
+  }
+  @media print {
+    .kk-ust-donus, .ust-cubuk, .kk-yazdir-btn { display: none !important; }
+    .kk-modul { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik kk-icerik">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+
+    <div class="kk-giris" style="margin-top:14px;">
+      <h1>📖 Kullanım Kılavuzu</h1>
+      <p>
+        Bu kılavuz, İSG Yönetim Platformu'ndaki <b>24 modülün</b> her birini tek tek anlatır: modülde
+        <b>hangi bilgilerin girildiğini</b>, <b>hangi kayıtların tutulduğunu</b>, <b>hangi raporların/çıktıların
+        alınabildiğini</b> ve girilen verinin <b>başka hangi modüllerle bağlantılı olduğunu ve hangi raporlara
+        yansıdığını</b> açıklar. Uygulamayı hiç kullanmamış biri bile modül modül okuyarak ne yapması gerektiğini
+        anlayabilir.
+      </p>
+      <div class="kk-onemli">
+        <b>Bu sistem fabrikada neyi kolaylaştırır?</b><br><br>
+        Bir fabrikada İş Sağlığı ve Güvenliği (İSG) çalışmaları normalde onlarca farklı Excel dosyası, kâğıt
+        tutanak, dağınık klasör ve "kimde ne var" belirsizliğiyle yürütülür — personel listesi bir yerde, risk
+        değerlendirmesi başka bir dosyada, kaza kayıtları ayrı bir defterde, ekipman kontrol tarihleri kimsenin
+        takip etmediği bir tabloda... Bu dağınıklık hem <b>yasal denetimlerde eksik/kayıp belge riskini</b> hem de
+        <b>gerçek kaza riskini</b> artırır (süresi geçmiş bir yangın tüpü, eğitimsiz çalışan, kapanmamış bir
+        uygunsuzluk kolayca gözden kaçar).<br><br>
+        Bu platform bütün bu kayıtları <b>tek bir dijital sistemde birleştirir</b> ve modüller birbirine
+        bağlıdır: bir iş kazası otomatik olarak hem risk kaydına hem uygunsuzluk/DÖF sürecine düşer; bir saha
+        denetiminde "uygun değil" işaretlenen madde tek tıkla resmi bir düzeltici faaliyet kaydına dönüşür;
+        bütün açık işler (kararlar, aksiyonlar, süresi yaklaşan kontroller) <b>Merkezi Aksiyon Takibi</b>
+        ekranında tek listede toplanır; İSG Kurulu toplantı raporu diğer modüllerdeki o ayın verilerini
+        <b>otomatik olarak</b> toplar. Böylece hiçbir kayıt kaybolmaz, hiçbir termin unutulmaz ve resmi
+        Word/PDF/Excel çıktıları (kaza raporu, risk değerlendirmesi, iş izni formu, eğitim sertifikası, kurul
+        tutanağı vb.) birkaç tıkla, doğru formatta hazır hale gelir. Kısacası bu sistem, fabrikanın İSG
+        yönetimini <b>dağınık kayıttan → izlenebilir, denetime hazır, birbirine bağlı bir bütüne</b> dönüştürür.
+      </div>
+    </div>
+
+    <div class="kk-toc">
+      <h2>İçindekiler — modüle tıklayarak doğrudan gidin</h2>
+
+      <div class="kk-toc-grup">
+        <b>Temel Kayıtlar</b>
+        <ul>
+          <li><a href="#personel">👥 Personel</a></li>
+          <li><a href="#egitim">🎓 Eğitim</a></li>
+          <li><a href="#yillik-plan">📅 Yıllık Değerlendirme ve Planlama</a></li>
+        </ul>
+      </div>
+
+      <div class="kk-toc-grup">
+        <b>Risk ve Tehlike Yönetimi</b>
+        <ul>
+          <li><a href="#risk">⚠️ Risk Değerlendirmesi</a></li>
+          <li><a href="#jsa">🪜 İş Güvenliği Analizi (JSA)</a></li>
+          <li><a href="#tespit-oneri">📖 Tespit ve Öneri Defteri</a></li>
+          <li><a href="#uygunsuzluk">✅ Uygunsuzluk (DÖF)</a></li>
+          <li><a href="#saha-denetim">🔍 Saha Denetim</a></li>
+        </ul>
+      </div>
+
+      <div class="kk-toc-grup">
+        <b>Olay ve Acil Durum</b>
+        <ul>
+          <li><a href="#olay-kaza">📋 Olay / Kaza Takibi</a></li>
+          <li><a href="#acil-durum">🚨 Acil Durum</a></li>
+          <li><a href="#kimyasal">🧪 Kimyasal</a></li>
+        </ul>
+      </div>
+
+      <div class="kk-toc-grup">
+        <b>Ekipman, Bakım ve İzinler</b>
+        <ul>
+          <li><a href="#periyodik-kontrol">🛠️ Periyodik Kontrol</a></li>
+          <li><a href="#kkd">🦺 KKD Takibi</a></li>
+          <li><a href="#bakim-talep">🔧 Bakım Onarım</a></li>
+          <li><a href="#is-izni">🧾 İş İzinleri</a></li>
+        </ul>
+      </div>
+
+      <div class="kk-toc-grup">
+        <b>İnsan Kaynağı Uyumu</b>
+        <ul>
+          <li><a href="#stajyer">🧑‍🎓 Staj</a></li>
+          <li><a href="#yuklenici">🏗️ Yüklenici</a></li>
+          <li><a href="#hizmet-sozlesmesi">🖋️ Hizmet Sözleşmeleri</a></li>
+          <li><a href="#sinav">📝 Sınav Oluşturucu</a></li>
+        </ul>
+      </div>
+
+      <div class="kk-toc-grup">
+        <b>Yönetim, Takip ve Raporlama</b>
+        <ul>
+          <li><a href="#kurul">🏛️ İSG Kurulu</a></li>
+          <li><a href="#merkezi-aksiyon">📌 Merkezi Aksiyon Takibi</a></li>
+          <li><a href="#raporlar">📊 Raporlar</a></li>
+          <li><a href="#harita">🗺️ Saha Dijital Haritası</a></li>
+          <li><a href="#malzeme-talep">📦 İSG Malzeme Talep</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============================= TEMEL KAYITLAR ============================= -->
+    <div class="kk-grup-baslik">1. Temel Kayıtlar</div>
+
+    <details class="kk-modul" id="personel">
+      <summary><span class="kk-modul-ikon">👥</span> Personel</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Fabrikadaki tüm çalışanların özlük bilgilerini tek merkezde tutar ve organizasyon şemasını oluşturur. Diğer bütün modüllerin (eğitim, olay/kaza, KKD, acil durum, kurul, sınav...) "kimin çalıştığı" bilgisini aldığı ana kaynaktır.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Sicil No, Ad Soyad, İşyeri Sicili/İşveren, Bölüm, Görev, İşe Giriş/Çıkış Tarihi</li>
+          <li>Eğitim seviyesi, engellilik/sendika durumu, kıdem, lojman gibi İK bilgileri</li>
+          <li>Organizasyon şeması: bölüm/unvan hiyerarşisi ve personelin bu hiyerarşideki yeri</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Personel kaydı, organizasyon pozisyonu (şema düğümü).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Excel şablonla toplu personel içe/dışa aktarma</li>
+          <li>Organizasyon Şeması — ağaç görünümü + yazdırılabilir kutulu şema</li>
+          <li><b>İmza Listesi / Eğitim Katılım Formu (PDF)</b> — seçilen personel için boş imza haneli katılım tutanağı, Eğitimci/İşveren Vekili imza satırı Hizmet Sözleşmesi modülünden otomatik önerilir</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Neredeyse tüm modüller personel seçim listesini buradan okur: Olay/Kaza (kaza mağduru), Eğitim (kime eğitim verildiği), KKD (kime zimmet verildiği), Acil Durum (ekip üyeleri), Kurul (katılımcılar), Sınav (sonuç sahibi). Hizmet Sözleşmesi modülünden Eğitimci/İşveren Vekili önerisi buraya gelir. Raporlar modülündeki Engelli Çalışan Kotası ve Acil Durum Ekip Yeterliliği hesapları da bu listeyi kullanır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Doğru ve güncel personel listesi olmadan hiçbir İSG süreci sağlıklı işlemez — bu modül tüm platformun "kimlik" omurgasıdır.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="egitim">
+      <summary><span class="kk-modul-ikon">🎓</span> Eğitim</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Personelin aldığı tüm İSG eğitimlerini (Temel İSG, İş Başı, Acil Durum Ekip Eğitimi, Yüksekte Çalışma, Kapalı Alan, İlkyardım, MYK belgeleri vb.) kayıt altına alır, geçerlilik sürelerini tehlike sınıfına göre otomatik hesaplar ve sertifika üretir.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Personel, eğitim/sertifika türü, eğitim tarihi, süre, belge (PDF) yükleme</li>
+          <li>Toplu eğitim girişi — aynı eğitime katılan birden fazla kişiyi tek seferde kaydetme</li>
+          <li>Firmaya özel yeni eğitim türü tanımlama</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Eğitim kaydı (personel + eğitim türü + tarih).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Eğitim Sertifikası — tehlike sınıfına göre süre hesaplı resmi belge</li>
+          <li>İSG Eğitim ve MYK Raporu (PDF)</li>
+          <li>Durum Tablosu — her personelin eğitim durumu (geçerli / süresi geçmiş / yaklaşıyor)</li>
+          <li>Excel şablon indirme / toplu içe-dışa aktarım</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Sertifikalardaki İG Uzmanı/İşyeri Hekimi imzası Hizmet Sözleşmesi modülünden gelir. Acil Durum Ekip Eğitimi kaydı, ekip üyelerinin "Eğitim Geçerlilik" durumunu besler. İSG Kurulu toplantı raporunda o ayın eğitimleri otomatik özetlenir. Raporlar panosundaki eğitim uyum oranı buradan hesaplanır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yasal zorunlu eğitimlerin süresi dolmadan yenilenmesini sağlar; sertifikasız/geçersiz belgeli personelin yüksekte çalışma, kapalı alan gibi riskli işlerde çalıştırılmasını önler.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="yillik-plan">
+      <summary><span class="kk-modul-ikon">📅</span> Yıllık Değerlendirme ve Planlama</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Firmanın yıllık İSG faaliyetlerini üç ayrı bölümde planlar: Eğitim Planı, Yıllık Çalışma Planı ve bunlardan türetilen resmi Yıllık Değerlendirme Raporu.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Eğitim Planı — konu, hangi ay(lar)da yapılacağı, hedef kitle, eğitmen</li>
+          <li>Yıllık Çalışma Planı — faaliyet, aylık dağılım, sorumlu, durum</li>
+          <li>Yıllık Değerlendirme Raporu — firma bilgileri + yapılan çalışma satırları (otomatik önerilir, düzenlenebilir)</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Eğitim planı satırı, çalışma planı satırı, yıllık değerlendirme raporu — hepsi yıl bazında saklanır.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Her üç sekme için ayrı Excel dışa aktarımı ve PDF/yazdırma.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Bağımsız bir planlama modülüdür, kavramsal olarak Eğitim modülüyle ilişkilidir (plandaki eğitimlerin gerçekleşmesi Eğitim modülünde izlenir).</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">İSG yönetim sisteminin yıllık Planla-Uygula-Kontrol Et-Önlem Al (PUKÖ) döngüsünün resmi belgesidir; denetimlerde planlanan faaliyetlerin gerçekleştirildiğini kanıtlar.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ============================= RİSK VE TEHLİKE ============================= -->
+    <div class="kk-grup-baslik">2. Risk ve Tehlike Yönetimi</div>
+
+    <details class="kk-modul" id="risk">
+      <summary><span class="kk-modul-ikon">⚠️</span> Risk Değerlendirmesi</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">6331 sayılı Kanun gereği zorunlu olan İSG Risk Değerlendirmesini Fine-Kinney veya 5x5 Matris yöntemiyle yapılandırılmış biçimde oluşturur; önlem sonrası risk azalmasını izler.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Bölüm, faaliyet, tehlike, risk tanımı, mevcut önlem</li>
+          <li>Önlem öncesi Olasılık × Frekans × Şiddet puanı (+ fotoğraf)</li>
+          <li>Planlanan ek önlem, önlem sonrası azaltılmış puan (+ fotoğraf), sorumlu, termin, durum</li>
+          <li>200'den fazla hazır tehlike/risk şablonundan (23 konu) toplu risk kaydı türetme</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Risk kaydı, bölüm listesi, risk şablonu.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Risk Değerlendirme Raporu (PDF) — yöntem açıklaması + tam risk tablosu</li>
+          <li>PPTX sunum — her risk için ayrı slayt (öncesi/sonrası fotoğraflı)</li>
+          <li>Saha Kontrol Checklist'i (Excel ve PDF) — alınan önlemlerin sahada uygulanıp uygulanmadığını doğrulamak için</li>
+          <li>JSON/Excel toplu içe-dışa aktarım</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Her iş kazası otomatik olarak "İş Kazaları" başlığı altında bir risk kaydına dönüşür (Olay/Kaza modülünden). Saha Dijital Haritası üzerinde konumlandırılabilir. JSA modülü aynı Fine-Kinney risk puanlama yöntemini buradan kullanır. Raporlar panosunda açık/gecikmiş risk sayısı gösterilir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yasal zorunluluğu standartlaştırır; hazır şablon kütüphanesiyle ilk risk değerlendirmesini hızla oluşturur; checklist ile alınan önlemlerin kağıt üzerinde kalmadığını periyodik olarak doğrular.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="jsa">
+      <summary><span class="kk-modul-ikon">🪜</span> İş Güvenliği Analizi (JSA)</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Belirli bir işi adım adım inceleyip her adımdaki tehlike, risk ve alınacak önlemleri kaydeden, göreve özgü ve saha ekibiyle birlikte imzalanan bir iş güvenliği analiz aracı.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Genel bilgiler: değerlendirilen iş, alan/ekipman, ekip, tarih</li>
+          <li>Hazırlık kanıtı (saha gözlemi, katılım, kaza geçmişi incelemesi vb.)</li>
+          <li>İş adımları — her adım için tehlike tanımı ve Olasılık×Frekans×Şiddet puanı, kontrol önlemleri</li>
+          <li>Hazırlayan ve Onaylayan için dijital imza; takip aksiyonları</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>JSA kaydı (adımlar ve her adımdaki tehlikeler iç içe tutulur).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>JSA Raporu — hem PDF hem Word (docx) — genel bilgi, adım adım tehlike/kontrol tablosu, takip aksiyonları, imza kutuları.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Risk modülündeki Fine-Kinney ölçeğini aynen kullanır. Kaydedilen takip aksiyonları otomatik olarak Uygunsuzluk modülüne "Kaynak: JSA" etiketiyle işlenir — dolayısıyla Merkezi Aksiyon listesinde de dolaylı olarak görünür.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Bakım, yükseklik, kapalı alan gibi rutin dışı riskli işler öncesinde göreve özgü, imzalı bir güvenlik talimatı sağlar; iş öncesi toolbox-talk'ta doğrudan kullanılabilir.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="tespit-oneri">
+      <summary><span class="kk-modul-ikon">📖</span> Tespit ve Öneri Defteri</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">6331 sayılı Kanun Md.13 (çalışan görüşlerinin alınması) kapsamındaki fiziksel "Tespit ve Öneri Defteri"nin dijital karşılığı — sahada görülen tehlike/eksiklikleri ve önerileri kayda geçirip tebliğ/kapanış sürecini izler.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Tespit tarihi, tespiti yapan, bölüm/yer, tespit metni, öneri metni, öncelik</li>
+          <li>Tebliğ edilen kişi/birim ve tarih, yapılan işlem, kapanış tarihi</li>
+          <li>Tespit Eden ve Tebliğ Edilen için dijital imza</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Tespit/öneri kaydı — durumu (Açık/Tebliğ Edildi/Uygulamada/Kapandı/Reddedildi) tarih girişlerine göre otomatik belirlenir.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Tespit ve Öneri Formu (PDF) — Genel Bilgiler, Tespit ve Öneri, Tebliğ ve Kapanış, Onay bölümlü resmi form. Excel dışa aktarım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">"Uygunsuzluğa Aktar" butonuyla bir kayıt tek tıkla Uygunsuzluk modülünde resmi bir DÖF kaydına dönüştürülebilir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Her çalışanın gözlemlediği tehlikeyi resmi olarak kayda geçirmesini sağlar (çalışan katılımı yasal zorunluluğu); ciddi bulgular tek tıkla resmi düzeltici faaliyet sürecine taşınır.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="uygunsuzluk">
+      <summary><span class="kk-modul-ikon">✅</span> Uygunsuzluk (Düzeltici / Önleyici Faaliyet)</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Saha denetimi, iş kazası, ramak kala, risk değerlendirmesi, Kurul veya JSA'dan gelen uygunsuzlukların kök neden analizi, düzeltici faaliyet, sorumlu/termin ve onay süreciyle uçtan uca yönetildiği merkezi DÖF modülü.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Uygunsuzluk tanımı, kaynak (Saha Denetimi/İş Kazası/Risk/Kurul/JSA/Manuel), risk seviyesi</li>
+          <li>Kök neden, düzeltici faaliyet önerisi, sorumlu, termin</li>
+          <li>Onay akışı (gerekiyorsa), kapanışta kanıt açıklaması, öncesi/sonrası fotoğraflar (8 adete kadar)</li>
+          <li>İlgili yasal mevzuat seçimi (70+ maddelik liste), dijital imza, Saha Haritası'nda konum işaretleme</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Uygunsuzluk kaydı (otomatik numaralı), uygunsuzluk konusu/defteri (gruplama başlığı).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Genel Rapor (PDF) — açık/kapalı kayıtların toplu dökümü, öncesi/sonrası fotoğraflarla</li>
+          <li>İSG Uygunsuzluk Bildirim Formu (PDF) — kayıt bazlı resmi form</li>
+          <li>Excel/JSON içe-dışa aktarım (fotoğraflı)</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Saha Denetim, Olay/Kaza, JSA ve Tespit-Öneri modüllerinden otomatik/tek-tık kayıt alır. Saha Haritası'nda görselleştirilebilir. İSG Kurulu toplantı raporuna dönem içi açılan/kapanan uygunsuzluklar otomatik yansır. Raporlar ve Merkezi Aksiyon panolarının en önemli veri kaynağıdır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">ISO 45001 tipi DÖF sürecinin dijital omurgası — bir sorunun sadece tespitini değil, kök nedenden kapanışa kadar takibini, sorumluluk ve kanıtla belgelenmesini sağlar.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="saha-denetim">
+      <summary><span class="kk-modul-ikon">🔍</span> Saha Denetim</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Belirli konularda (KKD kullanımı, yangın güvenliği, tertip-düzen, kimyasal alan vb.) standart kontrol listeleriyle hızlı, puanlanabilir saha denetimleri yapmayı sağlar.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Denetim konusu (9 hazır konu), tarih, denetçi, bölüm/lokasyon</li>
+          <li>Her kontrol maddesi için Uygun / Uygun Değil / Uygulanamaz sonucu ve not</li>
+          <li>Genel notlar</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Denetim kaydı (konu, kontrol listesi anlık kopyası, puan).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Puan otomatik hesaplanır (%); denetim detayı yazdırma, Excel dışa aktarım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">"Uygun Değil" işaretlenen her madde tek tek Uygunsuzluk modülüne "Kaynak: Saha Denetimi" etiketiyle aktarılabilir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Vardiya amirlerinin/İSG sorumlularının günlük/haftalık rutin turlarını disipline eder; puanlama ile bölümler/dönemler arası karşılaştırma sağlar; sahada görülen küçük sorunların kayıt dışı kalıp unutulmasını engeller.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ============================= OLAY VE ACİL DURUM ============================= -->
+    <div class="kk-grup-baslik">3. Olay ve Acil Durum</div>
+
+    <details class="kk-modul" id="olay-kaza">
+      <summary><span class="kk-modul-ikon">📋</span> Olay / Kaza Takibi</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Tüm iş kazalarını, ramak kalaları ve tehlike bildirimlerini kaydedip kaza kök-neden araştırması (5N1K), Fine-Kinney risk puanlaması ve TRIR/LTIFR gibi güvenlik performans göstergelerini hesaplar.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Olay tipi (16 tür — Ramak Kala, İlk Yardım, Kayıp Gün/LTI, Yangın, Kimyasal Sızıntı vb.), tarih/saat, yer, fotoğraf</li>
+          <li>Mağdur bilgisi (Personel'den seçilir), yaralanma türü/bölgesi, kayıp gün</li>
+          <li>Olay kronolojisi, tanık ifadeleri, Fine-Kinney risk puanı, 5N1K analizi</li>
+          <li>Düzeltici/önleyici faaliyetler, kapanış bilgisi ve 3 imzalı onay</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Olay/kaza kaydı, kronoloji satırları, tanık ifadeleri, aksiyon (DÖF) satırları.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Olay Araştırma Raporu — PDF ve Word — resmi kaza soruşturma raporu formatında</li>
+          <li>İstatistik sekmesi — TRIR, LTIFR, Şiddet ve DART oranı; bölüm/kişi/tip bazlı dağılım</li>
+          <li>Excel/JSON içe-dışa aktarım</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Her aksiyon satırı otomatik olarak Uygunsuzluk modülüne işlenir. Olayın kendisi otomatik olarak Risk modülünde "İş Kazaları" kaydı olur. İSG Kurulu toplantısına o dönemin kazaları otomatik satır olarak düşer. Raporlar panosunda son 12 ay olay/kaza özeti gösterilir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Her kaza/ramak kala anlık kayda alınıp kök neden analiziyle tekrarı önlenir; resmi soruşturma raporu hukuki/yasal süreçlerde doğrudan kullanılabilir formatta üretilir.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="acil-durum">
+      <summary><span class="kk-modul-ikon">🚨</span> Acil Durum</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Fabrikanın yangın/deprem/kimyasal sızıntı gibi acil durum hazırlığını uçtan uca yönetir: yangın tüpü ve söndürme ekipmanı envanteri/kontrolü, acil durum ekipleri, tatbikatlar ve resmi Acil Durum Planı.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Yangın tüpü kayıtları (tip, kapasite, dolum/bakım/hidrostatik test tarihleri, barkod)</li>
+          <li>Yangın tüpü periyodik kontrol ziyaretleri (dış firma bakımı, teslim alınan/verilen tüp sayısı, teslim tutanağı fotoğrafı) — toplu kontrol tarihi girişiyle tüm tüplere veya seçilenlere tek seferde tarih atanabilir</li>
+          <li>Ekipman kontrol formu (Hidrant, Yangın Dolabı, Göz Duşu, Sprinkler, Kaçış Yolu vb. — madde bazlı Uygun/Uygun Değil kontrolü, fotoğraf)</li>
+          <li>Acil durum ekip üyeleri, tatbikat kayıtları, senaryo kartları</li>
+          <li>Planlama Merkezi: tesis bilgisi, tahliye planları, komuta pozisyonları, dış kurumlar (itfaiye vb.), öz denetim</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Ekip, ekipman, yangın tüpü, yangın tüpü ziyareti, tatbikat, senaryo ve Planlama Merkezi'ndeki çok sayıda alt kayıt türü.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Ekip Görevlendirme Yazısı (Word), Ekipman Kontrol Formu (Word), Malzeme Envanteri (Word)</li>
+          <li>Ekipman Barkod Etiketleri (PDF) ve kamera ile barkod okuyarak sahada kontrol</li>
+          <li>Acil Durum Planı — Word, PDF ve PPTX olarak tam belge</li>
+          <li>Uygunluk Değerlendirmesi — çalışan sayısına göre yasal asgari ekip/ilkyardımcı hesaplaması</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Ekipmanlar, yangın tüpleri ve tahliye noktaları Saha Haritası'nda gösterilir. Kimyasal envanterinden seçim Acil Durum Planı'na eklenir. Ekip üyelerinin eğitim geçerliliği Eğitim modülünden gelir. Dönem içi yangın tüpü kontrolleri ve ekipman kontrolleri (tür bazlı özet — "örn. 15 adet göz-boy duşu kontrolü yapıldı") İSG Kurulu toplantı raporuna otomatik satır olarak düşer. Süresi yaklaşan/geçen kontroller Merkezi Aksiyon listesine yansır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yangın söndürme sistemlerinin ve tahliye düzeninin her an çalışır durumda olmasını garanti eder; barkodlu saha kontrolü ve otomatik gecikme uyarısıyla denetimlerde eksiksiz kanıt sunulur — can güvenliği açısından en kritik modüllerden biridir.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="kimyasal">
+      <summary><span class="kk-modul-ikon">🧪</span> Kimyasal</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Fabrikadaki tehlikeli/tehlikesiz tüm kimyasalların envanterini, GHS tehlike sınıflandırmasını, NFPA 704 (yangın elması) bilgisini ve GBF/SDS geçerlilik takibini yönetir; birlikte depolanmaması gereken kimyasalları otomatik tespit eder.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Kimyasal adı, CAS/EC no, tedarikçi, bölüm/lokasyon, depolama grubu, miktar</li>
+          <li>GHS piktogramları, H/P kodları, NFPA 704 değerleri (SDS'den otomatik tahmin edilebilir)</li>
+          <li>GBF/SDS revizyon tarihi ve dosyası — <b>SDS PDF'i yüklenirse birçok alan otomatik doldurulur</b></li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Kimyasal envanteri kaydı.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Kimyasal Bilgi Formu (PDF)</li>
+          <li>Excel şablon/toplu içe-dışa aktarım, liste yazdırma</li>
+          <li><b>Depolama Matrisi</b> — hangi kimyasal gruplarının birlikte depolanamayacağını gösteren renkli tablo</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Risk modülüne serbest referans verilebilir. Acil Durum Planı'ndaki "Kimyasal Ekleri" bölümüne buradan seçim yapılır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Hangi maddelerin bir arada tutulamayacağını (asit-baz, oksitleyici-yanıcı vb.) otomatik uyararak yangın/patlama/zehirlenme riskini azaltır; SDS güncelliğini takip ederek yasal uyumu sağlar.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ============================= EKİPMAN, BAKIM VE İZİNLER ============================= -->
+    <div class="kk-grup-baslik">4. Ekipman, Bakım ve İzinler</div>
+
+    <details class="kk-modul" id="periyodik-kontrol">
+      <summary><span class="kk-modul-ikon">🛠️</span> Periyodik Kontrol</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Periyodik muayeneye tabi ekipmanları (basınçlı kap, vinç, forklift, elektrik/topraklama tesisatı vb.) ve düzenli kontrol geçmişini takip ederek süresi geçen veya "uygun değil" çıkan ekipmanları öne çıkarır.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Ekipman kaydı — ad, demirbaş no, kategori (19 seçenek), risk seviyesi, kontrol periyodu (ay)</li>
+          <li>Kontrol kaydı — tarih, kontrol türü, rapor no, kontrol firması/uzmanı, sonuç (Uygun/Şartlı/Uygun Değil), sertifika görseli</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Ekipman, kontrol kaydı (muayene olayı).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Periyodik Kontrol Geçmişi (PDF) — ekipman bilgisi + kronolojik kontrol tablosu; Excel şablon/içe-dışa aktarım; özet sekmesinde süresi geçen/yaklaşan/uygun değil sayıları.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Raporlar panosundaki Periyodik Kontrol KPI kartlarını besler.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yasal muayene zorunluluklarının takibini sağlar; süresi geçmiş/uygun olmayan ekipmanın kullanılmaya devam etmesini önleyerek hem yasal uyumu hem iş kazası riskini azaltır.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="kkd">
+      <summary><span class="kk-modul-ikon">🦺</span> KKD Takibi</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Kişisel Koruyucu Donanımların (baret, eldiven, solunum maskesi vb.) stok/envanterini, personele zimmetlenmesini, kullanım ihlali tutanaklarını ve yeni ürün satın alma öncesi saha denemesini yönetir.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Envanter — KKD adı (60 kalemlik hazır katalog), tür, EN standardı, stok, değişim periyodu</li>
+          <li>Zimmet — personel, KKD, veriliş tarihi (değişim tarihi otomatik hesaplanır), kondisyon, teslim imzası</li>
+          <li>İhlal Takibi — kim, ne zaman, hangi KKD, ihlal türü, uygulanan işlem (sistem tekrarı otomatik saptar)</li>
+          <li>Numune Değerlendirme — satın alma öncesi saha denemesi, çalışan görüşü, İSG değerlendirmesi, imza</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Envanter, zimmet, ihlal tutanağı, numune değerlendirme — dört ayrı liste.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Zimmet Formu (PDF), İhlal Tutanağı (PDF), Numune Değerlendirme Formu (Word)</li>
+          <li>Özet: düşük stok, değişimi geçen/yaklaşan zimmetler, tekrar eden ihlal sahipleri</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Personel modülünden kişi bilgisi çekilir. Süresi geçmemiş her aktif zimmet Merkezi Aksiyon listesine otomatik düşer. KKD kataloğu, Malzeme Talep modülüne tek tıkla aktarılabilir (aynı referans liste).</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Hangi çalışana hangi KKD'nin ne zaman verildiği ve değiştirilmesi gerektiği izlenerek eskiyen ekipmanın kazaya yol açması önlenir; kullanmama ihlalleri disiplin sürecine bağlanır.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="bakim-talep">
+      <summary><span class="kk-modul-ikon">🔧</span> Bakım Onarım</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Üretim/idari birimlerin arıza-bakım ihtiyacını bildirdiği, bakım ekibinin değerlendirip İSG onayından geçirdiği, kapanışa kadar tek kayıt üzerinden takip edilen onay akışlı bir bakım talep sistemi.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Talep — birim, konum/ekipman, arıza açıklaması, öncelik, bakım türü, fotoğraf</li>
+          <li>Bakım değerlendirmesi — görüş, planlanan tarih, riskler/önlemler</li>
+          <li>İSG onayı — ilave önlem gerekli mi, onay durumu</li>
+          <li>Kapanış — tamamlama tarihi, bakım notu</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Bakım talebi (Yeni → Değerlendirmede → İSG Onayında → Onaylandı → Tamamlandı → Kapatıldı), ekipman envanteri + her ekipmanın bakım kartı (geçmiş işlemler).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Bakım Talep Raporu (Word), Ekipman Bakım Kartı (Word), Excel şablon/toplu içe-dışa aktarım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Riskli bir bakım işi için "İş İzni Talep Et" ile doğrudan İş İzni oluşturulur. Ekipman konumu Saha Haritası'nda gösterilir. Açık talepler Merkezi Aksiyon listesine düşer.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Arıza bildirimlerinin kaybolmadan, sorumluluk zinciri korunarak kapatılmasını sağlar; İSG onay adımı bakımın güvensiz koşullarda başlamasını engeller.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="is-izni">
+      <summary><span class="kk-modul-ikon">🧾</span> İş İzinleri</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Sıcak çalışma, kapalı alan, yüksekte çalışma, elektrik, kazı gibi riskli işler için önceden yazılı izin alınmasını, tür bazlı güvenlik kontrol listelerinin doldurulmasını ve onay akışının yönetilmesini sağlar.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>İzin türü (10 tür), iş tanımı, bölüm/lokasyon, yüklenici, çalışanlar, gerekli KKD, risk seviyesi, süre (azami 24 saat)</li>
+          <li>Tür bazlı 7-10 maddelik güvenlik kontrol listesi</li>
+          <li>Gaz ölçümü (oksijen/LEL/toksik gaz) — sıcak çalışma/kapalı alan için</li>
+          <li>İzolasyon/LOTO bilgisi — elektrik/bakım/basınçlı hat işleri için</li>
+          <li>3 taraflı dijital imza: Talep Eden, Bakım, İSG</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>İş izni kaydı — Taslak → Onay Bekliyor → Onaylandı → Aktif → Kapalı/Süresi Geçti/Reddedildi.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>İş İzni Formu (PDF) — kontrol maddeleri, gaz ölçümü, izolasyon bilgisi, 3 taraflı imza hücreleriyle.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Bir bakım talebinden doğrudan iş izni açılabilir ("İlgili Bakım İşi" seçimiyle); izin kapatılınca bağlı bakım talebi de otomatik işlenir. Raporlar panosunda açık/onay bekleyen/kritik izin özeti gösterilir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Ölümcül riskli işlerin başlamadan önce sistematik kontrolden geçmesini (gaz ölçümü, LOTO, gözcü ataması) ve yazılı onay/imza zincirinin belgelenmesini sağlar — kaza sonrası soruşturmada en kritik kanıt belgelerinden biridir.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ============================= İNSAN KAYNAĞI UYUMU ============================= -->
+    <div class="kk-grup-baslik">5. İnsan Kaynağı Uyumu</div>
+
+    <details class="kk-modul" id="stajyer">
+      <summary><span class="kk-modul-ikon">🧑‍🎓</span> Staj</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Fabrikada staj yapan öğrencilerin kayıtlarını ve staj öncesi zorunlu Temel İSG eğitimini/sertifikasını yönetir (stajyerler de kanunen "çalışan" sayılır).</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Ad soyad, bölüm, staj türü, okul, sorumlu/danışman (Personel'den seçilir)</li>
+          <li>Staj başlangıç/bitiş tarihi, Temel İSG eğitim tarihi (1-2 gün)</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Stajyer kaydı (otomatik "STJ0001" numarası ile) — durum tarihlere göre otomatik türetilir.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p><b>Temel İSG Eğitimi Sertifikası (PDF)</b> — iki sayfalı, tehlike sınıfına göre değişen konu/süre tablolu resmi sertifika; Excel şablon/toplu içe-dışa aktarım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Sorumlu/danışman Personel'den seçilir; sertifikadaki İG Uzmanı/İşyeri Hekimi adı Hizmet Sözleşmesi'nden otomatik gelir; firmanın tehlike sınıfı sertifika süresini belirler.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Staj yapan gençlerin eğitim almadan sahaya girmesini önler; genç/çocuk çalışan güvenliğini ve yasal uyumu garanti eder.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="yuklenici">
+      <summary><span class="kk-modul-ikon">🏗️</span> Yüklenici</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Sahaya giren taşeron/yüklenici firmaları, personelini, araç/ekipmanlarını ve ziyaretçilerini; gerekli evrakların (SGK, sağlık raporu, İSG eğitimi, KKD zimmeti, araç muayenesi vb.) süresini otomatik takip ederek sahaya girişe uygunluğunu belirleyen bir "elektronik kapı kontrolü" sistemi.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Yüklenici firma — ad, vergi no, risk seviyesi, gerekli evrak listesi</li>
+          <li>Yüklenici personeli — kimlik, görev, tehlike sınıfı ve 16 kalemlik belge checklist'i (SGK, KKD zimmet, sağlık raporu, Temel İSG belgesi, firma eğitimi, operatörler için Psikoteknik/SRC/ehliyet vb.)</li>
+          <li>Araç/ekipman — plaka, PTM/ruhsat/ZMS/TÜVTÜRK muayene tarihleri</li>
+          <li>Ziyaretçi — basit giriş kaydı</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Yüklenici firması, kişi/personel (belge checklist'i dahil), araç/ekipman, ziyaretçi.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Excel: tüm kayıtlar, tam uygun olanlar, uygun olmayanlar, 28 sütunlu detaylı döküm</li>
+          <li>PDF liste — her satırda "Giriş Engeli" nedenini (eksik/süresi geçmiş ilk belge) otomatik gösterir</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Kendi içinde kapalı bir sistemdir; şirket içi Personel/Eğitim modülleriyle karışmaz, sadece Dashboard'daki genel aramada birlikte listelenir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Alt işveren çalışanlarının belgesiz veya süresi geçmiş belgeyle sahaya girmesini engeller; araç muayene takibi de kaza riskini azaltır ve denetimlerde somut kanıt sağlar.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="hizmet-sozlesmesi">
+      <summary><span class="kk-modul-ikon">🖋️</span> Hizmet Sözleşmeleri</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Firmaya dışarıdan hizmet veren İş Güvenliği Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli sözleşmelerini kaydeder; yasal asgari çalışma süresine göre firmanın uygunluğunu hesaplar.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Görev türü, ad soyad, belge sınıfı, hizmet verilen firma/sicil</li>
+          <li>Sözleşme başlangıç/bitiş tarihi, ayrılan süre (dakika/ay), sözleşme belgesi</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Hizmet sözleşmesi kaydı — durum (Aktif/Yaklaşıyor/Süresi Geçti/Feshedildi) tarihe göre otomatik hesaplanır.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p><b>Sicil Özeti (Excel)</b> — her sicil için gerekli dk/ay (yasal asgari) ile atanan dk/ay karşılaştırması ve uygunluk durumu; kayıt listesi yazdırma, Excel toplu içe-dışa aktarım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Eğitim sertifikalarındaki ve Personel imza listelerindeki İG Uzmanı/İşyeri Hekimi/Eğitimci imza satırları buradaki en güncel, feshedilmemiş sözleşmeden otomatik doldurulur.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yasal asgari süre karşılaştırmasıyla firmayı "yetersiz İSG hizmeti" denetim riskinden korur; sözleşmesi bitmek üzere olan uzman/hekimin zamanında yenilenmesini garanti eder.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="sinav">
+      <summary><span class="kk-modul-ikon">📝</span> Sınav Oluşturucu</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Verilen İSG eğitimlerinin ardından çalışanların bilgisini ölçmek için soru bankası oluşturur, rastgele sorularla sınav üretir ve kağıt üzerinde yapılan sınav sonuçlarını kaydedip geçti/kaldı takibi yapar.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Soru Bankası — eğitim/konu, soru metni, 4 şık, doğru cevap</li>
+          <li>Yeni Sınav — başlık, konu, soru sayısı (havuzdan rastgele seçilir), geçme notu</li>
+          <li>Sonuç Girişi — personel, puan, tarih (doğru sayısı otomatik hesaplanır)</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Soru, sınav (soruların anlık kopyasıyla), sınav sonucu.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Boş sınav kağıdı ve cevap anahtarı yazdırma, Excel dışa aktarım (soru/sınav/sonuç), Excel şablon/toplu içe aktarım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Sonuç kaydı için Personel listesi, konu seçimi için Eğitim modülündeki eğitim türleri kullanılır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Verilen eğitimin gerçekten anlaşıldığını denetimlerde ibraz edilebilecek somut bir kayıtla kanıtlar; düşük başarılı çalışan/konuları tespit ederek tekrar eğitim ihtiyacını belirler.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ============================= YÖNETİM VE TAKİP ============================= -->
+    <div class="kk-grup-baslik">6. Yönetim, Takip ve Raporlama</div>
+
+    <details class="kk-modul" id="kurul">
+      <summary><span class="kk-modul-ikon">🏛️</span> İSG Kurulu</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">İSG Kurulu toplantılarının planlanmasını, gündeminin, kararlarının, katılımcı imza listesinin ve aylık faaliyet raporunun uçtan uca yönetildiği; diğer modüllerden o döneme ait verileri otomatik toplayan kapsamlı bir kurul yönetim modülü.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Toplantı — tarih, dönem, yer, başkan/yazman, katılımcılar, gündem maddeleri, genel değerlendirme</li>
+          <li>Karar — karar metni, sorumlu, termin, öncelik, oylama sonucu, kapanış/kanıt</li>
+          <li>İmza/Katılım Listesi — kuruldaki görev (Başkan, Sekreter, İşveren Vekili, İSG Uzmanı, İşyeri Hekimi, Çalışan Temsilcisi vb.)</li>
+          <li>Ay İçi Faaliyet — serbest biçimli aylık faaliyet dökümü</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Toplantı, karar, kurul olayı, imza listesi, ay içi faaliyet, denetim (audit) kaydı.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Toplantı Daveti (Word), Kurul Raporu (Word ve PDF — tam tutanak), Konu Başlıkları (Word)</li>
+          <li>Kurul Sunumu (PPTX), Atama Yazısı (Word), İmza Listesi (Word/PDF)</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti"><b>En yoğun otomatik entegrasyona sahip modül:</b> dönem içi Olay/Kaza kayıtları "Olaylar" bölümüne, dönem içi tespit edilen/kapatılan Uygunsuzluklar ayrı gündem maddelerine, dönem içi verilen Eğitimler "Ay İçinde Yapılan Eğitimler"e, Acil Durum'daki yangın tüpü kontrolleri ve ekipman kontrol özetleri "Ay İçi Faaliyetler"e otomatik olarak (salt okunur satırlar halinde) eklenir. Açık kararlar Merkezi Aksiyon listesine de yansır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yasal zorunlu Kurul toplantılarının eksiksiz, yönetmeliğe uygun tutanağa bağlanmasını sağlar; sahadaki dağınık verileri tek resmi raporda birleştirip işveren ve müfettişlere sunulacak belgeyi otomatik üretir.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="merkezi-aksiyon">
+      <summary><span class="kk-modul-ikon">📌</span> Merkezi Aksiyon Takibi</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Farklı modüllerdeki (sorumlu + termin + durum içeren) tüm açık aksiyonları tek listede toplayan, kendi verisi olmayan salt-okunur bir "genel aksiyon kokpiti". Hiçbir veri girilmez, sadece filtrelenir.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><p>Yalnızca arama ve filtre (kaynak modül, durum) uygulanır; veri girişi yoktur.</p></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Yok — sekiz kaynaktan canlı olarak toplanır: Uygunsuzluk, İSG Kurulu kararları, Risk, Olay/Kaza aksiyonları, Acil Durum ekipman kontrolü, Acil Durum eylem planı, KKD zimmet, Bakım Onarım.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Excel dışa aktarım (filtrelenmiş liste); özet: toplam açık, gecikmiş, 7 gün içinde termini dolacak aksiyon sayısı, sorumluya göre dağılım.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Bu modülün tamamı diğer 8 kaynağı birleştiren bir köprüdür; her satırdaki "İncele" bağlantısı kullanıcıyı kaydın gerçek modülüne yönlendirir.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">İSG sorumlusunun/fabrika müdürünün her modüle tek tek girmeden "elimde kaç açık iş var, hangileri gecikmiş" sorusuna tek ekrandan cevap bulmasını sağlar — yönetim gözden geçirme toplantılarının en pratik aracıdır.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="raporlar">
+      <summary><span class="kk-modul-ikon">📊</span> Raporlar</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Platformdaki tüm modüllerin verisini tek bir salt-okunur İSG performans panosunda (KPI kartları + grafikler) birleştiren, üst yönetime sunulabilecek konsolide özet üreten "hub" modül.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><p>Kullanıcı veri girmez; sadece "Özet Raporu Yazdır" ile mevcut görünümü PDF/yazdırılabilir hale getirir.</p></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Yok — salt okuma katmanı.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
+          <li>Genel Bakış KPI'ları: Aktif Personel, Eğitim Uyum Oranı, Açık Risk, Son 12 Ay Olay/Kaza, Açık Uygunsuzluk, Açık İş İzni, Acil Durum Ekip Yeterliliği, Engelli Çalışan Kotası, Toplam Açık Aksiyon</li>
+          <li>Her modül için ayrı bölüm/grafik; "Özet Raporu Yazdır" ile tek sayfalık konsolide çıktı</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">Neredeyse tüm modüllerden veri okur: Personel, Eğitim, Risk, Olay/Kaza, Uygunsuzluk, KKD, Kimyasal, Periyodik Kontrol, İş İzni, Malzeme Talep, Acil Durum, Merkezi Aksiyon.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Yöneticinin tek ekrandan tüm sahanın uyum durumunu görmesini sağlar; haftalık/aylık yönetim toplantılarında tek sayfalık özetle üst yönetime hızlı bilgi sunumu yapılabilir.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="harita">
+      <summary><span class="kk-modul-ikon">🗺️</span> Saha Dijital Haritası</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">Fabrikanın kat planı üzerine tıklayarak uygunsuzluk, risk, acil durum ekipmanı, yangın tüpü, tahliye planı ve bakım ekipmanı gibi kayıtları konumsal olarak işaretleyip görselleştiren interaktif harita.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Tesis (bina/kat) tanımı ve kat planı görseli</li>
+          <li>Kendine özgü noktalar: ekipman/tesis, boru köprüsü, fotoğraf noktası</li>
+          <li>Metin etiketleri, kaçış/yön okları</li>
+          <li>Diğer modüllerdeki kayıtların (uygunsuzluk, risk, acil durum ekipmanı vb.) sadece konumu buradan atanır</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Tesis, harita noktası, etiket, ok — kendine özgü kayıtlar; diğerleri ilgili modülde tutulur, harita sadece konumu gösterir.</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Ayrı bir Word/PDF/Excel çıktısı yoktur — tamamen interaktif görsel bir araçtır.</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti"><b>Platformun en yoğun görsel köprüsü:</b> Uygunsuzluk, Risk, Acil Durum (ekipman/tüp/kaçış yolu/toplanma alanı), Bakım Onarım ekipman envanterini gösterir. Bir noktaya tıklamak ilgili modüldeki kayda götürür; boş bir noktaya tıklayıp "yeni kayıt" seçmek, konum bilgisiyle ilgili modülün yeni kayıt formunu açar.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">Geniş sahalı fabrikalarda "en yakın yangın tüpü nerede", "bu bölümde açık uygunsuzluk var mı", "kaçış yolu nereden geçiyor" sorularını görsel olarak anında yanıtlar.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="kk-modul" id="malzeme-talep">
+      <summary><span class="kk-modul-ikon">📦</span> İSG Malzeme Talep</summary>
+      <div class="kk-modul-govde">
+        <div class="kk-blok"><h4>Amaç</h4>
+          <p class="kk-amac">İSG biriminin ihtiyaç duyduğu malzeme/KKD/ekipmanın resmi "talep oluru" formatında hazırlanıp, satın alma sürecinin tüm aşamalarında (teklif, sipariş, teslim, ödeme) takip edildiği bir süreç yönetim aracı.</p>
+        </div>
+        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
+          <li>Malzeme Kataloğu — kod, ad, kategori, birim, teknik özellikler (60 kalemlik hazır KKD kataloğu tek tıkla içe aktarılabilir)</li>
+          <li>Talep — tarih, konu, açıklama, aciliyet, gerekçe, seçilen malzemeler ve miktarları, imza yetkilisi</li>
+        </ul></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Malzeme kataloğu, malzeme talebi — 19 aşamalı iş akışıyla (Taslak → Olur → Teklif → Sipariş → Teslim → Ödeme → Tamamlandı).</p></div>
+        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Malzeme Talep Oluru (Word) — resmi olur yazısı; Olurlar Takip Listesi (durum bazlı takip tablosu, gecikenler işaretli).</p></div>
+        <div class="kk-blok"><h4>Bağlantılar</h4>
+          <div class="kk-baglanti">KKD modülüyle aynı 60 kalemlik referans kataloğu paylaşır.</div>
+        </div>
+        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
+          <div class="kk-onem">KKD/ekipman ihtiyacının resmi/imzalı bir belgeyle üst yönetime iletilmesini standartlaştırır; satın alma sürecinin hangi aşamada beklediğini görünür kılarak tedarik gecikmelerinin önüne geçer.</div>
+        </div>
+      </div>
+    </details>
+
+    <p style="text-align:center; color:var(--metin-soluk); font-size:12px; margin:36px 0 10px;">
+      Bu kılavuz risk360 İSG Yönetim Platformu içindir. Sorularınız için firmanızın İSG uzmanına veya sistem yöneticisine başvurabilirsiniz.
+    </p>
+  </div>
+
+  <a href="#top" class="kk-ust-donus" title="Başa dön">↑</a>
+
+  <script src="core/data.js"></script>
+  <script src="core/auth.js"></script>
+  <script>
+    const kullanici = girisGerekli();
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+    }
+  </script>
+</body>
+</html>
