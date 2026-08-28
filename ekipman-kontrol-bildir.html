@@ -232,7 +232,15 @@
         },
         () => {}
       ).catch(hata => {
-        durum.textContent = 'Kamera açılamadı: ' + (hata.message || hata);
+        // Kullanıcı raporu: "izin verme yanlışlıkla tıklandı şimdi barkod
+        // açılmıyor" — kamera izni bir kez reddedilince tarayıcı bir daha
+        // otomatik SORMAZ; ham hata metni yerine (ör. "NotAllowedError")
+        // kullanıcının izni nasıl geri açacağını gösteren açık bir mesaj
+        // gösterilir.
+        const izinReddedildi = (hata && (hata.name === 'NotAllowedError' || /permission|izin|denied/i.test(hata.message || hata)));
+        durum.textContent = izinReddedildi
+          ? 'Kamera izni reddedilmiş görünüyor. Tarayıcınızda adres çubuğunun solundaki kilit/(i) simgesine dokunup Kamera iznini "İzin Ver" yapın, sonra sayfayı yenileyip tekrar deneyin. (Kamera erişimi olmadan da alttaki "Ekipman No" alanına elle yazabilirsiniz.)'
+          : 'Kamera açılamadı: ' + (hata.message || hata);
         durum.classList.add('gorunur');
         _ekBarkodTaramaDurdur();
       });
