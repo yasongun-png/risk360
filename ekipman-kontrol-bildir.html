@@ -180,6 +180,18 @@
       `).join('');
     }
 
+    // Kullanıcı isteği: "bakımcı Enes Akkuş seçili gelsin tekrar girmeye
+    // gerek kalmasın" — cihaza özel (localStorage), Firestore'a YAZILMAZ;
+    // kota dolu/gizli gezinti gibi durumlarda sessizce yutulur (ad her
+    // seferinde elle girilebilir kalır, işlevsellik bozulmaz).
+    const _EK_SON_KONTROL_EDEN_ANAHTARI = 'ek_son_kontrol_eden';
+    function _ekSonKontrolEdenGetir() {
+      try { return localStorage.getItem(_EK_SON_KONTROL_EDEN_ANAHTARI) || ''; } catch (e) { return ''; }
+    }
+    function _ekSonKontrolEdenKaydet(ad) {
+      try { localStorage.setItem(_EK_SON_KONTROL_EDEN_ANAHTARI, ad); } catch (e) { /* kota dolu olabilir, önemli değil */ }
+    }
+
     function _ekKontrolFormunuAc(ekipman) {
       _ekBulunanEkipman = ekipman;
       document.getElementById('ekKodAlani').classList.add('gizli');
@@ -188,7 +200,12 @@
       document.getElementById('ekKontrolEkipmanNo').textContent = `${ekipman.ekipmanNo} — ${ekipman.tur}`;
       document.getElementById('ekKontrolEkipmanDetay').textContent = [ekipman.bolum, ekipman.lokasyon].filter(Boolean).join(' — ') || 'Lokasyon belirtilmemiş';
       document.getElementById('ekKontrolTarihi').value = bugunIso();
-      document.getElementById('ekKontrolEden').value = '';
+      // Kullanıcı isteği: "bakımcı Enes Akkuş seçili gelsin tekrar girmeye
+      // gerek kalmasın" — bu link/cihazı hep aynı bakımcı kullandığından,
+      // en son girilen ad bu TARAYICIYA (localStorage) kaydedilip bir
+      // sonraki ekipmanda otomatik doldurulur; farklı bir kişi kullanırsa
+      // alanı elle değiştirip üzerine yazabilir.
+      document.getElementById('ekKontrolEden').value = _ekSonKontrolEdenGetir();
       document.getElementById('ekBulgular').value = ekipman.bulgular || '';
       document.getElementById('ekYapilanIslem').value = ekipman.yapilanIslem || '';
       const kontrolHataEl = document.getElementById('ekKontrolHata');
@@ -361,6 +378,7 @@
           hataEl.classList.add('gorunur');
           return;
         }
+        _ekSonKontrolEdenKaydet(kontrolEden);
 
         const gonderBtn = document.getElementById('ekKontrolGonderBtn');
         gonderBtn.disabled = true;
