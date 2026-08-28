@@ -30,6 +30,12 @@
   .ek-soru-satir span { flex: 1; font-size: 13px; }
   .ek-soru-satir select { width: auto; min-width: 140px; margin: 0; }
   .gizli { display: none !important; }
+  .ek-liste-satir { display: block; width: 100%; text-align: left; padding: 10px 12px; border: none; border-bottom: 1px solid var(--kenarlik, #e5e7eb); background: #fff; font: inherit; cursor: pointer; }
+  .ek-liste-satir:last-child { border-bottom: none; }
+  .ek-liste-satir:active, .ek-liste-satir:hover { background: var(--arka-plan, #f3f4f6); }
+  .ek-liste-satir b { display: block; font-size: 13.5px; }
+  .ek-liste-satir span { display: block; font-size: 12px; color: var(--metin-soluk, #6b7280); margin-top: 2px; }
+  .ek-liste-bos { padding: 16px 12px; font-size: 13px; color: var(--metin-soluk, #6b7280); text-align: center; }
 </style>
 </head>
 <body>
@@ -71,6 +77,20 @@
           <div class="hata-mesaji" id="ekKodHata"></div>
           <button type="submit" class="birincil ek-gonder-btn">Bul</button>
         </form>
+
+        <!-- Kullanıcı isteği: "bu barkod taramnon içinde bakımcının
+             ulaşabileceği bir liste de olsun" — barkodu okutamadığı veya
+             ekipman no'yu bilmediği durumlarda, bakımcı tüm ekipman
+             listesine göz atıp aradığı satıra dokunarak da kontrol
+             formunu açabilsin (bkz. _ekListesiCiz). -->
+        <button type="button" class="ikincil ek-gonder-btn" id="ekListeAcBtn" style="margin-top:14px;">📋 Ekipman Listesinden Seç</button>
+        <div id="ekListeAlani" class="gizli" style="margin-top:14px;">
+          <div class="ek-alan">
+            <label for="ekListeArama">Ara</label>
+            <input type="text" id="ekListeArama" placeholder="Ekipman No, tür, bölüm veya lokasyona göre ara..." autocomplete="off">
+          </div>
+          <div id="ekListeGovde" style="max-height:340px; overflow-y:auto; border:1px solid var(--kenarlik, #e5e7eb); border-radius:10px;"></div>
+        </div>
       </div>
 
       <div id="ekKontrolAlani" class="gizli">
@@ -179,6 +199,41 @@
       const kodAlani = document.getElementById('ekKod');
       kodAlani.value = '';
       kodAlani.focus();
+      document.getElementById('ekListeAlani').classList.add('gizli');
+    }
+
+    // Kullanıcı isteği: "bu barkod taramnon içinde bakımcının ulaşabileceği
+    // bir liste de olsun" — barkodu okutamadığı/ekipman no'yu bilmediği
+    // durumlarda TÜM ekipman envanterine göz atıp dokunarak seçebileceği,
+    // arama kutulu bir liste.
+    function _ekListesiCiz(aramaMetni) {
+      const govde = document.getElementById('ekListeGovde');
+      const arama = (aramaMetni || '').trim().toLowerCase();
+      let liste = oku(_ekEnvanterAnahtari(), []);
+      if (arama) {
+        liste = liste.filter(e =>
+          (e.ekipmanNo || '').toLowerCase().includes(arama) ||
+          (e.tur || '').toLowerCase().includes(arama) ||
+          (e.bolum || '').toLowerCase().includes(arama) ||
+          (e.lokasyon || '').toLowerCase().includes(arama)
+        );
+      }
+      liste.sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true }));
+
+      if (!liste.length) {
+        govde.innerHTML = `<div class="ek-liste-bos">${arama ? 'Aramanızla eşleşen ekipman bulunamadı.' : 'Henüz ekipman eklenmedi.'}</div>`;
+        return;
+      }
+      govde.innerHTML = liste.map(e => `
+        <button type="button" class="ek-liste-satir" data-ek-liste-sec="${_ekKacir(e.id)}">
+          <b>${_ekKacir(e.ekipmanNo)} — ${_ekKacir(e.tur)}</b>
+          <span>${_ekKacir([e.bolum, e.lokasyon].filter(Boolean).join(' — ')) || 'Lokasyon belirtilmemiş'}</span>
+        </button>
+      `).join('');
+      govde.querySelectorAll('[data-ek-liste-sec]').forEach(btn => btn.addEventListener('click', () => {
+        const ekipman = liste.find(e => e.id === btn.getAttribute('data-ek-liste-sec'));
+        if (ekipman) { _ekBarkodTaramaDurdur(); _ekKontrolFormunuAc(ekipman); }
+      }));
     }
 
     // Manuel "Bul" formu ile kamera taraması AYNI arama mantığını kullanır
@@ -273,6 +328,16 @@
       document.getElementById('ekYeniKontrolBtn').addEventListener('click', _ekKodFormunaDon);
       document.getElementById('ekBarkodTaraBtn').addEventListener('click', _ekBarkodTaramaBaslat);
       document.getElementById('ekBarkodDurdurBtn').addEventListener('click', _ekBarkodTaramaDurdur);
+      document.getElementById('ekListeAcBtn').addEventListener('click', () => {
+        const alan = document.getElementById('ekListeAlani');
+        const acikMi = !alan.classList.contains('gizli');
+        if (acikMi) { alan.classList.add('gizli'); return; }
+        _ekBarkodTaramaDurdur();
+        alan.classList.remove('gizli');
+        document.getElementById('ekListeArama').value = '';
+        _ekListesiCiz('');
+      });
+      document.getElementById('ekListeArama').addEventListener('input', e => _ekListesiCiz(e.target.value));
 
       document.getElementById('ekKontrolForm').addEventListener('submit', async function (e) {
         e.preventDefault();
