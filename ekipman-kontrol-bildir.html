@@ -50,13 +50,23 @@
         <div class="ek-baslik">🧯 Ekipman Kontrol Formu</div>
         <div class="ek-firma" id="ekFirmaAdi"></div>
         <div class="ek-not">
-          Ekipmanın üzerindeki barkodu okutun veya Ekipman No'yu girin —
-          bulunursa o ekipmanın kontrol formu açılacak.
+          Ekipmanın üzerindeki barkodu kamerayla okutun veya Ekipman No'yu
+          elle girin — bulunursa o ekipmanın kontrol formu açılacak.
         </div>
+        <!-- Kullanıcı isteği: "acil durum ekipman kontrollerinde sadece
+             bakımcıya vereceğim bir uygulama yap barkodu tarasın
+             ekipmanın üstündeki formu görsün" — bu sayfa zaten girişsiz/
+             dışarıdan (bakımcıya link/QR olarak) açılan bir sayfaydı, sadece
+             Ekipman No'yu ELLE yazmayı destekliyordu; artık kamerayla
+             gerçek zamanlı barkod okuma da eklendi (bkz. ui.js _ekbBarkodTaraBaslat). -->
+        <button type="button" class="birincil ek-gonder-btn" id="ekBarkodTaraBtn" style="margin-bottom:10px;">📷 Barkod Tara (Kamera)</button>
+        <div id="ekBarkodOkuyucu" class="gizli" style="width:100%; min-height:240px; border-radius:10px; overflow:hidden; background:#000; margin-bottom:10px;"></div>
+        <div class="hata-mesaji" id="ekBarkodDurum"></div>
+        <button type="button" class="ikincil ek-gonder-btn gizli" id="ekBarkodDurdurBtn" style="margin-bottom:14px;">Taramayı Durdur</button>
         <form id="ekKodForm">
           <div class="ek-alan">
             <label for="ekKod">Ekipman No *</label>
-            <input type="text" id="ekKod" required autofocus autocomplete="off">
+            <input type="text" id="ekKod" required autocomplete="off">
           </div>
           <div class="hata-mesaji" id="ekKodHata"></div>
           <button type="submit" class="birincil ek-gonder-btn">Bul</button>
@@ -106,6 +116,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="core/data.js"></script>
   <script src="modules/acil-durum/model.js"></script>
   <script>
@@ -170,6 +181,74 @@
       kodAlani.focus();
     }
 
+    // Manuel "Bul" formu ile kamera taraması AYNI arama mantığını kullanır
+    // (bkz. modules/acil-durum/ui.js _ekBarkodOkundu ile aynı eşleştirme:
+    // Ekipman No, büyük/küçük harf duyarsız). hataEl verilirse (manuel
+    // form) hata orada gösterilir; kamera taramasında hataEl yerine
+    // #ekBarkodDurum kullanılır (taramaya devam edilebilsin diye modal
+    // kapanmaz).
+    function _ekKoduAraVeAc(kod, hataEl) {
+      const liste = oku(_ekEnvanterAnahtari(), []);
+      const ekipman = liste.find(x => (x.ekipmanNo || '').trim().toLowerCase() === kod.trim().toLowerCase() || x.id === kod.trim());
+      if (!ekipman) {
+        if (hataEl) {
+          hataEl.textContent = 'Bu koda ait bir ekipman bulunamadı. Ekipman No\'yu kontrol edin.';
+          hataEl.classList.add('gorunur');
+        }
+        return null;
+      }
+      _ekBarkodTaramaDurdur();
+      _ekKontrolFormunuAc(ekipman);
+      return ekipman;
+    }
+
+    // Kullanıcı isteği: "acil durum ekipman kontrollerinde sadece bakımcıya
+    // vereceğim bir uygulama yap barkodu tarasın ekipmanın üstündeki formu
+    // görsün" — bu sayfa zaten girişsiz/harici bir sayfaydı, sadece kamera
+    // ile canlı barkod okuma eksikti. modules/acil-durum/ui.js
+    // ekipmanBarkodTaramaBaslat ile AYNI Html5Qrcode deseni (formatsToSupport
+    // KISITLANMAZ, farklı barkod türleri de okunabilsin diye).
+    let _ekBarkodTarayici = null;
+
+    function _ekBarkodTaramaBaslat() {
+      if (typeof Html5Qrcode === 'undefined') { alert('Barkod tarama bileşeni yüklenemedi.'); return; }
+      const durum = document.getElementById('ekBarkodDurum');
+      durum.textContent = '';
+      durum.classList.remove('gorunur');
+      document.getElementById('ekBarkodOkuyucu').classList.remove('gizli');
+      document.getElementById('ekBarkodDurdurBtn').classList.remove('gizli');
+      document.getElementById('ekBarkodTaraBtn').classList.add('gizli');
+
+      _ekBarkodTarayici = new Html5Qrcode('ekBarkodOkuyucu', { verbose: false });
+      _ekBarkodTarayici.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        kod => {
+          const eslesen = _ekKoduAraVeAc(kod, null);
+          if (!eslesen) {
+            durum.textContent = `"${kod}" koduyla eşleşen ekipman bulunamadı, taramaya devam ediliyor…`;
+            durum.classList.add('gorunur');
+          }
+        },
+        () => {}
+      ).catch(hata => {
+        durum.textContent = 'Kamera açılamadı: ' + (hata.message || hata);
+        durum.classList.add('gorunur');
+        _ekBarkodTaramaDurdur();
+      });
+    }
+
+    function _ekBarkodTaramaDurdur() {
+      document.getElementById('ekBarkodOkuyucu').classList.add('gizli');
+      document.getElementById('ekBarkodDurdurBtn').classList.add('gizli');
+      document.getElementById('ekBarkodTaraBtn').classList.remove('gizli');
+      if (_ekBarkodTarayici) {
+        const tarayici = _ekBarkodTarayici;
+        _ekBarkodTarayici = null;
+        tarayici.stop().then(() => tarayici.clear()).catch(() => {});
+      }
+    }
+
     function _ekFormuBaslat() {
       document.getElementById('ekYukleniyor').classList.add('gizli');
       document.getElementById('ekKodAlani').classList.remove('gizli');
@@ -177,24 +256,15 @@
 
       document.getElementById('ekKodForm').addEventListener('submit', function (e) {
         e.preventDefault();
-        const hataEl = document.getElementById('ekKodHata');
-        hataEl.textContent = '';
-        hataEl.classList.remove('gorunur');
         const kod = document.getElementById('ekKod').value.trim();
         if (!kod) return;
-
-        const liste = oku(_ekEnvanterAnahtari(), []);
-        const ekipman = liste.find(x => (x.ekipmanNo || '').toLowerCase() === kod.toLowerCase());
-        if (!ekipman) {
-          hataEl.textContent = 'Bu koda ait bir ekipman bulunamadı. Ekipman No\'yu kontrol edin.';
-          hataEl.classList.add('gorunur');
-          return;
-        }
-        _ekKontrolFormunuAc(ekipman);
+        _ekKoduAraVeAc(kod, document.getElementById('ekKodHata'));
       });
 
       document.getElementById('ekBaskaKodBtn').addEventListener('click', _ekKodFormunaDon);
       document.getElementById('ekYeniKontrolBtn').addEventListener('click', _ekKodFormunaDon);
+      document.getElementById('ekBarkodTaraBtn').addEventListener('click', _ekBarkodTaramaBaslat);
+      document.getElementById('ekBarkodDurdurBtn').addEventListener('click', _ekBarkodTaramaDurdur);
 
       document.getElementById('ekKontrolForm').addEventListener('submit', async function (e) {
         e.preventDefault();
