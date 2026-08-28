@@ -511,6 +511,12 @@ function ekipmanOlustur(veriler) {
     // ekipman-kontrol-bildir.html'de (barkodla açılan bakımcı formu)
     // doldurulabilir.
     yapilanIslem: (veriler.yapilanIslem || '').trim(),
+    // Kullanıcı isteği: "bakımcı diğer kayıtlara müdahale edemesin ...
+    // yapılan işlemin hemen üstünde bakım yapanın adı soyadı girilsin" —
+    // "Kontrolü Yapan" (İSG uzmanının kontrolü kim yaptı bilgisi) ile
+    // KARIŞTIRILMASIN diye ayrı bir alan: barkodla açılan bakımcı formunu
+    // dolduran kişinin kimliği.
+    bakimYapan: (veriler.bakimYapan || '').trim(),
     kontrolCevaplari: sorular.reduce((acc, s) => {
       const cevap = (veriler.kontrolCevaplari || {})[s.id];
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';

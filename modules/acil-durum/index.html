@@ -412,6 +412,13 @@
              forma yazıp kayıt edebilsin" — aynı alan, barkodla açılan
              bakımcı formunda (ekipman-kontrol-bildir.html) doldurulunca
              burada da (İSG uzmanı tarafı) görünür/düzenlenebilir olsun diye. -->
+        <!-- Kullanıcı isteği: "yapılan işlemin hemen üstünde bakım
+             yapanın adı soyadı girilsin" — barkodla açılan bakımcı
+             formunda (ekipman-kontrol-bildir.html) doldurulunca burada da
+             görünür/düzenlenebilir. -->
+        <label for="ekipmanBakimYapan">Bakım Yapan — Ad Soyad</label>
+        <input type="text" id="ekipmanBakimYapan">
+
         <label for="ekipmanYapilanIslem">Yapılan İşlem</label>
         <textarea id="ekipmanYapilanIslem" placeholder="Değiştirilen parça, yapılan müdahale vb."></textarea>
 
@@ -728,13 +735,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=8"></script>
+  <script src="model.js?v=9"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=4"></script>
-  <script src="service.js?v=9"></script>
-  <script src="kontrol-formu-cikti.js?v=11"></script>
+  <script src="service.js?v=10"></script>
+  <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=19"></script>
+  <script src="ui.js?v=20"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

@@ -169,6 +169,9 @@ function ekipmanGuncelle(id, veriler) {
     // Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan forma
     // yazıp kayıt edebilsin" — bkz. model.js ekipmanOlustur aynı notu.
     yapilanIslem: (veriler.yapilanIslem || '').trim(),
+    // Kullanıcı isteği: "yapılan işlemin hemen üstünde bakım yapanın adı
+    // soyadı girilsin" — bkz. model.js ekipmanOlustur aynı notu.
+    bakimYapan: (veriler.bakimYapan || '').trim(),
     kontrolCevaplari: sorular.reduce((acc, s) => {
       const cevap = (veriler.kontrolCevaplari || {})[s.id];
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';

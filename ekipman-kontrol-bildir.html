@@ -106,21 +106,40 @@
             <label for="ekKontrolTarihi">Kontrol Tarihi *</label>
             <input type="date" id="ekKontrolTarihi" required>
           </div>
+          <!-- Kullanıcı isteği: "kontrol eden kısmı boş kalsada kayıt
+               etsin" — artık zorunlu değil (bakımcı doldurmak istemezse
+               boş kalabilir; daha önce İSG uzmanının girdiği değer varsa
+               o gösterilir, düzenlenebilir). -->
           <div class="ek-alan">
-            <label for="ekKontrolEden">Kontrolü Yapan *</label>
-            <input type="text" id="ekKontrolEden" required placeholder="Ad Soyad">
+            <label for="ekKontrolEden">Kontrolü Yapan</label>
+            <input type="text" id="ekKontrolEden" placeholder="Ad Soyad (opsiyonel)">
           </div>
 
           <div id="ekSorularAlani"></div>
 
+          <!-- Kullanıcı isteği: "uygun uygun değildir seçenekleri ve
+               bulguları görsün ama değiştiremesin" — kontrol soruları
+               (yukarıda, bkz. _ekSorulariCiz'de disabled) ve Bulgular
+               artık salt görüntüleme; bu ikisi İSG uzmanı tarafından
+               belirlenir, bakımcı sadece görür. -->
           <div class="ek-alan" style="margin-top:14px;">
-            <label for="ekBulgular">Bulgular</label>
-            <textarea id="ekBulgular" rows="3"></textarea>
+            <label for="ekBulgular">Bulgular <span style="font-weight:400; color:var(--metin-soluk, #6b7280);">(salt görüntüleme)</span></label>
+            <textarea id="ekBulgular" rows="3" readonly style="background:var(--arka-plan, #f3f4f6); color:var(--metin-soluk, #6b7280);"></textarea>
+          </div>
+
+          <!-- Kullanıcı isteği: "yapılan işlemin hemen üstünde bakım
+               yapanın adı soyadı girilsin" — bu, ilk seferde girilip
+               cihazda hatırlanan (bkz. _ekSonKontrolEdenGetir/Kaydet)
+               asıl kimlik alanı. -->
+          <div class="ek-alan">
+            <label for="ekBakimYapan">Bakım Yapan — Ad Soyad *</label>
+            <input type="text" id="ekBakimYapan" required placeholder="Ad Soyad">
           </div>
 
           <!-- Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan
                forma yazıp kayıt edebilsin" — Bulgular'dan (tespit edilen
-               durum) ayrı, bakımcının fiilen ne yaptığını yazdığı alan. -->
+               durum) ayrı, bakımcının fiilen ne yaptığını yazdığı, DÜZENLE-
+               NEBİLİR alan. -->
           <div class="ek-alan">
             <label for="ekYapilanIslem">Yapılan İşlem</label>
             <textarea id="ekYapilanIslem" rows="3" placeholder="Değiştirilen parça, yapılan müdahale vb."></textarea>
@@ -196,13 +215,19 @@
     // bulunduğunda tür bazlı kontrol soruları (bkz. modules/acil-durum/
     // model.js EKIPMAN_KONTROL_SORULARI), bir önceki kontrolün cevap ve
     // bulgularıyla ÖNCEDEN DOLU olarak, tarih bugüne varsayılı açılır.
+    // Kullanıcı isteği: "uygun uygun değildir seçenekleri ve bulguları
+    // görsün ama değiştiremesin" — kontrol soruları artık disabled
+    // (salt görüntüleme); disabled bir <select>'in .value'su JS'ten hâlâ
+    // okunabilir olduğundan (yalnızca native form-submit'te atlanır, bu
+    // sayfa değerleri doğrudan JS ile okuyup Firestore'a yazıyor) mevcut
+    // cevaplar kayıtta bozulmadan korunur.
     function _ekSorulariCiz(ekipman) {
       const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
       const oncekiCevaplar = ekipman.kontrolCevaplari || {};
       document.getElementById('ekSorularAlani').innerHTML = sorular.map(s => `
         <div class="ek-soru-satir">
           <span>${_ekKacir(s.soru)}</span>
-          <select data-ek-soru="${s.id}">
+          <select data-ek-soru="${s.id}" disabled>
             <option value="" ${oncekiCevaplar[s.id] ? '' : 'selected'}>— Seçilmedi —</option>
             ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${oncekiCevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
           </select>
@@ -230,12 +255,17 @@
       document.getElementById('ekKontrolEkipmanNo').textContent = `${ekipman.ekipmanNo} — ${ekipman.tur}`;
       document.getElementById('ekKontrolEkipmanDetay').textContent = [ekipman.bolum, ekipman.lokasyon].filter(Boolean).join(' — ') || 'Lokasyon belirtilmemiş';
       document.getElementById('ekKontrolTarihi').value = bugunIso();
+      // Kullanıcı isteği: "kontrol eden kısmı boş kalsada kayıt etsin" —
+      // artık cihazda hatırlanan ad BURAYA değil "Bakım Yapan" alanına
+      // yazılıyor (aşağıda); Kontrolü Yapan sadece İSG uzmanının önceden
+      // girdiği değeri (varsa) gösterir, boş bırakılabilir.
+      document.getElementById('ekKontrolEden').value = ekipman.kontrolEden || '';
       // Kullanıcı isteği: "bakımcı Enes Akkuş seçili gelsin tekrar girmeye
       // gerek kalmasın" — bu link/cihazı hep aynı bakımcı kullandığından,
       // en son girilen ad bu TARAYICIYA (localStorage) kaydedilip bir
       // sonraki ekipmanda otomatik doldurulur; farklı bir kişi kullanırsa
       // alanı elle değiştirip üzerine yazabilir.
-      document.getElementById('ekKontrolEden').value = _ekSonKontrolEdenGetir();
+      document.getElementById('ekBakimYapan').value = _ekSonKontrolEdenGetir();
       document.getElementById('ekBulgular').value = ekipman.bulgular || '';
       document.getElementById('ekYapilanIslem').value = ekipman.yapilanIslem || '';
       _ekFotoUrlleri = [ekipman.fotoUrl || '', ekipman.fotoUrl2 || '', ekipman.fotoUrl3 || ''];
@@ -442,13 +472,16 @@
         hataEl.classList.remove('gorunur');
 
         const tarih = document.getElementById('ekKontrolTarihi').value;
+        // Kullanıcı isteği: "kontrol eden kısmı boş kalsada kayıt etsin" —
+        // artık zorunlu değil; asıl zorunlu kimlik alanı "Bakım Yapan".
         const kontrolEden = document.getElementById('ekKontrolEden').value.trim();
-        if (!tarih || !kontrolEden) {
-          hataEl.textContent = 'Lütfen kontrol tarihini ve kontrolü yapan kişinin adını girin.';
+        const bakimYapan = document.getElementById('ekBakimYapan').value.trim();
+        if (!tarih || !bakimYapan) {
+          hataEl.textContent = 'Lütfen kontrol tarihini ve bakım yapanın adını girin.';
           hataEl.classList.add('gorunur');
           return;
         }
-        _ekSonKontrolEdenKaydet(kontrolEden);
+        _ekSonKontrolEdenKaydet(bakimYapan);
 
         const gonderBtn = document.getElementById('ekKontrolGonderBtn');
         gonderBtn.disabled = true;
@@ -477,6 +510,7 @@
             bulgular: bulgular.trim(),
             yapilanIslem: yapilanIslem.trim(),
             kontrolEden: kontrolEden,
+            bakimYapan: bakimYapan,
             fotoUrl: _ekFotoUrlleri[0],
             fotoUrl2: _ekFotoUrlleri[1],
             fotoUrl3: _ekFotoUrlleri[2]
