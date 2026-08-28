@@ -902,8 +902,8 @@ function ayIciFaaliyetleriCiz() {
   faaliyetler.forEach(f => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${_ktKacir(f.faaliyet)}</td><td>${f.adet || '-'}</td><td>${_ktKacir(f.aciklama) || '-'}</td>
-      <td><button class="tablo-buton sil" data-sil="${f.id}">Sil</button></td>
+      <td>${_ktKacir(f.faaliyet)}${f.otomatik ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Acil Durum modülünden)</span>' : ''}</td><td>${f.adet || '-'}</td><td>${_ktKacir(f.aciklama) || '-'}</td>
+      <td>${f.otomatik ? '-' : `<button class="tablo-buton sil" data-sil="${f.id}">Sil</button>`}</td>
     `;
     govde.appendChild(satir);
   });

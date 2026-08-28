@@ -709,8 +709,58 @@ function toplantiBaskanSekreterGetir(toplantiId) {
 
 // ---- Ay İçi İSG Çalışmaları (serbest biçimli faaliyet dökümü) ----
 
+// Kullanıcı isteği: "yapılan periyodik kontrolü de İSG kuruluna yapılan isg
+// faaliyetlerine taşı" + "acil durum ekipman kontrollerini de İSG kurulunda
+// yapılan İSG faaliyetlerinde özet bilgi olarak göster , örn 15 adet göz boy
+// duruşun kontrolü yapıldı 30 adet yangın dolabı kontrol edildi vb." — Acil
+// Durum modülünden iki otomatik satır türü, olay-kaza/eğitim entegrasyonlarıyla
+// aynı gerekçeyle (script çakışması) doğrudan tenantAnahtar() ile okunur ve
+// gerçek bir ayIciFaaliyet kaydı oluşturmadan, salt okunur şekilde listeye eklenir.
+function _kurulOtomatikAyIciFaaliyetleriGetir(toplanti) {
+  const ay = toplanti && (toplanti.donem || (toplanti.tarih || '').slice(0, 7));
+  if (!ay) return [];
+  const sonuc = [];
+
+  const ziyaretler = oku(tenantAnahtar('acil_durum_yangin_tupu_ziyaretleri'), [])
+    .filter(z => String(z.tarih || '').slice(0, 7) === ay)
+    .filter(z => !toplanti.tarih || !z.tarih || z.tarih <= toplanti.tarih);
+  ziyaretler.forEach(z => {
+    sonuc.push({
+      id: 'oto-ytz-' + z.id,
+      toplantiId: toplanti.id,
+      faaliyet: 'Yangın Tüpü Periyodik Kontrolü' + (z.yapanFirma ? ' - ' + z.yapanFirma : ''),
+      adet: z.alinanTupSayisi != null && z.alinanTupSayisi !== '' ? String(z.alinanTupSayisi) : '0',
+      aciklama: [z.alinanTupCinsi, z.teslimDurumu ? ('Teslim Durumu: ' + z.teslimDurumu) : ''].filter(Boolean).join(' — '),
+      otomatik: true
+    });
+  });
+
+  const ekipmanlar = oku(tenantAnahtar('acil_durum_ekipmanlari'), [])
+    .filter(e => String(e.sonKontrol || '').slice(0, 7) === ay)
+    .filter(e => !toplanti.tarih || !e.sonKontrol || e.sonKontrol <= toplanti.tarih);
+  const turSayaci = {};
+  ekipmanlar.forEach(e => {
+    const tur = e.tur || 'Diğer';
+    turSayaci[tur] = (turSayaci[tur] || 0) + 1;
+  });
+  Object.keys(turSayaci).sort().forEach(tur => {
+    sonuc.push({
+      id: 'oto-ek-' + tur,
+      toplantiId: toplanti.id,
+      faaliyet: tur + ' Kontrolü',
+      adet: String(turSayaci[tur]),
+      aciklama: turSayaci[tur] + ' adet ' + tur.toLowerCase() + ' kontrol edildi.',
+      otomatik: true
+    });
+  });
+
+  return sonuc;
+}
+
 function toplantiAyIciFaaliyetleriniGetir(toplantiId) {
-  return ayIciFaaliyetTumunuGetir().filter(f => f.toplantiId === toplantiId);
+  const manuel = ayIciFaaliyetTumunuGetir().filter(f => f.toplantiId === toplantiId);
+  const otomatik = _kurulOtomatikAyIciFaaliyetleriGetir(toplantiIdIleGetirRepo(toplantiId));
+  return [...otomatik, ...manuel];
 }
 
 function ayIciFaaliyetEkle(toplantiId, veriler) {
