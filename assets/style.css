@@ -672,6 +672,11 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
 .genel-rozet.rozet-reddedildi { background: #fee2e2; color: #b91c1c; }
 .genel-rozet.rozet-taslak, .genel-rozet.rozet-gerekmiyor { background: #f3f4f6; color: var(--metin-soluk); }
 
+/* Yangın Tüpü Periyodik Kontrol Ziyaretleri (Teslim Durumu) */
+.genel-rozet.rozet-teslim-edildi { background: #dcfce7; color: #15803d; }
+.genel-rozet.rozet-kismen-teslim-edildi { background: #fef3c7; color: #b45309; }
+.genel-rozet.rozet-beklemede { background: #fee2e2; color: #b91c1c; }
+
 /* Tespit ve Öneri Defteri rozetleri */
 .genel-rozet.rozet-kapandi { background: #dcfce7; color: #15803d; }
 .genel-rozet.rozet-teblig-edildi { background: #e0e7ff; color: #4338ca; }

@@ -214,6 +214,28 @@
         </table>
       </div>
       <div class="bos-durum" id="yanginTupuBosDurum"></div>
+
+      <!-- Kullanıcı isteği: "yangın tüplerinin kontrol kayıtları listesi
+           yapalım, yapan firma kim, hangi tarihte geldi kaç tane tüpte
+           problem için alındı, yerlerine tüp konuldu mu gibi ... yangın
+           tüpü periyodik kontrolleri olarak" — tüp envanterinden AYRI,
+           dış firmanın periyodik kontrol ZİYARETLERİNİN kaydı (bkz.
+           ui.js yanginTupuZiyaretleriCiz). -->
+      <div class="form-bolum-baslik" style="margin-top:24px;">Yangın Tüpü Periyodik Kontrolleri</div>
+      <p style="font-size:12px; color:var(--metin-soluk); margin:-4px 0 10px;">
+        Dış firmanın yaptığı periyodik bakım/kontrol ziyaretlerinin kaydı — hangi firma geldi, kaç tüp problemli bulunup alındı, yerlerine tüp konuldu mu.
+      </p>
+      <div class="arac-cubugu">
+        <div></div>
+        <button type="button" class="birincil" id="yanginTupuZiyaretEkleBtn" style="width:auto;">+ Kontrol Kaydı Ekle</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>İşlemler</th><th>Yapan Firma</th><th>Tarih</th><th>Alınan Tüp Sayısı</th><th>Teslim Durumu</th><th>Teslim Tarihi</th><th>Notlar</th></tr></thead>
+          <tbody id="yanginTupuZiyaretTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="yanginTupuZiyaretBosDurum"></div>
     </div>
 
     <!-- TATBİKAT -->
@@ -527,6 +549,53 @@
        _ekipmanImzaPaneliCiz / _ekipmanImzaKaydetTiklandi /
        core/tenant.js firmaEkipmanBolumImzasiKaydet). -->
 
+  <!-- YANGIN TÜPÜ PERİYODİK KONTROL ZİYARETİ MODAL -- kullanıcı isteği:
+       "yangın tüplerinin kontrol kayıtları listesi yapalım, yapan firma
+       kim, hangi tarihte geldi kaç tane tüpte problem için alındı,
+       yerlerine tüp konuldu mu". -->
+  <div class="modal-katman" id="yanginTupuZiyaretModalKatman">
+    <div class="modal-kutu" style="max-width:480px;">
+      <h3 id="yanginTupuZiyaretModalBaslik">Yeni Kontrol Kaydı</h3>
+      <form id="yanginTupuZiyaretForm">
+        <label for="ytzYapanFirma">Yapan Firma *</label>
+        <input type="text" id="ytzYapanFirma">
+        <div class="alan-hatasi" id="ytzYapanFirmaHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ytzTarih">Tarih *</label>
+            <input type="date" id="ytzTarih">
+            <div class="alan-hatasi" id="ytzTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="ytzAlinanTupSayisi">Alınan Tüp Sayısı <span style="color:var(--metin-soluk); font-weight:400;">(problem nedeniyle)</span></label>
+            <input type="number" id="ytzAlinanTupSayisi" min="0">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="ytzTeslimDurumu">Yerlerine Tüp Konuldu mu?</label>
+            <select id="ytzTeslimDurumu"></select>
+          </div>
+          <div>
+            <label for="ytzTeslimTarihi">Teslim Tarihi <span style="color:var(--metin-soluk); font-weight:400;">(varsa)</span></label>
+            <input type="date" id="ytzTeslimTarihi">
+          </div>
+        </div>
+
+        <label for="ytzNotlar">Notlar</label>
+        <textarea id="ytzNotlar" rows="3"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="yanginTupuZiyaretModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+        <button type="button" class="tablo-buton" id="yanginTupuZiyaretModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+      </form>
+    </div>
+  </div>
+
   <!-- YANGIN TÜPÜ MODAL -->
   <div class="modal-katman" id="yanginTupuModalKatman">
     <div class="modal-kutu" style="max-width:600px;">
@@ -735,13 +804,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=9"></script>
-  <script src="validation.js?v=2"></script>
-  <script src="repository.js?v=4"></script>
-  <script src="service.js?v=10"></script>
+  <script src="model.js?v=10"></script>
+  <script src="validation.js?v=3"></script>
+  <script src="repository.js?v=5"></script>
+  <script src="service.js?v=11"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=20"></script>
+  <script src="ui.js?v=21"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

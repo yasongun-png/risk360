@@ -116,6 +116,12 @@ function acilDurumSayfasiniBaslat(firma) {
   document.getElementById('yanginTupuModalKapatBtn').addEventListener('click', yanginTupuModalKapat);
   document.getElementById('yanginTupuModalIptalBtn').addEventListener('click', yanginTupuModalKapat);
   document.getElementById('yanginTupuForm').addEventListener('submit', yanginTupuFormGonderildi);
+  // Kullanıcı isteği: "yangın tüpü periyodik kontrolleri" (dış firma
+  // ziyaretleri) — bkz. yanginTupuZiyaretleriCiz.
+  document.getElementById('yanginTupuZiyaretEkleBtn').addEventListener('click', () => yanginTupuZiyaretModalAc());
+  document.getElementById('yanginTupuZiyaretModalKapatBtn').addEventListener('click', yanginTupuZiyaretModalKapat);
+  document.getElementById('yanginTupuZiyaretModalIptalBtn').addEventListener('click', yanginTupuZiyaretModalKapat);
+  document.getElementById('yanginTupuZiyaretForm').addEventListener('submit', yanginTupuZiyaretFormGonderildi);
   document.getElementById('yanginTupuAramaKutusu').addEventListener('input', e => yanginTupleriniCiz(e.target.value));
   document.getElementById('yanginTupuSeriNumarasi').addEventListener('input', _yanginTupuSeriNumarasiUyariGuncelle);
   document.getElementById('yanginTupuTumunuSecCheckbox').addEventListener('change', e => {
@@ -403,7 +409,7 @@ function gorunumDegistir(gorunum) {
     _ekipmanBolumSekmeleriCiz();
     ekipmanlariCiz('');
   }
-  else if (gorunum === 'yanginTupu') yanginTupleriniCiz('');
+  else if (gorunum === 'yanginTupu') { yanginTupleriniCiz(''); yanginTupuZiyaretleriCiz(); }
   else if (gorunum === 'tatbikat') tatbikatlariCiz('');
 }
 
@@ -1590,6 +1596,93 @@ function yanginTupuFormGonderildi(e) {
   _bekleyenHaritaKonum = null;
   yanginTupuModalKapat();
   yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
+}
+
+// ==================== YANGIN TÜPÜ PERİYODİK KONTROL ZİYARETLERİ ====================
+// Kullanıcı isteği: "yangın tüplerinin kontrol kayıtları listesi yapalım,
+// yapan firma kim, hangi tarihte geldi kaç tane tüpte problem için alındı,
+// yerlerine tüp konuldu mu gibi ayrı bir liste ... yangın tüpü periyodik
+// kontrolleri olarak" — tüp envanterinden AYRI, dış firmanın periyodik
+// kontrol ziyaretinin kendi kaydı (bkz. model.js yanginTupuZiyaretOlustur).
+let _duzenlenenYanginTupuZiyaretId = null;
+
+function yanginTupuZiyaretleriCiz() {
+  const govde = document.getElementById('yanginTupuZiyaretTabloGovde');
+  const bosDurum = document.getElementById('yanginTupuZiyaretBosDurum');
+  if (!govde) return;
+  const liste = yanginTupuZiyaretleriGetir();
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Henüz periyodik kontrol kaydı eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(z => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>
+        <button class="tablo-buton" data-ytz-duzenle="${z.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-ytz-sil="${z.id}">Sil</button>
+      </td>
+      <td>${_adKacir(z.yapanFirma)}</td>
+      <td>${gunAyYil(z.tarih) || '-'}</td>
+      <td>${z.alinanTupSayisi || 0}</td>
+      <td><span class="genel-rozet rozet-${rozetSinifAdi(z.teslimDurumu)}">${_adKacir(z.teslimDurumu)}</span></td>
+      <td>${gunAyYil(z.teslimTarihi) || '-'}</td>
+      <td>${_adKacir(z.notlar) || '-'}</td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-ytz-duzenle]').forEach(btn => btn.addEventListener('click', () => yanginTupuZiyaretModalAc(yanginTupuZiyaretiIdIleGetirRepo(btn.getAttribute('data-ytz-duzenle')))));
+  govde.querySelectorAll('[data-ytz-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu periyodik kontrol kaydını silmek istediğinize emin misiniz?', 'Sil')) {
+      const sonuc = yanginTupuZiyaretiSil(btn.getAttribute('data-ytz-sil'));
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      yanginTupuZiyaretleriCiz();
+    }
+  }));
+}
+
+function yanginTupuZiyaretModalAc(ziyaret) {
+  _duzenlenenYanginTupuZiyaretId = ziyaret ? ziyaret.id : null;
+  document.getElementById('yanginTupuZiyaretModalBaslik').textContent = ziyaret ? 'Kontrol Kaydını Düzenle' : 'Yeni Kontrol Kaydı';
+  document.getElementById('ytzYapanFirma').value = ziyaret ? ziyaret.yapanFirma : '';
+  document.getElementById('ytzTarih').value = ziyaret ? ziyaret.tarih : bugunIso();
+  document.getElementById('ytzAlinanTupSayisi').value = ziyaret ? ziyaret.alinanTupSayisi : 0;
+  document.getElementById('ytzTeslimDurumu').innerHTML = YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.map(d => `<option ${ziyaret && ziyaret.teslimDurumu === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('ytzTeslimTarihi').value = ziyaret ? ziyaret.teslimTarihi : '';
+  document.getElementById('ytzNotlar').value = ziyaret ? ziyaret.notlar : '';
+  temizleFormHatalari('yanginTupuZiyaretForm');
+  document.getElementById('yanginTupuZiyaretModalKatman').classList.add('acik');
+}
+
+function yanginTupuZiyaretModalKapat() {
+  document.getElementById('yanginTupuZiyaretModalKatman').classList.remove('acik');
+  _duzenlenenYanginTupuZiyaretId = null;
+}
+
+function yanginTupuZiyaretFormGonderildi(e) {
+  e.preventDefault();
+  temizleFormHatalari('yanginTupuZiyaretForm');
+
+  const veriler = {
+    yapanFirma: document.getElementById('ytzYapanFirma').value,
+    tarih: document.getElementById('ytzTarih').value,
+    alinanTupSayisi: document.getElementById('ytzAlinanTupSayisi').value,
+    teslimDurumu: document.getElementById('ytzTeslimDurumu').value,
+    teslimTarihi: document.getElementById('ytzTeslimTarihi').value,
+    notlar: document.getElementById('ytzNotlar').value
+  };
+
+  const sonuc = _duzenlenenYanginTupuZiyaretId ? yanginTupuZiyaretiGuncelle(_duzenlenenYanginTupuZiyaretId, veriler) : yanginTupuZiyaretiEkle(veriler);
+  if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar, 'ytz'); return; }
+
+  yanginTupuZiyaretModalKapat();
+  yanginTupuZiyaretleriCiz();
 }
 
 // ==================== TATBİKAT ====================

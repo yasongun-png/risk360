@@ -345,6 +345,45 @@ function yanginTupuToplusil(idler) {
   return { basarili: true, silinen: tumu.length - kalanlar.length };
 }
 
+// ---- Yangın Tüpü Periyodik Kontrol Ziyaretleri ----
+// Kullanıcı isteği: "yangın tüplerinin kontrol kayıtları listesi yapalım,
+// yapan firma kim, hangi tarihte geldi kaç tane tüpte problem için
+// alındı, yerlerine tüp konuldu mu gibi ... yangın tüpü periyodik
+// kontrolleri olarak" — dış firmanın yaptığı periyodik bakım/kontrol
+// ziyaretinin kendi kaydı (tüp envanterinden ayrı, bkz. model.js
+// yanginTupuZiyaretOlustur).
+function yanginTupuZiyaretleriGetir() {
+  return yanginTupuZiyaretleriTumunuGetir().slice().sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+}
+
+function yanginTupuZiyaretiEkle(veriler) {
+  const dogrulama = yanginTupuZiyaretiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = yanginTupuZiyaretOlustur(veriler);
+  yanginTupuZiyaretiEkleRepo(yeni);
+  return { basarili: true, ziyaret: yeni };
+}
+
+function yanginTupuZiyaretiGuncelle(id, veriler) {
+  const dogrulama = yanginTupuZiyaretiDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const guncellenen = yanginTupuZiyaretiGuncelleRepo(id, {
+    yapanFirma: (veriler.yapanFirma || '').trim(),
+    tarih: veriler.tarih,
+    alinanTupSayisi: Number(veriler.alinanTupSayisi || 0),
+    teslimDurumu: YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.includes(veriler.teslimDurumu) ? veriler.teslimDurumu : 'Beklemede',
+    teslimTarihi: veriler.teslimTarihi || '',
+    notlar: (veriler.notlar || '').trim()
+  });
+  return { basarili: true, ziyaret: guncellenen };
+}
+
+function yanginTupuZiyaretiSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  yanginTupuZiyaretiSilRepo(id);
+  return { basarili: true };
+}
+
 // Formdaki seri numarasıyla envanterde zaten kayıtlı bir tüp olup olmadığını
 // arar — ui.js bu sonuca göre "zaten listede" uyarısı gösterir, tekrar kayıt
 // oluşturmayı otomatik ENGELLEMEZ (kullanıcı isterse yine de yeni kayıt ekleyebilir).

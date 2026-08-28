@@ -21,6 +21,13 @@ function yanginTupuDogrula(veriler) {
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
 
+function yanginTupuZiyaretiDogrula(veriler) {
+  const hatalar = {};
+  if (!veriler.yapanFirma || !veriler.yapanFirma.trim()) hatalar.yapanFirma = 'Yapan firma zorunludur.';
+  if (!veriler.tarih) hatalar.tarih = 'Tarih zorunludur.';
+  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
+}
+
 function tatbikatDogrula(veriler) {
   const hatalar = {};
   if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Tatbikat adı zorunludur.';

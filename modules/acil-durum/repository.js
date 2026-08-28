@@ -3,6 +3,10 @@
 function _ekipAnahtari() { return tenantAnahtar('acil_durum_ekipleri'); }
 function _ekipmanAnahtari() { return tenantAnahtar('acil_durum_ekipmanlari'); }
 function _yanginTupuAnahtari() { return tenantAnahtar('acil_durum_yangin_tupleri'); }
+// Kullanıcı isteği: "yangın tüplerinin kontrol kayıtları listesi yapalım
+// ... yangın tüpü periyodik kontrolleri olarak" — dış firma bakım/kontrol
+// ziyaretlerinin kendi kaydı, tüp envanterinden AYRI bir liste.
+function _yanginTupuZiyaretAnahtari() { return tenantAnahtar('acil_durum_yangin_tupu_ziyaretleri'); }
 function _tatbikatAnahtari() { return tenantAnahtar('acil_durum_tatbikatlari'); }
 function _senaryoAnahtari() { return tenantAnahtar('acil_durum_senaryolari'); }
 function _planAnahtari() { return tenantAnahtar('acil_durum_plani'); }
@@ -83,6 +87,14 @@ function yanginTupuIdIleGetirRepo(id) { return yanginTupleriTumunuGetir().find(x
 function yanginTupuListesiKaydetRepo(liste) { _genelListeKaydet(_yanginTupuAnahtari, liste); }
 // Excel içe aktarma için — bkz. _genelListeKaydetVeBekle yorumu.
 function yanginTupuListesiKaydetRepoVeBekle(liste) { return _genelListeKaydetVeBekle(_yanginTupuAnahtari, liste); }
+
+// Kullanıcı isteği: "yangın tüpü periyodik kontrolleri" (dış firma
+// ziyaretleri) — tüp envanterinden ayrı, kendi basit CRUD'u.
+function yanginTupuZiyaretleriTumunuGetir() { return _genelListeGetir(_yanginTupuZiyaretAnahtari); }
+function yanginTupuZiyaretiEkleRepo(k) { return _genelEkle(_yanginTupuZiyaretAnahtari, k); }
+function yanginTupuZiyaretiGuncelleRepo(id, v) { return _genelGuncelle(_yanginTupuZiyaretAnahtari, id, v); }
+function yanginTupuZiyaretiSilRepo(id) { _genelSil(_yanginTupuZiyaretAnahtari, id); }
+function yanginTupuZiyaretiIdIleGetirRepo(id) { return yanginTupuZiyaretleriTumunuGetir().find(x => x.id === id) || null; }
 
 function tatbikatlariTumunuGetir() { return _genelListeGetir(_tatbikatAnahtari); }
 function tatbikatEkleRepo(k) { return _genelEkle(_tatbikatAnahtari, k); }

@@ -613,6 +613,28 @@ function yanginTupuOlustur(veriler) {
   };
 }
 
+// Kullanıcı isteği: "yangın tüplerinin kontrol kayıtları listesi yapalım,
+// yapan firma kim, hangi tarihte geldi, kaç tane tüpte problem için
+// alındı, yerlerine tüp konuldu mu gibi ayrı bir liste, yangın tüpü
+// periyodik kontrolleri olarak" — bu, TEK bir tüpün kendi kaydındaki
+// Yıllık Bakım/Hidrostatik Test tarihlerinden FARKLI: dış firmanın yaptığı
+// TOPLU periyodik kontrol ZİYARETİNİN kendisinin kaydı (o gün kaç tüp
+// alındı, geri geldi mi vb.) — firma bazlı, tek bir ziyarete ait özet bilgi.
+const YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI = ['Beklemede', 'Kısmen Teslim Edildi', 'Teslim Edildi'];
+
+function yanginTupuZiyaretOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    yapanFirma: (veriler.yapanFirma || '').trim(),
+    tarih: veriler.tarih || bugunIso(),
+    alinanTupSayisi: Number(veriler.alinanTupSayisi || 0),
+    teslimDurumu: YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.includes(veriler.teslimDurumu) ? veriler.teslimDurumu : 'Beklemede',
+    teslimTarihi: veriler.teslimTarihi || '',
+    notlar: (veriler.notlar || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
 function tatbikatOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
