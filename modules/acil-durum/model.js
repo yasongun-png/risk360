@@ -628,6 +628,11 @@ function yanginTupuZiyaretOlustur(veriler) {
     yapanFirma: (veriler.yapanFirma || '').trim(),
     tarih: veriler.tarih || bugunIso(),
     alinanTupSayisi: Number(veriler.alinanTupSayisi || 0),
+    // Kullanıcı isteği: "hangi cins ve ağırlıkta yangın tüpü alındı" —
+    // serbest metin (ör. "6 KG Kuru Kimyevi Toz (KKT) x 3, 5 KG CO2 x 2");
+    // ziyarette birden fazla tür/ağırlık karışık alınabildiğinden yapılı
+    // bir alan yerine serbest metin tercih edildi.
+    alinanTupCinsi: (veriler.alinanTupCinsi || '').trim(),
     teslimDurumu: YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.includes(veriler.teslimDurumu) ? veriler.teslimDurumu : 'Beklemede',
     teslimTarihi: veriler.teslimTarihi || '',
     notlar: (veriler.notlar || '').trim(),

@@ -185,6 +185,12 @@
           <input type="file" id="yanginTupuIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="yanginTupuDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="yanginTupuYazdirBtn">Yazdır</button>
+          <!-- Kullanıcı isteği: "yukarda bunun bir butonu olsun aşağıda
+               görülmeyebilir butona basınca aşağıya yönlendirsin" —
+               Periyodik Kontroller bölümü sayfanın altında kalıp fark
+               edilmeyebiliyordu, bu düğme oraya kaydırır (bkz.
+               #yanginTupuZiyaretBaslik ve ui.js scrollIntoView). -->
+          <button type="button" class="ikincil" id="yanginTupuZiyaretlereGitBtn">🔽 Periyodik Kontroller</button>
           <button type="button" class="ikincil" id="yanginTupuBarkodTaraBtn">📸 Barkod Tara (Kamera)</button>
           <!-- Kullanıcı raporu: "bu barkodu okumadı" — parlak/eğri metal
                etiket üzerindeki yoğun QR kodu, canlı kamera görüntüsünden
@@ -221,7 +227,7 @@
            tüpü periyodik kontrolleri olarak" — tüp envanterinden AYRI,
            dış firmanın periyodik kontrol ZİYARETLERİNİN kaydı (bkz.
            ui.js yanginTupuZiyaretleriCiz). -->
-      <div class="form-bolum-baslik" style="margin-top:24px;">Yangın Tüpü Periyodik Kontrolleri</div>
+      <div class="form-bolum-baslik" id="yanginTupuZiyaretBaslik" style="margin-top:24px; scroll-margin-top:16px;">Yangın Tüpü Periyodik Kontrolleri</div>
       <p style="font-size:12px; color:var(--metin-soluk); margin:-4px 0 10px;">
         Dış firmanın yaptığı periyodik bakım/kontrol ziyaretlerinin kaydı — hangi firma geldi, kaç tüp problemli bulunup alındı, yerlerine tüp konuldu mu.
       </p>
@@ -231,7 +237,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>İşlemler</th><th>Yapan Firma</th><th>Tarih</th><th>Alınan Tüp Sayısı</th><th>Teslim Durumu</th><th>Teslim Tarihi</th><th>Notlar</th></tr></thead>
+          <thead><tr><th>İşlemler</th><th>Yapan Firma</th><th>Tarih</th><th>Alınan Tüp Sayısı</th><th>Cins ve Ağırlık</th><th>Teslim Durumu</th><th>Teslim Tarihi</th><th>Notlar</th></tr></thead>
           <tbody id="yanginTupuZiyaretTabloGovde"></tbody>
         </table>
       </div>
@@ -573,6 +579,12 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği: "hangi cins ve ağırlıkta yangın tüpü
+             alındı" -- ziyarette birden fazla tür/ağırlık karışık
+             alınabildiğinden serbest metin (ör. "6 KG KKT x 3, 5 KG CO2 x 2"). -->
+        <label for="ytzAlinanTupCinsi">Alınan Tüplerin Cinsi ve Ağırlığı</label>
+        <input type="text" id="ytzAlinanTupCinsi" placeholder="ör. 6 KG Kuru Kimyevi Toz (KKT) x 3, 5 KG CO2 x 2">
+
         <div class="form-satir-ikili">
           <div>
             <label for="ytzTeslimDurumu">Yerlerine Tüp Konuldu mu?</label>
@@ -804,13 +816,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=10"></script>
+  <script src="model.js?v=11"></script>
   <script src="validation.js?v=3"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=11"></script>
+  <script src="service.js?v=12"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=21"></script>
+  <script src="ui.js?v=22"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

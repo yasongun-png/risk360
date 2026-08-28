@@ -128,6 +128,12 @@ function acilDurumSayfasiniBaslat(firma) {
     document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
   document.getElementById('yanginTupuSeciliSilBtn').addEventListener('click', yanginTupuSeciliSil);
+  // Kullanıcı isteği: "yukarda bunun bir butonu olsun aşağıda
+  // görülmeyebilir butona basınca aşağıya yönlendirsin" — Periyodik
+  // Kontroller bölümü sayfa altında kalıp fark edilmeyebiliyordu.
+  document.getElementById('yanginTupuZiyaretlereGitBtn').addEventListener('click', () => {
+    document.getElementById('yanginTupuZiyaretBaslik').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   document.getElementById('yanginTupuBarkodTaraBtn').addEventListener('click', yanginTupuBarkodTaramaBaslat);
   document.getElementById('yanginTupuBarkodTaramaKapatBtn').addEventListener('click', yanginTupuBarkodTaramaDurdur);
   document.getElementById('yanginTupuBarkodFotoBtn').addEventListener('click', () => document.getElementById('yanginTupuBarkodFotoDosya').click());
@@ -1630,6 +1636,7 @@ function yanginTupuZiyaretleriCiz() {
       <td>${_adKacir(z.yapanFirma)}</td>
       <td>${gunAyYil(z.tarih) || '-'}</td>
       <td>${z.alinanTupSayisi || 0}</td>
+      <td>${_adKacir(z.alinanTupCinsi) || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(z.teslimDurumu)}">${_adKacir(z.teslimDurumu)}</span></td>
       <td>${gunAyYil(z.teslimTarihi) || '-'}</td>
       <td>${_adKacir(z.notlar) || '-'}</td>
@@ -1653,6 +1660,7 @@ function yanginTupuZiyaretModalAc(ziyaret) {
   document.getElementById('ytzYapanFirma').value = ziyaret ? ziyaret.yapanFirma : '';
   document.getElementById('ytzTarih').value = ziyaret ? ziyaret.tarih : bugunIso();
   document.getElementById('ytzAlinanTupSayisi').value = ziyaret ? ziyaret.alinanTupSayisi : 0;
+  document.getElementById('ytzAlinanTupCinsi').value = ziyaret ? ziyaret.alinanTupCinsi || '' : '';
   document.getElementById('ytzTeslimDurumu').innerHTML = YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.map(d => `<option ${ziyaret && ziyaret.teslimDurumu === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ytzTeslimTarihi').value = ziyaret ? ziyaret.teslimTarihi : '';
   document.getElementById('ytzNotlar').value = ziyaret ? ziyaret.notlar : '';
@@ -1673,6 +1681,7 @@ function yanginTupuZiyaretFormGonderildi(e) {
     yapanFirma: document.getElementById('ytzYapanFirma').value,
     tarih: document.getElementById('ytzTarih').value,
     alinanTupSayisi: document.getElementById('ytzAlinanTupSayisi').value,
+    alinanTupCinsi: document.getElementById('ytzAlinanTupCinsi').value,
     teslimDurumu: document.getElementById('ytzTeslimDurumu').value,
     teslimTarihi: document.getElementById('ytzTeslimTarihi').value,
     notlar: document.getElementById('ytzNotlar').value

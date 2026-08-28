@@ -371,6 +371,9 @@ function yanginTupuZiyaretiGuncelle(id, veriler) {
     yapanFirma: (veriler.yapanFirma || '').trim(),
     tarih: veriler.tarih,
     alinanTupSayisi: Number(veriler.alinanTupSayisi || 0),
+    // Kullanıcı isteği: "hangi cins ve ağırlıkta yangın tüpü alındı" —
+    // bkz. model.js yanginTupuZiyaretOlustur aynı notu.
+    alinanTupCinsi: (veriler.alinanTupCinsi || '').trim(),
     teslimDurumu: YANGIN_TUPU_ZIYARET_TESLIM_DURUMLARI.includes(veriler.teslimDurumu) ? veriler.teslimDurumu : 'Beklemede',
     teslimTarihi: veriler.teslimTarihi || '',
     notlar: (veriler.notlar || '').trim()
