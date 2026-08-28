@@ -1109,6 +1109,7 @@ function ekipmanModalAc(ekipman) {
   // raporlarda görünür.
   document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'Eksik', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
+  document.getElementById('ekipmanYapilanIslem').value = ekipman ? ekipman.yapilanIslem || '' : '';
   document.getElementById('ekipmanNotlar').value = ekipman ? ekipman.notlar : '';
   _ekipmanFotoUrlleri = ekipman ? [ekipman.fotoUrl || '', ekipman.fotoUrl2 || '', ekipman.fotoUrl3 || ''] : ['', '', ''];
   [1, 2, 3].forEach(i => {
@@ -1348,6 +1349,7 @@ function ekipmanFormGonderildi(e) {
     sorumlu: document.getElementById('ekipmanSorumlu').value,
     durum: document.getElementById('ekipmanDurum').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
+    yapilanIslem: document.getElementById('ekipmanYapilanIslem').value,
     kontrolCevaplari: _ekipmanKontrolListesiTopla(),
     malzemeListesi: _ekipmanMalzemeListesi,
     malzemeKontrolleri: _ekipmanMalzemeKontrolleri,

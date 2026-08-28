@@ -118,6 +118,14 @@
             <textarea id="ekBulgular" rows="3"></textarea>
           </div>
 
+          <!-- Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan
+               forma yazıp kayıt edebilsin" — Bulgular'dan (tespit edilen
+               durum) ayrı, bakımcının fiilen ne yaptığını yazdığı alan. -->
+          <div class="ek-alan">
+            <label for="ekYapilanIslem">Yapılan İşlem</label>
+            <textarea id="ekYapilanIslem" rows="3" placeholder="Değiştirilen parça, yapılan müdahale vb."></textarea>
+          </div>
+
           <div class="hata-mesaji" id="ekKontrolHata"></div>
           <button type="submit" class="birincil ek-gonder-btn" id="ekKontrolGonderBtn">Kontrolü Kaydet</button>
           <button type="button" class="ikincil" id="ekBaskaKodBtn" style="width:100%; margin-top:8px;">← Başka Ekipman</button>
@@ -182,6 +190,7 @@
       document.getElementById('ekKontrolTarihi').value = bugunIso();
       document.getElementById('ekKontrolEden').value = '';
       document.getElementById('ekBulgular').value = ekipman.bulgular || '';
+      document.getElementById('ekYapilanIslem').value = ekipman.yapilanIslem || '';
       const kontrolHataEl = document.getElementById('ekKontrolHata');
       kontrolHataEl.textContent = '';
       kontrolHataEl.classList.remove('gorunur');
@@ -362,6 +371,7 @@
           const cevaplar = {};
           document.querySelectorAll('[data-ek-soru]').forEach(sel => { cevaplar[sel.getAttribute('data-ek-soru')] = sel.value; });
           const bulgular = document.getElementById('ekBulgular').value;
+          const yapilanIslem = document.getElementById('ekYapilanIslem').value;
 
           const anahtar = _ekEnvanterAnahtari();
           const liste = oku(anahtar, []);
@@ -377,6 +387,7 @@
               return acc;
             }, {}),
             bulgular: bulgular.trim(),
+            yapilanIslem: yapilanIslem.trim(),
             kontrolEden: kontrolEden
           });
 

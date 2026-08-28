@@ -166,6 +166,9 @@ function ekipmanGuncelle(id, veriler) {
     sorumlu: (veriler.sorumlu || '').trim(),
     durum: veriler.durum || 'Aktif',
     bulgular: (veriler.bulgular || '').trim(),
+    // Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan forma
+    // yazıp kayıt edebilsin" — bkz. model.js ekipmanOlustur aynı notu.
+    yapilanIslem: (veriler.yapilanIslem || '').trim(),
     kontrolCevaplari: sorular.reduce((acc, s) => {
       const cevap = (veriler.kontrolCevaplari || {})[s.id];
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';

@@ -504,6 +504,13 @@ function ekipmanOlustur(veriler) {
     // Son kontrolü fiilen kimin yaptığı (kullanıcı isteği: "kontrolü kim
     // yaptı bunların girilmesi lazım").
     kontrolEden: (veriler.kontrolEden || '').trim(),
+    // Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan forma
+    // yazıp kayıt edebilsin" — "Bulgular" (tespit edilen durum) ile aynı
+    // kayıtta ama ayrı bir alan: bakımcının fiilen NE YAPTIĞI (değiştirilen
+    // parça, yapılan müdahale vb.). Hem uygulama içi Ekipman formunda hem
+    // ekipman-kontrol-bildir.html'de (barkodla açılan bakımcı formu)
+    // doldurulabilir.
+    yapilanIslem: (veriler.yapilanIslem || '').trim(),
     kontrolCevaplari: sorular.reduce((acc, s) => {
       const cevap = (veriler.kontrolCevaplari || {})[s.id];
       acc[s.id] = EKIPMAN_KONTROL_CEVAP_SECENEKLERI.includes(cevap) ? cevap : '';

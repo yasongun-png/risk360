@@ -127,7 +127,10 @@ async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
       _kfParagraf('Dolap İçi Malzeme Kontrolü:', { spacing: { before: 120, after: 80 } }),
       _kfKontrolTablosu(ekipman.malzemeListesi.map(m => ({ id: m.id, soru: `${m.ad} (${m.adet || 1} adet)` })), ekipman.malzemeKontrolleri || {})
     ] : []),
-    _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: fotolar.length ? 80 : 200 } }),
+    _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: 80 } }),
+    // Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan forma
+    // yazıp kayıt edebilsin" — Bulgular'ın hemen altında ayrı satır.
+    _kfParagraf(`Yapılan İşlem: ${_kfTireVeyaDeger(ekipman.yapilanIslem)}`, { spacing: { before: 0, after: fotolar.length ? 80 : 200 } }),
     ...(fotolar.length ? [new docx.Paragraph({
       spacing: { after: 200 },
       children: fotolar.flatMap((f, i) => [

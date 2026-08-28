@@ -408,6 +408,13 @@
         <label for="ekipmanBulgular">Bulgular</label>
         <textarea id="ekipmanBulgular"></textarea>
 
+        <!-- Kullanıcı isteği: "bakımcı yaptığı işi de barkod ile açılan
+             forma yazıp kayıt edebilsin" — aynı alan, barkodla açılan
+             bakımcı formunda (ekipman-kontrol-bildir.html) doldurulunca
+             burada da (İSG uzmanı tarafı) görünür/düzenlenebilir olsun diye. -->
+        <label for="ekipmanYapilanIslem">Yapılan İşlem</label>
+        <textarea id="ekipmanYapilanIslem" placeholder="Değiştirilen parça, yapılan müdahale vb."></textarea>
+
         <!-- Kullanıcı isteği: "acil durum ekipman kontrollerine her bir
              kontrol için 3 adet fotoğraf ekleyebilmek istiyorum" -->
         <label>Fotoğraflar <span style="color:var(--metin-soluk); font-weight:400;">(kontrol/bulgu kanıtı, en fazla 3 adet, opsiyonel)</span></label>
@@ -721,13 +728,13 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=7"></script>
+  <script src="model.js?v=8"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=4"></script>
-  <script src="service.js?v=8"></script>
-  <script src="kontrol-formu-cikti.js?v=10"></script>
+  <script src="service.js?v=9"></script>
+  <script src="kontrol-formu-cikti.js?v=11"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=18"></script>
+  <script src="ui.js?v=19"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
