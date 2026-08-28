@@ -28,9 +28,12 @@ function uygunsuzluklariGetir(aramaMetni, filtreler) {
     const aKapali = a.durum === 'Kapalı' || a.durum === 'İptal';
     const bKapali = b.durum === 'Kapalı' || b.durum === 'İptal';
     if (aKapali !== bKapali) return aKapali ? 1 : -1;
-    // Bildirim tarihi geriye dönük girilebildiği için (kullanıcı isteği)
-    // sıralama gerçek giriş anına (olusturmaTarihi) göre yapılır — en son
-    // eklenen açık kayıt en üstte görünür.
+    // Kullanıcı isteği: "uygunsuzluklarda kapatılanlar kapatıldığı tarihe
+    // göre sıralı görünsün" — kapalı/iptal kayıtlar KAPANIŞ tarihine göre
+    // (en son kapatılan en üstte), açık kayıtlar ise (bildirim tarihi
+    // geriye dönük girilebildiği için) gerçek giriş anına (olusturmaTarihi)
+    // göre sıralanır — en son eklenen açık kayıt en üstte görünür.
+    if (aKapali) return (b.kapanisTarihi || '').localeCompare(a.kapanisTarihi || '');
     return (b.olusturmaTarihi || '').localeCompare(a.olusturmaTarihi || '');
   });
 }
