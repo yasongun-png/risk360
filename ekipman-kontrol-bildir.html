@@ -126,6 +126,32 @@
             <textarea id="ekYapilanIslem" rows="3" placeholder="Değiştirilen parça, yapılan müdahale vb."></textarea>
           </div>
 
+          <!-- Kullanıcı isteği: "bakımcı barkod okutup kontrol ettikten
+               sonra fotoğraf da çekip ekleyebilsin" — modules/acil-durum/
+               ui.js'teki 3 fotoğraf slotu ile AYNI desen (fotoSikistir +
+               fotoBuyukKaydet, Storage/CORS'a hiç uğramaz), ama burada
+               sadece "Çek" (kamera) var — bakımcı zaten sahada. -->
+          <div class="ek-alan">
+            <label>Fotoğraflar <span style="font-weight:400; color:var(--metin-soluk, #6b7280);">(opsiyonel, en fazla 3 adet)</span></label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:90px;">
+                <button type="button" class="ikincil" id="ekFoto1CekBtn" style="width:100%; padding:8px; font-size:12px;">📷 Çek 1</button>
+                <input type="file" id="ekFoto1CekDosya" accept="image/*" capture="environment" style="display:none;">
+                <div id="ekFoto1Onizleme" style="margin-top:6px;"></div>
+              </div>
+              <div style="flex:1; min-width:90px;">
+                <button type="button" class="ikincil" id="ekFoto2CekBtn" style="width:100%; padding:8px; font-size:12px;">📷 Çek 2</button>
+                <input type="file" id="ekFoto2CekDosya" accept="image/*" capture="environment" style="display:none;">
+                <div id="ekFoto2Onizleme" style="margin-top:6px;"></div>
+              </div>
+              <div style="flex:1; min-width:90px;">
+                <button type="button" class="ikincil" id="ekFoto3CekBtn" style="width:100%; padding:8px; font-size:12px;">📷 Çek 3</button>
+                <input type="file" id="ekFoto3CekDosya" accept="image/*" capture="environment" style="display:none;">
+                <div id="ekFoto3Onizleme" style="margin-top:6px;"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="hata-mesaji" id="ekKontrolHata"></div>
           <button type="submit" class="birincil ek-gonder-btn" id="ekKontrolGonderBtn">Kontrolü Kaydet</button>
           <button type="button" class="ikincil" id="ekBaskaKodBtn" style="width:100%; margin-top:8px;">← Başka Ekipman</button>
@@ -156,6 +182,10 @@
     const _ekSlug = (_ekParams.get('firma') || '').trim();
     let _ekFirma = null;
     let _ekBulunanEkipman = null;
+    // Kullanıcı isteği: "bakımcı barkod okutup kontrol ettikten sonra
+    // fotoğraf da çekip ekleyebilsin" — modules/acil-durum/ui.js
+    // _ekipmanFotoUrlleri ile aynı desen (fotoUrl/fotoUrl2/fotoUrl3).
+    let _ekFotoUrlleri = ['', '', ''];
 
     function _ekEnvanterAnahtari() {
       return 'isg_' + _ekFirma.slug + '_acil_durum_ekipmanlari';
@@ -208,6 +238,8 @@
       document.getElementById('ekKontrolEden').value = _ekSonKontrolEdenGetir();
       document.getElementById('ekBulgular').value = ekipman.bulgular || '';
       document.getElementById('ekYapilanIslem').value = ekipman.yapilanIslem || '';
+      _ekFotoUrlleri = [ekipman.fotoUrl || '', ekipman.fotoUrl2 || '', ekipman.fotoUrl3 || ''];
+      [1, 2, 3].forEach(i => { document.getElementById('ekFoto' + i + 'CekDosya').value = ''; _ekFotoOnizlemeCiz(i); });
       const kontrolHataEl = document.getElementById('ekKontrolHata');
       kontrolHataEl.textContent = '';
       kontrolHataEl.classList.remove('gorunur');
@@ -232,6 +264,40 @@
     // bir liste de olsun" — barkodu okutamadığı/ekipman no'yu bilmediği
     // durumlarda TÜM ekipman envanterine göz atıp dokunarak seçebileceği,
     // arama kutulu bir liste.
+    // Kullanıcı isteği: "bakımcı barkod okutup kontrol ettikten sonra
+    // fotoğraf da çekip ekleyebilsin" — modules/acil-durum/ui.js
+    // _ekipmanFotoSecildi/_ekipmanFotoOnizlemeCiz ile AYNI desen; doğrudan
+    // fotoSikistir + fotoBuyukKaydet kullanılır (Storage/CORS'a hiç
+    // uğranmaz, core/data.js'te zaten yüklü).
+    async function _ekFotoSecildi(e, index) {
+      const dosya = e.target.files[0];
+      e.target.value = '';
+      if (!dosya) return;
+      try {
+        const dataUrl = await fotoSikistir(dosya, 900, 0.6);
+        _ekFotoUrlleri[index - 1] = await fotoBuyukKaydet(dataUrl, _ekFirma ? _ekFirma.slug : '');
+        _ekFotoOnizlemeCiz(index);
+      } catch (hata) {
+        alert(hata.message || 'Fotoğraf yüklenemedi.');
+      }
+    }
+
+    function _ekFotoOnizlemeCiz(index) {
+      const kutu = document.getElementById('ekFoto' + index + 'Onizleme');
+      if (!kutu) return;
+      const url = _ekFotoUrlleri[index - 1];
+      kutu.innerHTML = url
+        ? `<div style="display:flex; align-items:center; gap:6px;">
+             <img data-foto-ref="${url}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik, #e5e7eb);">
+             <button type="button" style="border:none; background:none; color:#dc2626; font-size:11px; cursor:pointer; padding:0;">Kaldır</button>
+           </div>`
+        : '<div style="font-size:11px; color:var(--metin-soluk, #6b7280);">Yok</div>';
+      if (url) {
+        kutu.querySelector('button').addEventListener('click', () => { _ekFotoUrlleri[index - 1] = ''; _ekFotoOnizlemeCiz(index); });
+        fotoReferanslariCoz(kutu);
+      }
+    }
+
     function _ekListesiCiz(aramaMetni) {
       const govde = document.getElementById('ekListeGovde');
       const arama = (aramaMetni || '').trim().toLowerCase();
@@ -364,6 +430,10 @@
         _ekListesiCiz('');
       });
       document.getElementById('ekListeArama').addEventListener('input', e => _ekListesiCiz(e.target.value));
+      [1, 2, 3].forEach(i => {
+        document.getElementById('ekFoto' + i + 'CekBtn').addEventListener('click', () => document.getElementById('ekFoto' + i + 'CekDosya').click());
+        document.getElementById('ekFoto' + i + 'CekDosya').addEventListener('change', e => _ekFotoSecildi(e, i));
+      });
 
       document.getElementById('ekKontrolForm').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -406,7 +476,10 @@
             }, {}),
             bulgular: bulgular.trim(),
             yapilanIslem: yapilanIslem.trim(),
-            kontrolEden: kontrolEden
+            kontrolEden: kontrolEden,
+            fotoUrl: _ekFotoUrlleri[0],
+            fotoUrl2: _ekFotoUrlleri[1],
+            fotoUrl3: _ekFotoUrlleri[2]
           });
 
           const sonuc = await yazVeSonucuGetir(anahtar, liste);
