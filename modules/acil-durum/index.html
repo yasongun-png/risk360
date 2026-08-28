@@ -208,6 +208,13 @@
                bozuluyor. Ekrandan gizlemek için display:none yerine
                gerçek bir boyut verip ekran dışına taşındı. -->
           <div id="yanginTupuBarkodDosyaOkuyucu" style="position:absolute; left:-9999px; top:-9999px; width:300px; height:300px;"></div>
+          <!-- Kullanıcı isteği: "yangın tüpü kontrollerinde toplu kontrol
+               tarihi ekle buna göre sonraki kontrol tarihi görünsün girdiğim
+               tarih tüm tüpleri için veya seçtiğim tüpler için geçerli
+               olsun" — seçili satır varsa yalnızca onlara, yoksa (arama/tab
+               filtresine göre) TÜM listeye uygulanır (bkz. ui.js
+               yanginTupuTopluKontrolModalAc). -->
+          <button type="button" class="ikincil" id="yanginTupuTopluKontrolBtn">🗓️ Toplu Kontrol Tarihi</button>
           <button type="button" class="birincil" id="yeniYanginTupuBtn" style="width:auto;">+ Yangın Tüpü Ekle</button>
           <button type="button" class="ikincil" id="yanginTupuSeciliSilBtn">Seçilenleri Sil</button>
         </div>
@@ -624,6 +631,23 @@
   </div>
 
   <!-- YANGIN TÜPÜ MODAL -->
+  <div class="modal-katman" id="yanginTupuTopluKontrolModalKatman">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3>Toplu Kontrol Tarihi Ver</h3>
+      <p id="yanginTupuTopluKontrolBilgi" style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;"></p>
+      <form id="yanginTupuTopluKontrolForm">
+        <label for="ytkTarih">Kontrol Tarihi</label>
+        <input type="date" id="ytkTarih" required>
+        <p style="font-size:12px; color:var(--metin-soluk);">Bu tarihe göre "Sonraki Yıllık Bakım" tarihi otomatik hesaplanır.</p>
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="yanginTupuTopluKontrolIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="yanginTupuTopluKontrolKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <div class="modal-katman" id="yanginTupuModalKatman">
     <div class="modal-kutu" style="max-width:600px;">
       <h3 id="yanginTupuModalBaslik">Yeni Yangın Tüpü</h3>
@@ -834,10 +858,10 @@
   <script src="model.js?v=12"></script>
   <script src="validation.js?v=3"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=13"></script>
+  <script src="service.js?v=14"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="ui.js?v=23"></script>
+  <script src="ui.js?v=24"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

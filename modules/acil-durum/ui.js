@@ -132,6 +132,10 @@ function acilDurumSayfasiniBaslat(firma) {
     document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
   document.getElementById('yanginTupuSeciliSilBtn').addEventListener('click', yanginTupuSeciliSil);
+  document.getElementById('yanginTupuTopluKontrolBtn').addEventListener('click', yanginTupuTopluKontrolModalAc);
+  document.getElementById('yanginTupuTopluKontrolKapatBtn').addEventListener('click', yanginTupuTopluKontrolModalKapat);
+  document.getElementById('yanginTupuTopluKontrolIptalBtn').addEventListener('click', yanginTupuTopluKontrolModalKapat);
+  document.getElementById('yanginTupuTopluKontrolForm').addEventListener('submit', yanginTupuTopluKontrolFormGonderildi);
   // Kullanıcı isteği: "yukarda bunun bir butonu olsun aşağıda
   // görülmeyebilir butona basınca aşağıya yönlendirsin" — Periyodik
   // Kontroller bölümü sayfa altında kalıp fark edilmeyebiliyordu.
@@ -1460,6 +1464,42 @@ async function yanginTupuSeciliSil() {
   const sonuc = yanginTupuToplusil(secililer);
   if (!sonuc.basarili) { alert(sonuc.hata); return; }
   alert(`${sonuc.silinen} kayıt silindi.`);
+  yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
+}
+
+// Kullanıcı isteği: "yangın tüpü kontrollerinde toplu kontrol tarihi ekle
+// buna göre sonraki kontrol tarihi görünsün girdiğim tarih tüm tüpleri için
+// veya seçtiğim tüpler için geçerli olsun" — barkod üretimindeki "seçili
+// varsa seçililere, yoksa listedeki tümüne" kuralıyla aynı davranış.
+function yanginTupuTopluKontrolModalAc() {
+  const secililer = Array.from(document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+  const govdeSatirSayisi = document.querySelectorAll('#yanginTupuTabloGovde tr').length;
+  document.getElementById('yanginTupuTopluKontrolBilgi').textContent = secililer.length
+    ? `${secililer.length} seçili yangın tüpüne uygulanacak.`
+    : `Seçim yapılmadı — listelenen ${govdeSatirSayisi} yangın tüpünün tamamına uygulanacak.`;
+  document.getElementById('ytkTarih').value = bugunIso();
+  document.getElementById('yanginTupuTopluKontrolModalKatman').classList.add('acik');
+}
+
+function yanginTupuTopluKontrolModalKapat() {
+  document.getElementById('yanginTupuTopluKontrolModalKatman').classList.remove('acik');
+}
+
+async function yanginTupuTopluKontrolFormGonderildi(e) {
+  e.preventDefault();
+  const tarih = document.getElementById('ytkTarih').value;
+  if (!tarih) return;
+  const secililer = Array.from(document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+  // Seçim yoksa, gerçek tüm envanter yerine EKRANDA LİSTELENEN (arama/filtre
+  // sonrası) tüplerin tamamı hedeflenir — barkod üretimindeki "seçili yoksa
+  // filtrelenmiş listenin tamamı" kuralıyla aynı davranış.
+  const hedefIdler = secililer.length
+    ? secililer
+    : Array.from(document.querySelectorAll('#yanginTupuTabloGovde [data-yangin-tupu-sec]')).map(cb => cb.getAttribute('data-id'));
+  const sonuc = await yanginTupuTopluKontrolTarihiUygula(tarih, hedefIdler);
+  if (!sonuc.basarili) { alert(sonuc.hata || 'Kaydedilemedi.'); return; }
+  yanginTupuTopluKontrolModalKapat();
+  alert(`${sonuc.guncellenen} yangın tüpünün kontrol tarihi güncellendi.`);
   yanginTupleriniCiz(document.getElementById('yanginTupuAramaKutusu').value);
 }
 

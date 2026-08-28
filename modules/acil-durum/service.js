@@ -333,6 +333,26 @@ async function yanginTupuTopluIceAktar(satirlar) {
   return { basarili, basarisizSayisi: hatalar.length, hatalar, yazimBasarili: yazimSonucu.basarili, yazimHatasi: yazimSonucu.hata };
 }
 
+// Kullanıcı isteği: "yangın tüpü kontrollerinde toplu kontrol tarihi ekle
+// buna göre sonraki kontrol tarihi görünsün girdiğim tarih tüm tüpleri için
+// veya seçtiğim tüpler için geçerli olsun" — idler boş/null verilirse TÜM
+// tüplere, doluysa yalnızca seçilenlere uygulanır. yanginTupuToplusil ile
+// aynı "N ayrı yazım yerine tek oku+güncelle+yaz" ilkesi.
+async function yanginTupuTopluKontrolTarihiUygula(tarih, idler) {
+  if (!tarih) return { basarili: false, hata: 'Kontrol tarihi zorunludur.' };
+  const idSeti = idler && idler.length ? new Set(idler) : null;
+  const sonrakiYillikBakim = gunEkle(tarih, YANGIN_TUPU_YILLIK_BAKIM_GUN);
+  const liste = yanginTupleriTumunuGetir();
+  let guncellenen = 0;
+  const yeniListe = liste.map(t => {
+    if (idSeti && !idSeti.has(t.id)) return t;
+    guncellenen++;
+    return Object.assign({}, t, { yillikBakimTarihi: tarih, sonrakiYillikBakim });
+  });
+  const yazimSonucu = await yanginTupuListesiKaydetRepoVeBekle(yeniListe);
+  return { basarili: yazimSonucu.basarili, hata: yazimSonucu.hata, guncellenen };
+}
+
 // Kullanıcı isteği: "toplu silme olması lazım" — bkz. modules/yuklenici/
 // service.js yukleniciKayitlariToplusil ile aynı desen: N ayrı silme
 // çağrısı yerine tek oku+filtrele+yaz.
