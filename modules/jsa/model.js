@@ -23,6 +23,84 @@ const JSA_HAZIRLIK_KANITLARI = [
 
 const JSA_DURUMLARI = ['Taslak', 'Onay Bekliyor', 'Onaylandı', 'Revizyon Gerekli'];
 
+// Kullanıcı isteği: örnek olarak paylaşılan kağıt JSA formundaki gibi ("Select
+// applicable hazards", "Please select work equipment necessary" vb.) ikonlu,
+// tik atılabilir hızlı tehlike/ekipman/KKD taraması — adım bazlı serbest metin
+// tehlike analizinin (bkz. jsaTehlikeOlustur) YERİNE değil, ONA EK, sahada tek
+// bakışta okunabilen görsel bir özet. is-izni modülündeki IS_IZNI_KKD_SECENEKLERI
+// ile aynı "ikon + tik" deseni (bkz. modules/is-izni/model.js, ui.js .iz-kkd-chip).
+const JSA_TEHLIKE_IKONLARI = [
+  { id: 'ezilmeSikisma', ad: 'Ezilme / Sıkışma', ikon: '🖐️' },
+  { id: 'kesilme', ad: 'Kesilme / Kesici Alet', ikon: '🔪' },
+  { id: 'dusenCisim', ad: 'Düşen Cisim / Malzeme', ikon: '📦' },
+  { id: 'elektrikCarpmasi', ad: 'Elektrik Çarpması', ikon: '⚡' },
+  { id: 'yukseklikDusme', ad: 'Yüksekten Düşme', ikon: '🪜' },
+  { id: 'kaymaTakilma', ad: 'Kayma / Takılma / Düşme', ikon: '🚶' },
+  { id: 'yanginPatlama', ad: 'Yangın / Patlama', ikon: '🔥' },
+  { id: 'kimyasalMaruziyet', ad: 'Kimyasal Maruziyet', ikon: '☠️' },
+  { id: 'trafikKazasi', ad: 'Trafik / Araç Kazası', ikon: '🚗' },
+  { id: 'titresim', ad: 'Titreşim', ikon: '📳' },
+  { id: 'gurultu', ad: 'Gürültü', ikon: '🔊' },
+  { id: 'kasIskelet', ad: 'Kas-İskelet Zorlanması', ikon: '🏋️' }
+];
+
+const JSA_ONLEM_IKONLARI = [
+  { id: 'atikKutusu', ad: 'Atık Kutusu Kullan', ikon: '🗑️' },
+  { id: 'sahaTemiz', ad: 'Sahayı Temiz ve Düzenli Tut', ikon: '🧹' },
+  { id: 'sondurucu', ad: 'Yangın Söndürücü Bulundur', ikon: '🧯' },
+  { id: 'uyariLevhasi', ad: 'Uyarı Levhası / İşareti Koy', ikon: '⚠️' },
+  { id: 'iletisim', ad: 'Telsiz / İletişim Bulundur', ikon: '📻' },
+  { id: 'bariyer', ad: 'Bariyer / Şerit ile Çevir', ikon: '🚧' },
+  { id: 'havalandirma', ad: 'Havalandırma Sağla', ikon: '🌀' },
+  { id: 'elSinyaliYasak', ad: 'Onaysız El Sinyaliyle Yönlendirme Yasak', ikon: '🚫' }
+];
+
+const JSA_EKIPMAN_IKONLARI = [
+  { id: 'isMakinesi', ad: 'İş Makinesi (Ekskavatör vb.)', ikon: '🚜' },
+  { id: 'kaynakMakinesi', ad: 'Kaynak Makinesi', ikon: '🔥' },
+  { id: 'taslamaKesme', ad: 'Taşlama / Kesme', ikon: '⚙️' },
+  { id: 'matkapDelme', ad: 'Matkap / Delme', ikon: '🛠️' },
+  { id: 'elAletleri', ad: 'El Aletleri', ikon: '🔨' },
+  { id: 'seyyarAydinlatma', ad: 'Seyyar Aydınlatma', ikon: '💡' },
+  { id: 'merdiven', ad: 'Merdiven', ikon: '🪜' },
+  { id: 'vincKaldirma', ad: 'Vinç / Kaldırma Ekipmanı', ikon: '🏗️' }
+];
+
+const JSA_YUKSEKLIK_EKIPMAN_IKONLARI = [
+  { id: 'sabitIskele', ad: 'Sabit İskele', ikon: '🧱' },
+  { id: 'seyyarIskele', ad: 'Seyyar İskele', ikon: '🪟' },
+  { id: 'platformVinc', ad: 'Platform Vinç / Sepetli Araç', ikon: '🧗' },
+  { id: 'makasliPlatform', ad: 'Makaslı Platform', ikon: '📐' },
+  { id: 'emniyetKemeri', ad: 'Paraşüt Tipi Emniyet Kemeri', ikon: '🪢' },
+  { id: 'ankrajKarabina', ad: 'Ankraj Noktası / Karabina', ikon: '🔗' }
+];
+
+// is-izni/model.js IS_IZNI_KKD_SECENEKLERI ile AYNI liste (kod paylaşımı
+// yok, bilinçli kopya — bkz. session genelindeki "her modül kendi küçük
+// yardımcı verisini taşır" ilkesi) — aynı KKD, uygulama genelinde hep aynı
+// ikonla gösterilsin diye.
+const JSA_KKD_IKONLARI = [
+  { id: 'baret', ad: 'Baret', ikon: '⛑️' },
+  { id: 'koruyucuGozluk', ad: 'Koruyucu Gözlük', ikon: '🥽' },
+  { id: 'yuzSiperi', ad: 'Yüz Siperi', ikon: '😷' },
+  { id: 'isEldiveni', ad: 'İş Eldiveni', ikon: '🧤' },
+  { id: 'kimyasalEldiven', ad: 'Kimyasal Dayanımlı Eldiven', ikon: '🧪' },
+  { id: 'elektrikEldiveni', ad: 'Elektrik Yalıtkan Eldiven', ikon: '⚡' },
+  { id: 'kulakKoruyucu', ad: 'Kulak Koruyucu', ikon: '🎧' },
+  { id: 'tozMaskesi', ad: 'Toz Maskesi', ikon: '😮‍💨' },
+  { id: 'gazMaskesi', ad: 'Gaz Maskesi / Solunum Cihazı', ikon: '🫁' },
+  { id: 'kimyasalTulum', ad: 'Kimyasal Koruyucu Tulum', ikon: '🥼' },
+  { id: 'kaynakMaskesi', ad: 'Kaynak Maskesi / Siperi', ikon: '🔥' },
+  { id: 'celikBurunlu', ad: 'Çelik Burunlu İş Ayakkabısı', ikon: '🥾' },
+  { id: 'emniyetKemeriKkd', ad: 'Paraşüt Tipi Emniyet Kemeri', ikon: '🪢' },
+  { id: 'reflektifYelek', ad: 'Reflektif Yelek', ikon: '🦺' }
+];
+
+function _jsaIkonSecimiTemizle(liste, katalog) {
+  const gecerliIdler = new Set(katalog.map(k => k.id));
+  return Array.isArray(liste) ? liste.filter(id => gecerliIdler.has(id)) : [];
+}
+
 function bugunIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -96,6 +174,13 @@ function jsaKaydiOlustur(veriler) {
     revizyon: (v.revizyon || '').trim(),
     kapsam: (v.kapsam || '').trim(),
     hazirlikKanitlari: Array.isArray(v.hazirlikKanitlari) ? v.hazirlikKanitlari.filter(h => JSA_HAZIRLIK_KANITLARI.includes(h)) : [],
+    // Hızlı tehlike/önlem/ekipman/KKD taraması (ikon tik listesi) — bkz.
+    // yukarıdaki JSA_*_IKONLARI kataloglarındaki "id" değerleri.
+    tehlikeSecimleri: _jsaIkonSecimiTemizle(v.tehlikeSecimleri, JSA_TEHLIKE_IKONLARI),
+    onlemSecimleri: _jsaIkonSecimiTemizle(v.onlemSecimleri, JSA_ONLEM_IKONLARI),
+    ekipmanSecimleri: _jsaIkonSecimiTemizle(v.ekipmanSecimleri, JSA_EKIPMAN_IKONLARI),
+    yukseklikEkipmanSecimleri: _jsaIkonSecimiTemizle(v.yukseklikEkipmanSecimleri, JSA_YUKSEKLIK_EKIPMAN_IKONLARI),
+    kkdSecimleri: _jsaIkonSecimiTemizle(v.kkdSecimleri, JSA_KKD_IKONLARI),
     genelFotoUrl: v.genelFotoUrl || '',
     adimlar: Array.isArray(v.adimlar) ? v.adimlar.map(jsaAdimOlustur) : [],
     hazirlayanAdi: (v.hazirlayanAdi || '').trim(),

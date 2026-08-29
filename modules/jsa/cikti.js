@@ -44,7 +44,24 @@ const _JR_PDF_STIL = `
   #jsaRaporuPdf .jr-imza-kutu b{ display:block; font-size:9.5px; }
   #jsaRaporuPdf .jr-imza-kutu span{ font-size:8.5px; color:#4b5563; }
   #jsaRaporuPdf .jr-foto{ max-width:60mm; max-height:45mm; display:block; margin:2mm 0; }
+  #jsaRaporuPdf .jr-ikon-grup-baslik{ font-size:8.5px; font-weight:800; color:#374151; text-transform:uppercase; letter-spacing:.02em; margin:2mm 0 1mm; }
+  #jsaRaporuPdf .jr-ikon-grid{ display:flex; flex-wrap:wrap; gap:1.2mm; margin-bottom:1mm; page-break-inside:avoid; }
+  #jsaRaporuPdf .jr-ikon-hucre{ display:flex; align-items:center; gap:1.2mm; border:0.5px solid #9ca3af; border-radius:2mm; padding:1mm 2mm 1mm 1.2mm; font-size:7.7px; color:#6b7280; background:#fff; }
+  #jsaRaporuPdf .jr-ikon-hucre.secili{ border-color:#111827; border-width:1px; background:#f1f5f9; color:#111827; font-weight:700; }
+  #jsaRaporuPdf .jr-ikon-hucre .kutucuk{ font-size:8.5px; }
 `;
+
+// Beş kategori için de aynı desen — sadece katalog ve başlık değişir (bkz.
+// model.js JSA_*_IKONLARI, "seçilen" olanlar koyu çerçeve + ☑ ile öne çıkar,
+// diğerleri kağıt formdaki boş ☐ kutucuklar gibi soluk kalır).
+function _jrIkonGrupHtml(baslik, katalog, seciliIdler) {
+  const seciliSet = new Set(seciliIdler || []);
+  return `
+    <div class="jr-ikon-grup-baslik">${_jrKacir(baslik)}</div>
+    <div class="jr-ikon-grid">
+      ${katalog.map(k => `<div class="jr-ikon-hucre${seciliSet.has(k.id) ? ' secili' : ''}"><span class="kutucuk">${seciliSet.has(k.id) ? '☑' : '☐'}</span>${k.ikon} ${_jrKacir(k.ad)}</div>`).join('')}
+    </div>`;
+}
 
 function _jrAlanSatiri(etiket1, deger1, etiket2, deger2) {
   return `<tr>
@@ -112,6 +129,13 @@ async function jsaRaporuPdfOlustur(kayit, firma) {
     ${kayit.hazirlikKanitlari.length ? `
     <div class="jr-bolum-baslik">Hazırlık Kanıtı</div>
     <ul class="jr-hazirlik-liste">${kayit.hazirlikKanitlari.map(h => `<li>${_jrKacir(h)}</li>`).join('')}</ul>` : ''}
+
+    <div class="jr-bolum-baslik">Hızlı Tehlike ve Ekipman Taraması</div>
+    ${_jrIkonGrupHtml('İlgili Tehlikeler', JSA_TEHLIKE_IKONLARI, kayit.tehlikeSecimleri)}
+    ${_jrIkonGrupHtml('Gerekli Önlemler', JSA_ONLEM_IKONLARI, kayit.onlemSecimleri)}
+    ${_jrIkonGrupHtml('Gerekli Çalışma Ekipmanı', JSA_EKIPMAN_IKONLARI, kayit.ekipmanSecimleri)}
+    ${_jrIkonGrupHtml('Gerekli Yükseklikte Çalışma Ekipmanı', JSA_YUKSEKLIK_EKIPMAN_IKONLARI, kayit.yukseklikEkipmanSecimleri)}
+    ${_jrIkonGrupHtml('Gerekli KKD', JSA_KKD_IKONLARI, kayit.kkdSecimleri)}
 
     ${genelFotoDataUrl ? `<div class="jr-bolum-baslik">İşin Genel Fotoğrafı</div><img class="jr-foto" src="${genelFotoDataUrl}">` : ''}
 
@@ -267,6 +291,23 @@ async function jsaRaporuWordOlustur(kayit, firma) {
     cocuklar.push(_jrWordBaslik('Hazırlık Kanıtı'));
     kayit.hazirlikKanitlari.forEach(h => cocuklar.push(new docx.Paragraph({ bullet: { level: 0 }, children: [new docx.TextRun({ text: h })] })));
   }
+
+  // Hızlı tehlike/önlem/ekipman/KKD taraması — Word'de yalnızca İŞARETLENEN
+  // seçenekler tek satır halinde listelenir (PDF'teki tam kağıt-form
+  // görünümünün aksine, Word'de tüm katalogu boş kutucuklarla basmak
+  // gereksiz uzatır).
+  const _jrIkonSeciliMetin = (katalog, seciliIdler) => katalog.filter(k => (seciliIdler || []).includes(k.id)).map(k => `${k.ikon} ${k.ad}`).join('   ·   ');
+  [
+    ['İlgili Tehlikeler', JSA_TEHLIKE_IKONLARI, kayit.tehlikeSecimleri],
+    ['Gerekli Önlemler', JSA_ONLEM_IKONLARI, kayit.onlemSecimleri],
+    ['Gerekli Çalışma Ekipmanı', JSA_EKIPMAN_IKONLARI, kayit.ekipmanSecimleri],
+    ['Gerekli Yükseklikte Çalışma Ekipmanı', JSA_YUKSEKLIK_EKIPMAN_IKONLARI, kayit.yukseklikEkipmanSecimleri],
+    ['Gerekli KKD', JSA_KKD_IKONLARI, kayit.kkdSecimleri]
+  ].forEach(([baslik, katalog, secim]) => {
+    if (!secim || !secim.length) return;
+    cocuklar.push(_jrWordBaslik(baslik));
+    cocuklar.push(new docx.Paragraph({ spacing: { after: 120 }, children: [new docx.TextRun({ text: _jrIkonSeciliMetin(katalog, secim) })] }));
+  });
 
   const genelFoto = await _jrGorseWordVerisiGetir(kayit.genelFotoUrl);
   if (genelFoto) {

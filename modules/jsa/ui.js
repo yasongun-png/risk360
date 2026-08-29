@@ -192,6 +192,7 @@ function jsaEditorAc(id) {
   document.getElementById('editorBaslik').textContent = mevcut ? `Düzenle — ${mevcut.kayitNo}` : 'Yeni JSA';
   _jsaAdim1FormunuDoldur();
   _jsaHazirlikKanitiCiz();
+  _jsaIkonGridleriniCiz();
   _jsaGenelFotoOnizlemeCiz();
   _jsaAdimListesiCiz();
   _jsaTehlikeAlaniCiz();
@@ -256,6 +257,39 @@ function _jsaHazirlikKanitiCiz() {
       else _jsaTaslak.hazirlikKanitlari = _jsaTaslak.hazirlikKanitlari.filter(h => h !== deger);
     });
   });
+}
+
+// Kağıt JSA formundaki ikonlu/tikli tehlike-önlem-ekipman-KKD taraması —
+// beş grid de aynı desende çizilir, sadece katalog/taslak alanı değişir
+// (bkz. index.html .jsa-ikon-chip, model.js JSA_*_IKONLARI).
+function _jsaIkonGridiCiz(kutuId, katalog, taslakAlani) {
+  const kutu = document.getElementById(kutuId);
+  const secili = new Set(_jsaTaslak[taslakAlani]);
+  kutu.innerHTML = katalog.map(k => `
+    <label class="jsa-ikon-chip${secili.has(k.id) ? ' secili' : ''}">
+      <input type="checkbox" value="${k.id}" ${secili.has(k.id) ? 'checked' : ''}>
+      <span class="ikon">${k.ikon}</span>${_jsaKacir(k.ad)}
+    </label>
+  `).join('');
+  kutu.querySelectorAll('.jsa-ikon-chip').forEach(etiket => {
+    const kutucuk = etiket.querySelector('input');
+    kutucuk.addEventListener('change', () => {
+      etiket.classList.toggle('secili', kutucuk.checked);
+      if (kutucuk.checked) {
+        if (!_jsaTaslak[taslakAlani].includes(kutucuk.value)) _jsaTaslak[taslakAlani].push(kutucuk.value);
+      } else {
+        _jsaTaslak[taslakAlani] = _jsaTaslak[taslakAlani].filter(id => id !== kutucuk.value);
+      }
+    });
+  });
+}
+
+function _jsaIkonGridleriniCiz() {
+  _jsaIkonGridiCiz('jsaTehlikeIkonGrid', JSA_TEHLIKE_IKONLARI, 'tehlikeSecimleri');
+  _jsaIkonGridiCiz('jsaOnlemIkonGrid', JSA_ONLEM_IKONLARI, 'onlemSecimleri');
+  _jsaIkonGridiCiz('jsaEkipmanIkonGrid', JSA_EKIPMAN_IKONLARI, 'ekipmanSecimleri');
+  _jsaIkonGridiCiz('jsaYukseklikEkipmanIkonGrid', JSA_YUKSEKLIK_EKIPMAN_IKONLARI, 'yukseklikEkipmanSecimleri');
+  _jsaIkonGridiCiz('jsaKkdIkonGrid', JSA_KKD_IKONLARI, 'kkdSecimleri');
 }
 
 function _jsaGenelFotoOnizlemeCiz() {

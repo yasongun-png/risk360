@@ -34,6 +34,15 @@
   .jsa-adim-stepper button { flex: 1; min-width: 160px; }
   .jsa-hazirlik-liste { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 14px; margin: 8px 0 14px; }
   .jsa-hazirlik-liste label { display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+
+  /* Kağıt JSA formundaki ikonlu/tikli tehlike-ekipman-KKD taraması — is-izni
+     modülündeki .iz-kkd-chip ile aynı desen (bkz. model.js JSA_*_IKONLARI). */
+  .jsa-ikon-baslik { font-size: 12.5px; font-weight: 700; color: var(--metin-soluk, #6b7280); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .02em; }
+  .jsa-ikon-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .jsa-ikon-chip { display: flex; align-items: center; gap: 6px; border: 1.5px solid var(--kenarlik, #e5e7eb); border-radius: 20px; padding: 7px 12px 7px 8px; font-size: 12px; font-weight: 600; cursor: pointer; user-select: none; color: var(--metin-ana, #111827); }
+  .jsa-ikon-chip input { display: none; }
+  .jsa-ikon-chip .ikon { font-size: 16px; }
+  .jsa-ikon-chip.secili { border-color: var(--celik-mavi-koyu, #1d4ed8); background: #eef2ff; color: var(--celik-mavi-koyu, #1d4ed8); }
 </style>
 </head>
 <body>
@@ -140,7 +149,24 @@
         <label style="margin-top:10px;">Hazırlık Kanıtı</label>
         <div class="jsa-hazirlik-liste" id="hazirlikKanitiListesi"></div>
 
-        <label>İşin Genel Fotoğrafı <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label>
+        <div class="form-bolum-baslik" style="margin-top:14px;">Hızlı Tehlike ve Ekipman Taraması <span style="font-weight:400; font-size:12px; color:var(--metin-soluk);">(sahada tek bakışta okunabilen ikonlu özet — aşağıdaki adım bazlı analizi tamamlar, yerini almaz)</span></div>
+
+        <div class="jsa-ikon-baslik">İlgili Tehlikeleri Seçin</div>
+        <div class="jsa-ikon-grid" id="jsaTehlikeIkonGrid"></div>
+
+        <div class="jsa-ikon-baslik">Gerekli Önlemleri Seçin</div>
+        <div class="jsa-ikon-grid" id="jsaOnlemIkonGrid"></div>
+
+        <div class="jsa-ikon-baslik">Gerekli Çalışma Ekipmanını Seçin</div>
+        <div class="jsa-ikon-grid" id="jsaEkipmanIkonGrid"></div>
+
+        <div class="jsa-ikon-baslik">Gerekli Yükseklikte Çalışma Ekipmanını Seçin</div>
+        <div class="jsa-ikon-grid" id="jsaYukseklikEkipmanIkonGrid"></div>
+
+        <div class="jsa-ikon-baslik">Gerekli KKD'yi Seçin</div>
+        <div class="jsa-ikon-grid" id="jsaKkdIkonGrid"></div>
+
+        <label style="margin-top:14px;">İşin Genel Fotoğrafı <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label>
         <div id="genelFotoOnizleme" style="margin-bottom:10px;"></div>
         <input type="file" id="genelFotoDosya" accept="image/*" style="display:none;">
         <button type="button" class="ikincil" id="genelFotoSecBtn">+ Fotoğraf Seç</button>
