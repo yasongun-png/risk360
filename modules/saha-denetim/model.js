@@ -107,6 +107,9 @@ function denetimOlustur(veriler) {
     kontrolListesi: veriler.kontrolListesi || denetimKontrolListesiUret(veriler.denetimTuru),
     notlar: (veriler.notlar || '').trim(),
     tamamlandiMi: !!veriler.tamamlandiMi,
+    // Kullanıcı isteği: "üretilen ör. saha denetim raporu imzalı pdf halini
+    // yükleyebileyim" (bkz. core/belge-yukle.js).
+    imzaliBelgeUrl: veriler.imzaliBelgeUrl || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

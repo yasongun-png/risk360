@@ -6,6 +6,7 @@ let _aksiyonTaslak = [];
 let _kronolojiTaslak = [];
 let _tanikTaslak = [];
 let _olayFotograflari = [];
+let _olayImzaliBelge = '';
 
 // Olay yeri fotoğrafları önizlemesi — kurul modülündeki _kararFotoEkOnizlemeCiz
 // ile aynı desen (bkz. modules/kurul/toplanti-ui.js), en fazla 3 fotoğraf.
@@ -89,9 +90,30 @@ function _eskiKazaPaneliKaydiEsle(r) {
   });
 }
 
+// Kullanıcı isteği: "üretilen ör. olay araştırma raporu imzalı pdf halini
+// yükleyebileyim" (bkz. core/belge-yukle.js).
+function _olayBelgeOnizlemeCiz() {
+  document.getElementById('okBelgeOnizleme').innerHTML = belgeOnizlemeHtml('okBelge', !!_olayImzaliBelge);
+  if (_olayImzaliBelge) {
+    document.getElementById('okBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(_olayImzaliBelge); });
+    document.getElementById('okBelgeKaldirBtn').addEventListener('click', () => { _olayImzaliBelge = ''; _olayBelgeOnizlemeCiz(); });
+  }
+}
+
 function olayKazaSayfasiniBaslat() {
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeRCA').addEventListener('click', () => gorunumDegistir('rca'));
+
+  document.getElementById('okBelgeAlani').innerHTML = belgeYukleyiciHtml('okBelge', 'İmzalı Olay Araştırma Raporu');
+  belgeYukleyiciBagla('okBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      _olayImzaliBelge = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      _olayBelgeOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
 
   _mevzuatKutulariOlustur();
   document.getElementById('yeniKayitBtn').addEventListener('click', () => kayitModalAc());
@@ -574,6 +596,8 @@ function kayitModalAc(kayitHam) {
   document.getElementById('temelKazaYeri').value = kayit ? kayit.kazaYeri : '';
   _olayFotograflari = kayit && Array.isArray(kayit.olayYeriFotograflari) ? kayit.olayYeriFotograflari.slice(0, 3) : [];
   _olayFotoOnizlemeCiz();
+  _olayImzaliBelge = kayit ? (kayit.imzaliBelgeUrl || '') : '';
+  _olayBelgeOnizlemeCiz();
 
   // Kişi — kendi firmanın personeli HEMEN doldurulur; kullanıcının yönettiği
   // diğer firmalardaki personel bulut (Firestore) üzerinden tek seferlik
@@ -729,7 +753,9 @@ async function formGonderildi(e) {
     sorusturmaBitis: document.getElementById('raporSorusturmaBitis').value,
 
     kapanisTarihi: document.getElementById('kapanisTarihi').value,
-    durum: document.getElementById('kapanisDurum').value
+    durum: document.getElementById('kapanisDurum').value,
+
+    imzaliBelgeUrl: _olayImzaliBelge
   };
 
   const sonuc = _duzenlenenKayitId ? olayKaydiGuncelle(_duzenlenenKayitId, veriler) : olayKaydiEkle(veriler);

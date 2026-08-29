@@ -100,6 +100,7 @@ function toplantiDetaySayfasiniBaslat() {
   _kaynakOlayliBosKararlariTemizle(_toplantiId);
 
   bilgiKartiniCiz(toplanti);
+  _ktBelgeAlaniniKur(toplanti);
   _genelDegerlendirmeFormunuDoldur(toplanti);
   gundemListesiniCiz(toplanti);
   kararlariCiz();
@@ -292,6 +293,36 @@ function bilgiKartiniCiz(toplanti) {
     <p style="font-size:13px;"><strong>Katılımcılar:</strong> ${_ktKacir(toplanti.katilimcilar.join(', ')) || '-'}</p>
     ${toplanti.notlar ? `<p style="font-size:13px;"><strong>Notlar:</strong> ${_ktKacir(toplanti.notlar)}</p>` : ''}
   `;
+}
+
+// Kullanıcı isteği: "üretilen ör. kurul tutanağı imzalı pdf halini
+// yükleyebileyim" (bkz. core/belge-yukle.js).
+function _ktBelgeOnizlemeCiz() {
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  document.getElementById('ktBelgeOnizleme').innerHTML = belgeOnizlemeHtml('ktBelge', !!(toplanti && toplanti.imzaliBelgeUrl));
+  if (toplanti && toplanti.imzaliBelgeUrl) {
+    document.getElementById('ktBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(toplanti.imzaliBelgeUrl); });
+    document.getElementById('ktBelgeKaldirBtn').addEventListener('click', () => {
+      toplantiGuncelle(_toplantiId, Object.assign({}, toplanti, { imzaliBelgeUrl: '' }));
+      _ktBelgeOnizlemeCiz();
+    });
+  }
+}
+
+function _ktBelgeAlaniniKur() {
+  document.getElementById('ktBelgeAlani').innerHTML = belgeYukleyiciHtml('ktBelge', 'İmzalı Kurul Tutanağı');
+  belgeYukleyiciBagla('ktBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      const mevcut = toplantiIdIleGetirRepo(_toplantiId);
+      toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, { imzaliBelgeUrl: referans }));
+      _ktBelgeOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _ktBelgeOnizlemeCiz();
 }
 
 // Genel Değerlendirme, önceden yalnızca ayrı "Toplantıyı Düzenle" formundan

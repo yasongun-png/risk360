@@ -181,6 +181,19 @@
   <div id="yazdirmaAlani"></div>
 
   <!-- AYARLAR MODAL -->
+  <!-- İMZALI BELGE MODAL -->
+  <div class="modal-katman" id="mtBelgeModalKatman">
+    <div class="modal-kutu" style="max-width:460px;">
+      <h3>İmzalı Talep Oluru</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Word olurunu imzalattıktan sonra taranmış hâlini buraya ekleyebilirsiniz.</p>
+      <div id="mtBelgeAlani"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mtBelgeKapatBtn">Kapat</button>
+      </div>
+      <button type="button" class="tablo-buton" id="mtBelgeModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <div class="modal-katman" id="ayarlarModalKatman">
     <div class="modal-kutu" style="max-width:460px;">
       <h3>Malzeme Talep Ayarları</h3>
@@ -276,6 +289,7 @@
   <script src="../../core/tenant.js"></script>
   <script src="../../core/excel.js"></script>
   <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/belge-yukle.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>

@@ -219,6 +219,11 @@ function olayKaydiOlustur(veriler) {
     kapanisTarihi: veriler.kapanisTarihi || '',
     durum: veriler.durum || 'Açık',
 
+    // Kullanıcı isteği: "üretilen ör. olay araştırma raporu imzalı pdf
+    // halini yükleyebileyim" — ıslak imzalı/taranmış rapor (bkz.
+    // core/belge-yukle.js).
+    imzaliBelgeUrl: veriler.imzaliBelgeUrl || '',
+
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

@@ -44,6 +44,12 @@
       <button type="button" class="birincil" id="planPptxIndirBtn" style="width:auto;">📊 PPTX İndir</button>
     </div>
 
+    <!-- Kullanıcı isteği: "acil durum planı imzalı pdf halini yükleyebileyim"
+         — yukarıdaki Word/PDF/PPTX üretildikten sonra ıslak imzalı/onaylı
+         hâli taranıp buraya geri yüklenebilir (bkz. core/belge-yukle.js). -->
+    <div class="form-bolum-baslik" style="margin-top:10px;">İmzalı / Onaylı Planı Yükle</div>
+    <div id="planBelgeAlani"></div>
+
     <div id="planOzetKutusu"></div>
 
     <div class="rapor-meta-grid">
@@ -154,6 +160,7 @@
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
   <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/belge-yukle.js"></script>
   <script src="../personel/model.js"></script>
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>

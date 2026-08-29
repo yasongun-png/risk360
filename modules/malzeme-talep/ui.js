@@ -23,6 +23,9 @@ function malzemeTalepSayfasiniBaslat() {
   _mtTakipBaslat();
   _mtKatalogBaslat();
 
+  document.getElementById('mtBelgeKapatBtn').addEventListener('click', mtBelgeModalKapat);
+  document.getElementById('mtBelgeModalKapatBtn').addEventListener('click', mtBelgeModalKapat);
+
   mtOzetiCiz();
   mtGorunumDegistir('yeniTalep');
 }
@@ -50,6 +53,47 @@ function mtOzetiCiz() {
       ${kart('Geciken', ozet.geciken)}
     </div>
   `;
+}
+
+// ==================== İMZALI BELGE (Kullanıcı isteği: "üretilen ör.
+// malzeme talep oluru imzalı pdf halini yükleyebileyim") ====================
+
+let _mtBelgeAcikId = null;
+
+function _mtBelgeOnizlemeCiz() {
+  const t = malzemeTalepIdIleGetirRepo(_mtBelgeAcikId);
+  document.getElementById('mtBelgeOnizleme').innerHTML = belgeOnizlemeHtml('mtBelge', !!(t && t.imzaliBelgeUrl));
+  if (t && t.imzaliBelgeUrl) {
+    document.getElementById('mtBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(t.imzaliBelgeUrl); });
+    document.getElementById('mtBelgeKaldirBtn').addEventListener('click', () => {
+      malzemeTalepBelgeGuncelle(_mtBelgeAcikId, '');
+      _mtBelgeOnizlemeCiz();
+      takipListesiniCiz(document.getElementById('takipAramaKutusu') ? document.getElementById('takipAramaKutusu').value : '');
+    });
+  }
+}
+
+function mtBelgeModalAc(id) {
+  _mtBelgeAcikId = id;
+  document.getElementById('mtBelgeAlani').innerHTML = belgeYukleyiciHtml('mtBelge', 'İmzalı Belge');
+  belgeYukleyiciBagla('mtBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      malzemeTalepBelgeGuncelle(_mtBelgeAcikId, referans);
+      _mtBelgeOnizlemeCiz();
+      takipListesiniCiz(document.getElementById('takipAramaKutusu') ? document.getElementById('takipAramaKutusu').value : '');
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _mtBelgeOnizlemeCiz();
+  document.getElementById('mtBelgeModalKatman').classList.add('acik');
+}
+
+function mtBelgeModalKapat() {
+  document.getElementById('mtBelgeModalKatman').classList.remove('acik');
+  _mtBelgeAcikId = null;
 }
 
 // ==================== AYARLAR ====================
@@ -363,6 +407,7 @@ function takipListesiniCiz(aramaMetni) {
         <button class="tablo-buton" data-tekrarla="${t.id}">Tekrarla</button>
         <button class="tablo-buton" data-word="${t.id}">Word</button>
         <button class="tablo-buton" data-yazdir="${t.id}">Yazdır</button>
+        <button class="tablo-buton" data-belge="${t.id}">${t.imzaliBelgeUrl ? '✓ Belge' : '📎 Belge'}</button>
         <button class="tablo-buton sil" data-sil="${t.id}">Sil</button>
       </td>
     `;
@@ -374,6 +419,7 @@ function takipListesiniCiz(aramaMetni) {
     mtOzetiCiz();
   }));
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => talepFormunuDoldur(malzemeTalepIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-belge]').forEach(btn => btn.addEventListener('click', () => mtBelgeModalAc(btn.getAttribute('data-belge'))));
   govde.querySelectorAll('[data-tekrarla]').forEach(btn => btn.addEventListener('click', () => {
     const t = malzemeTalepIdIleGetirRepo(btn.getAttribute('data-tekrarla'));
     if (!t) return;

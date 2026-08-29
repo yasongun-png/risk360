@@ -510,6 +510,17 @@ function bakimTalepSil(id) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "üretilen ör. bakım talep raporu imzalı pdf halini
+// yükleyebileyim" — durum akışından bağımsız, her aşamada eklenebilir/
+// kaldırılabilir (bkz. core/belge-yukle.js).
+function bakimTalepBelgeGuncelle(id, referans) {
+  const kayit = bakimTalepIdIleGetirRepo(id);
+  if (!kayit) return { basarili: false, hata: 'Talep bulunamadı.' };
+  kayit.imzaliBelgeUrl = referans || '';
+  bakimTalepGuncelleRepo(id, kayit);
+  return { basarili: true, kayit };
+}
+
 // ---- Özet (birim bazlı dashboard) ----
 
 function bakimTalepOzetiHesapla() {

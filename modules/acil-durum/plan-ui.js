@@ -34,10 +34,36 @@ function planAlanlariniDoldur(plan) {
   });
 }
 
+// ---- İmzalı / Onaylı Plan Belgesi (PDF/fotoğraf) ----
+
+function _planBelgeOnizlemeCiz() {
+  const plan = planGetirRepo() || bosPlanOlustur();
+  document.getElementById('planBelgeOnizleme').innerHTML = belgeOnizlemeHtml('planBelge', !!plan.imzaliBelgeUrl);
+  if (plan.imzaliBelgeUrl) {
+    document.getElementById('planBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(plan.imzaliBelgeUrl); });
+    document.getElementById('planBelgeKaldirBtn').addEventListener('click', () => { planGuncelle('imzaliBelgeUrl', ''); _planBelgeOnizlemeCiz(); });
+  }
+}
+
+function _planBelgeAlaniniKur() {
+  document.getElementById('planBelgeAlani').innerHTML = belgeYukleyiciHtml('planBelge', 'İmzalı / Onaylı Plan Belgesi');
+  belgeYukleyiciBagla('planBelge', async dosya => {
+    try {
+      const referans = await belgeDosyasiIsle(dosya, _planFirma ? _planFirma.slug : '');
+      planGuncelle('imzaliBelgeUrl', referans);
+      _planBelgeOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _planBelgeOnizlemeCiz();
+}
+
 function planSayfasiniBaslat(firma) {
   _planFirma = firma;
   const plan = planGetirVeyaOlustur(firma);
   planAlanlariniDoldur(plan);
+  _planBelgeAlaniniKur();
 
   Object.entries(_PLAN_ALAN_ESLESME).forEach(([elId, alan]) => {
     document.getElementById(elId).addEventListener('change', e => planGuncelle(alan, e.target.value));

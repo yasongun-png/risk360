@@ -74,6 +74,9 @@ function stajyerOlustur(veriler) {
 
     durum: veriler.durum || 'Planlandı',
     notlar: (veriler.notlar || '').trim(),
+    // Kullanıcı isteği: "üretilen ör. temel isg eğitim sertifikası imzalı
+    // pdf halini yükleyebileyim" (bkz. core/belge-yukle.js).
+    imzaliBelgeUrl: veriler.imzaliBelgeUrl || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

@@ -236,6 +236,7 @@ function denetimDetayCiz() {
   `;
 
   document.getElementById('denetimDetayNotlar').value = denetim.notlar || '';
+  _sdBelgeAlaniniKur(denetim);
 
   const tamamlaBtn = document.getElementById('denetimDetayTamamlaBtn');
   tamamlaBtn.textContent = denetim.tamamlandiMi ? '✓ Tamamlandı' : 'Denetimi Tamamla';
@@ -261,6 +262,34 @@ function denetimDetayListeTiklandi(e) {
   if (aktarIndex !== null && _detayModalDenetimId) {
     aktarModalAc(_detayModalDenetimId, Number(aktarIndex));
   }
+}
+
+// Kullanıcı isteği: "üretilen ör. saha denetim raporu imzalı pdf halini
+// yükleyebileyim" (bkz. core/belge-yukle.js).
+function _sdBelgeOnizlemeCiz(denetim) {
+  document.getElementById('sdBelgeOnizleme').innerHTML = belgeOnizlemeHtml('sdBelge', !!denetim.imzaliBelgeUrl);
+  if (denetim.imzaliBelgeUrl) {
+    document.getElementById('sdBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(denetim.imzaliBelgeUrl); });
+    document.getElementById('sdBelgeKaldirBtn').addEventListener('click', () => {
+      denetimBelgeGuncelle(denetim.id, '');
+      denetimDetayCiz();
+    });
+  }
+}
+
+function _sdBelgeAlaniniKur(denetim) {
+  document.getElementById('sdBelgeAlani').innerHTML = belgeYukleyiciHtml('sdBelge', 'İmzalı Denetim Raporu');
+  belgeYukleyiciBagla('sdBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      denetimBelgeGuncelle(denetim.id, referans);
+      denetimDetayCiz();
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _sdBelgeOnizlemeCiz(denetim);
 }
 
 function denetimNotDegisti() {

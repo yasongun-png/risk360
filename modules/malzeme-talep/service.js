@@ -201,6 +201,14 @@ function malzemeTalepDurumGuncelle(id, yeniDurum) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// Kullanıcı isteği: "üretilen ör. malzeme talep oluru imzalı pdf halini
+// yükleyebileyim" (bkz. core/belge-yukle.js).
+function malzemeTalepBelgeGuncelle(id, referans) {
+  const guncellenen = malzemeTalepGuncelleRepo(id, { imzaliBelgeUrl: referans || '' });
+  if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
+  return { basarili: true, kayit: guncellenen };
+}
+
 function malzemeTalepSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   malzemeTalepSilRepo(id);

@@ -544,6 +544,9 @@ function _btDetayIcerikOlustur(k, kullanici) {
   }
   html += '</div>';
 
+  // ---- İmzalı Belge ----
+  html += '<div><h4 style="margin:0 0 8px;">İmzalı / Onaylı Belge</h4><div id="btBelgeAlani"></div></div>';
+
   // ---- Geçmiş ----
   html += `<div><h4 style="margin:0 0 8px;">Geçmiş</h4><div style="font-size:12px; display:flex; flex-direction:column; gap:4px;">
     ${(k.gecmis || []).slice().reverse().map(g => `<div>${_btTarihSaat(g.tarih)} — <strong>${_btKacir(g.kullanici)}</strong>: ${_btKacir(g.not)}</div>`).join('')}
@@ -553,7 +556,38 @@ function _btDetayIcerikOlustur(k, kullanici) {
   return html;
 }
 
+// Kullanıcı isteği: "üretilen ör. bakım talep raporu imzalı pdf halini
+// yükleyebileyim" (bkz. core/belge-yukle.js).
+function _btBelgeOnizlemeCiz(k) {
+  document.getElementById('btBelgeOnizleme').innerHTML = belgeOnizlemeHtml('btBelge', !!k.imzaliBelgeUrl);
+  if (k.imzaliBelgeUrl) {
+    document.getElementById('btBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(k.imzaliBelgeUrl); });
+    document.getElementById('btBelgeKaldirBtn').addEventListener('click', () => {
+      bakimTalepBelgeGuncelle(k.id, '');
+      k.imzaliBelgeUrl = '';
+      _btBelgeOnizlemeCiz(k);
+    });
+  }
+}
+
+function _btBelgeAlaniniKur(k) {
+  document.getElementById('btBelgeAlani').innerHTML = belgeYukleyiciHtml('btBelge', 'İmzalı Bakım Raporu');
+  belgeYukleyiciBagla('btBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      bakimTalepBelgeGuncelle(k.id, referans);
+      k.imzaliBelgeUrl = referans;
+      _btBelgeOnizlemeCiz(k);
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _btBelgeOnizlemeCiz(k);
+}
+
 function _btDetayOlaylariBagla(k, kullanici) {
+  _btBelgeAlaniniKur(k);
   const btBkKaydet = document.getElementById('btBkKaydetBtn');
   if (btBkKaydet) btBkKaydet.addEventListener('click', () => _btBakimKaydet(k.id, false));
 

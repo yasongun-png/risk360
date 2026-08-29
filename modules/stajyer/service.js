@@ -63,6 +63,13 @@ function stajyerGuncelle(id, veriler) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// Kullanıcı isteği: "üretilen ör. temel isg eğitim sertifikası imzalı pdf
+// halini yükleyebileyim" (bkz. core/belge-yukle.js).
+function stajyerBelgeGuncelle(id, referans) {
+  const guncellenen = stajyerGuncelleRepo(id, { imzaliBelgeUrl: referans || '' });
+  return { basarili: true, kayit: guncellenen };
+}
+
 function stajyerSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   stajyerSilRepo(id);

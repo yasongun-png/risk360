@@ -220,6 +220,9 @@ function malzemeTalepKaydiOlustur(veriler) {
     unvan: (veriler.unvan || '').trim(),
     durum: veriler.durum || 'Taslak',
     malzemeler: Array.isArray(veriler.malzemeler) ? veriler.malzemeler : [],
+    // Kullanıcı isteği: "üretilen ör. malzeme talep oluru imzalı pdf halini
+    // yükleyebileyim" (bkz. core/belge-yukle.js).
+    imzaliBelgeUrl: veriler.imzaliBelgeUrl || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

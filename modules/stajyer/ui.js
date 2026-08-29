@@ -189,6 +189,40 @@ function sorumluPersonelSecildi() {
   document.getElementById('sorumluAdi').value = personel ? personel.adSoyad : '';
 }
 
+// Kullanıcı isteği: "üretilen ör. temel isg eğitim sertifikası imzalı pdf
+// halini yükleyebileyim" — yalnızca mevcut (kaydedilmiş) bir kayıt için
+// gösterilir, yeni kayıt henüz id'ye sahip olmadığından önce kaydedilmelidir
+// (bkz. core/belge-yukle.js).
+function _sjBelgeOnizlemeCiz(kayit) {
+  document.getElementById('sjBelgeOnizleme').innerHTML = belgeOnizlemeHtml('sjBelge', !!(kayit && kayit.imzaliBelgeUrl));
+  if (kayit && kayit.imzaliBelgeUrl) {
+    document.getElementById('sjBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(kayit.imzaliBelgeUrl); });
+    document.getElementById('sjBelgeKaldirBtn').addEventListener('click', () => {
+      stajyerBelgeGuncelle(kayit.id, '');
+      kayit.imzaliBelgeUrl = '';
+      _sjBelgeOnizlemeCiz(kayit);
+    });
+  }
+}
+
+function _sjBelgeAlaniniKur(kayit) {
+  const alan = document.getElementById('sjBelgeAlani');
+  if (!kayit) { alan.innerHTML = '<p style="font-size:12px; color:var(--metin-soluk);">Belge eklemek için önce kaydı kaydedin.</p>'; return; }
+  alan.innerHTML = belgeYukleyiciHtml('sjBelge', 'İmzalı Temel İSG Eğitimi Sertifikası');
+  belgeYukleyiciBagla('sjBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      stajyerBelgeGuncelle(kayit.id, referans);
+      kayit.imzaliBelgeUrl = referans;
+      _sjBelgeOnizlemeCiz(kayit);
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _sjBelgeOnizlemeCiz(kayit);
+}
+
 function kayitModalAc(kayit) {
   _duzenlenenKayitId = kayit ? kayit.id : null;
   document.getElementById('modalBaslik').textContent = kayit ? (kayit.stajNo + ' Kaydını Düzenle') : 'Yeni Stajyer';
@@ -212,6 +246,7 @@ function kayitModalAc(kayit) {
   document.getElementById('isgEgitimTarihi2').value = kayit ? kayit.isgEgitimTarihi2 : '';
   document.getElementById('durum').innerHTML = STAJYER_DURUMLARI.map(d => `<option ${kayit && kayit.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('notlar').value = kayit ? kayit.notlar : '';
+  _sjBelgeAlaniniKur(kayit);
 
   isgEgitimUyarisiniGuncelle();
   temizleFormHatalari();

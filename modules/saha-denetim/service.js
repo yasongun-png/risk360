@@ -92,6 +92,13 @@ function denetimTamamla(id) {
   return guncellenen ? { basarili: true, denetim: _denetimZenginlestir(guncellenen) } : { basarili: false };
 }
 
+// Kullanıcı isteği: "üretilen ör. saha denetim raporu imzalı pdf halini
+// yükleyebileyim" (bkz. core/belge-yukle.js).
+function denetimBelgeGuncelle(id, referans) {
+  const guncellenen = denetimGuncelleRepo(id, { imzaliBelgeUrl: referans || '' });
+  return guncellenen ? { basarili: true, denetim: _denetimZenginlestir(guncellenen) } : { basarili: false };
+}
+
 // "Uygun Değil" işaretlenen bir kontrol maddesini, mevcut Uygunsuzluk/DÖF
 // modülüne (uygunsuzlukEkle) yeni bir kayıt olarak aktarır. Aktarılan madde
 // tekrar aktarılamaz (aktarildiId ile işaretlenir).

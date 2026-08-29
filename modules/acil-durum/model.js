@@ -760,7 +760,11 @@ function bosPlanOlustur() {
     uyariSistemleri: '',
     ozelRiskBolgeleri: [],
     notlar: '',
-    revizyonGecmisi: []
+    revizyonGecmisi: [],
+    // Kullanıcı isteği: "acil durum planı imzalı pdf halini yükleyebileyim"
+    // — uygulamada üretilen Word/PDF/PPTX planı fiziken imzalandıktan sonra
+    // taranıp geri yüklenebilsin diye (bkz. core/belge-yukle.js).
+    imzaliBelgeUrl: ''
   };
 }
 

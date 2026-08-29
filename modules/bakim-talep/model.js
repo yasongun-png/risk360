@@ -80,6 +80,9 @@ function bakimTalepOlustur(veriler, talepNo) {
     },
     redGerekcesi: '',
     ilgiliUygunsuzlukNo: (veriler.ilgiliUygunsuzlukNo || '').trim(),
+    // Kullanıcı isteği: "üretilen ör. bakım talep raporu imzalı pdf halini
+    // yükleyebileyim" (bkz. core/belge-yukle.js).
+    imzaliBelgeUrl: '',
     gecmis: []
   };
 }

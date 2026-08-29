@@ -96,6 +96,9 @@ function toplantiOlustur(veriler) {
     // Otomatik (Olay/Kaza modülünden çekilen) olay satırlarından "Sil"
     // denilenlerin kaza id'leri — bkz. service.js _kurulOtomatikOlaylariGetir.
     otomatikOlayGizliKazaIdleri: Array.isArray(veriler.otomatikOlayGizliKazaIdleri) ? veriler.otomatikOlayGizliKazaIdleri : [],
+    // Kullanıcı isteği: "üretilen ör. kurul tutanağı imzalı pdf halini
+    // yükleyebileyim" — ıslak imzalı/taranmış tutanak (bkz. core/belge-yukle.js).
+    imzaliBelgeUrl: veriler.imzaliBelgeUrl || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
