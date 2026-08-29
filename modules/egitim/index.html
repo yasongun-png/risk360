@@ -101,14 +101,24 @@
           <label style="display:flex; align-items:center; gap:6px; font-weight:normal;">
             <input type="checkbox" id="suresizMi" style="width:auto;"> Süresiz (bitiş tarihi yok)
           </label>
-
-          <!-- Kullanıcı isteği: "myk belgesi girişinde pdf ekleme de olsun,
-               belgeyi ekleyip daha sonra indirebileyim veya tıkladığımda
-               açılsın" -->
-          <label for="belgeDosyasi">Belge (PDF)</label>
-          <input type="file" id="belgeDosyasi" accept="application/pdf">
-          <div id="belgeDosyasiOnizleme" style="margin-top:6px; margin-bottom:14px;"></div>
         </div>
+
+        <!-- Kullanıcı isteği: "myk belgesi girişinde pdf ekleme de olsun,
+             belgeyi ekleyip daha sonra indirebileyim veya tıkladığımda
+             açılsın" — sonra: "tüm eğitim kayıtlarına istersem pdf veya
+             fotoğraf ile eğitim kayıtlarını ekleyebileyim" — bu yüzden
+             belge yükleme artık MYK ile sınırlı değil, HER eğitim/sertifika
+             türünde gösterilir. -->
+        <label>Belge / Kanıt <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı — sertifika, katılım formu vb. PDF veya fotoğraf olarak ekleyebilirsiniz)</span></label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+          <button type="button" class="ikincil" id="belgePdfSecBtn">📄 PDF Seç</button>
+          <button type="button" class="ikincil" id="belgeFotoCekBtn">📷 Fotoğraf Çek</button>
+          <button type="button" class="ikincil" id="belgeFotoSecBtn">🖼️ Fotoğraf Seç</button>
+        </div>
+        <input type="file" id="belgePdfDosya" accept="application/pdf" style="display:none;">
+        <input type="file" id="belgeFotoCekDosya" accept="image/*" capture="environment" style="display:none;">
+        <input type="file" id="belgeFotoSecDosya" accept="image/*" style="display:none;">
+        <div id="belgeDosyasiOnizleme" style="margin-top:6px; margin-bottom:14px;"></div>
 
         <div class="form-satir-ikili">
           <div>
@@ -267,7 +277,7 @@
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=2"></script>
-  <script src="ui.js?v=2"></script>
+  <script src="ui.js?v=3"></script>
   <script src="cikti.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('egitim');

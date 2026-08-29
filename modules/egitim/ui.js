@@ -561,7 +561,12 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitTablosunuCiz(e.target.value));
   document.getElementById('egitimTuruId').addEventListener('change', turAlanlariniGuncelle);
   document.getElementById('suresizMi').addEventListener('change', turAlanlariniGuncelle);
-  document.getElementById('belgeDosyasi').addEventListener('change', _egtBelgeDosyasiSecildi);
+  document.getElementById('belgePdfSecBtn').addEventListener('click', () => document.getElementById('belgePdfDosya').click());
+  document.getElementById('belgeFotoCekBtn').addEventListener('click', () => document.getElementById('belgeFotoCekDosya').click());
+  document.getElementById('belgeFotoSecBtn').addEventListener('click', () => document.getElementById('belgeFotoSecDosya').click());
+  document.getElementById('belgePdfDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
+  document.getElementById('belgeFotoCekDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
+  document.getElementById('belgeFotoSecDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeDurum').addEventListener('click', () => gorunumDegistir('durum'));
 
@@ -907,20 +912,28 @@ function _pdfDosyasiniDataUrlOku(dosya) {
   });
 }
 
+// Kullanıcı isteği: "tüm eğitim kayıtlarına istersem pdf veya fotoğraf ile
+// eğitim kayıtlarını ekyebileyim" — PDF Seç, Fotoğraf Çek ve Fotoğraf Seç
+// düğmelerinin ÜÇÜ de bu tek fonksiyona bağlanır; dosya türüne göre PDF
+// (yukarıdaki ham data URL yolu) veya fotoğraf (fotoSikistir ile küçültülmüş)
+// olarak aynı belgeDosyasi alanına yazılır.
 async function _egtBelgeDosyasiSecildi(e) {
   const dosya = e.target.files[0];
   e.target.value = '';
   if (!dosya) return;
-  if (dosya.type !== 'application/pdf') { alert('Lütfen bir PDF dosyası seçin.'); return; }
+  const pdfMi = dosya.type === 'application/pdf';
+  const fotoMi = dosya.type.startsWith('image/');
+  if (!pdfMi && !fotoMi) { alert('Lütfen bir PDF dosyası veya fotoğraf seçin.'); return; }
   // Firestore belge başına ~1MB sınırı var; base64 kodlama ham boyutu ~%37
   // büyüttüğünden 2MB üzerindeki dosyalar güvenli aralığın dışında kalır.
-  if (dosya.size > 2 * 1024 * 1024) { alert('PDF dosyası çok büyük (maks. 2 MB). Lütfen daha küçük bir dosya seçin.'); return; }
+  // Fotoğraflar zaten fotoSikistir ile küçültüldüğünden bu sınıra takılmaz.
+  if (pdfMi && dosya.size > 2 * 1024 * 1024) { alert('PDF dosyası çok büyük (maks. 2 MB). Lütfen daha küçük bir dosya seçin.'); return; }
   try {
-    const dataUrl = await _pdfDosyasiniDataUrlOku(dosya);
+    const dataUrl = pdfMi ? await _pdfDosyasiniDataUrlOku(dosya) : await fotoSikistir(dosya, 1600, 0.7);
     _egtBelgeDosyasi = await fotoBuyukKaydet(dataUrl, _aktifFirma ? _aktifFirma.slug : '');
     _egtBelgeOnizlemeCiz();
   } catch (hata) {
-    alert(hata.message || 'PDF yüklenemedi.');
+    alert(hata.message || 'Belge yüklenemedi.');
   }
 }
 
@@ -995,7 +1008,9 @@ function modalAc(kayit) {
   document.getElementById('saat').value = kayit ? kayit.saat : '';
   document.getElementById('aciklama').value = kayit ? (kayit.aciklama || '') : '';
   _egtBelgeDosyasi = kayit ? (kayit.belgeDosyasi || '') : '';
-  document.getElementById('belgeDosyasi').value = '';
+  document.getElementById('belgePdfDosya').value = '';
+  document.getElementById('belgeFotoCekDosya').value = '';
+  document.getElementById('belgeFotoSecDosya').value = '';
   _egtBelgeOnizlemeCiz();
   temizleFormHatalari();
   document.getElementById('modalKatman').classList.add('acik');
