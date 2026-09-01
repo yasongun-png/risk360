@@ -47,7 +47,6 @@ async function periyodikEkipmanGecmisiniYazdir(ekipmanId) {
         <tr><td class="pk-etiket">Bölüm</td><td>${_pkKacir(ekipman.bolum)}</td><td class="pk-etiket">Lokasyon</td><td>${_pkKacir(ekipman.lokasyon) || '-'}</td></tr>
         <tr><td class="pk-etiket">Periyodik Kontrol Süresi</td><td>${ekipman.periyotAy} ay</td><td class="pk-etiket">Risk Seviyesi</td><td>${_pkKacir(ekipman.riskSeviyesi)}</td></tr>
         <tr><td class="pk-etiket">Son Kontrol Tarihi</td><td>${_pkKacir(gunAyYil(ekipman.sonKontrolTarihi)) || '-'}</td><td class="pk-etiket">Sonraki Kontrol Tarihi</td><td>${_pkKacir(gunAyYil(ekipman.sonrakiKontrolTarihi)) || '-'}</td></tr>
-        ${ekipman.olculenGazlar ? `<tr><td class="pk-etiket">Ölçülen Gazlar</td><td colspan="3">${_pkKacir(ekipman.olculenGazlar)}</td></tr>` : ''}
       </table>
     </div>
 

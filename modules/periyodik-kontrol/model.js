@@ -15,15 +15,8 @@ const PERIYODIK_KATEGORILERI = [
   'Vinç ve Caraskallar', 'Forkliftler', 'Transpaletler', 'Platformlar (Yüksekte Çalışma)',
   'Asansörler', 'Elektrik Tesisatı', 'Topraklama Tesisatı', 'Paratoner (Yıldırımlık)',
   'Yangın Söndürme Cihazları', 'Yangın Dolapları / Hidrant', 'Sprinkler Sistemleri',
-  'Gaz Tesisatı', 'Mobil Gaz Ölçüm Cihazı', 'Sabit Gaz Ölçüm Cihazı', 'İskeleler', 'Kimyasal Tanklar', 'Konveyörler', 'Pompalar', 'Diğer'
+  'Gaz Tesisatı', 'İskeleler', 'Kimyasal Tanklar', 'Konveyörler', 'Pompalar', 'Diğer'
 ];
-
-// Yalnızca gaz ölçüm cihazı kategorilerinde (mobil/sabit) anlamlı, o yüzden
-// ekipman formunda kategori seçimine göre koşullu gösterilir (bkz. ui.js
-// _pkKategoriAlanlariniGuncelle) — kullanıcı isteği: "iş izinleri yerine
-// periyodik kontrol modülü daha mantıklı" (gaz ölçüm cihazlarının
-// kalibrasyonu zaten bu modüldeki kontrol kaydı akışıyla birebir örtüşüyor).
-const PERIYODIK_GAZ_OLCUM_KATEGORILERI = ['Mobil Gaz Ölçüm Cihazı', 'Sabit Gaz Ölçüm Cihazı'];
 
 // Tüm kategoriler için yaygın uygulamadaki varsayılan periyot: 12 ay.
 // Risk değerlendirmesi farklı bir süre gerektiriyorsa ekipman kaydında değiştirilebilir.
@@ -101,10 +94,6 @@ function periyodikEkipmanOlustur(veriler) {
     model: (veriler.model || '').trim(),
     seriNo: (veriler.seriNo || '').trim(),
     imalYili: veriler.imalYili || '',
-    // Yalnızca gaz ölçüm cihazı kategorilerinde kullanılır — ör. "O2, LEL,
-    // CO, H2S" veya "O2, NH3, SO2" (cihazlar arası ölçüm gazı kombinasyonu
-    // çok değişken olduğundan sabit liste yerine serbest metin).
-    olculenGazlar: (veriler.olculenGazlar || '').trim(),
     bolum: (veriler.bolum || '').trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
     sorumluPersonel: (veriler.sorumluPersonel || '').trim(),

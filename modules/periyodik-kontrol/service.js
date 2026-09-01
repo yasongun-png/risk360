@@ -72,7 +72,6 @@ function periyodikEkipmanGuncelle(id, veriler) {
     model: (veriler.model || '').trim(),
     seriNo: (veriler.seriNo || '').trim(),
     imalYili: veriler.imalYili || '',
-    olculenGazlar: (veriler.olculenGazlar || '').trim(),
     bolum: veriler.bolum.trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
     sorumluPersonel: (veriler.sorumluPersonel || '').trim(),
