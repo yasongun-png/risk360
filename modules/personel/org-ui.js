@@ -112,15 +112,21 @@ function orgYazdir(e) {
   const tumPersonel = personelleriGetir('', false);
   const firma = aktifFirmaGetir();
 
+  // Kullanıcı raporu: "burdada duruyo kötü" — #yazdirmaAlani zaten CSS'te
+  // (assets/style.css) varsayılan olarak display:none ve sadece @media print
+  // içinde görünür kılınıyor; buradaki mount.style.display = 'block' satırı
+  // bunu SATIR-İÇİ STİLLE (CSS kuralından daha yüksek özgüllükte) eziyordu,
+  // bu yüzden şema, yazdırma iletişim kutusu açılmadan önce sayfanın altında
+  // biçimsiz şekilde gerçekten görünür oluyordu. Görünürlük tamamen CSS'e
+  // bırakılır — inline style hiç ayarlanmaz.
   const mount = document.getElementById('yazdirmaAlani');
   mount.innerHTML = `
     <div class="doc-title">ORGANİZASYON ŞEMASI</div>
     <div class="doc-meta" style="text-align:center;"><b>${firma ? firma.ad : ''}</b></div>
     <ul class="org-print-agac">${kokler.map(k => _orgDugumYazdirCiz(k, tumPersonel)).join('')}</ul>
   `;
-  mount.style.display = 'block';
   setTimeout(() => {
     window.print();
-    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
+    setTimeout(() => { mount.innerHTML = ''; }, 400);
   }, 80);
 }
