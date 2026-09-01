@@ -50,11 +50,3 @@ function izinTalepDogrula(veriler) {
   if (!veriler.talepEden || !veriler.talepEden.trim()) hatalar.talepEden = 'Talep eden zorunludur.';
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
-
-// Gaz Ölçüm Cihazları sekmesi — bkz. model.js gazCihaziOlustur.
-function gazCihaziDogrula(veriler) {
-  const hatalar = {};
-  if (!veriler.cihazNo || !veriler.cihazNo.trim()) hatalar.cihazNo = 'Cihaz no / etiketi zorunludur.';
-  if (!veriler.olculenGazlar || !veriler.olculenGazlar.trim()) hatalar.olculenGazlar = 'Ölçülen gazlar zorunludur.';
-  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
-}

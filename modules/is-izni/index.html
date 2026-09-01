@@ -44,7 +44,6 @@
 
     <div class="sekme-cubugu">
       <button type="button" data-sekme="izinler">İzinler</button>
-      <button type="button" data-sekme="gazCihazlari" class="sekme-seciliDegil">Gaz Ölçüm Cihazları</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
     </div>
 
@@ -69,102 +68,9 @@
       <div class="bos-durum" id="izinBosDurum"></div>
     </div>
 
-    <!-- GAZ ÖLÇÜM CİHAZLARI -->
-    <div id="bolum-gazCihazlari" style="display:none;">
-      <p style="font-size:12px; color:var(--metin-soluk); margin-top:0;">
-        Sıcak Çalışma ve Kapalı Alan izinlerinde kullanılan taşınabilir gaz ölçüm cihazlarının envanteri ve periyodik kalibrasyon takibi.
-      </p>
-      <div class="arac-cubugu">
-        <input type="text" id="gcAramaKutusu" class="arama-kutusu" placeholder="Cihaz no, marka veya ölçülen gaza göre ara...">
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="birincil" id="gcYeniBtn" style="width:auto;">+ Yeni Cihaz</button>
-        </div>
-      </div>
-      <div class="tablo-scroll">
-        <table class="veri-tablosu">
-          <thead><tr><th>Cihaz No</th><th>Marka / Model</th><th>Ölçülen Gazlar</th><th>Lokasyon / Sorumlu</th><th>Son Kalibrasyon</th><th>Sonraki Kalibrasyon</th><th>Durum</th><th>İşlemler</th></tr></thead>
-          <tbody id="gcTabloGovde"></tbody>
-        </table>
-      </div>
-      <div class="bos-durum" id="gcBosDurum"></div>
-    </div>
-
     <!-- ÖZET -->
     <div id="bolum-ozet" style="display:none;">
       <div id="izinOzetKutusu"></div>
-    </div>
-  </div>
-
-  <!-- GAZ ÖLÇÜM CİHAZI MODAL -->
-  <div class="modal-katman" id="gcModalKatman">
-    <div class="modal-kutu" style="max-width:560px;">
-      <h3 id="gcModalBaslik">Yeni Gaz Ölçüm Cihazı</h3>
-      <form id="gcForm">
-        <div class="form-satir-ikili">
-          <div>
-            <label for="gcCihazNo">Cihaz No / Etiketi</label>
-            <input type="text" id="gcCihazNo" placeholder="ör. ARRC-0169">
-            <div class="alan-hatasi" id="gcCihazNoHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
-          </div>
-          <div>
-            <label for="gcDurum">Durum</label>
-            <select id="gcDurum"></select>
-          </div>
-        </div>
-        <div class="form-satir-ikili">
-          <div>
-            <label for="gcMarka">Marka</label>
-            <input type="text" id="gcMarka" placeholder="ör. Dräger">
-          </div>
-          <div>
-            <label for="gcModel">Model</label>
-            <input type="text" id="gcModel" placeholder="ör. X-am 5000">
-          </div>
-        </div>
-        <label for="gcSeriNo">Seri No</label>
-        <input type="text" id="gcSeriNo">
-
-        <label for="gcOlculenGazlar">Ölçülen Gazlar</label>
-        <input type="text" id="gcOlculenGazlar" placeholder="ör. O2, LEL, CO, H2S">
-        <div class="alan-hatasi" id="gcOlculenGazlarHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
-
-        <div class="form-satir-ikili">
-          <div>
-            <label for="gcLokasyon">Lokasyon</label>
-            <input type="text" id="gcLokasyon">
-          </div>
-          <div>
-            <label for="gcSorumlu">Sorumlu</label>
-            <input type="text" id="gcSorumlu">
-          </div>
-        </div>
-
-        <div class="form-satir-ikili">
-          <div>
-            <label for="gcSonKalibrasyonTarihi">Son Kalibrasyon Tarihi</label>
-            <input type="date" id="gcSonKalibrasyonTarihi">
-          </div>
-          <div>
-            <label for="gcKalibrasyonPeriyoduAy">Kalibrasyon Periyodu (Ay)</label>
-            <input type="number" id="gcKalibrasyonPeriyoduAy" min="1" value="12">
-          </div>
-        </div>
-        <p style="font-size:11px; color:var(--metin-soluk); margin-top:-8px;" id="gcSonrakiOnizleme"></p>
-
-        <label for="gcKalibrasyonFirmasi">Kalibrasyon Firması</label>
-        <input type="text" id="gcKalibrasyonFirmasi">
-
-        <div id="gcBelgeAlani"></div>
-
-        <label for="gcNotlar">Notlar</label>
-        <textarea id="gcNotlar" rows="2"></textarea>
-
-        <div class="modal-eylemler">
-          <button type="button" class="ikincil" id="gcModalIptalBtn">İptal</button>
-          <button type="submit" class="birincil">Kaydet</button>
-        </div>
-      </form>
-      <button type="button" class="tablo-buton" id="gcModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -374,7 +280,6 @@
   <script src="../../core/excel.js"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="../../core/belge-yukle.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
