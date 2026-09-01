@@ -401,6 +401,8 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('tatbikatYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Tatbikatları', _adFirma ? _adFirma.ad : '', TATBIKAT_EXPORT_KOLONLARI, tatbikatlariGetir(document.getElementById('tatbikatAramaKutusu').value));
   });
+
+  _gocBaslat();
 }
 
 function gorunumDegistir(gorunum) {
@@ -408,12 +410,13 @@ function gorunumDegistir(gorunum) {
   document.querySelectorAll('[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
-  ['ekipler', 'uygunluk', 'ekipman', 'yanginTupu', 'tatbikat'].forEach(g => {
+  ['ekipler', 'uygunluk', 'ekipman', 'yanginTupu', 'gazOlcum', 'tatbikat'].forEach(g => {
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
   if (gorunum === 'ekipler') ekipleriCiz('');
   else if (gorunum === 'uygunluk') uygunlugCiz();
+  else if (gorunum === 'gazOlcum') { gocCihazlariCiz(''); gocKalibrasyonlariCiz(''); }
   else if (gorunum === 'ekipman') {
     // Kullanıcı isteği: "tüm ekipmanlarda kontrol periyodunu 30 gün yap
     // mevcut ekipmanlarda da bu süre değişsin yeniden hesaplansın" --

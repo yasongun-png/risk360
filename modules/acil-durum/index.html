@@ -45,6 +45,7 @@
 
     <div class="sekme-cubugu">
       <button type="button" data-sekme="yanginTupu" class="sekme-seciliDegil">Yangın Tüpü</button>
+      <button type="button" data-sekme="gazOlcum" class="sekme-seciliDegil">Gaz Ölçüm Cihazları</button>
       <button type="button" data-sekme="ekipler">Ekipler</button>
       <button type="button" data-sekme="uygunluk" class="sekme-seciliDegil">Uygunluk Değerlendirmesi</button>
       <button type="button" data-sekme="ekipman" class="sekme-seciliDegil">Ekipman</button>
@@ -249,6 +250,38 @@
         </table>
       </div>
       <div class="bos-durum" id="yanginTupuZiyaretBosDurum"></div>
+    </div>
+
+    <!-- GAZ ÖLÇÜM CİHAZLARI -->
+    <div id="bolum-gazOlcum" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="gocCihazAramaKutusu" class="arama-kutusu" placeholder="Cihaz adı, cihaz no veya bölüme göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="birincil" id="yeniGocCihazBtn" style="width:auto;">+ Cihaz Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Cihaz No</th><th>Ad</th><th>Tür</th><th>Ölçülen Gazlar</th><th>Bölüm / Lokasyon</th><th>Son Kalibrasyon</th><th>Sonraki Kalibrasyon</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="gocCihazTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="gocCihazBosDurum"></div>
+
+      <div class="form-bolum-baslik" style="margin-top:24px; scroll-margin-top:16px;">Kalibrasyon Kayıtları</div>
+      <p style="font-size:12px; color:var(--metin-soluk); margin:-4px 0 10px;">
+        Tüm cihazların kalibrasyon/fonksiyon testi kayıtları — hangi firma geldi, sonuç ne, sertifika belgesi.
+      </p>
+      <div class="arac-cubugu">
+        <input type="text" id="gocKalibrasyonAramaKutusu" class="arama-kutusu" placeholder="Cihaz, firma veya rapor no ile ara...">
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Cihaz</th><th>Tarih</th><th>Tür</th><th>Rapor No</th><th>Firma</th><th>Uzman</th><th>Sonuç</th><th>İşlemler</th></tr></thead>
+          <tbody id="gocKalibrasyonTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="gocKalibrasyonBosDurum"></div>
     </div>
 
     <!-- TATBİKAT -->
@@ -833,6 +866,152 @@
     </div>
   </div>
 
+  <div class="modal-katman" id="gocCihazModalKatman">
+    <div class="modal-kutu" style="max-width:600px;">
+      <h3 id="gocCihazModalBaslik">Yeni Gaz Ölçüm Cihazı</h3>
+      <form id="gocCihazForm">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocAd">Cihaz Adı</label>
+            <input type="text" id="gocAd">
+            <div class="alan-hatasi" id="gocAdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="gocTur">Tür</label>
+            <select id="gocTur"></select>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocMarka">Marka</label>
+            <input type="text" id="gocMarka" placeholder="ör. Dräger">
+          </div>
+          <div>
+            <label for="gocModel">Model</label>
+            <input type="text" id="gocModel" placeholder="ör. X-am 5000">
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocSeriNo">Seri No</label>
+            <input type="text" id="gocSeriNo">
+          </div>
+          <div>
+            <label for="gocImalYili">İmal Yılı</label>
+            <input type="text" id="gocImalYili">
+          </div>
+        </div>
+
+        <label for="gocOlculenGazlar">Ölçülen Gazlar</label>
+        <input type="text" id="gocOlculenGazlar" placeholder="ör. O2, LEL, CO, H2S">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocBolum">Bölüm</label>
+            <input type="text" id="gocBolum">
+            <div class="alan-hatasi" id="gocBolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="gocLokasyon">Lokasyon</label>
+            <input type="text" id="gocLokasyon">
+          </div>
+        </div>
+
+        <label for="gocSorumluPersonel">Sorumlu Personel</label>
+        <input type="text" id="gocSorumluPersonel">
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocPeriyotAy">Kalibrasyon Periyodu (Ay)</label>
+            <input type="number" id="gocPeriyotAy" min="1">
+          </div>
+          <div>
+            <label for="gocDurum">Durum</label>
+            <select id="gocDurum"></select>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocSonKalibrasyonTarihi">Son Kalibrasyon Tarihi</label>
+            <input type="date" id="gocSonKalibrasyonTarihi">
+          </div>
+          <div>
+            <label for="gocSonrakiKalibrasyonTarihi">Sonraki Kalibrasyon Tarihi <span style="color:var(--metin-soluk); font-weight:400;">(otomatik)</span></label>
+            <input type="date" id="gocSonrakiKalibrasyonTarihi">
+          </div>
+        </div>
+
+        <label for="gocNotlar">Notlar</label>
+        <textarea id="gocNotlar"></textarea>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="gocCihazModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="gocCihazModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="gocKalibrasyonModalKatman">
+    <div class="modal-kutu" style="max-width:600px;">
+      <h3 id="gocKalibrasyonModalBaslik">Yeni Kalibrasyon Kaydı</h3>
+      <form id="gocKalibrasyonForm">
+        <label for="gocKoCihazId">Cihaz</label>
+        <select id="gocKoCihazId"></select>
+        <div class="alan-hatasi" id="gocKoCihazIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocKoKalibrasyonTarihi">Kalibrasyon Tarihi</label>
+            <input type="date" id="gocKoKalibrasyonTarihi">
+          </div>
+          <div>
+            <label for="gocKoTur">Tür</label>
+            <select id="gocKoTur"></select>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocKoRaporNo">Rapor No</label>
+            <input type="text" id="gocKoRaporNo">
+          </div>
+          <div>
+            <label for="gocKoSonuc">Sonuç</label>
+            <select id="gocKoSonuc"></select>
+          </div>
+        </div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="gocKoFirma">Kalibrasyonu Yapan Firma</label>
+            <input type="text" id="gocKoFirma">
+            <div class="alan-hatasi" id="gocKoFirmaHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="gocKoUzman">Uzman</label>
+            <input type="text" id="gocKoUzman">
+          </div>
+        </div>
+
+        <label for="gocKoAciklama">Açıklama</label>
+        <textarea id="gocKoAciklama"></textarea>
+
+        <div id="gocKalibrasyonBelgeAlani" style="margin-top:14px;"></div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="gocKalibrasyonModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="gocKalibrasyonModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
@@ -840,8 +1019,10 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="../../core/data.js"></script>
   <script src="../../core/auth.js"></script>
+  <script src="../../core/belge-yukle.js"></script>
   <!-- ?v= tarayıcı JS önbelleğini kırmak için (kullanıcı raporu: "değişiklik
        görünmüyor" — tarayıcı eski script'i önbellekten okuyordu, bkz.
        modules/personel/index.html'deki aynı çözüm). Bu dosyaların içeriği
@@ -861,6 +1042,9 @@
   <script src="service.js?v=14"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
+  <script src="gaz-olcum.js"></script>
+  <script src="gaz-olcum-cikti.js"></script>
+  <script src="gaz-olcum-ui.js"></script>
   <script src="ui.js?v=24"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
