@@ -28,3 +28,33 @@ function izinSilRepo(id) {
 function izinIdIleGetirRepo(id) {
   return izinTumunuGetir().find(k => k.id === id) || null;
 }
+
+// ---- Gaz Ölçüm Cihazları (bkz. model.js gazCihaziOlustur) ----
+function _gazCihaziAnahtari() { return tenantAnahtar('is_izni_gaz_cihazlari'); }
+
+function gazCihazlariTumunuGetir() { return oku(_gazCihaziAnahtari(), []); }
+function _gazCihazlariKaydet(liste) { yaz(_gazCihaziAnahtari(), liste); }
+
+function gazCihaziEkleRepo(kayit) {
+  const liste = gazCihazlariTumunuGetir();
+  liste.push(kayit);
+  _gazCihazlariKaydet(liste);
+  return kayit;
+}
+
+function gazCihaziGuncelleRepo(id, veriler) {
+  const liste = gazCihazlariTumunuGetir();
+  const index = liste.findIndex(k => k.id === id);
+  if (index === -1) return null;
+  liste[index] = Object.assign({}, liste[index], veriler);
+  _gazCihazlariKaydet(liste);
+  return liste[index];
+}
+
+function gazCihaziSilRepo(id) {
+  _gazCihazlariKaydet(gazCihazlariTumunuGetir().filter(k => k.id !== id));
+}
+
+function gazCihaziIdIleGetirRepo(id) {
+  return gazCihazlariTumunuGetir().find(k => k.id === id) || null;
+}

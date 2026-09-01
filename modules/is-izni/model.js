@@ -302,3 +302,67 @@ function izinOlustur(veriler) {
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
+
+// ---- Gaz Ölçüm Cihazları (envanter + kalibrasyon takibi) ----
+// Kullanıcı isteği: "gaz ölçüm cihazlarının bilgileri ve kalibrasyon
+// bilgilerinin gireleceği bir sekme" — Sıcak Çalışma/Kapalı Alan izinlerinde
+// kullanılan taşınabilir gaz ölçüm cihazlarının envanteri ve periyodik
+// kalibrasyon takibi, İş İzni modülü içinde ayrı bir sekme olarak.
+// periyodik-kontrol modülündeki ekipman deseniyle aynı mantık (son
+// kalibrasyon + periyot -> sonraki kalibrasyon, süresi geçti/yaklaşıyor
+// uyarısı) ama bilerek ayrı bir kayıt/anahtar — kullanıcı burada, iş izni
+// modülünün içinde tutulmasını istedi.
+const GAZ_CIHAZI_DURUMLARI = ['Aktif', 'Pasif', 'Arızalı'];
+const GAZ_CIHAZI_VARSAYILAN_PERIYOT_AY = 12;
+
+function _gazCihaziYerelTarihStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function gazCihaziSonrakiKalibrasyonHesapla(sonKalibrasyonTarihi, periyotAy) {
+  if (!sonKalibrasyonTarihi) return '';
+  const d = new Date(sonKalibrasyonTarihi + 'T00:00:00');
+  if (isNaN(d)) return '';
+  d.setMonth(d.getMonth() + Number(periyotAy || GAZ_CIHAZI_VARSAYILAN_PERIYOT_AY));
+  return _gazCihaziYerelTarihStr(d);
+}
+
+// "Uygun Değil" muadili yok (cihaz kaydı, kontrol kaydı ikilisi değil) —
+// yalnızca elle işaretlenen Pasif/Arızalı öncelikli, aksi halde sonraki
+// kalibrasyon tarihine göre gecikmiş/yaklaşan/geçerli.
+function gazCihaziDurumuHesapla(cihaz, bugunStr) {
+  if (cihaz.durum === 'Pasif' || cihaz.durum === 'Arızalı') return cihaz.durum;
+  const bugun = bugunStr || bugunIso();
+  if (!cihaz.sonrakiKalibrasyonTarihi) return 'Aktif';
+  if (cihaz.sonrakiKalibrasyonTarihi < bugun) return 'Süresi Geçti';
+  const otuzGunSonra = new Date(bugun + 'T00:00:00');
+  otuzGunSonra.setDate(otuzGunSonra.getDate() + 30);
+  if (cihaz.sonrakiKalibrasyonTarihi <= _gazCihaziYerelTarihStr(otuzGunSonra)) return 'Yaklaşıyor';
+  return 'Aktif';
+}
+
+function gazCihaziOlustur(veriler) {
+  const periyotAy = Number(veriler.kalibrasyonPeriyoduAy || GAZ_CIHAZI_VARSAYILAN_PERIYOT_AY);
+  const sonKalibrasyonTarihi = veriler.sonKalibrasyonTarihi || '';
+  return {
+    id: veriler.id || rastgeleId(),
+    cihazNo: (veriler.cihazNo || '').trim(),
+    marka: (veriler.marka || '').trim(),
+    model: (veriler.model || '').trim(),
+    seriNo: (veriler.seriNo || '').trim(),
+    // ör. "O2, LEL, CO, H2S" — sabit bir listeye zorlamak yerine serbest metin,
+    // cihazlar arası ölçüm gazı kombinasyonu çok değişken olduğundan.
+    olculenGazlar: (veriler.olculenGazlar || '').trim(),
+    lokasyon: (veriler.lokasyon || '').trim(),
+    sorumlu: (veriler.sorumlu || '').trim(),
+    sonKalibrasyonTarihi,
+    kalibrasyonPeriyoduAy: periyotAy,
+    sonrakiKalibrasyonTarihi: veriler.sonrakiKalibrasyonTarihi || gazCihaziSonrakiKalibrasyonHesapla(sonKalibrasyonTarihi, periyotAy),
+    kalibrasyonFirmasi: (veriler.kalibrasyonFirmasi || '').trim(),
+    // Kalibrasyon sertifikası (PDF/fotoğraf) — bkz. core/belge-yukle.js.
+    sertifikaBelgesi: veriler.sertifikaBelgesi || '',
+    durum: GAZ_CIHAZI_DURUMLARI.includes(veriler.durum) ? veriler.durum : 'Aktif',
+    notlar: (veriler.notlar || '').trim(),
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}

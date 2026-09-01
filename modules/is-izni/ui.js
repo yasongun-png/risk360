@@ -156,8 +156,159 @@ function izinSayfasiniBaslat() {
   });
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('is-izni', 'İş İzinleri'));
 
+  _gcSayfasiniBaslat();
+
   izOzetiCiz();
   izGorunumDegistir('izinler');
+}
+
+// ==================== GAZ ÖLÇÜM CİHAZLARI ====================
+// Kullanıcı isteği: "gaz ölçüm cihazlarının bilgileri ve kalibrasyon
+// bilgilerinin gireleceği bir sekme".
+
+let _gcDuzenlenenId = null;
+let _gcBelge = '';
+
+function _gcKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+function gazCihazlariniCiz(aramaMetni) {
+  const govde = document.getElementById('gcTabloGovde');
+  const bosDurum = document.getElementById('gcBosDurum');
+  const liste = gazCihazlariniGetir(aramaMetni);
+
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni ? 'Aramanızla eşleşen cihaz bulunamadı.' : 'Henüz gaz ölçüm cihazı eklenmedi.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(c => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_gcKacir(c.cihazNo)}</td>
+      <td>${[c.marka, c.model].filter(Boolean).map(_gcKacir).join(' ') || '-'}</td>
+      <td>${_gcKacir(c.olculenGazlar)}</td>
+      <td>${[c.lokasyon, c.sorumlu].filter(Boolean).map(_gcKacir).join(' — ') || '-'}</td>
+      <td>${gunAyYil(c.sonKalibrasyonTarihi) || '-'}</td>
+      <td>${gunAyYil(c.sonrakiKalibrasyonTarihi) || '-'}</td>
+      <td><span class="genel-rozet rozet-${slugOlustur(c.durumGoruntu)}">${_gcKacir(c.durumGoruntu)}</span></td>
+      <td>
+        <button class="tablo-buton" data-gc-duzenle="${c.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-gc-sil="${c.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-gc-duzenle]').forEach(btn => btn.addEventListener('click', () => gcModalAc(gazCihaziIdIleGetirRepo(btn.getAttribute('data-gc-duzenle')))));
+  govde.querySelectorAll('[data-gc-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu gaz ölçüm cihazını silmek istediğinize emin misiniz?', 'Sil')) {
+      const sonuc = gazCihaziSil(btn.getAttribute('data-gc-sil'));
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      gazCihazlariniCiz(document.getElementById('gcAramaKutusu').value);
+    }
+  }));
+}
+
+function _gcSonrakiOnizlemeGuncelle() {
+  const tarih = document.getElementById('gcSonKalibrasyonTarihi').value;
+  const periyot = document.getElementById('gcKalibrasyonPeriyoduAy').value;
+  const kutu = document.getElementById('gcSonrakiOnizleme');
+  const sonraki = gazCihaziSonrakiKalibrasyonHesapla(tarih, periyot);
+  kutu.textContent = sonraki ? ('Sonraki kalibrasyon: ' + gunAyYil(sonraki)) : '';
+}
+
+function _gcBelgeOnizlemeCiz() {
+  document.getElementById('gcBelgeOnizleme').innerHTML = belgeOnizlemeHtml('gcBelge', !!_gcBelge);
+  if (_gcBelge) {
+    document.getElementById('gcBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(_gcBelge); });
+    document.getElementById('gcBelgeKaldirBtn').addEventListener('click', () => { _gcBelge = ''; _gcBelgeOnizlemeCiz(); });
+  }
+}
+
+function _gcBelgeAlaniniKur() {
+  document.getElementById('gcBelgeAlani').innerHTML = belgeYukleyiciHtml('gcBelge', 'Kalibrasyon Sertifikası');
+  belgeYukleyiciBagla('gcBelge', async dosya => {
+    try {
+      const firma = aktifFirmaGetir();
+      _gcBelge = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      _gcBelgeOnizlemeCiz();
+    } catch (hata) {
+      alert(hata.message || 'Belge yüklenemedi.');
+    }
+  });
+  _gcBelgeOnizlemeCiz();
+}
+
+function gcModalAc(cihaz) {
+  _gcDuzenlenenId = cihaz ? cihaz.id : null;
+  document.getElementById('gcModalBaslik').textContent = cihaz ? (cihaz.cihazNo + ' — Düzenle') : 'Yeni Gaz Ölçüm Cihazı';
+  document.getElementById('gcCihazNo').value = cihaz ? cihaz.cihazNo : '';
+  document.getElementById('gcDurum').innerHTML = GAZ_CIHAZI_DURUMLARI.map(d => `<option ${cihaz && cihaz.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('gcMarka').value = cihaz ? cihaz.marka : '';
+  document.getElementById('gcModel').value = cihaz ? cihaz.model : '';
+  document.getElementById('gcSeriNo').value = cihaz ? cihaz.seriNo : '';
+  document.getElementById('gcOlculenGazlar').value = cihaz ? cihaz.olculenGazlar : '';
+  document.getElementById('gcLokasyon').value = cihaz ? cihaz.lokasyon : '';
+  document.getElementById('gcSorumlu').value = cihaz ? cihaz.sorumlu : '';
+  document.getElementById('gcSonKalibrasyonTarihi').value = cihaz ? cihaz.sonKalibrasyonTarihi : '';
+  document.getElementById('gcKalibrasyonPeriyoduAy').value = cihaz ? cihaz.kalibrasyonPeriyoduAy : 12;
+  document.getElementById('gcKalibrasyonFirmasi').value = cihaz ? cihaz.kalibrasyonFirmasi : '';
+  document.getElementById('gcNotlar').value = cihaz ? cihaz.notlar : '';
+  _gcBelge = cihaz ? (cihaz.sertifikaBelgesi || '') : '';
+  _gcBelgeAlaniniKur();
+  _gcSonrakiOnizlemeGuncelle();
+  document.querySelectorAll('#gcForm .alan-hatasi').forEach(el => el.textContent = '');
+  document.getElementById('gcModalKatman').classList.add('acik');
+}
+
+function gcModalKapat() {
+  document.getElementById('gcModalKatman').classList.remove('acik');
+  _gcDuzenlenenId = null;
+}
+
+function gcFormGonderildi(e) {
+  e.preventDefault();
+  document.querySelectorAll('#gcForm .alan-hatasi').forEach(el => el.textContent = '');
+  const veriler = {
+    cihazNo: document.getElementById('gcCihazNo').value,
+    durum: document.getElementById('gcDurum').value,
+    marka: document.getElementById('gcMarka').value,
+    model: document.getElementById('gcModel').value,
+    seriNo: document.getElementById('gcSeriNo').value,
+    olculenGazlar: document.getElementById('gcOlculenGazlar').value,
+    lokasyon: document.getElementById('gcLokasyon').value,
+    sorumlu: document.getElementById('gcSorumlu').value,
+    sonKalibrasyonTarihi: document.getElementById('gcSonKalibrasyonTarihi').value,
+    kalibrasyonPeriyoduAy: document.getElementById('gcKalibrasyonPeriyoduAy').value,
+    kalibrasyonFirmasi: document.getElementById('gcKalibrasyonFirmasi').value,
+    sertifikaBelgesi: _gcBelge,
+    notlar: document.getElementById('gcNotlar').value
+  };
+  const sonuc = _gcDuzenlenenId ? gazCihaziGuncelle(_gcDuzenlenenId, veriler) : gazCihaziEkle(veriler);
+  if (!sonuc.basarili) {
+    Object.keys(sonuc.hatalar || {}).forEach(alan => {
+      const hataEl = document.getElementById('gc' + alan.charAt(0).toUpperCase() + alan.slice(1) + 'Hata');
+      if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
+    });
+    return;
+  }
+  gcModalKapat();
+  gazCihazlariniCiz(document.getElementById('gcAramaKutusu').value);
+}
+
+function _gcSayfasiniBaslat() {
+  document.getElementById('gcYeniBtn').addEventListener('click', () => gcModalAc());
+  document.getElementById('gcModalKapatBtn').addEventListener('click', gcModalKapat);
+  document.getElementById('gcModalIptalBtn').addEventListener('click', gcModalKapat);
+  document.getElementById('gcForm').addEventListener('submit', gcFormGonderildi);
+  document.getElementById('gcSonKalibrasyonTarihi').addEventListener('change', _gcSonrakiOnizlemeGuncelle);
+  document.getElementById('gcKalibrasyonPeriyoduAy').addEventListener('input', _gcSonrakiOnizlemeGuncelle);
+  document.getElementById('gcAramaKutusu').addEventListener('input', e => gazCihazlariniCiz(e.target.value));
 }
 
 const IS_IZNI_EXPORT_KOLONLARI = [
@@ -188,11 +339,12 @@ function _izFiltreleriOku() {
 
 function izGorunumDegistir(gorunum) {
   _izGorunum = gorunum;
-  ['izinler', 'ozet'].forEach(g => {
+  ['izinler', 'gazCihazlari', 'ozet'].forEach(g => {
     document.querySelector(`[data-sekme="${g}"]`).classList.toggle('sekme-seciliDegil', g !== gorunum);
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
   if (gorunum === 'izinler') izinleriCiz(document.getElementById('izinAramaKutusu').value);
+  else if (gorunum === 'gazCihazlari') gazCihazlariniCiz(document.getElementById('gcAramaKutusu').value);
   else izOzetiCiz();
 }
 

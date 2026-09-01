@@ -153,6 +153,43 @@ function izinSil(id) {
   return { basarili: true };
 }
 
+// ---- Gaz Ölçüm Cihazları (envanter + kalibrasyon takibi) ----
+
+function gazCihazlariniGetir(aramaMetni) {
+  const bugun = bugunIso();
+  const kucuk = (aramaMetni || '').trim().toLocaleLowerCase('tr-TR');
+  return gazCihazlariTumunuGetir()
+    .filter(c => !kucuk
+      || (c.cihazNo || '').toLocaleLowerCase('tr-TR').includes(kucuk)
+      || (c.marka || '').toLocaleLowerCase('tr-TR').includes(kucuk)
+      || (c.olculenGazlar || '').toLocaleLowerCase('tr-TR').includes(kucuk)
+      || (c.lokasyon || '').toLocaleLowerCase('tr-TR').includes(kucuk))
+    .map(c => Object.assign({}, c, { durumGoruntu: gazCihaziDurumuHesapla(c, bugun) }))
+    .sort((a, b) => (a.sonrakiKalibrasyonTarihi || '9999').localeCompare(b.sonrakiKalibrasyonTarihi || '9999'));
+}
+
+function gazCihaziEkle(veriler) {
+  const dogrulama = gazCihaziDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const yeni = gazCihaziOlustur(veriler);
+  gazCihaziEkleRepo(yeni);
+  return { basarili: true, cihaz: yeni };
+}
+
+function gazCihaziGuncelle(id, veriler) {
+  const dogrulama = gazCihaziDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+  const guncellenen = gazCihaziGuncelleRepo(id, gazCihaziOlustur(Object.assign({}, veriler, { id })));
+  if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
+  return { basarili: true, cihaz: guncellenen };
+}
+
+function gazCihaziSil(id) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  gazCihaziSilRepo(id);
+  return { basarili: true };
+}
+
 // Onay akışı, sırasız bir onaycı listesi üzerinden ilerler (eski uygulamadaki
 // gibi) — her "Onay Ver" tıklaması listeye yeni, zaten karar verilmiş bir
 // onaycı satırı ekler. Onaylayan kimliği artık serbest metinle (prompt)
