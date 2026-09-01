@@ -123,8 +123,27 @@ function orgYazdir(e) {
   mount.innerHTML = `
     <div class="doc-title">ORGANİZASYON ŞEMASI</div>
     <div class="doc-meta" style="text-align:center;"><b>${firma ? firma.ad : ''}</b></div>
-    <ul class="org-print-agac">${kokler.map(k => _orgDugumYazdirCiz(k, tumPersonel)).join('')}</ul>
+    <div class="org-print-sarici">
+      <ul class="org-print-agac">${kokler.map(k => _orgDugumYazdirCiz(k, tumPersonel)).join('')}</ul>
+    </div>
   `;
+
+  // Kullanıcı raporu: "şema sağa sola doğru fazla gereksiz büyüyor" — çok
+  // kardeşli/derin şemalar tek satırlık flex ağaçta sayfa genişliğini
+  // kolayca aşar. Gerçek çizilmiş genişlik ölçülüp gerekiyorsa sarıcıya tek
+  // bir transform: scale uygulanır (metin kırılmadan orantılı küçülür).
+  // Ölçüm için #yazdirmaAlani display:none'dan (0 genişlik döner) geçici
+  // olarak EKRAN DIŞINA taşınır — acil-durum/index.html'deki barkod
+  // okuyucuyla aynı teknik — sonra satır-içi stil TAMAMEN kaldırılır ki
+  // yazdırma diyaloğu açılana kadar ekranda hiç görünmesin (bkz. yukarıdaki
+  // "burdada duruyo kötü" düzeltmesi).
+  mount.style.cssText = 'display:block; position:absolute; left:-9999px; top:-9999px;';
+  const sarici = mount.querySelector('.org-print-sarici');
+  const genislikMm = sarici.scrollWidth / 96 * 25.4;
+  const SAYFA_GENISLIK_MM = 277; // A4 yatay (297mm) - @page kuralındaki 10mm+10mm kenar boşluğu
+  sarici.style.transform = genislikMm > SAYFA_GENISLIK_MM ? `scale(${(SAYFA_GENISLIK_MM / genislikMm).toFixed(3)})` : '';
+  mount.removeAttribute('style');
+
   setTimeout(() => {
     window.print();
     setTimeout(() => { mount.innerHTML = ''; }, 400);
