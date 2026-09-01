@@ -52,6 +52,7 @@ function _pkEkipmanBaslat() {
 
   document.getElementById('ekKategori').addEventListener('change', () => {
     if (!document.getElementById('ekPeriyotAy').value) document.getElementById('ekPeriyotAy').value = PERIYODIK_VARSAYILAN_AY;
+    _pkGazOlcumSatiriniGuncelle();
   });
   document.getElementById('ekSonKontrolTarihi').addEventListener('change', () => {
     const tarih = document.getElementById('ekSonKontrolTarihi').value;
@@ -156,6 +157,15 @@ function ekipmanlariCiz(aramaMetni) {
   }));
 }
 
+// "Ölçülen Gazlar" alanı yalnızca gaz ölçüm cihazı kategorilerinden biri
+// (mobil/sabit) seçiliyken gösterilir (bkz. model.js
+// PERIYODIK_GAZ_OLCUM_KATEGORILERI) — kullanıcı isteği: "iş izinleri yerine
+// periyodik kontrol modülü daha mantıklı".
+function _pkGazOlcumSatiriniGuncelle() {
+  const gazMi = PERIYODIK_GAZ_OLCUM_KATEGORILERI.includes(document.getElementById('ekKategori').value);
+  document.getElementById('ekGazOlcumSatiri').style.display = gazMi ? '' : 'none';
+}
+
 function ekipmanModalAc(kayit) {
   _duzenlenenEkipmanId = kayit ? kayit.id : null;
   document.getElementById('ekipmanModalBaslik').textContent = kayit ? (kayit.ekipmanNo + ' Kaydını Düzenle') : 'Yeni Ekipman';
@@ -168,6 +178,8 @@ function ekipmanModalAc(kayit) {
   document.getElementById('ekModel').value = kayit ? kayit.model : '';
   document.getElementById('ekSeriNo').value = kayit ? kayit.seriNo : '';
   document.getElementById('ekImalYili').value = kayit ? kayit.imalYili : '';
+  document.getElementById('ekOlculenGazlar').value = kayit ? kayit.olculenGazlar : '';
+  _pkGazOlcumSatiriniGuncelle();
   document.getElementById('ekBolum').value = kayit ? kayit.bolum : '';
   document.getElementById('ekLokasyon').value = kayit ? kayit.lokasyon : '';
   document.getElementById('ekSorumluPersonel').value = kayit ? kayit.sorumluPersonel : '';
@@ -199,6 +211,7 @@ function ekipmanFormGonderildi(e) {
     model: document.getElementById('ekModel').value,
     seriNo: document.getElementById('ekSeriNo').value,
     imalYili: document.getElementById('ekImalYili').value,
+    olculenGazlar: document.getElementById('ekOlculenGazlar').value,
     bolum: document.getElementById('ekBolum').value,
     lokasyon: document.getElementById('ekLokasyon').value,
     sorumluPersonel: document.getElementById('ekSorumluPersonel').value,
