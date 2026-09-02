@@ -9,8 +9,81 @@ function gocRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+// Kullanıcı isteği: "bunlar 3 harften oluşur bunları içe aktara bir
+// excel'e aktar ve oradan ben içe aktırırım" — Yangın Tüpü sekmesindeki
+// Şablon İndir/İçe Aktar/Dışa Aktar akışının aynısı (bkz. ui.js
+// YANGIN_TUPU_IMPORT_KOLONLARI ve _acilDurumExcelRaporBaglantilariniKur).
+const GOC_IMPORT_KOLONLARI = [
+  { anahtar: 'cihazNo', baslik: 'Cihaz No', esanlamlar: ['Cihaz No (boşsa otomatik üretilir)'] },
+  { anahtar: 'tur', baslik: 'Tür (Mobil/Sabit)' },
+  { anahtar: 'ad', baslik: 'Ad' },
+  { anahtar: 'marka', baslik: 'Marka' },
+  { anahtar: 'model', baslik: 'Model' },
+  { anahtar: 'seriNo', baslik: 'Seri No' },
+  { anahtar: 'imalYili', baslik: 'İmal Yılı' },
+  { anahtar: 'olculenGazlar', baslik: 'Ölçülen Gazlar' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'lokasyon', baslik: 'Lokasyon' },
+  { anahtar: 'sorumluPersonel', baslik: 'Sorumlu Personel' },
+  { anahtar: 'periyotAy', baslik: 'Kalibrasyon Periyodu (Ay)' },
+  { anahtar: 'sonKalibrasyonTarihi', baslik: 'Son Kalibrasyon Tarihi' },
+  { anahtar: 'sonrakiKalibrasyonTarihi', baslik: 'Sonraki Kalibrasyon Tarihi' },
+  { anahtar: 'durum', baslik: 'Durum' },
+  { anahtar: 'notlar', baslik: 'Notlar' }
+];
+
+const GOC_EXPORT_KOLONLARI = [
+  { anahtar: 'cihazNo', baslik: 'Cihaz No' },
+  { anahtar: 'ad', baslik: 'Ad' },
+  { anahtar: 'tur', baslik: 'Tür' },
+  { anahtar: 'marka', baslik: 'Marka' },
+  { anahtar: 'model', baslik: 'Model' },
+  { anahtar: 'seriNo', baslik: 'Seri No' },
+  { anahtar: 'olculenGazlar', baslik: 'Ölçülen Gazlar' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'lokasyon', baslik: 'Lokasyon' },
+  { anahtar: 'sonKalibrasyonTarihi', baslik: 'Son Kalibrasyon' },
+  { anahtar: 'sonrakiKalibrasyonTarihi', baslik: 'Sonraki Kalibrasyon' },
+  { anahtar: 'durumGoruntu', baslik: 'Durum' }
+];
+
+function _gocExcelBaglantilariniKur() {
+  document.getElementById('gocCihazSablonIndirBtn').addEventListener('click', () => {
+    excelSablonIndir(GOC_IMPORT_KOLONLARI, 'acil_durum_gaz_olcum_sablonu.xlsx');
+  });
+  document.getElementById('gocCihazDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(gocCihazlariGetir(''), GOC_EXPORT_KOLONLARI, 'acil_durum_gaz_olcum_cihazlari.xlsx');
+  });
+  document.getElementById('gocCihazIceAktarBtn').addEventListener('click', () => document.getElementById('gocCihazIceAktarDosya').click());
+  document.getElementById('gocCihazIceAktarDosya').addEventListener('change', e => {
+    const dosya = e.target.files[0];
+    excelIceAktar(dosya, GOC_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      satirlar.forEach(satir => {
+        satir.sonKalibrasyonTarihi = excelTarihiNormallestir(satir.sonKalibrasyonTarihi);
+        satir.sonrakiKalibrasyonTarihi = excelTarihiNormallestir(satir.sonrakiKalibrasyonTarihi);
+      });
+      const dugme = document.getElementById('gocCihazIceAktarBtn');
+      dugme.disabled = true;
+      try {
+        const sonuc = await gocCihazTopluIceAktar(satirlar);
+        if (!sonuc.yazimBasarili) {
+          alert('İçe aktarılan kayıtlar sunucuya KAYDEDİLEMEDİ, lütfen tekrar deneyin: ' + (sonuc.yazimHatasi ? (sonuc.yazimHatasi.message || sonuc.yazimHatasi) : 'bilinmeyen hata'));
+        } else {
+          alert(excelIceAktarOzetMesaji(sonuc));
+        }
+      } finally {
+        dugme.disabled = false;
+      }
+      gocCihazlariCiz(document.getElementById('gocCihazAramaKutusu').value);
+    });
+  });
+}
+
 function _gocBaslat() {
   document.getElementById('yeniGocCihazBtn').addEventListener('click', () => gocCihazModalAc());
+  _gocExcelBaglantilariniKur();
   document.getElementById('gocCihazModalKapatBtn').addEventListener('click', gocCihazModalKapat);
   document.getElementById('gocCihazModalIptalBtn').addEventListener('click', gocCihazModalKapat);
   document.getElementById('gocCihazForm').addEventListener('submit', gocCihazFormGonderildi);

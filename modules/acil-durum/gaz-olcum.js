@@ -41,6 +41,14 @@ function gocCihazSilRepo(id) {
   _gocKalibrasyonKaydet(gocKalibrasyonTumunuGetirRepo().filter(k => k.cihazId !== id));
 }
 
+// Excel içe aktarma için — N ayrı yaz() yerine TEK oku+yaz (bkz.
+// modules/acil-durum/repository.js _genelListeKaydetVeBekle yorumu:
+// "yangın tüpü 281 adet içe aktardım sayı azaldı" hatasıyla aynı kök
+// nedeni önlemek için).
+function _gocCihazListesiKaydetRepoVeBekle(liste) {
+  return yazVeSonucuGetir(_gocCihazAnahtari(), liste);
+}
+
 function gocCihazIdIleGetirRepo(id) {
   return gocCihazTumunuGetirRepo().find(k => k.id === id) || null;
 }
@@ -255,6 +263,40 @@ function gocCihazGuncelle(id, veriler) {
   });
   if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
   return { basarili: true, kayit: guncellenen };
+}
+
+// Yangın Tüpü sekmesindeki excelIceAktar akışıyla aynı desen (bkz.
+// service.js yanginTupuTopluIceAktar): Cihaz No (yoksa Seri No) envanterde
+// zaten varsa GÜNCELLE, yoksa YENİ ekle — hepsi bu çalışma kopyası
+// üzerinde, TEK yazımla sunucuya gönderilir.
+async function gocCihazTopluIceAktar(satirlar) {
+  const liste = gocCihazTumunuGetirRepo();
+  let basarili = 0;
+  const hatalar = [];
+
+  satirlar.forEach((satir, index) => {
+    const dogrulama = gocCihazDogrula(satir);
+    if (!dogrulama.gecerli) {
+      hatalar.push(`Satır ${index + 2}: ${Object.values(dogrulama.hatalar)[0]}`);
+      return;
+    }
+    const cihazNo = (satir.cihazNo || '').trim().toLowerCase();
+    const seriNo = (satir.seriNo || '').trim().toLowerCase();
+    const mevcutIndex = liste.findIndex(c =>
+      (cihazNo && (c.cihazNo || '').trim().toLowerCase() === cihazNo) ||
+      (seriNo && (c.seriNo || '').trim().toLowerCase() === seriNo)
+    );
+    if (mevcutIndex !== -1) {
+      liste[mevcutIndex] = gocCihazOlustur(Object.assign({}, liste[mevcutIndex], satir, { id: liste[mevcutIndex].id }));
+    } else {
+      const otoCihazNo = (satir.cihazNo && satir.cihazNo.trim()) || gocSonrakiNoUret(liste);
+      liste.push(gocCihazOlustur(Object.assign({}, satir, { cihazNo: otoCihazNo })));
+    }
+    basarili++;
+  });
+
+  const yazimSonucu = await _gocCihazListesiKaydetRepoVeBekle(liste);
+  return { basarili, basarisizSayisi: hatalar.length, hatalar, yazimBasarili: yazimSonucu.basarili, yazimHatasi: yazimSonucu.hata };
 }
 
 function gocCihazSil(id) {

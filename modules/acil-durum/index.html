@@ -257,6 +257,10 @@
       <div class="arac-cubugu">
         <input type="text" id="gocCihazAramaKutusu" class="arama-kutusu" placeholder="Cihaz adı, cihaz no veya bölüme göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="gocCihazSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="gocCihazIceAktarBtn">İçe Aktar</button>
+          <input type="file" id="gocCihazIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="gocCihazDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="birincil" id="yeniGocCihazBtn" style="width:auto;">+ Cihaz Ekle</button>
         </div>
       </div>
@@ -1042,9 +1046,9 @@
   <script src="service.js?v=14"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
-  <script src="gaz-olcum.js?v=1"></script>
+  <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
-  <script src="gaz-olcum-ui.js?v=1"></script>
+  <script src="gaz-olcum-ui.js?v=2"></script>
   <script src="ui.js?v=25"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
