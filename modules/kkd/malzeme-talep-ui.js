@@ -1,4 +1,7 @@
-// İSG Malzeme Talep ekranı DOM işlemleri (Yeni Talep Oluru / Takip Listesi / Malzeme Kataloğu).
+// İSG Malzeme Talep ekranı DOM işlemleri (Yeni Talep Oluru / Takip Listesi /
+// Malzeme Kataloğu) — KKD modülünün kendi sekmesi (bkz. malzeme-talep.js dosya
+// başı notu). KKD'nin üst sekme çubuğu [data-sekme] kullandığından, bu alt
+// sekme çubuğu isim çakışmasını önlemek için [data-mt-sekme] kullanır.
 
 let _mtGorunum = 'yeniTalep';
 let _duzenlenenTalepId = null;
@@ -9,13 +12,9 @@ function mtRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
-function _mtKacir(v) {
-  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}
-
 function malzemeTalepSayfasiniBaslat() {
-  document.querySelectorAll('[data-sekme]').forEach(btn => {
-    btn.addEventListener('click', () => mtGorunumDegistir(btn.getAttribute('data-sekme')));
+  document.querySelectorAll('[data-mt-sekme]').forEach(btn => {
+    btn.addEventListener('click', () => mtGorunumDegistir(btn.getAttribute('data-mt-sekme')));
   });
 
   _mtAyarlarBaslat();
@@ -33,8 +32,8 @@ function malzemeTalepSayfasiniBaslat() {
 function mtGorunumDegistir(gorunum) {
   _mtGorunum = gorunum;
   ['yeniTalep', 'takip', 'katalog'].forEach(g => {
-    document.querySelector(`[data-sekme="${g}"]`).classList.toggle('sekme-seciliDegil', g !== gorunum);
-    document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
+    document.querySelector(`[data-mt-sekme="${g}"]`).classList.toggle('sekme-seciliDegil', g !== gorunum);
+    document.getElementById('bolum-mt-' + g).style.display = g === gorunum ? '' : 'none';
   });
 
   if (gorunum === 'takip') takipListesiniCiz(document.getElementById('takipAramaKutusu').value);
@@ -99,33 +98,33 @@ function mtBelgeModalKapat() {
 // ==================== AYARLAR ====================
 
 function _mtAyarlarBaslat() {
-  document.getElementById('ayarlarBtn').addEventListener('click', ayarlarModalAc);
-  document.getElementById('ayarlarKapatBtn').addEventListener('click', ayarlarModalKapat);
-  document.getElementById('ayarlarIptalBtn').addEventListener('click', ayarlarModalKapat);
-  document.getElementById('ayarlarKaydetBtn').addEventListener('click', () => {
+  document.getElementById('mtAyarlarBtn').addEventListener('click', mtAyarlarModalAc);
+  document.getElementById('mtAyarlarKapatBtn').addEventListener('click', mtAyarlarModalKapat);
+  document.getElementById('mtAyarlarIptalBtn').addEventListener('click', mtAyarlarModalKapat);
+  document.getElementById('mtAyarlarKaydetBtn').addEventListener('click', () => {
     malzemeTalepAyarlariKaydet({
-      mudurluk: document.getElementById('ayMudurluk').value,
-      hitap: document.getElementById('ayHitap').value,
-      imzaYetkilisi: document.getElementById('ayImzaYetkilisi').value,
-      unvan: document.getElementById('ayUnvan').value,
-      paraf: document.getElementById('ayParaf').value
+      mudurluk: document.getElementById('mtAyMudurluk').value,
+      hitap: document.getElementById('mtAyHitap').value,
+      imzaYetkilisi: document.getElementById('mtAyImzaYetkilisi').value,
+      unvan: document.getElementById('mtAyUnvan').value,
+      paraf: document.getElementById('mtAyParaf').value
     });
-    ayarlarModalKapat();
+    mtAyarlarModalKapat();
   });
 }
 
-function ayarlarModalAc() {
+function mtAyarlarModalAc() {
   const a = malzemeTalepAyarlariGetir();
-  document.getElementById('ayMudurluk').value = a.mudurluk;
-  document.getElementById('ayHitap').value = a.hitap;
-  document.getElementById('ayImzaYetkilisi').value = a.imzaYetkilisi;
-  document.getElementById('ayUnvan').value = a.unvan;
-  document.getElementById('ayParaf').value = a.paraf;
-  document.getElementById('ayarlarModalKatman').classList.add('acik');
+  document.getElementById('mtAyMudurluk').value = a.mudurluk;
+  document.getElementById('mtAyHitap').value = a.hitap;
+  document.getElementById('mtAyImzaYetkilisi').value = a.imzaYetkilisi;
+  document.getElementById('mtAyUnvan').value = a.unvan;
+  document.getElementById('mtAyParaf').value = a.paraf;
+  document.getElementById('mtAyarlarModalKatman').classList.add('acik');
 }
 
-function ayarlarModalKapat() {
-  document.getElementById('ayarlarModalKatman').classList.remove('acik');
+function mtAyarlarModalKapat() {
+  document.getElementById('mtAyarlarModalKatman').classList.remove('acik');
 }
 
 // ==================== YENİ TALEP ====================

@@ -241,7 +241,6 @@
           <li><a href="#merkezi-aksiyon">📌 Merkezi Aksiyon Takibi</a></li>
           <li><a href="#raporlar">📊 Raporlar</a></li>
           <li><a href="#harita">🗺️ Saha Dijital Haritası</a></li>
-          <li><a href="#malzeme-talep">📦 İSG Malzeme Talep</a></li>
         </ul>
       </div>
     </div>
@@ -569,14 +568,16 @@
           <li>Zimmet — personel, KKD, veriliş tarihi (değişim tarihi otomatik hesaplanır), kondisyon, teslim imzası</li>
           <li>İhlal Takibi — kim, ne zaman, hangi KKD, ihlal türü, uygulanan işlem (sistem tekrarı otomatik saptar)</li>
           <li>Numune Değerlendirme — satın alma öncesi saha denemesi, çalışan görüşü, İSG değerlendirmesi, imza</li>
+          <li>Malzeme Talep — malzeme kataloğu (kod, ad, kategori, birim, teknik özellikler; 60 kalemlik hazır KKD kataloğu tek tıkla içe aktarılabilir) ve İSG malzeme/ekipman talebi resmi "talep oluru" formatında, tarih/konu/aciliyet/gerekçe/seçilen malzemeler/imza yetkilisiyle</li>
         </ul></div>
-        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Envanter, zimmet, ihlal tutanağı, numune değerlendirme — dört ayrı liste.</p></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Envanter, zimmet, ihlal tutanağı, numune değerlendirme, malzeme kataloğu ve malzeme talebi (19 aşamalı iş akışı: Taslak → Olur → Teklif → Sipariş → Teslim → Ödeme → Tamamlandı) — KKD modülünün kendi sekmeleri olarak.</p></div>
         <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
           <li>Zimmet Formu (PDF), İhlal Tutanağı (PDF), Numune Değerlendirme Formu (Word)</li>
+          <li>Malzeme Talep Oluru (Word) — resmi olur yazısı; Olurlar Takip Listesi (durum bazlı takip tablosu, gecikenler işaretli)</li>
           <li>Özet: düşük stok, değişimi geçen/yaklaşan zimmetler, tekrar eden ihlal sahipleri</li>
         </ul></div>
         <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti">Personel modülünden kişi bilgisi çekilir. Süresi geçmemiş her aktif zimmet Merkezi Aksiyon listesine otomatik düşer. KKD kataloğu, Malzeme Talep modülüne tek tıkla aktarılabilir (aynı referans liste).</div>
+          <div class="kk-baglanti">Personel modülünden kişi bilgisi çekilir. Süresi geçmemiş her aktif zimmet Merkezi Aksiyon listesine otomatik düşer. Malzeme Talep sekmesi, KKD envanteriyle aynı 60 kalemlik referans kataloğu paylaşır.</div>
         </div>
         <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
           <div class="kk-onem">Hangi çalışana hangi KKD'nin ne zaman verildiği ve değiştirilmesi gerektiği izlenerek eskiyen ekipmanın kazaya yol açması önlenir; kullanmama ihlalleri disiplin sürecine bağlanır.</div>
@@ -788,27 +789,6 @@
         </div>
         <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
           <div class="kk-onem">Geniş sahalı fabrikalarda "en yakın yangın tüpü nerede", "bu bölümde açık uygunsuzluk var mı", "kaçış yolu nereden geçiyor" sorularını görsel olarak anında yanıtlar.</div>
-        </div>
-      </div>
-    </details>
-
-    <details class="kk-modul" id="malzeme-talep">
-      <summary><span class="kk-modul-ikon">📦</span> İSG Malzeme Talep</summary>
-      <div class="kk-modul-govde">
-        <div class="kk-blok"><h4>Amaç</h4>
-          <p class="kk-amac">İSG biriminin ihtiyaç duyduğu malzeme/KKD/ekipmanın resmi "talep oluru" formatında hazırlanıp, satın alma sürecinin tüm aşamalarında (teklif, sipariş, teslim, ödeme) takip edildiği bir süreç yönetim aracı.</p>
-        </div>
-        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
-          <li>Malzeme Kataloğu — kod, ad, kategori, birim, teknik özellikler (60 kalemlik hazır KKD kataloğu tek tıkla içe aktarılabilir)</li>
-          <li>Talep — tarih, konu, açıklama, aciliyet, gerekçe, seçilen malzemeler ve miktarları, imza yetkilisi</li>
-        </ul></div>
-        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Malzeme kataloğu, malzeme talebi — 19 aşamalı iş akışıyla (Taslak → Olur → Teklif → Sipariş → Teslim → Ödeme → Tamamlandı).</p></div>
-        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Malzeme Talep Oluru (Word) — resmi olur yazısı; Olurlar Takip Listesi (durum bazlı takip tablosu, gecikenler işaretli).</p></div>
-        <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti">KKD modülüyle aynı 60 kalemlik referans kataloğu paylaşır.</div>
-        </div>
-        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
-          <div class="kk-onem">KKD/ekipman ihtiyacının resmi/imzalı bir belgeyle üst yönetime iletilmesini standartlaştırır; satın alma sürecinin hangi aşamada beklediğini görünür kılarak tedarik gecikmelerinin önüne geçer.</div>
         </div>
       </div>
     </details>

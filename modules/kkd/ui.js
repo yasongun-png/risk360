@@ -22,13 +22,17 @@ function kkdSayfasiniBaslat() {
   _kkdZimmetBaslat();
   _kkdIhlalBaslat();
   _kkdNumuneBaslat();
+  // Kullanıcı isteği: "İSG malzeme talebini KKD modülü içine alalım" — eskiden
+  // ayrı modules/malzeme-talep/ sayfasıydı, artık KKD'nin kendi sekmesi (bkz.
+  // malzeme-talep.js/-ui.js/-cikti.js dosya başı notları).
+  malzemeTalepSayfasiniBaslat();
 
   kkdGorunumDegistir('envanter');
 }
 
 function kkdGorunumDegistir(gorunum) {
   _kkdGorunum = gorunum;
-  ['envanter', 'zimmet', 'ihlal', 'numune', 'ozet'].forEach(g => {
+  ['envanter', 'zimmet', 'ihlal', 'numune', 'malzeme', 'ozet'].forEach(g => {
     document.querySelector(`[data-sekme="${g}"]`).classList.toggle('sekme-seciliDegil', g !== gorunum);
     document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none';
   });
@@ -37,6 +41,7 @@ function kkdGorunumDegistir(gorunum) {
   else if (gorunum === 'zimmet') zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value);
   else if (gorunum === 'ihlal') ihlalleriCiz(document.getElementById('ihlalAramaKutusu').value);
   else if (gorunum === 'numune') numuneleriCiz(document.getElementById('numuneAramaKutusu').value);
+  else if (gorunum === 'malzeme') mtGorunumDegistir(_mtGorunum);
   else ozetiCiz();
 }
 

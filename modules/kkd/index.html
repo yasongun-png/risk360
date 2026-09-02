@@ -32,6 +32,7 @@
       <button type="button" data-sekme="zimmet" class="sekme-seciliDegil">Zimmet</button>
       <button type="button" data-sekme="ihlal" class="sekme-seciliDegil">İhlal Takibi</button>
       <button type="button" data-sekme="numune" class="sekme-seciliDegil">Numune Değerlendirme</button>
+      <button type="button" data-sekme="malzeme" class="sekme-seciliDegil">Malzeme Talep</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
     </div>
 
@@ -131,6 +132,162 @@
       <div class="bos-durum" id="numuneBosDurum"></div>
     </div>
 
+    <!-- MALZEME TALEP (kullanıcı isteği: "İSG malzeme talebini KKD modülü
+         içine alalım" — eskiden ayrı modules/malzeme-talep/ sayfasıydı). -->
+    <div id="bolum-malzeme" style="display:none;">
+      <div class="dashboard-ust">
+        <h3 style="margin:0; font-size:15px;">İSG Malzeme Talep</h3>
+        <button type="button" class="ikincil" id="mtAyarlarBtn">⚙️ Ayarlar</button>
+      </div>
+
+      <div id="mtOzetKutusu" style="margin:10px 0 14px;"></div>
+
+      <div class="sekme-cubugu">
+        <button type="button" data-mt-sekme="yeniTalep">Yeni Talep Oluru</button>
+        <button type="button" data-mt-sekme="takip" class="sekme-seciliDegil">Olurlar Takip Listesi</button>
+        <button type="button" data-mt-sekme="katalog" class="sekme-seciliDegil">Malzeme Kataloğu</button>
+      </div>
+
+      <!-- YENİ TALEP -->
+      <div id="bolum-mt-yeniTalep">
+        <div class="modul-grid" style="grid-template-columns: 1.1fr 1fr; align-items:start; gap:18px;">
+          <div class="kart">
+            <div class="card-title"><h3 style="margin:0; font-size:14px;" id="talepFormBaslik">Yeni Talep</h3></div>
+            <form id="talepForm">
+              <div class="form-satir-ikili">
+                <div>
+                  <label for="tTarih">Talep Tarihi</label>
+                  <input type="date" id="tTarih">
+                  <div class="alan-hatasi" id="tTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+                </div>
+                <div>
+                  <label for="tAciliyet">Aciliyet</label>
+                  <select id="tAciliyet"></select>
+                </div>
+              </div>
+              <label for="tKonu">Konu / Özü</label>
+              <input type="text" id="tKonu">
+              <div class="alan-hatasi" id="tKonuHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+              <div class="form-satir-ikili">
+                <div>
+                  <label for="tBirim">Talep Eden Birim</label>
+                  <input type="text" id="tBirim">
+                </div>
+                <div>
+                  <label for="tKullanimBolumu">Kullanım Bölümü</label>
+                  <input type="text" id="tKullanimBolumu">
+                </div>
+              </div>
+
+              <div class="form-bolum-baslik">Malzeme Seçimi</div>
+              <input type="text" id="pickAramaKutusu" class="arama-kutusu" placeholder="Kataloğ­da ara...">
+              <div id="malzemePicker" style="max-height:160px; overflow-y:auto; margin:8px 0 14px;"></div>
+
+              <div id="secilenMalzemeler"></div>
+
+              <div class="form-bolum-baslik">Talep Metni</div>
+              <div class="form-satir-ikili">
+                <div>
+                  <label for="tGerekce">Gerekçe</label>
+                  <select id="tGerekce"></select>
+                </div>
+                <div>
+                  <label for="tOzelGerekce">Özel Gerekçe <span style="color:var(--metin-soluk); font-weight:400;">(seçiliyse)</span></label>
+                  <input type="text" id="tOzelGerekce">
+                </div>
+              </div>
+              <button type="button" class="ikincil" id="metinOnerBtn" style="width:auto;">Talep Metnini Oluştur</button>
+              <label for="tMetin" style="margin-top:10px;">Talep Metni (düzenlenebilir)</label>
+              <textarea id="tMetin" rows="4"></textarea>
+              <div class="alan-hatasi" id="tMalzemelerHata" style="color:var(--hata); font-size:12px;"></div>
+
+              <div class="form-bolum-baslik">Başlık / İmza Bilgileri</div>
+              <div class="form-satir-ikili">
+                <div>
+                  <label for="tMudurluk">Müdürlük</label>
+                  <input type="text" id="tMudurluk">
+                </div>
+                <div>
+                  <label for="tHitap">Hitap</label>
+                  <input type="text" id="tHitap">
+                </div>
+              </div>
+              <div class="form-satir-ikili">
+                <div>
+                  <label for="tImzaYetkilisi">İmza Yetkilisi</label>
+                  <input type="text" id="tImzaYetkilisi">
+                </div>
+                <div>
+                  <label for="tUnvan">Unvan</label>
+                  <input type="text" id="tUnvan">
+                </div>
+              </div>
+              <label for="tDurum">Durum</label>
+              <select id="tDurum"></select>
+              <label for="tAciklama">Genel Açıklama</label>
+              <textarea id="tAciklama"></textarea>
+
+              <div class="modal-eylemler" style="justify-content:flex-start; gap:8px;">
+                <button type="button" class="ikincil" id="talepTemizleBtn">Temizle / Yeni</button>
+                <button type="submit" class="birincil" style="width:auto;">Kaydet</button>
+                <button type="button" class="ikincil" id="talepWordBtn">Word İndir</button>
+                <button type="button" class="ikincil" id="talepYazdirBtn">Yazdır</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="kart">
+            <div class="card-title"><h3 style="margin:0; font-size:14px;">Önizleme</h3></div>
+            <div id="talepOnizleme" style="border:1px solid var(--kenarlik); transform:scale(0.72); transform-origin:top left; width:139%; height:600px; overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAKİP LİSTESİ -->
+      <div id="bolum-mt-takip" style="display:none;">
+        <div class="arac-cubugu">
+          <input type="text" id="takipAramaKutusu" class="arama-kutusu" placeholder="Konu, belge no veya birime göre ara...">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select id="takipDurumFiltre" style="width:auto; margin:0;"><option value="">Tüm Durumlar</option></select>
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:13px;">
+              <input type="checkbox" id="gecikenlerFiltre" style="width:auto; margin:0;"> Sadece Gecikenler
+            </label>
+            <button type="button" class="ikincil" id="takipDisaAktarBtn">Dışa Aktar</button>
+          </div>
+        </div>
+        <div class="tablo-scroll">
+          <table class="veri-tablosu">
+            <thead><tr><th>Belge No</th><th>Tarih</th><th>Konu</th><th>Birim</th><th>Aciliyet</th><th>Durum</th><th>İşlemler</th></tr></thead>
+            <tbody id="takipTabloGovde"></tbody>
+          </table>
+        </div>
+        <div class="bos-durum" id="takipBosDurum"></div>
+      </div>
+
+      <!-- MALZEME KATALOĞU -->
+      <div id="bolum-mt-katalog" style="display:none;">
+        <div class="arac-cubugu">
+          <input type="text" id="katalogAramaKutusu" class="arama-kutusu" placeholder="Malzeme adı, kod veya kategoriye göre ara...">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="ikincil" id="katalogSablonIndirBtn">Şablon İndir</button>
+            <button type="button" class="ikincil" id="katalogIceAktarBtn">İçe Aktar</button>
+            <input type="file" id="katalogIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+            <button type="button" class="ikincil" id="katalogDisaAktarBtn">Dışa Aktar</button>
+            <button type="button" class="ikincil" id="kkdKatalogYukleBtn">KKD Kataloğunu Yükle</button>
+            <button type="button" class="birincil" id="yeniMalzemeBtn" style="width:auto;">+ Yeni Malzeme</button>
+          </div>
+        </div>
+        <div class="tablo-scroll">
+          <table class="veri-tablosu">
+            <thead><tr><th>Kod</th><th>Ad</th><th>Kategori</th><th>Birim</th><th>Durum</th><th>İşlemler</th></tr></thead>
+            <tbody id="katalogTabloGovde"></tbody>
+          </table>
+        </div>
+        <div class="bos-durum" id="katalogBosDurum"></div>
+      </div>
+    </div>
+
     <!-- ÖZET -->
     <div id="bolum-ozet" style="display:none;">
       <div id="ozetKutusu"></div>
@@ -138,6 +295,106 @@
   </div>
 
   <div id="yazdirmaAlani"></div>
+
+  <!-- MALZEME TALEP: İMZALI BELGE MODAL -->
+  <div class="modal-katman" id="mtBelgeModalKatman">
+    <div class="modal-kutu" style="max-width:460px;">
+      <h3>İmzalı Talep Oluru</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Word olurunu imzalattıktan sonra taranmış hâlini buraya ekleyebilirsiniz.</p>
+      <div id="mtBelgeAlani"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mtBelgeKapatBtn">Kapat</button>
+      </div>
+      <button type="button" class="tablo-buton" id="mtBelgeModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MALZEME TALEP: AYARLAR MODAL -->
+  <div class="modal-katman" id="mtAyarlarModalKatman">
+    <div class="modal-kutu" style="max-width:460px;">
+      <h3>Malzeme Talep Ayarları</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Yeni bir talep açtığınızda bu bilgiler otomatik gelir; her talepte ayrıca değiştirilebilir.</p>
+      <label for="mtAyMudurluk">Müdürlük</label>
+      <input type="text" id="mtAyMudurluk" placeholder="ör. TEKNİK HİZMETLER MÜDÜRLÜĞÜ">
+      <label for="mtAyHitap">Hitap</label>
+      <input type="text" id="mtAyHitap" placeholder="ör. GENEL MÜDÜRLÜK MAKAMI'NA">
+      <label for="mtAyImzaYetkilisi">İmza Yetkilisi</label>
+      <input type="text" id="mtAyImzaYetkilisi">
+      <label for="mtAyUnvan">Unvan</label>
+      <input type="text" id="mtAyUnvan">
+      <label for="mtAyParaf">Paraf</label>
+      <input type="text" id="mtAyParaf" placeholder="ör. Y.S.">
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mtAyarlarIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="mtAyarlarKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="mtAyarlarKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MALZEME TALEP: MALZEME MODAL -->
+  <div class="modal-katman" id="malzemeModalKatman">
+    <div class="modal-kutu" style="max-width:620px;">
+      <h3 id="malzemeModalBaslik">Yeni Malzeme</h3>
+      <form id="malzemeForm">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="mAd">Malzeme Adı</label>
+            <input type="text" id="mAd">
+            <div class="alan-hatasi" id="mAdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="mKod">Malzeme Kodu</label>
+            <input type="text" id="mKod">
+            <div class="alan-hatasi" id="mKodHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+        <label for="mResmiAdi">Resmî Adı <span style="color:var(--metin-soluk); font-weight:400;">(boşsa malzeme adı kullanılır)</span></label>
+        <input type="text" id="mResmiAdi">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="mKategori">Kategori</label>
+            <input type="text" id="mKategori" placeholder="ör. KKD, Yangın Güvenliği...">
+          </div>
+          <div>
+            <label for="mAltKategori">Alt Kategori</label>
+            <input type="text" id="mAltKategori">
+          </div>
+        </div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="mBirim">Birim</label>
+            <select id="mBirim"></select>
+          </div>
+          <div>
+            <label for="mVarsayilanMiktar">Varsayılan Miktar</label>
+            <input type="number" id="mVarsayilanMiktar" min="0" step="any">
+          </div>
+        </div>
+        <label for="mStandartlar">Standartlar <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir standart)</span></label>
+        <textarea id="mStandartlar" placeholder="EN 397&#10;TS EN ISO 20345"></textarea>
+        <label for="mTeknikOzellikler">Teknik Özellikler <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir özellik)</span></label>
+        <textarea id="mTeknikOzellikler"></textarea>
+        <label for="mMarkaAlternatifleri">Marka / Model Alternatifleri <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir alternatif)</span></label>
+        <textarea id="mMarkaAlternatifleri"></textarea>
+        <label for="mAltKalemler">Alt Kalemler <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir kalem)</span></label>
+        <textarea id="mAltKalemler"></textarea>
+        <label for="mKullanimAmaci">Kullanım Amacı</label>
+        <input type="text" id="mKullanimAmaci">
+        <label for="mRiskAciklamasi">Risk / Tehlike</label>
+        <input type="text" id="mRiskAciklamasi">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:6px;">
+          <input type="checkbox" id="mAktifMi" style="width:auto; margin:0;" checked> Aktif
+        </label>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="malzemeModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="malzemeModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
 
   <!-- ENVANTER MODAL -->
   <div class="modal-katman" id="envanterModalKatman">
@@ -540,6 +797,7 @@
   <script src="../../core/rapor.js"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/belge-yukle.js"></script>
   <script src="../personel/model.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
@@ -549,6 +807,9 @@
   <script src="service.js"></script>
   <script src="ui.js"></script>
   <script src="cikti.js"></script>
+  <script src="malzeme-talep.js"></script>
+  <script src="malzeme-talep-ui.js"></script>
+  <script src="malzeme-talep-cikti.js"></script>
   <script>
     const kullanici = girisGerekliModul('kkd');
 
