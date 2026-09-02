@@ -1,9 +1,9 @@
-// Sınav Oluşturucu ekranının DOM işlemleri.
-// Üç sekme: Soru Bankası, Sınavlar, Sonuçlar. Ayrıca tek bir sınavın
-// sonuçlarını görüp yeni sonuç eklemek için ayrı bir modal (sonuçModal).
+// Sınav Oluşturucu ekranının DOM işlemleri — Eğitim modülünün kendi sekmesi
+// (bkz. sinav.js dosya başı notu). Üç iç sekme: Soru Bankası, Sınavlar,
+// Sonuçlar. Ayrıca tek bir sınavın sonuçlarını görüp yeni sonuç eklemek için
+// ayrı bir modal (sonucModal).
 
 let _sinavSekme = 'sorular';
-let _sinavAktifFirma = null;
 let _duzenlenenSoruId = null;
 let _sonucModalSinavId = null;
 
@@ -50,18 +50,16 @@ function _soruIceAktarSatiriEkle(satir) {
   });
 }
 
-function kacir(v) {
+function _sinavKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
-function _kisalt(metin, uzunluk) {
+function _sinavKisalt(metin, uzunluk) {
   const m = String(metin || '');
   return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
 }
 
-function sinavSayfasiniBaslat(firma) {
-  _sinavAktifFirma = firma;
-
+function sinavSayfasiniBaslat() {
   document.getElementById('sekmeSorular').addEventListener('click', () => sinavSekmeDegistir('sorular'));
   document.getElementById('sekmeSinavlar').addEventListener('click', () => sinavSekmeDegistir('sinavlar'));
   document.getElementById('sekmeSonuclar').addEventListener('click', () => sinavSekmeDegistir('sonuclar'));
@@ -129,7 +127,7 @@ function _konuSecimleriniDoldur(selectId, hepsiSecenegiEkle) {
   const konuSayilari = soruBankasiKonuSayilari();
   const secenekler = EGITIM_TURLERI.map(t => {
     const sayi = konuSayilari[t.id] || 0;
-    return `<option value="${t.id}">${kacir(t.ad)} (${sayi} soru)</option>`;
+    return `<option value="${t.id}">${_sinavKacir(t.ad)} (${sayi} soru)</option>`;
   }).join('');
   secim.innerHTML = (hepsiSecenegiEkle ? '<option value="">Tüm Konular</option>' : '') + secenekler;
 }
@@ -146,6 +144,10 @@ function sinavSekmeDegistir(sekme) {
   if (sekme === 'sorular') soruTablosunuCiz();
   if (sekme === 'sinavlar') sinavTablosunuCiz();
   if (sekme === 'sonuclar') sonucTablosunuCiz();
+}
+
+function _sinavFormHatalariniTemizle(formId) {
+  document.querySelectorAll('#' + formId + ' .alan-hatasi').forEach(el => el.textContent = '');
 }
 
 // ---- Soru Bankası ----
@@ -171,9 +173,9 @@ function soruTablosunuCiz() {
   liste.forEach(s => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${kacir(_kisalt(s.soruMetni, 90))}</td>
-      <td>${kacir(s.turAdi)}</td>
-      <td>${kacir(s.dogruCevap)}) ${kacir(_kisalt(s.secenekler[s.dogruCevap], 40))}</td>
+      <td>${_sinavKacir(_sinavKisalt(s.soruMetni, 90))}</td>
+      <td>${_sinavKacir(s.turAdi)}</td>
+      <td>${_sinavKacir(s.dogruCevap)}) ${_sinavKacir(_sinavKisalt(s.secenekler[s.dogruCevap], 40))}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${s.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${s.id}">Sil</button>
@@ -199,7 +201,7 @@ function soruTablosunuCiz() {
 function soruModalAc(soruId) {
   _duzenlenenSoruId = soruId || null;
   _konuSecimleriniDoldur('soruKonuId', false);
-  temizleFormHatalari('soruForm');
+  _sinavFormHatalariniTemizle('soruForm');
 
   if (_duzenlenenSoruId) {
     const soru = soruIdIleGetirRepo(_duzenlenenSoruId);
@@ -223,13 +225,9 @@ function soruModalKapat() {
   document.getElementById('soruModalKatman').classList.remove('acik');
 }
 
-function temizleFormHatalari(formId) {
-  document.querySelectorAll('#' + formId + ' .alan-hatasi').forEach(el => el.textContent = '');
-}
-
 function soruFormGonderildi(e) {
   e.preventDefault();
-  temizleFormHatalari('soruForm');
+  _sinavFormHatalariniTemizle('soruForm');
 
   const veriler = {
     egitimTuruId: document.getElementById('soruKonuId').value,
@@ -279,9 +277,9 @@ function sinavTablosunuCiz() {
   liste.forEach(s => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${kacir(s.baslik)}</td>
-      <td>${kacir(s.turAdi)}</td>
-      <td>${kacir(s.tarih)}</td>
+      <td>${_sinavKacir(s.baslik)}</td>
+      <td>${_sinavKacir(s.turAdi)}</td>
+      <td>${_sinavKacir(s.tarih)}</td>
       <td>${s.sorular.length}</td>
       <td>${s.katilimciSayisi} (${s.gecenSayisi} geçti)</td>
       <td>
@@ -314,7 +312,7 @@ function sinavTablosunuCiz() {
 }
 
 function sinavModalAc() {
-  temizleFormHatalari('sinavForm');
+  _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
   document.getElementById('sinavForm').reset();
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
@@ -327,7 +325,7 @@ function sinavModalKapat() {
 
 function sinavFormGonderildi(e) {
   e.preventDefault();
-  temizleFormHatalari('sinavForm');
+  _sinavFormHatalariniTemizle('sinavForm');
 
   const veriler = {
     baslik: document.getElementById('sinavBaslik').value,
@@ -371,9 +369,9 @@ function sonucTablosunuCiz() {
   liste.forEach(r => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${kacir(r.personelAdi)}</td>
-      <td>${kacir(r.sinavBasligi)}</td>
-      <td>${kacir(r.tarih)}</td>
+      <td>${_sinavKacir(r.personelAdi)}</td>
+      <td>${_sinavKacir(r.sinavBasligi)}</td>
+      <td>${_sinavKacir(r.tarih)}</td>
       <td>${r.dogruSayisi} / ${r.toplamSoru}</td>
       <td>${r.puan}</td>
       <td><span class="durum-rozet ${SINAV_DURUM_SINIF[r.durum]}">${SINAV_DURUM_METIN[r.durum]}</span></td>
@@ -400,12 +398,12 @@ function sonucModalAc(sinavId) {
   const sinav = sinavGetir(sinavId);
   if (!sinav) return;
 
-  temizleFormHatalari('sonucEkleForm');
+  _sinavFormHatalariniTemizle('sonucEkleForm');
   document.getElementById('sonucModalBaslik').textContent = `Sonuçlar — ${sinav.baslik}`;
 
   const personelSecim = document.getElementById('sonucPersonelId');
   personelSecim.innerHTML = personelleriGetir('', false)
-    .map(p => `<option value="${p.id}">${kacir(p.adSoyad)} (${kacir(p.sicilNo)})</option>`)
+    .map(p => `<option value="${p.id}">${_sinavKacir(p.adSoyad)} (${_sinavKacir(p.sicilNo)})</option>`)
     .join('');
 
   document.getElementById('sonucPuan').value = '';
@@ -437,7 +435,7 @@ function sonucModalTablosunuCiz() {
   liste.forEach(r => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${kacir(r.personelAdi)}</td>
+      <td>${_sinavKacir(r.personelAdi)}</td>
       <td>${r.dogruSayisi} / ${r.toplamSoru}</td>
       <td>${r.puan}</td>
       <td><span class="durum-rozet ${SINAV_DURUM_SINIF[r.durum]}">${SINAV_DURUM_METIN[r.durum]}</span></td>
@@ -459,7 +457,7 @@ function sonucModalTablosunuCiz() {
 
 function sonucEkleFormGonderildi(e) {
   e.preventDefault();
-  temizleFormHatalari('sonucEkleForm');
+  _sinavFormHatalariniTemizle('sonucEkleForm');
 
   const veriler = {
     personelId: document.getElementById('sonucPersonelId').value,
@@ -487,11 +485,11 @@ function sonucEkleFormGonderildi(e) {
 function _sinavSorularHtmlUret(sinav, cevapGoster) {
   return sinav.sorular.map((soru, i) => `
     <div style="margin-bottom:14px; break-inside:avoid;">
-      <div style="font-weight:700; margin-bottom:4px;">${i + 1}. ${kacir(soru.soruMetni)}</div>
+      <div style="font-weight:700; margin-bottom:4px;">${i + 1}. ${_sinavKacir(soru.soruMetni)}</div>
       ${SINAV_SIK_HARFLERI.map(harf => {
         const vurgula = cevapGoster && harf === soru.dogruCevap;
         return `<div style="margin-left:16px; ${vurgula ? 'font-weight:700; color:#15803d;' : ''}">
-          ${vurgula ? '✔' : '☐'} ${harf}) ${kacir(soru.secenekler[harf])}
+          ${vurgula ? '✔' : '☐'} ${harf}) ${_sinavKacir(soru.secenekler[harf])}
         </div>`;
       }).join('')}
     </div>
@@ -502,12 +500,13 @@ function _sinavKagidiYazdirOrtak(sinavId, baslikOnEki, cevapGoster) {
   const sinav = sinavGetir(sinavId);
   if (!sinav) return;
 
+  const firma = aktifFirmaGetir();
   const mount = document.getElementById('yazdirmaAlani');
   mount.innerHTML = `
-    <div class="doc-title">${kacir(baslikOnEki)}: ${kacir(sinav.baslik)}</div>
+    <div class="doc-title">${_sinavKacir(baslikOnEki)}: ${_sinavKacir(sinav.baslik)}</div>
     <div class="doc-meta">
-      <b>${kacir(_sinavAktifFirma ? _sinavAktifFirma.ad : '')}</b><br>
-      Konu: ${kacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${kacir(sinav.tarih)} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
+      <b>${_sinavKacir(firma ? firma.ad : '')}</b><br>
+      Konu: ${_sinavKacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${_sinavKacir(sinav.tarih)} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
       ${cevapGoster ? '' : '<br><br>Ad Soyad: ______________________________ &nbsp;&nbsp; Sicil No: ______________'}
     </div>
     ${_sinavSorularHtmlUret(sinav, cevapGoster)}

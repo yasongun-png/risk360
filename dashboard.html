@@ -85,7 +85,7 @@
 
     const MODULLER = [
       { anahtar: 'personel', ikon: '👥', baslik: 'Personel', aciklama: 'Personel kayıtları ve TC Kimlik doğrulaması', baglanti: 'modules/personel/index.html', aktif: true },
-      { anahtar: 'egitim', ikon: '🎓', baslik: 'Eğitim', aciklama: 'Zorunlu İSG eğitimleri ve sertifika takibi', baglanti: 'modules/egitim/index.html', aktif: true },
+      { anahtar: 'egitim', ikon: '🎓', baslik: 'Eğitim', aciklama: 'Zorunlu İSG eğitimleri, sertifika takibi ve sınav oluşturucu (soru bankası, sonuç takibi)', baglanti: 'modules/egitim/index.html', aktif: true },
       { anahtar: 'yillik-plan', ikon: '📅', baslik: 'Yıllık Değerlendirme ve Planlama', aciklama: 'Eğitim planı, yıllık çalışma planı ve yıllık değerlendirme raporu', baglanti: 'modules/yillik-plan/index.html', aktif: true },
       { anahtar: 'risk', ikon: '⚠️', baslik: 'Risk Değerlendirmesi', aciklama: 'Tehlike tespiti ve risk skorlama', baglanti: 'modules/risk/index.html', aktif: true },
       { anahtar: 'kurul', ikon: '🏛️', baslik: 'İSG Kurulu', aciklama: 'Kurul toplantıları ve karar takibi', baglanti: 'modules/kurul/index.html', aktif: true },
@@ -97,7 +97,6 @@
       { anahtar: 'uygunsuzluk', ikon: '✅', baslik: 'Uygunsuzluk', aciklama: 'Düzeltici, önleyici faaliyet ve onay akışı', baglanti: 'modules/uygunsuzluk/index.html', aktif: true },
       { anahtar: 'yuklenici', ikon: '🏗️', baslik: 'Yüklenici', aciklama: 'Yüklenici firma ve personel evrak uygunluğu', baglanti: 'modules/yuklenici/index.html', aktif: true },
       { anahtar: 'stajyer', ikon: '🧑‍🎓', baslik: 'Staj', aciklama: 'Stajyer kayıtları ve Temel Eğitim Belgesi', baglanti: 'modules/stajyer/index.html', aktif: true },
-      { anahtar: 'sinav', ikon: '📝', baslik: 'Sınav Oluşturucu', aciklama: 'Soru bankası, rastgele sınav oluşturma ve sonuç takibi', baglanti: 'modules/sinav/index.html', aktif: true },
       { anahtar: 'saha-denetim', ikon: '🔍', baslik: 'Saha Denetim', aciklama: 'Konu bazlı kontrol listeleri, puanlama ve DÖF aktarımı', baglanti: 'modules/saha-denetim/index.html', aktif: true },
       { anahtar: 'is-izni', ikon: '🧾', baslik: 'İş İzinleri', aciklama: 'Sıcak çalışma, kapalı alan, yüksekte çalışma vb. çalışma izin belgeleri', baglanti: 'modules/is-izni/index.html', aktif: true },
       { anahtar: 'merkezi-aksiyon', ikon: '📌', baslik: 'Merkezi Aksiyon Takibi', aciklama: 'Tüm modüllerden doğan aksiyonların tekilleştirilmesi', baglanti: 'modules/merkezi-aksiyon/index.html', aktif: true },
@@ -117,6 +116,7 @@
     const _BILDIRIM_ANAHTAR_MODUL_ESLESME = {
       personel: 'personel',
       egitim_kayitlari: 'egitim',
+      sinav_sorulari: 'egitim', sinav_sinavlar: 'egitim', sinav_sonuclari: 'egitim',
       yillik_egitim_plani: 'yillik-plan', yillik_calisma_plani: 'yillik-plan', yillik_degerlendirme_raporu: 'yillik-plan',
       risk_kayitlari: 'risk', risk_bolumleri: 'risk',
       kurul_toplantilari: 'kurul', kurul_kararlari: 'kurul', kurul_olaylari: 'kurul', kurul_imzalari: 'kurul', kurul_ayici_faaliyetler: 'kurul', kurul_denetim: 'kurul',
@@ -129,7 +129,6 @@
       uygunsuzluk_kayitlari: 'uygunsuzluk', uygunsuzluk_konulari: 'uygunsuzluk',
       yuklenici_firmalari: 'yuklenici', yuklenici_kisileri: 'yuklenici', yuklenici_araclari: 'yuklenici', yuklenici_ziyaretciler: 'yuklenici',
       stajyer_kayitlari: 'stajyer',
-      sinav_sorulari: 'sinav', sinav_sinavlar: 'sinav', sinav_sonuclari: 'sinav',
       saha_denetimleri: 'saha-denetim',
       is_izinleri: 'is-izni',
       tespit_oneri_kayitlari: 'tespit-oneri',

@@ -30,6 +30,7 @@
     <div class="sekme-cubugu">
       <button type="button" id="sekmeKayitlar">Eğitim Kayıtları</button>
       <button type="button" id="sekmeDurum" class="sekme-seciliDegil">Durum Tablosu</button>
+      <button type="button" id="sekmeSinav" class="sekme-seciliDegil">Sınav Oluşturucu</button>
     </div>
 
     <div id="kayitlarBolumu">
@@ -78,6 +79,235 @@
         firmanın Tehlike Sınıfı'na göre otomatik hesaplanır.
       </p>
       <div id="durumTablosuKutusu"></div>
+    </div>
+
+    <!-- SINAV OLUŞTURUCU (kullanıcı isteği: "sınav oluşturucu modülünü de
+         eğitimin içine koyalım" — eskiden ayrı modules/sinav/ sayfasıydı). -->
+    <div id="sinavBolumu" style="display:none;">
+      <div class="sekme-cubugu">
+        <button type="button" id="sekmeSorular">Soru Bankası</button>
+        <button type="button" id="sekmeSinavlar" class="sekme-seciliDegil">Sınavlar</button>
+        <button type="button" id="sekmeSonuclar" class="sekme-seciliDegil">Sonuçlar</button>
+      </div>
+
+      <div id="panelSorular">
+        <div class="arac-cubugu">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <select id="soruKonuFiltre" style="width:auto; margin:0;"></select>
+            <input type="text" id="soruAramaKutusu" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin:0;">
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="ikincil" id="soruSablonIndirBtn">Şablon İndir</button>
+            <button type="button" class="ikincil" id="soruIceAktarBtn">İçe Aktar</button>
+            <input type="file" id="soruIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+            <button type="button" class="ikincil" id="soruDisaAktarBtn">Dışa Aktar</button>
+            <button type="button" class="birincil" id="yeniSoruBtn" style="width:auto;">+ Yeni Soru</button>
+          </div>
+        </div>
+
+        <div class="tablo-scroll">
+          <table class="veri-tablosu">
+            <thead>
+              <tr>
+                <th>Soru</th>
+                <th>Konu</th>
+                <th>Doğru Cevap</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="soruTabloGovde"></tbody>
+          </table>
+        </div>
+        <div class="bos-durum" id="soruBosDurum"></div>
+      </div>
+
+      <div id="panelSinavlar" style="display:none;">
+        <div class="arac-cubugu">
+          <input type="text" id="sinavAramaKutusu" class="arama-kutusu" placeholder="Başlık veya konuya göre ara...">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="ikincil" id="sinavDisaAktarBtn">Dışa Aktar</button>
+            <button type="button" class="birincil" id="yeniSinavBtn" style="width:auto;">+ Yeni Sınav Oluştur</button>
+          </div>
+        </div>
+
+        <div class="tablo-scroll">
+          <table class="veri-tablosu">
+            <thead>
+              <tr>
+                <th>Başlık</th>
+                <th>Konu</th>
+                <th>Tarih</th>
+                <th>Soru Sayısı</th>
+                <th>Katılımcı</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="sinavTabloGovde"></tbody>
+          </table>
+        </div>
+        <div class="bos-durum" id="sinavBosDurum"></div>
+      </div>
+
+      <div id="panelSonuclar" style="display:none;">
+        <div class="arac-cubugu">
+          <input type="text" id="sonucAramaKutusu" class="arama-kutusu" placeholder="Personel veya sınava göre ara...">
+          <button type="button" class="ikincil" id="sonucDisaAktarBtn">Dışa Aktar</button>
+        </div>
+
+        <div class="tablo-scroll">
+          <table class="veri-tablosu">
+            <thead>
+              <tr>
+                <th>Personel</th>
+                <th>Sınav</th>
+                <th>Tarih</th>
+                <th>Doğru / Toplam</th>
+                <th>Puan</th>
+                <th>Durum</th>
+                <th>İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="sonucTabloGovde"></tbody>
+          </table>
+        </div>
+        <div class="bos-durum" id="sonucBosDurum"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SINAV: Yeni / Düzenle Soru -->
+  <div class="modal-katman" id="soruModalKatman">
+    <div class="modal-kutu">
+      <h3 id="soruModalBaslik">Yeni Soru</h3>
+      <form id="soruForm">
+        <label for="soruKonuId">Eğitim / Konu</label>
+        <select id="soruKonuId"></select>
+        <div class="alan-hatasi" id="soruKonuIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="soruMetni">Soru Metni</label>
+        <textarea id="soruMetni" rows="3"></textarea>
+        <div class="alan-hatasi" id="soruMetniHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="secenekA">A Şıkkı</label>
+        <input type="text" id="secenekA">
+        <div class="alan-hatasi" id="secenekAHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="secenekB">B Şıkkı</label>
+        <input type="text" id="secenekB">
+        <div class="alan-hatasi" id="secenekBHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="secenekC">C Şıkkı</label>
+        <input type="text" id="secenekC">
+        <div class="alan-hatasi" id="secenekCHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="secenekD">D Şıkkı</label>
+        <input type="text" id="secenekD">
+        <div class="alan-hatasi" id="secenekDHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="dogruCevap">Doğru Cevap</label>
+        <select id="dogruCevap">
+          <option value="">Seçiniz</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+        <div class="alan-hatasi" id="dogruCevapHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="soruModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="soruModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- SINAV: Yeni Sınav -->
+  <div class="modal-katman" id="sinavModalKatman">
+    <div class="modal-kutu">
+      <h3>Yeni Sınav Oluştur</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Seçilen konudaki soru bankasından, belirttiğiniz sayıda soru rastgele seçilerek sınav oluşturulur.
+      </p>
+      <form id="sinavForm">
+        <label for="sinavBaslik">Sınav Başlığı</label>
+        <input type="text" id="sinavBaslik" placeholder="Örn: Temel İSG Eğitimi Sınavı - 2026/1">
+        <div class="alan-hatasi" id="baslikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <label for="sinavKonuId">Eğitim / Konu</label>
+        <select id="sinavKonuId"></select>
+        <div class="alan-hatasi" id="sinavKonuIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="sinavTarih">Tarih</label>
+            <input type="date" id="sinavTarih">
+            <div class="alan-hatasi" id="sinavTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="sinavSoruSayisi">Soru Sayısı</label>
+            <input type="number" id="sinavSoruSayisi" min="1">
+            <div class="alan-hatasi" id="soruSayisiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+        </div>
+
+        <label for="sinavGecmeNotu">Geçme Notu (0-100)</label>
+        <input type="number" id="sinavGecmeNotu" min="0" max="100">
+
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="sinavModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Oluştur</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="sinavModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- SINAV: Sınav Sonuçları -->
+  <div class="modal-katman" id="sonucModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="sonucModalBaslik">Sonuçlar</h3>
+
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Doğru / Toplam</th>
+              <th>Puan</th>
+              <th>Durum</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="sonucModalTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="sonucModalBosDurum"></div>
+
+      <h3 style="margin-top:20px;">Sonuç Ekle</h3>
+      <form id="sonucEkleForm">
+        <label for="sonucPersonelId">Personel</label>
+        <select id="sonucPersonelId"></select>
+        <div class="alan-hatasi" id="sonucPersonelIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
+        <div class="form-satir-ikili">
+          <div>
+            <label for="sonucPuan">Puan (0-100)</label>
+            <input type="number" id="sonucPuan" min="0" max="100">
+            <div class="alan-hatasi" id="puanHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+          </div>
+          <div>
+            <label for="sonucTarih">Tarih</label>
+            <input type="date" id="sonucTarih">
+          </div>
+        </div>
+
+        <div class="modal-eylemler">
+          <button type="submit" class="birincil">Sonuç Ekle</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="sonucModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -277,7 +507,9 @@
   <script src="validation.js?v=2"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=2"></script>
-  <script src="ui.js?v=3"></script>
+  <script src="sinav.js?v=1"></script>
+  <script src="sinav-ui.js?v=1"></script>
+  <script src="ui.js?v=4"></script>
   <script src="cikti.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('egitim');

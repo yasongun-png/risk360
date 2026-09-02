@@ -569,6 +569,11 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('belgeFotoSecDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeDurum').addEventListener('click', () => gorunumDegistir('durum'));
+  // Kullanıcı isteği: "sınav oluşturucu modülünü de eğitimin içine koyalım"
+  // — eskiden ayrı modules/sinav/ sayfasıydı (bkz. sinav.js/-ui.js dosya
+  // başı notları).
+  document.getElementById('sekmeSinav').addEventListener('click', () => gorunumDegistir('sinav'));
+  sinavSayfasiniBaslat();
 
   document.getElementById('sertTehlikeSinifi').addEventListener('change', _sertifikaSureOnizlemesiGuncelle);
   document.getElementById('sertEgitimTuru').addEventListener('change', _sertifikaSureOnizlemesiGuncelle);
@@ -696,13 +701,17 @@ function gorunumDegistir(gorunum) {
   _egitimGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
   document.getElementById('sekmeDurum').classList.toggle('sekme-seciliDegil', gorunum !== 'durum');
+  document.getElementById('sekmeSinav').classList.toggle('sekme-seciliDegil', gorunum !== 'sinav');
   document.getElementById('kayitlarBolumu').style.display = gorunum === 'kayitlar' ? '' : 'none';
   document.getElementById('durumBolumu').style.display = gorunum === 'durum' ? '' : 'none';
+  document.getElementById('sinavBolumu').style.display = gorunum === 'sinav' ? '' : 'none';
 
   if (gorunum === 'kayitlar') {
     kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
-  } else {
+  } else if (gorunum === 'durum') {
     durumTablosunuCiz();
+  } else {
+    sinavSekmeDegistir(_sinavSekme);
   }
 }
 

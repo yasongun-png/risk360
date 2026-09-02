@@ -230,7 +230,6 @@
           <li><a href="#stajyer">🧑‍🎓 Staj</a></li>
           <li><a href="#yuklenici">🏗️ Yüklenici</a></li>
           <li><a href="#hizmet-sozlesmesi">🖋️ Hizmet Sözleşmeleri</a></li>
-          <li><a href="#sinav">📝 Sınav Oluşturucu</a></li>
         </ul>
       </div>
 
@@ -266,7 +265,7 @@
           <li><b>İmza Listesi / Eğitim Katılım Formu (PDF)</b> — seçilen personel için boş imza haneli katılım tutanağı, Eğitimci/İşveren Vekili imza satırı Hizmet Sözleşmesi modülünden otomatik önerilir</li>
         </ul></div>
         <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti">Neredeyse tüm modüller personel seçim listesini buradan okur: Olay/Kaza (kaza mağduru), Eğitim (kime eğitim verildiği), KKD (kime zimmet verildiği), Acil Durum (ekip üyeleri), Kurul (katılımcılar), Sınav (sonuç sahibi). Hizmet Sözleşmesi modülünden Eğitimci/İşveren Vekili önerisi buraya gelir. Raporlar modülündeki Engelli Çalışan Kotası ve Acil Durum Ekip Yeterliliği hesapları da bu listeyi kullanır.</div>
+          <div class="kk-baglanti">Neredeyse tüm modüller personel seçim listesini buradan okur: Olay/Kaza (kaza mağduru), Eğitim (kime eğitim verildiği), KKD (kime zimmet verildiği), Acil Durum (ekip üyeleri), Kurul (katılımcılar), Eğitim'in Sınav Oluşturucu sekmesi (sonuç sahibi). Hizmet Sözleşmesi modülünden Eğitimci/İşveren Vekili önerisi buraya gelir. Raporlar modülündeki Engelli Çalışan Kotası ve Acil Durum Ekip Yeterliliği hesapları da bu listeyi kullanır.</div>
         </div>
         <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
           <div class="kk-onem">Doğru ve güncel personel listesi olmadan hiçbir İSG süreci sağlıklı işlemez — bu modül tüm platformun "kimlik" omurgasıdır.</div>
@@ -284,16 +283,18 @@
           <li>Personel, eğitim/sertifika türü, eğitim tarihi, süre, belge (PDF) yükleme</li>
           <li>Toplu eğitim girişi — aynı eğitime katılan birden fazla kişiyi tek seferde kaydetme</li>
           <li>Firmaya özel yeni eğitim türü tanımlama</li>
+          <li>Sınav Oluşturucu sekmesi — soru bankası (eğitim/konu, soru metni, 4 şık, doğru cevap), yeni sınav (başlık, konu, soru sayısı, geçme notu), sonuç girişi (personel, puan, tarih)</li>
         </ul></div>
-        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Eğitim kaydı (personel + eğitim türü + tarih).</p></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Eğitim kaydı (personel + eğitim türü + tarih); Sınav Oluşturucu sekmesinde ayrıca soru, sınav (soruların anlık kopyasıyla) ve sınav sonucu.</p></div>
         <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><ul>
           <li>Eğitim Sertifikası — tehlike sınıfına göre süre hesaplı resmi belge</li>
           <li>İSG Eğitim ve MYK Raporu (PDF)</li>
           <li>Durum Tablosu — her personelin eğitim durumu (geçerli / süresi geçmiş / yaklaşıyor)</li>
           <li>Excel şablon indirme / toplu içe-dışa aktarım</li>
+          <li>Sınav Oluşturucu: boş sınav kağıdı ve cevap anahtarı yazdırma, Excel dışa aktarım (soru/sınav/sonuç), Excel şablon/toplu içe aktarım</li>
         </ul></div>
         <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti">Sertifikalardaki İG Uzmanı/İşyeri Hekimi imzası Hizmet Sözleşmesi modülünden gelir. Acil Durum Ekip Eğitimi kaydı, ekip üyelerinin "Eğitim Geçerlilik" durumunu besler. İSG Kurulu toplantı raporunda o ayın eğitimleri otomatik özetlenir. Raporlar panosundaki eğitim uyum oranı buradan hesaplanır.</div>
+          <div class="kk-baglanti">Sertifikalardaki İG Uzmanı/İşyeri Hekimi imzası Hizmet Sözleşmesi modülünden gelir. Acil Durum Ekip Eğitimi kaydı, ekip üyelerinin "Eğitim Geçerlilik" durumunu besler. İSG Kurulu toplantı raporunda o ayın eğitimleri otomatik özetlenir. Raporlar panosundaki eğitim uyum oranı buradan hesaplanır. Sınav Oluşturucu sekmesi, konu seçiminde Eğitim türlerini ve sonuç girişinde Personel listesini aynı sayfadan doğrudan kullanır.</div>
         </div>
         <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
           <div class="kk-onem">Yasal zorunlu eğitimlerin süresi dolmadan yenilenmesini sağlar; sertifikasız/geçersiz belgeli personelin yüksekte çalışma, kapalı alan gibi riskli işlerde çalıştırılmasını önler.</div>
@@ -676,28 +677,6 @@
         </div>
         <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
           <div class="kk-onem">Yasal asgari süre karşılaştırmasıyla firmayı "yetersiz İSG hizmeti" denetim riskinden korur; sözleşmesi bitmek üzere olan uzman/hekimin zamanında yenilenmesini garanti eder.</div>
-        </div>
-      </div>
-    </details>
-
-    <details class="kk-modul" id="sinav">
-      <summary><span class="kk-modul-ikon">📝</span> Sınav Oluşturucu</summary>
-      <div class="kk-modul-govde">
-        <div class="kk-blok"><h4>Amaç</h4>
-          <p class="kk-amac">Verilen İSG eğitimlerinin ardından çalışanların bilgisini ölçmek için soru bankası oluşturur, rastgele sorularla sınav üretir ve kağıt üzerinde yapılan sınav sonuçlarını kaydedip geçti/kaldı takibi yapar.</p>
-        </div>
-        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
-          <li>Soru Bankası — eğitim/konu, soru metni, 4 şık, doğru cevap</li>
-          <li>Yeni Sınav — başlık, konu, soru sayısı (havuzdan rastgele seçilir), geçme notu</li>
-          <li>Sonuç Girişi — personel, puan, tarih (doğru sayısı otomatik hesaplanır)</li>
-        </ul></div>
-        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Soru, sınav (soruların anlık kopyasıyla), sınav sonucu.</p></div>
-        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Boş sınav kağıdı ve cevap anahtarı yazdırma, Excel dışa aktarım (soru/sınav/sonuç), Excel şablon/toplu içe aktarım.</p></div>
-        <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti">Sonuç kaydı için Personel listesi, konu seçimi için Eğitim modülündeki eğitim türleri kullanılır.</div>
-        </div>
-        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
-          <div class="kk-onem">Verilen eğitimin gerçekten anlaşıldığını denetimlerde ibraz edilebilecek somut bir kayıtla kanıtlar; düşük başarılı çalışan/konuları tespit ederek tekrar eğitim ihtiyacını belirler.</div>
         </div>
       </div>
     </details>
