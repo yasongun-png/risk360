@@ -60,10 +60,8 @@
       ve Eğitim modüllerine erişir. <strong>Düzenleyici:</strong> tüm modüllere
       erişir ve ekleme/düzenleme yapabilir ama hiçbir kaydı silemez; yeni bir
       kayıt eklediğinde size bildirim düşer. <strong>Bakım:</strong> sadece
-      Bakım Onarım modülüne erişir, tüm birimlerin taleplerini görür.
-      <strong>Talep Eden Birim:</strong> sadece Bakım Onarım modülüne, sadece
-      KENDİ biriminin taleplerine erişir. Hepsi sadece burada seçtiğiniz
-      firma(lar)a erişebilir ve hiçbiri kayıt silemez.
+      İş İzinleri modülünde kendi onay imzasını atabilir. Hepsi sadece burada
+      seçtiğiniz firma(lar)a erişebilir ve hiçbiri kayıt silemez.
     </p>
 
     <div class="hata-mesaji" id="hataMesaji"></div>
@@ -101,24 +99,12 @@
       <select id="kkRol">
         <option value="ik">İK — sadece Personel ve Eğitim</option>
         <option value="duzenleyici">Düzenleyici — tüm modüller, silme yok</option>
-        <option value="bakim">Bakım — sadece Bakım Onarım, tüm birimler</option>
-        <option value="birim">Talep Eden Birim — sadece Bakım Onarım, kendi birimi</option>
-        <option value="envanter">Envanter Sorumlusu — sadece Ekipman Envanteri</option>
+        <option value="bakim">Bakım — sadece İş İzinlerinde onay imzası</option>
       </select>
-
-      <div id="kkBirimAlani" style="display:none;">
-        <label for="kkBirim">Birim</label>
-        <select id="kkBirim"></select>
-      </div>
-
-      <div id="kkBakimTuruAlani" style="display:none;">
-        <label>Bakım Türleri <span style="font-weight:400; color:var(--metin-soluk);">(hiçbiri işaretlenmezse tümünü görür)</span></label>
-        <div id="kkBakimTuruListesi" style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0 10px;"></div>
-      </div>
 
       <div id="kkIsgOnayiAlani" style="display:none;">
         <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
-          <input type="checkbox" id="kkIsgOnayi" style="width:auto;"> Bakım Onarım'da İSG onayı verebilsin
+          <input type="checkbox" id="kkIsgOnayi" style="width:auto;"> İş İzinlerinde İSG onayı verebilsin
         </label>
       </div>
 
@@ -165,7 +151,6 @@
   <script src="core/tenant.js"></script>
   <script src="core/metin-istem.js"></script>
   <script src="modules/personel/org-repository.js"></script>
-  <script src="modules/bakim-talep/model.js"></script>
   <script>
     function _kkKacir(v) {
       return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -189,12 +174,8 @@
       document.getElementById('admModalIptalBtn').addEventListener('click', admModalKapat);
       document.getElementById('admModalKaydetBtn').addEventListener('click', admKaydet);
       document.getElementById('kkRol').addEventListener('change', () => {
-        _kkBirimAlaniniGuncelle();
-        _kkBirimSecimDoldur();
         _kkIsgOnayiAlaniniGuncelle();
-        _kkBakimTuruAlaniniGuncelle();
       });
-      document.getElementById('kkFirmaListesi').addEventListener('change', _kkBirimSecimDoldur);
 
       // Diğer admin sayfalarıyla aynı önlem (bkz. dashboard.html,
       // giris-kayitlari.html): bulut senkronu doğrulanmadan isg_kullanicilar
@@ -271,69 +252,16 @@
 
     const KK_ROL_ETIKETLERI = {
       duzenleyici: '✏️ Düzenleyici (silme yok)',
-      bakim: '🔧 Bakım',
-      birim: '🏭 Talep Eden Birim',
-      envanter: '📦 Envanter Sorumlusu'
+      bakim: '🔧 Bakım'
     };
 
-    function _kkBirimAlaniniGuncelle() {
-      document.getElementById('kkBirimAlani').style.display = document.getElementById('kkRol').value === 'birim' ? '' : 'none';
-    }
-
     // Kullanıcı isteği: "kullanıcılar kısmında İSG onayı verebilecekleri de
-    // admin belirleyebilsin" — varsayılan olarak SADECE admin İSG onaylayıcısı
-    // sayılırdı (bkz. modules/bakim-talep/service.js _btIsgOnaylayiciMi);
-    // artık admin, Düzenleyici rolündeki bir kullanıcıya bu yetkiyi de
-    // (Bakım Onarım modülüne özel) verebilir.
+    // admin belirleyebilsin" — varsayılan olarak SADECE admin İSG
+    // onaylayıcısı sayılırdı (bkz. modules/is-izni/service.js
+    // _izIsgOnaylayiciMi); admin, Düzenleyici rolündeki bir kullanıcıya bu
+    // yetkiyi de verebilir.
     function _kkIsgOnayiAlaniniGuncelle() {
       document.getElementById('kkIsgOnayiAlani').style.display = document.getElementById('kkRol').value === 'duzenleyici' ? '' : 'none';
-    }
-
-    // Kullanıcı isteği: "bakım tarafında elektrik ve otomasyon bakım da
-    // var, elektrik ile mekanik ayrı olmalı" — 'bakim' rolündeki bir hesap
-    // isteğe bağlı olarak birden fazla bakım türüne (hiçbiri işaretlenmezse
-    // hepsine) sınırlanabilir (bkz. modules/bakim-talep/service.js
-    // bakimTalepleriGetir, core/auth.js bakimTurleriCoz).
-    function _kkBakimTuruAlaniniGuncelle() {
-      const goster = document.getElementById('kkRol').value === 'bakim';
-      document.getElementById('kkBakimTuruAlani').style.display = goster ? '' : 'none';
-      if (goster) {
-        const liste = document.getElementById('kkBakimTuruListesi');
-        liste.innerHTML = BAKIM_TALEP_BAKIM_TURLERI.map(t => `
-          <label style="display:flex; align-items:center; gap:6px; font-weight:400; cursor:pointer;">
-            <input type="checkbox" class="kkBakimTuruKutusu" value="${_kkKacir(t)}"> ${_kkKacir(t)}
-          </label>
-        `).join('');
-      }
-    }
-
-    // Birim seçim listesini, o an İŞARETLİ firma(lar)ın bölümler listesinden
-    // (bkz. core/tenant.js firma.bolumler, Firma Yönetimi'nde düzenlenir) VE
-    // Personel modülünün organizasyon şemasındaki müdürlüklerden (en üst
-    // seviye pozisyonlar, bkz. modules/personel/org-repository.js) doldurur
-    // — kullanıcı isteği: "personel modülünden müdürlükleri de al", "müdürlüklerin
-    // altında da kullanıcı tanımlayabileyim". Bu sayfada "aktif firma" kavramı
-    // yok (firma-yonetim.html'deki gibi), bu yüzden işaretli her firma için
-    // buyukVeriFirmadanOku ile tek seferlik, firma-bağımsız okuma yapılır.
-    async function _kkBirimSecimDoldur() {
-      const secim = document.getElementById('kkBirim');
-      const oncekiSecim = secim.value;
-      const secilenFirmalar = getFirmalar().filter(f => document.querySelector(`#kkFirmaListesi input[value="${f.id}"]:checked`));
-
-      const bolumSeti = new Set(secilenFirmalar.flatMap(f => Array.isArray(f.bolumler) ? f.bolumler : []));
-
-      const mudurlukListeleri = await Promise.all(secilenFirmalar.map(f =>
-        buyukVeriFirmadanOku('isg_' + f.slug + '_organizasyon_pozisyonlari', []).catch(() => [])
-      ));
-      mudurlukListeleri.forEach(liste => {
-        (Array.isArray(liste) ? liste : []).filter(p => !p.ustId).forEach(p => bolumSeti.add(p.ad));
-      });
-
-      const bolumler = Array.from(bolumSeti).sort((a, b) => a.localeCompare(b, 'tr'));
-      secim.innerHTML = bolumler.length
-        ? bolumler.map(b => `<option value="${_kkKacir(b)}">${_kkKacir(b)}</option>`).join('')
-        : '<option value="">Önce Firma Yönetimi\'nden bölüm ekleyin</option>';
-      if (bolumler.includes(oncekiSecim)) secim.value = oncekiSecim;
     }
 
     function renderListe() {
@@ -351,10 +279,7 @@
       kullanicilar.forEach(k => {
         const firmaAdlari = _firmaAdlariGetir(k.erisimFirmaIdleri);
         const rolEtiket = KK_ROL_ETIKETLERI[k.rol] || '🗂️ İK';
-        const birimSatiri = k.rol === 'birim' ? `<span class="firmalar">🏭 Birim: ${_kkKacir(k.birimAdi || '—')}</span>` : '';
-        const isgOnaySatiri = k.rol === 'duzenleyici' && k.isgOnayiVerebilir ? '<span class="firmalar">✅ İSG onayı verebilir (Bakım Onarım)</span>' : '';
-        const kBakimTurleri = bakimTurleriCoz(k);
-        const bakimTuruSatiri = k.rol === 'bakim' ? `<span class="firmalar">🔧 Bakım Türü: ${_kkKacir(kBakimTurleri.length ? kBakimTurleri.join(', ') : 'Tümü')}</span>` : '';
+        const isgOnaySatiri = k.rol === 'duzenleyici' && k.isgOnayiVerebilir ? '<span class="firmalar">✅ İSG onayı verebilir (İş İzni)</span>' : '';
         const satir = document.createElement('div');
         satir.className = 'kk-satir';
         satir.innerHTML = `
@@ -362,8 +287,6 @@
             <span class="ad">${_kkKacir(k.adSoyad)} <span style="font-weight:400; font-size:11px; color:var(--metin-soluk);">${rolEtiket}</span></span>
             <span class="kullanici-adi">@${_kkKacir(k.kullaniciAdi)}</span>
             <span class="firmalar">${firmaAdlari.length ? '🏢 ' + _kkKacir(firmaAdlari.join(', ')) : '⚠️ Hiç firma atanmadı'}</span>
-            ${birimSatiri}
-            ${bakimTuruSatiri}
             ${isgOnaySatiri}
           </div>
           <div class="islemler">
@@ -415,14 +338,8 @@
       document.getElementById('kkKullaniciAdi').disabled = !!kayit;
       document.getElementById('kkSifre').value = '';
       document.getElementById('kkRol').value = kayit ? kayit.rol : 'ik';
-      _kkBirimAlaniniGuncelle();
       _kkIsgOnayiAlaniniGuncelle();
       document.getElementById('kkIsgOnayi').checked = !!(kayit && kayit.isgOnayiVerebilir);
-      _kkBakimTuruAlaniniGuncelle();
-      const kayitBakimTurleri = kayit ? bakimTurleriCoz(kayit) : [];
-      document.querySelectorAll('.kkBakimTuruKutusu').forEach(kutu => {
-        kutu.checked = kayitBakimTurleri.includes(kutu.value);
-      });
 
       // Düzenlemede kullanıcı adı ve şifre burada değiştirilmez (kullanıcı
       // adı sabit kalır, şifre için ayrı "Şifre Değiştir" butonu kullanılır
@@ -443,9 +360,6 @@
         </label>
       `).join('') || '<div style="font-size:12px; color:var(--metin-soluk);">Önce Firma Yönetimi\'nden bir firma eklemelisiniz.</div>';
 
-      _kkBirimSecimDoldur();
-      if (kayit && kayit.rol === 'birim') document.getElementById('kkBirim').value = kayit.birimAdi || '';
-
       document.getElementById('kkModalHata').textContent = '';
       document.getElementById('kkModalKatman').classList.add('acik');
     }
@@ -463,12 +377,10 @@
       const hataEl = document.getElementById('kkModalHata');
 
       const rol = document.getElementById('kkRol').value;
-      const birimAdi = document.getElementById('kkBirim').value;
       const isgOnayiVerebilir = document.getElementById('kkIsgOnayi').checked;
-      const bakimTurleri = Array.from(document.querySelectorAll('.kkBakimTuruKutusu:checked')).map(cb => cb.value);
       const sonuc = _duzenlenenId
-        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri)
-        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri);
+        ? ikKullaniciGuncelle(_duzenlenenId, adSoyad, secilenFirmaIdleri, rol, isgOnayiVerebilir)
+        : await ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, secilenFirmaIdleri, rol, isgOnayiVerebilir);
 
       if (!sonuc.basarili) {
         hataEl.textContent = sonuc.hata;

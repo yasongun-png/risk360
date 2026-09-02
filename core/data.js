@@ -129,7 +129,7 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
       // Kişi bazlı okundu takibi (bkz. dashboard.html _bildirimZiliniKur):
       // tek bir paylaşılan "okunduMu" bayrağı yerine, hangi kullanıcı(lar)ın
       // bu bildirimi gördüğü tutulur — aksi halde hedefli bildirimlerde
-      // (bkz. modules/bakim-talep) bir kullanıcının "tümünü okundu işaretle"
+      // (bkz. modules/is-izni hedefRol) bir kullanıcının "tümünü okundu işaretle"
       // demesi BAŞKA bir kullanıcının hedefli bildirimini de "okunmuş"
       // gösterirdi.
       okuyanKullaniciIdleri: []
@@ -141,11 +141,11 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
 }
 
 // tenantAnahtar()'ın ürettiği depolama anahtarı SONEKİ (ör. 'egitim_kayitlari',
-// 'is_izinleri', 'bakim_talepleri'), dashboard.html'deki MODULLER dizisinin
-// 'anahtar' alanıyla (ör. 'egitim', 'is-izni', 'bakim-talep') HEMEN HEMEN HİÇ
-// birebir eşleşmez — her modül repository.js'inde kendi anahtarını seçer.
+// 'is_izinleri'), dashboard.html'deki MODULLER dizisinin 'anahtar' alanıyla
+// (ör. 'egitim', 'is-izni') HEMEN HEMEN HİÇ birebir eşleşmez — her modül
+// repository.js'inde kendi anahtarını seçer.
 // Rol bazlı yazma izni SADECE dashboard'daki modül anahtarına göre tanımlı
-// olduğundan (bkz. core/auth.js IK_IZINLI_MODULLER, BAKIM_TALEP_YAZILABILEN_ROLLER),
+// olduğundan (bkz. core/auth.js IK_IZINLI_MODULLER),
 // izne tabi HER modül için soneki buradan açıkça eşlemek gerekir — aksi
 // halde (ör. yalnızca ham soneki karşılaştırmak) İK'nın Eğitim'e bile
 // yazması yanlışlıkla engellenir (bir kez gerçekten yaşandı, testle
@@ -154,12 +154,6 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
 const _MODUL_ANAHTARI_DEPOLAMA_SONEKLERI = {
   personel: ['personel'],
   egitim: ['egitim_kayitlari'],
-  'bakim-talep': ['bakim_talepleri'],
-  // Ekipman envanteri kasıtlı olarak 'bakim-talep'ten AYRI bir modül
-  // anahtarı — kullanıcı isteği: "ekipman envanterine giriş yapabilecekler
-  // sınırlı olsun, bakımdan ayrı bir kullanıcı ve admin sadece girebilsin"
-  // (bkz. core/auth.js kullaniciEklemeYapabilirMi 'envanter' rolü).
-  'bakim-ekipman': ['bakim_ekipman_envanteri'],
   'is-izni': ['is_izinleri']
 };
 

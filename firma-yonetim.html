@@ -277,9 +277,9 @@
     // bu sayfanın konumundan (GitHub Pages alt yolu/özel domain fark etmeksizin)
     // türetilir, sabit bir domain YAZILMAZ.
     // Kullanıcı isteği: "barkodu yine ramak kala'nın barkodunun olduğu
-    // yerden verebilirsin" — aynı modal/poster iskeleti, üç farklı barkod
-    // formu için (ramak-kala-bildir.html, is-izni-bildir.html,
-    // ekipman-bakim-bildir.html) tek yerden yeniden kullanılır.
+    // yerden verebilirsin" — aynı modal/poster iskeleti, birden fazla
+    // barkod formu için (ramak-kala-bildir.html, is-izni-bildir.html, vb.)
+    // tek yerden yeniden kullanılır.
     const BARKOD_TIPLERI = {
       'ramak-kala': {
         sayfa: 'ramak-kala-bildir.html',
@@ -310,16 +310,9 @@
         posterMetin: 'Tamamlanmış bir iş iznini İSG olarak onaylamak/imzalamak için barkodu telefonunuzla okutun.',
         posterAlt: 'Bu barkod sadece İSG imzası içindir.'
       },
-      'ekipman-bakim': {
-        sayfa: 'ekipman-bakim-bildir.html',
-        baslik: 'Ekipman Bakım Kartı Barkodu',
-        posterBaslik: 'EKİPMAN BAKIM KARTI',
-        posterMetin: 'Ekipmanda yapılan bakım/onarım işlemini kaydetmek için barkodu telefonunuzla okutup ekipman kodunu girin.',
-        posterAlt: 'Ekipman envanterde yoksa otomatik olarak yeni kayıt açılır.'
-      },
       // Kullanıcı isteği: "barkodu okuttuğumda o ekipmanın kontrol formunu
-      // doldurabileyim tarih otomatik o gün olsun" -- ekipman-bakim ile aynı
-      // iskelet, ama Acil Durum ekipman envanterindeki (Hidrant/Yangın
+      // doldurabileyim tarih otomatik o gün olsun" -- Acil Durum ekipman
+      // envanterindeki (Hidrant/Yangın
       // Dolabı/Sprinkler vb.) periyodik kontrol checklist'ini doldurur.
       'ekipman-kontrol': {
         sayfa: 'ekipman-kontrol-bildir.html',
@@ -379,7 +372,6 @@
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni">🧾 İş İzni Barkodu (Sorumlu Bölüm)</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="is-izni-isg">🧾 İş İzni Barkodu (İSG)</button>
             <button class="mini-buton" data-is-izni-sifre="${firma.id}">🔒 İş İzni Şifreleri</button>
-            <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-bakim">🔧 Ekipman Bakım Barkodu</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="ekipman-kontrol">🧯 Ekipman Kontrol Barkodu</button>
             <button class="mini-buton" data-barkod="${firma.id}" data-barkod-tip="risk">⚠️ Risk Bildirimi Barkodu</button>
             <button class="mini-buton" data-duzenle="${firma.id}">Yeniden Adlandır</button>

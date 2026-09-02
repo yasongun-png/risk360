@@ -134,31 +134,6 @@ const HARITA_DIS_KAYNAKLAR = {
       kontrolGecmisi: [], olusturmaTarihi: k.olusturmaTarihi, guncellemeTarihi: k.olusturmaTarihi
     })
   },
-  // Bakım Onarım — Ekipman Envanteri. Kullanıcı isteği: "ekipman konumu
-  // haritadan seçilebilsin, nokta olarak işaretlenebilsin".
-  bakimEkipman: {
-    // Mevcut genel 'ekipman' türü (⚙️, bkz. model.js HARITA_TIPLERI.ekipman)
-    // yeniden kullanılır — henüz başka bir dış kaynak tarafından üstlenilmemiş.
-    turler: ['ekipman'],
-    tumunuGetir: () => ekipmanEnvanteriTumunuGetirRepo(),
-    idIleGetir: id => ekipmanEnvanterKaydiIdIleGetirRepo(id),
-    konumGuncelle: (id, tesisId, x, y) => ekipmanEnvanterKaydiGuncelleRepoVeBekle(id, { haritaTesisId: tesisId, haritaX: x, haritaY: y }),
-    // Ekipman envanteri kayıtları haritadan DOĞRUDAN oluşturulamaz — her
-    // zaman bir talebin ekipman kodundan kendiliğinden doğar (bkz.
-    // service.js _ekipmanEnvanteriGuncelle); haritada boş bir noktaya
-    // tıklanırsa envanter sekmesine yönlendirilir.
-    yeniKayitUrl: () => `../bakim-talep/index.html?hedef=envanter`,
-    acUrl: id => `../bakim-talep/index.html?ac=${id}&hedef=ekipman`,
-    modulAdi: 'Bakım Onarım',
-    normallestir: k => ({
-      kaynak: 'bakimEkipman', kaynakId: k.id, id: 'x-be-' + k.id, tesisId: k.haritaTesisId,
-      x: Number(k.haritaX) || 0, y: Number(k.haritaY) || 0,
-      tur: 'ekipman', altTur: '', no: k.kod, baslik: k.ad || k.kod, aciklama: k.tip,
-      kat: '', bolum: '', durum: 'Çalışıyor', fotograflar: k.fotograf ? [{ url: k.fotograf }] : [],
-      ek: { 'Tip': k.tip, 'Toplam Talep': k.talepSayisi, 'Son Kullanım': k.sonKullanimTarihi },
-      kontrolGecmisi: [], olusturmaTarihi: k.ilkGorulmeTarihi, guncellemeTarihi: k.sonKullanimTarihi
-    })
-  }
 };
 
 // acil-durum modülünün EKIPMAN_TURLERI (Türkçe metin) → harita tür/altTür.
@@ -226,7 +201,7 @@ async function haritaSayfasiniBaslat() {
     const disKayit = kaynak.idIleGetir(odaklanId);
     if (disKayit && disKayit.haritaTesisId && state.tesisler.some(t => t.id === disKayit.haritaTesisId)) {
       state.aktifTesisId = disKayit.haritaTesisId;
-      const _odaklanOnEkleri = { acilDurumEkipman: 'ade', acilDurumYanginTupu: 'adyt', acilDurumTahliye: 'adt', bakimEkipman: 'be' };
+      const _odaklanOnEkleri = { acilDurumEkipman: 'ade', acilDurumYanginTupu: 'adyt', acilDurumTahliye: 'adt' };
       odaklanacakMarkerId = 'x-' + (_odaklanOnEkleri[odaklanKaynak] || odaklanKaynak) + '-' + odaklanId;
     }
   } else if (konumKaynak && konumId && HARITA_DIS_KAYNAKLAR[konumKaynak]) {

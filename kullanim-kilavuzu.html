@@ -220,7 +220,6 @@
         <ul>
           <li><a href="#periyodik-kontrol">🛠️ Periyodik Kontrol</a></li>
           <li><a href="#kkd">🦺 KKD Takibi</a></li>
-          <li><a href="#bakim-talep">🔧 Bakım Onarım</a></li>
           <li><a href="#is-izni">🧾 İş İzinleri</a></li>
         </ul>
       </div>
@@ -585,29 +584,6 @@
       </div>
     </details>
 
-    <details class="kk-modul" id="bakim-talep">
-      <summary><span class="kk-modul-ikon">🔧</span> Bakım Onarım</summary>
-      <div class="kk-modul-govde">
-        <div class="kk-blok"><h4>Amaç</h4>
-          <p class="kk-amac">Üretim/idari birimlerin arıza-bakım ihtiyacını bildirdiği, bakım ekibinin değerlendirip İSG onayından geçirdiği, kapanışa kadar tek kayıt üzerinden takip edilen onay akışlı bir bakım talep sistemi.</p>
-        </div>
-        <div class="kk-blok"><h4>Ne Girilir</h4><ul>
-          <li>Talep — birim, konum/ekipman, arıza açıklaması, öncelik, bakım türü, fotoğraf</li>
-          <li>Bakım değerlendirmesi — görüş, planlanan tarih, riskler/önlemler</li>
-          <li>İSG onayı — ilave önlem gerekli mi, onay durumu</li>
-          <li>Kapanış — tamamlama tarihi, bakım notu</li>
-        </ul></div>
-        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Bakım talebi (Yeni → Değerlendirmede → İSG Onayında → Onaylandı → Tamamlandı → Kapatıldı), ekipman envanteri + her ekipmanın bakım kartı (geçmiş işlemler).</p></div>
-        <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Bakım Talep Raporu (Word), Ekipman Bakım Kartı (Word), Excel şablon/toplu içe-dışa aktarım.</p></div>
-        <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti">Riskli bir bakım işi için "İş İzni Talep Et" ile doğrudan İş İzni oluşturulur. Ekipman konumu Saha Haritası'nda gösterilir. Açık talepler Merkezi Aksiyon listesine düşer.</div>
-        </div>
-        <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
-          <div class="kk-onem">Arıza bildirimlerinin kaybolmadan, sorumluluk zinciri korunarak kapatılmasını sağlar; İSG onay adımı bakımın güvensiz koşullarda başlamasını engeller.</div>
-        </div>
-      </div>
-    </details>
-
     <details class="kk-modul" id="is-izni">
       <summary><span class="kk-modul-ikon">🧾</span> İş İzinleri</summary>
       <div class="kk-modul-govde">
@@ -761,7 +737,7 @@
           <p class="kk-amac">Farklı modüllerdeki (sorumlu + termin + durum içeren) tüm açık aksiyonları tek listede toplayan, kendi verisi olmayan salt-okunur bir "genel aksiyon kokpiti". Hiçbir veri girilmez, sadece filtrelenir.</p>
         </div>
         <div class="kk-blok"><h4>Ne Girilir</h4><p>Yalnızca arama ve filtre (kaynak modül, durum) uygulanır; veri girişi yoktur.</p></div>
-        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Yok — sekiz kaynaktan canlı olarak toplanır: Uygunsuzluk, İSG Kurulu kararları, Risk, Olay/Kaza aksiyonları, Acil Durum ekipman kontrolü, Acil Durum eylem planı, KKD zimmet, Bakım Onarım.</p></div>
+        <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Yok — yedi kaynaktan canlı olarak toplanır: Uygunsuzluk, İSG Kurulu kararları, Risk, Olay/Kaza aksiyonları, Acil Durum ekipman kontrolü, Acil Durum eylem planı, KKD zimmet.</p></div>
         <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Excel dışa aktarım (filtrelenmiş liste); özet: toplam açık, gecikmiş, 7 gün içinde termini dolacak aksiyon sayısı, sorumluya göre dağılım.</p></div>
         <div class="kk-blok"><h4>Bağlantılar</h4>
           <div class="kk-baglanti">Bu modülün tamamı diğer 8 kaynağı birleştiren bir köprüdür; her satırdaki "İncele" bağlantısı kullanıcıyı kaydın gerçek modülüne yönlendirir.</div>
@@ -808,7 +784,7 @@
         <div class="kk-blok"><h4>Kayıt Türleri</h4><p>Tesis, harita noktası, etiket, ok — kendine özgü kayıtlar; diğerleri ilgili modülde tutulur, harita sadece konumu gösterir.</p></div>
         <div class="kk-blok"><h4>Raporlar / Çıktılar</h4><p>Ayrı bir Word/PDF/Excel çıktısı yoktur — tamamen interaktif görsel bir araçtır.</p></div>
         <div class="kk-blok"><h4>Bağlantılar</h4>
-          <div class="kk-baglanti"><b>Platformun en yoğun görsel köprüsü:</b> Uygunsuzluk, Risk, Acil Durum (ekipman/tüp/kaçış yolu/toplanma alanı), Bakım Onarım ekipman envanterini gösterir. Bir noktaya tıklamak ilgili modüldeki kayda götürür; boş bir noktaya tıklayıp "yeni kayıt" seçmek, konum bilgisiyle ilgili modülün yeni kayıt formunu açar.</div>
+          <div class="kk-baglanti"><b>Platformun en yoğun görsel köprüsü:</b> Uygunsuzluk, Risk, Acil Durum (ekipman/tüp/kaçış yolu/toplanma alanı) kayıtlarını gösterir. Bir noktaya tıklamak ilgili modüldeki kayda götürür; boş bir noktaya tıklayıp "yeni kayıt" seçmek, konum bilgisiyle ilgili modülün yeni kayıt formunu açar.</div>
         </div>
         <div class="kk-blok"><h4>Fabrikadaki Önemi</h4>
           <div class="kk-onem">Geniş sahalı fabrikalarda "en yakın yangın tüpü nerede", "bu bölümde açık uygunsuzluk var mı", "kaçış yolu nereden geçiyor" sorularını görsel olarak anında yanıtlar.</div>

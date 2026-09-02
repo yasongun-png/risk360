@@ -253,10 +253,6 @@ function izinOlustur(veriler) {
     aciklama: (veriler.aciklama || '').trim(),
     bolum: (veriler.bolum || '').trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
-    // Kullanıcı isteği: "eğer iş izni daha önce açılmış bir bakım talebinin
-    // devamı ise... o bakım talebinin numarası iş izninde referans olarak
-    // yer alsın" — bkz. is-izni-bildir.html "İlgili Bakım İşi" seçimi.
-    bakimTalepId: (veriler.bakimTalepId || '').trim(),
     yuklenici: (veriler.yuklenici || '').trim(),
     talepEden: (veriler.talepEden || '').trim(),
     sahaSorumlusu: (veriler.sahaSorumlusu || '').trim(),

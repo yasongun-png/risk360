@@ -106,7 +106,6 @@
       { anahtar: 'tespit-oneri', ikon: '📖', baslik: 'Tespit ve Öneri Defteri', aciklama: 'İG uzmanı/işyeri hekimi tespit-öneri kayıtları, tebliğ ve kapanış takibi', baglanti: 'modules/tespit-oneri/index.html', aktif: true },
       { anahtar: 'hizmet-sozlesmesi', ikon: '🖋️', baslik: 'Hizmet Sözleşmeleri', aciklama: 'İG Uzmanı, İşyeri Hekimi ve Diğer Sağlık Personeli hizmet sözleşmesi takibi', baglanti: 'modules/hizmet-sozlesmesi/index.html', aktif: true },
       { anahtar: 'harita', ikon: '🗺️', baslik: 'Saha Dijital Haritası', aciklama: 'Tesis krokisi üzerinde uygunsuzluk, arıza, risk, yangın/acil durum ekipmanı ve KKD noktası takibi', baglanti: 'modules/harita/index.html', aktif: true },
-      { anahtar: 'bakim-talep', ikon: '🔧', baslik: 'Bakım Onarım', aciklama: 'Birimlerden gelen bakım talebi; Bakım değerlendirmesi, İSG onayı ve gerekiyorsa İş İzni ile kapanışa kadar tek akış', baglanti: 'modules/bakim-talep/index.html', aktif: true },
       { anahtar: 'jsa', ikon: '🪜', baslik: 'İş Güvenliği Analizi (JSA)', aciklama: 'Görev bazlı iş adımları, Fine-Kinney tehlike/risk/kontrol analizi, kaşe/imza onayı ve PDF/Word raporu', baglanti: 'modules/jsa/index.html', aktif: true }
     ];
 
@@ -136,8 +135,7 @@
       is_izinleri: 'is-izni',
       tespit_oneri_kayitlari: 'tespit-oneri',
       hizmet_sozlesmeleri: 'hizmet-sozlesmesi',
-      harita_tesisler: 'harita', harita_kayitlar: 'harita', harita_etiketler: 'harita', harita_oklar: 'harita',
-      bakim_talepleri: 'bakim-talep', bakim_ekipman_envanteri: 'bakim-talep'
+      harita_tesisler: 'harita', harita_kayitlar: 'harita', harita_etiketler: 'harita', harita_oklar: 'harita'
     };
 
     // Bir 'isg_<slug>_<tenantAnahtar>' anahtarını { firma, modul } olarak
@@ -168,22 +166,13 @@
       return (firma ? firma.ad + ' — ' : '') + modulEtiket;
     }
 
-    // Bildirim herkese açık (hedefRol/hedefBirim boş) VEYA bu kullanıcının
-    // rolüne/birimine hedefliyse görünür. Admin, gözetim amacıyla HER
-    // bildirimi görür (kullanıcı isteği: "Yönetici/Admin: Tüm kayıtları
-    // görür").
+    // Bildirim herkese açık (hedefRol boş) VEYA bu kullanıcının rolüne
+    // hedefliyse görünür. Admin, gözetim amacıyla HER bildirimi görür
+    // (kullanıcı isteği: "Yönetici/Admin: Tüm kayıtları görür").
     function _bildirimKullaniciyaGorunurMu(b, kullanici) {
-      if (!b.hedefRol && !b.hedefBirim) return true;
+      if (!b.hedefRol) return true;
       if (kullaniciAdminMi(kullanici)) return true;
-      if (b.hedefBirim) return kullanici.rol === 'birim' && kullanici.birimAdi === b.hedefBirim;
-      // 'bakim' rolü bir/birden fazla bakım türüne sınırlanmışsa (bkz.
-      // kullanicilar.html kkBakimTuruListesi) sadece o türlere hedeflenen
-      // (ya da hedefsiz genel) bildirimleri görür — kullanıcı isteği:
-      // "elektrik ile mekanik ayrı olmalı", "birden fazla seçebileyim".
-      if (b.hedefRol === 'bakim') {
-        const kullaniciTurleri = bakimTurleriCoz(kullanici);
-        return kullanici.rol === 'bakim' && (!b.hedefBakimTuru || !kullaniciTurleri.length || kullaniciTurleri.includes(b.hedefBakimTuru));
-      }
+      if (b.hedefRol === 'bakim') return kullanici.rol === 'bakim';
       if (b.hedefRol === 'isg') return kullanici.rol === 'duzenleyici' && !!kullanici.isgOnayiVerebilir;
       return false;
     }
@@ -217,7 +206,7 @@
         bos.style.display = siraliBildirimler.length ? 'none' : 'block';
         liste.innerHTML = siraliBildirimler.map(b => {
           const etiketler = Array.isArray(b.kayitEtiketleri) ? b.kayitEtiketleri.filter(Boolean) : [];
-          const eylemFiili = b.hedefRol || b.hedefBirim ? '' : 'yeni kayıt ekledi';
+          const eylemFiili = b.hedefRol ? '' : 'yeni kayıt ekledi';
           const hedef = _bildirimHedefiCoz(b.anahtar);
           const tiklanabilirMi = !!(hedef.firma && hedef.modul);
           return `

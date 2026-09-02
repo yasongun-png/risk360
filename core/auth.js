@@ -248,26 +248,10 @@ function girisGerekli() {
 // ekleme yapsın ama silemesin, diğer modülleri sadece görsün ekleme
 // yapamasın".
 //
-// rol==='bakim' (Bakım Bölümü) ve rol==='birim' (Talep Eden Birim) — Bakım
-// Talep ve Onay Modülü için: ikisi de SADECE bakim-talep modülüne
-// yazabilir, diğerleri salt-okunur. 'birim' kullanıcıları ayrıca
-// modules/bakim-talep/service.js içinde KENDİ birimAdi'lerine göre KAYIT
-// bazında da filtrelenir (sadece kendi biriminin taleplerini görür/açar) —
-// bu, modül seviyesinde değil kayıt seviyesinde bir kısıtlama olduğundan
-// burada değil, bakim-talep modülünün kendi service.js'inde uygulanır.
+// rol==='bakim' (Bakım Personeli) — İş İzni modülündeki "Bakım Onayı" imza
+// adımı için: SADECE is-izni modülüne yazabilir, diğerleri salt-okunur.
 const IK_IZINLI_MODULLER = ['personel', 'egitim'];
-const BAKIM_TALEP_YAZILABILEN_ROLLER = ['bakim', 'birim'];
-
-// 'bakim' rolündeki bir kullanıcının sınırlandığı bakım türleri (kullanıcı
-// isteği: "bakım türlerinde birden fazla seçebileyim") — yeni kayıtlar
-// bakimTurleri (dizi) kullanır; eski (tek seçimli) kayıtlardaki bakimTuru
-// alanı geriye dönük uyumluluk için burada tek elemanlı diziye çevrilir.
-// Her ikisi de boşsa "hepsini görür" anlamına gelir (bkz. çağıran taraf).
-function bakimTurleriCoz(kullanici) {
-  if (!kullanici) return [];
-  if (Array.isArray(kullanici.bakimTurleri) && kullanici.bakimTurleri.length) return kullanici.bakimTurleri;
-  return kullanici.bakimTuru ? [kullanici.bakimTuru] : [];
-}
+const BAKIM_YAZILABILEN_ROLLER = ['bakim'];
 
 function kullaniciAdminMi(kullanici) {
   return !!kullanici && (!kullanici.rol || kullanici.rol === 'admin');
@@ -282,33 +266,20 @@ function kullaniciModuleErisebilirMi(kullanici) {
 }
 
 // Admin ve düzenleyici her modülde ekleyebilir; İK SADECE IK_IZINLI_MODULLER'de
-// (Personel/Eğitim) ekleyebilir; bakim/birim rolleri bakim-talep VE is-izni
-// modüllerinde ekleyebilir — kullanıcı isteği: "formu tamamlayıp izin
-// verecek sorumlu bölüm (birim rolü)" barkod üzerinden İş İzni formunu
-// tamamlayıp imzalayabilmeli, bakım rolü de kendi onay imzasını atabilmeli;
-// diğer modüllerde sadece görüntülerler. 'bakim-ekipman' (ekipman envanteri)
-// ayrı bir modül anahtarı: bakim/birim rolleri buraya HÂLÂ yazabilir çünkü
-// bir bakım talebi açıldığında/kapatıldığında envanter kaydı OTOMATİK
-// güncellenir (bkz. modules/bakim-talep/service.js _ekipmanEnvanteriGuncelle,
-// _ekipmanBakimKartinaYaz) — bu arka plan yazımı engellenirse talep açma/
-// kapama sırasında beklenmedik bir "yetkiniz yok" hatası çıkar. Kullanıcı
-// isteği ("ekipman envanterine giriş yapabilecekler sınırlı olsun, bakımdan
-// ayrı bir kullanıcı ve admin sadece girebilsin") ekranın KENDİSİNE elle
-// girip düzenleme erişimini kısıtlamakla ilgili — bu, arayüz katmanında
-// _btEkipmanDuzenleyebilirMi ile uygulanır, burada değil.
+// (Personel/Eğitim) ekleyebilir; 'bakim' rolü SADECE is-izni modülünde
+// (kendi onay imzasını atabilmesi için) ekleyebilir; diğer modüllerde
+// sadece görüntülerler.
 function kullaniciEklemeYapabilirMi(kullanici, modulAnahtari) {
   if (!kullanici) return false;
   if (kullaniciAdminMi(kullanici) || kullanici.rol === 'duzenleyici') return true;
   if (kullanici.rol === 'ik') return IK_IZINLI_MODULLER.includes(modulAnahtari);
-  if (kullanici.rol === 'envanter') return modulAnahtari === 'bakim-ekipman';
-  if (BAKIM_TALEP_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'bakim-talep' || modulAnahtari === 'is-izni' || modulAnahtari === 'bakim-ekipman';
+  if (BAKIM_YAZILABILEN_ROLLER.includes(kullanici.rol)) return modulAnahtari === 'is-izni';
   return false;
 }
 
 // Sadece tam yetkili admin silebilir; diğer tüm kısıtlı roller (düzenleyici,
-// İK, bakım, birim) HİÇBİR kaydı silemez (kullanıcı isteği: mcakir/ksahbaz
-// için "veri silme kapalı olsun", İK için "ekleme yapsın ama silemesin" —
-// aynı prensip Bakım Talep modülündeki roller için de geçerli).
+// İK, bakım) HİÇBİR kaydı silemez (kullanıcı isteği: mcakir/ksahbaz için
+// "veri silme kapalı olsun", İK için "ekleme yapsın ama silemesin").
 function kullaniciSilebilirMi(kullanici) {
   return kullaniciAdminMi(kullanici);
 }
@@ -388,18 +359,13 @@ async function adminEkle(kullaniciAdi, sifre, adSoyad) {
 
 // ---- Kısıtlı kullanıcı yönetimi (admin tarafından) ----
 //
-// Her kısıtlı kullanıcı (İK, düzenleyici, bakım, birim, envanter) bir admin
+// Her kısıtlı kullanıcı (İK, düzenleyici, bakım) bir admin
 // tarafından (olusturanId) oluşturulur ve SADECE o admin tarafından
 // görülür/düzenlenir — firmaların sahipId'yle izole edilmesiyle aynı
 // mantık. Hepsi aynı erisimFirmaIdleri mekanizmasını kullanır; farkları
 // modül/silme yetkisidir (bkz. kullaniciEklemeYapabilirMi,
-// kullaniciSilebilirMi). 'birim' rolü ayrıca bir birimAdi taşır (Bakım
-// Talep modülünde SADECE o birimin taleplerini görür — bkz.
-// modules/bakim-talep/service.js). 'envanter' rolü (kullanıcı isteği:
-// "ekipman envanterine giriş yapabilecekler sınırlı olsun, bakımdan ayrı
-// bir kullanıcı ve admin sadece girebilsin") SADECE ekipman envanterine
-// girip düzenleyebilir, bakım taleplerine ERİŞEMEZ.
-const KISITLI_ROLLER = ['ik', 'duzenleyici', 'bakim', 'birim', 'envanter'];
+// kullaniciSilebilirMi).
+const KISITLI_ROLLER = ['ik', 'duzenleyici', 'bakim'];
 
 function kullaniciAdiMusaitMi(kullaniciAdi, haricId) {
   const temiz = (kullaniciAdi || '').trim().toLowerCase();
@@ -423,7 +389,7 @@ function ikKullanicilariGetir() {
   return oku('isg_kullanicilar', []).filter(k => KISITLI_ROLLER.includes(k.rol) && k.olusturanId === admin.id);
 }
 
-async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri) {
+async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, isgOnayiVerebilir) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -434,7 +400,6 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, b
   if (!temizAdSoyad) return { basarili: false, hata: 'Ad soyad boş olamaz.' };
   if (!sifre || sifre.length < 4) return { basarili: false, hata: 'Şifre en az 4 karakter olmalı.' };
   if (!kullaniciAdiMusaitMi(temizKullaniciAdi)) return { basarili: false, hata: 'Bu kullanıcı adı zaten kullanılıyor.' };
-  if (temizRol === 'birim' && !(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
 
   // Sadece BU admin'in sahip olduğu firmalar atanabilir (kullaniciAdminMi(admin)
   // burada zaten kesin — girisGerekliAdmin bu sayfaya girişi zaten sınırlar).
@@ -451,17 +416,11 @@ async function ikKullaniciEkle(kullaniciAdi, sifre, adSoyad, firmaIdleri, rol, b
     olusturanId: admin.id,
     erisimFirmaIdleri: gecerliFirmaIdleri
   };
-  if (temizRol === 'birim') yeniKullanici.birimAdi = (birimAdi || '').trim();
   // Kullanıcı isteği: "İSG onayı verebilecekleri de admin belirleyebilsin" —
   // varsayılan olarak sadece admin İSG onaylayıcısıdır (bkz.
-  // modules/bakim-talep/service.js _btIsgOnaylayiciMi); bu bayrak SADECE
-  // Düzenleyici rolüne, Bakım Onarım modülüne özel olarak bu yetkiyi ekler.
+  // modules/is-izni/service.js _izIsgOnaylayiciMi); bu bayrak SADECE
+  // Düzenleyici rolüne bu yetkiyi ekler.
   if (temizRol === 'duzenleyici') yeniKullanici.isgOnayiVerebilir = !!isgOnayiVerebilir;
-  // Kullanıcı isteği: "elektrik ile mekanik ayrı olmalı", sonra "bakım
-  // türlerinde birden fazla seçebileyim" — 'bakim' rolü isteğe bağlı olarak
-  // birden fazla bakım türüne sınırlanabilir (boş dizi = hepsini görür,
-  // geriye dönük uyumlu).
-  if (temizRol === 'bakim') yeniKullanici.bakimTurleri = Array.isArray(bakimTurleri) ? bakimTurleri.filter(t => BAKIM_TALEP_BAKIM_TURLERI.includes(t)) : [];
   kullanicilar.push(yeniKullanici);
   yaz('isg_kullanicilar', kullanicilar);
   return { basarili: true, kullanici: yeniKullanici };
@@ -479,11 +438,9 @@ function _kisitliKullaniciBul(kullanicilar, id, admin) {
 
 // Kullanıcı isteği: "rolünü sonradan değiştirebilmek istiyorum" — rol artık
 // yeniden atanabilir (eskiden sadece oluşturmada seçilip sabit kalıyordu).
-// Rol değişince önceki role özel alanlar (birimAdi/isgOnayiVerebilir/
-// bakimTurleri) temizlenip yeni role uygun alan yeniden yazılır — aksi
-// halde ör. 'birim' rolünden 'ik'ye geçen bir kullanıcıda eski birimAdi
-// kalıntı olarak kalırdı.
-function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVerebilir, bakimTurleri) {
+// Rol değişince önceki role özel isgOnayiVerebilir temizlenip yeni role
+// uygun alan yeniden yazılır.
+function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, isgOnayiVerebilir) {
   const admin = oturumdakiKullanici();
   if (!admin) return { basarili: false, hata: 'Oturum bulunamadı.' };
 
@@ -495,16 +452,10 @@ function ikKullaniciGuncelle(id, adSoyad, firmaIdleri, rol, birimAdi, isgOnayiVe
   if (!kayit) return { basarili: false, hata: 'Kullanıcı bulunamadı.' };
 
   const temizRol = KISITLI_ROLLER.includes(rol) ? rol : kayit.rol;
-  if (temizRol === 'birim' && !(birimAdi || '').trim()) return { basarili: false, hata: 'Birim rolü için bir birim seçilmeli.' };
 
-  delete kayit.birimAdi;
   delete kayit.isgOnayiVerebilir;
-  delete kayit.bakimTuru;
-  delete kayit.bakimTurleri;
   kayit.rol = temizRol;
-  if (temizRol === 'birim') kayit.birimAdi = birimAdi.trim();
   if (temizRol === 'duzenleyici') kayit.isgOnayiVerebilir = !!isgOnayiVerebilir;
-  if (temizRol === 'bakim') kayit.bakimTurleri = Array.isArray(bakimTurleri) ? bakimTurleri.filter(t => BAKIM_TALEP_BAKIM_TURLERI.includes(t)) : [];
 
   const sahipOlunanFirmalar = new Set(getFirmalar().map(f => f.id));
   kayit.adSoyad = temizAdSoyad;
