@@ -79,7 +79,7 @@ const _TO_KAYIT_STIL = `
          versin" — defterin asıl "elle yazılan" kısmı (Tespit/Öneri/Yapılan
          İşlem/Not) mavi mürekkep rengi ve el yazısı fontuyla basılır; sabit
          alanlar (tarih, isim, kayıt no vb.) normal matbu yazıyla kalır. */
-      #toKayitPdf .uc-el-yazisi{ color:#1e3a8a; font-family:'Segoe Script','Bradley Hand',cursive; font-style:italic; font-size:11pt; }
+      #toKayitPdf .uc-el-yazisi{ color:#1e3a8a; font-family:'Caveat','Segoe Script','Bradley Hand',cursive; font-weight:600; font-size:14pt; line-height:1.3; }
 
       #toKayitPdf .uc-rozet{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
       #toKayitPdf .uc-rozet-oncelik{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
@@ -213,6 +213,12 @@ async function tespitOneriKaydiPdfOlustur(id) {
       img.addEventListener('error', resolve, { once: true });
     });
   }));
+  // El yazısı fontu (Caveat) html2canvas görüntüyü yakalamadan TAM yüklenmiş
+  // olmalı, yoksa tarayıcı geçici yedek fontla (Times New Roman vb.) çizip
+  // yakalar -- font sonradan gelse bile PDF'e o hâliyle basılmış olur.
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.load("600 14pt Caveat"); await document.fonts.ready; } catch (e) { /* yoksay, yedek fontla devam */ }
+  }
 
   const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
   const genislikMm = 210;
