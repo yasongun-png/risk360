@@ -853,6 +853,18 @@ li.org-dugum { margin-bottom: 12px; }
   line-height: 1.4;
 }
 
+/* Tespit ve Öneri Defteri — kullanıcı isteği: "tespit kısmında yazılanlar
+   çok yer kaplıyor ana sayfada en fazla 4 satırını göster, tümünü isteyen
+   Düzenle'yi açsın" — .us-tanim-hucre ile aynı satır sınırlama deseni. */
+.to-metin-hucre {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
 .geri-link {
   font-size: 13px;
   color: var(--celik-mavi);

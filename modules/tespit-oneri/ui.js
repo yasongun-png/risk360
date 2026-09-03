@@ -8,13 +8,6 @@ function _toKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
-// Kullanıcı isteği: "tespit bulgu sütünü çok yer kaplıyor" -- Tespit/Öneri
-// metinleri listede kısaltılıp "..." ile gösterilir, tam metin title
-// tooltip'inde (imlecin üstüne gelince) ve satırın Düzenle modalında görünür.
-function _toKisalt(metin, uzunluk) {
-  const m = String(metin || '');
-  return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
-}
 
 // Kullanıcı isteği: "tespit ve öneri defterinde sicil no ya göre filtreleme
 // yapılsın" -- İşyeri Sicili dropdown'ını, kayıtlarda geçen benzersiz
@@ -294,8 +287,8 @@ function toKayitlariCiz(aramaMetni) {
       <td>${_toIslemButonlariUret(k)}</td>
       <td>${k.kayitNo}<br><small style="color:var(--metin-soluk);">${gunAyYil(k.tespitTarihi) || '-'}</small></td>
       <td>${k.bolum}<br><small style="color:var(--metin-soluk);">${k.tespitEden}${k.isyeriSicili ? ' — Sicil: ' + k.isyeriSicili : ''}</small></td>
-      <td title="${_toKacir(k.tespit)}">${_toKacir(_toKisalt(k.tespit, 70))}</td>
-      <td title="${_toKacir(k.oneri)}">${_toKacir(_toKisalt(k.oneri, 70))}</td>
+      <td><div class="to-metin-hucre" title="${_toKacir(k.tespit)}">${_toKacir(k.tespit)}</div></td>
+      <td><div class="to-metin-hucre" title="${_toKacir(k.oneri)}">${_toKacir(k.oneri)}</div></td>
       <td><span class="genel-rozet rozet-${toRozetSinifAdi(k.oncelik)}">${k.oncelik}</span></td>
       <td>${k.tebligEdilen || '-'}<br><small style="color:var(--metin-soluk);">${gunAyYil(k.tebligTarihi) || ''}</small></td>
       <td>${_toFotoHucresiUret(k.defterSayfasiFotografi)}</td>
@@ -366,7 +359,7 @@ function toOzetiCiz() {
       <table class="veri-tablosu">
         <thead><tr><th>No</th><th>Bölüm</th><th>Tespit</th><th>Öncelik</th><th>Durum</th></tr></thead>
         <tbody>
-          ${ozet.oncelikliAcikKayitlar.map(k => `<tr><td>${_toKacir(k.kayitNo)}</td><td>${_toKacir(k.bolum)}</td><td title="${_toKacir(k.tespit)}">${_toKacir(_toKisalt(k.tespit, 70))}</td><td>${_toKacir(k.oncelik)}</td><td>${_toKacir(k.durum)}</td></tr>`).join('') || '<tr><td colspan="5">Açık kayıt yok.</td></tr>'}
+          ${ozet.oncelikliAcikKayitlar.map(k => `<tr><td>${_toKacir(k.kayitNo)}</td><td>${_toKacir(k.bolum)}</td><td><div class="to-metin-hucre" title="${_toKacir(k.tespit)}">${_toKacir(k.tespit)}</div></td><td>${_toKacir(k.oncelik)}</td><td>${_toKacir(k.durum)}</td></tr>`).join('') || '<tr><td colspan="5">Açık kayıt yok.</td></tr>'}
         </tbody>
       </table>
     </div>
