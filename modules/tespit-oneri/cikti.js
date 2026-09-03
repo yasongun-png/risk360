@@ -19,12 +19,13 @@ function _toPdfKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
-function _toAlanSatiri(etiket1, deger1, etiket2, deger2) {
+function _toAlanSatiri(etiket1, deger1, etiket2, deger2, elYazisiMi) {
+  const degerSinifi = elYazisiMi ? 'uc-form-deger uc-el-yazisi' : 'uc-form-deger';
   if (etiket2 === undefined) {
-    return `<tr><td class="uc-form-etiket">${_toPdfKacir(etiket1)}</td><td class="uc-form-deger" colspan="3">${deger1}</td></tr>`;
+    return `<tr><td class="uc-form-etiket">${_toPdfKacir(etiket1)}</td><td class="${degerSinifi}" colspan="3">${deger1}</td></tr>`;
   }
   return `<tr>
-    <td class="uc-form-etiket">${_toPdfKacir(etiket1)}</td><td class="uc-form-deger">${deger1}</td>
+    <td class="uc-form-etiket">${_toPdfKacir(etiket1)}</td><td class="${degerSinifi}">${deger1}</td>
     <td class="uc-form-etiket">${_toPdfKacir(etiket2)}</td><td class="uc-form-deger">${deger2}</td>
   </tr>`;
 }
@@ -74,6 +75,11 @@ const _TO_KAYIT_STIL = `
       #toKayitPdf .uc-form-bolum td{ border:1px solid #111827; padding:2.5mm 3mm; vertical-align:top; font-size:9pt; }
       #toKayitPdf .uc-form-etiket{ font-weight:700; width:16%; background:#fff; white-space:pre-line; }
       #toKayitPdf .uc-form-deger{ width:34%; white-space:pre-line; }
+      /* Kullanıcı isteği: "PDF mavi ve yana yatık el yazısı ile çıktı
+         versin" — defterin asıl "elle yazılan" kısmı (Tespit/Öneri/Yapılan
+         İşlem/Not) mavi mürekkep rengi ve el yazısı fontuyla basılır; sabit
+         alanlar (tarih, isim, kayıt no vb.) normal matbu yazıyla kalır. */
+      #toKayitPdf .uc-el-yazisi{ color:#1e3a8a; font-family:'Segoe Script','Bradley Hand',cursive; font-style:italic; font-size:11pt; transform:rotate(-1deg); }
 
       #toKayitPdf .uc-rozet{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
       #toKayitPdf .uc-rozet-oncelik{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
@@ -167,8 +173,8 @@ async function tespitOneriKaydiPdfOlustur(id) {
     <div class="uc-form-bolum">
       <h2>2. Tespit ve Öneri</h2>
       <table>
-        ${_toAlanSatiri('Tespit (Bulgu)', _toPdfKacir(k.tespit) || '-')}
-        ${_toAlanSatiri('Öneri', _toPdfKacir(k.oneri) || '-')}
+        ${_toAlanSatiri('Tespit (Bulgu)', _toPdfKacir(k.tespit) || '-', undefined, undefined, true)}
+        ${_toAlanSatiri('Öneri', _toPdfKacir(k.oneri) || '-', undefined, undefined, true)}
       </table>
     </div>
 
@@ -177,8 +183,8 @@ async function tespitOneriKaydiPdfOlustur(id) {
       <table>
         ${_toAlanSatiri('Tebliğ Edilen', _toPdfKacir(k.tebligEdilen) || '-', 'Tebliğ Tarihi', _toPdfKacir(gunAyYil(k.tebligTarihi)) || '-')}
         ${_toAlanSatiri('Durum', _toPdfKacir(k.durum), 'Kapanış Tarihi', _toPdfKacir(gunAyYil(k.kapanisTarihi)) || '-')}
-        ${_toAlanSatiri('Yapılan İşlem', _toPdfKacir(k.yapilanIslem) || '-')}
-        ${_toAlanSatiri('Not', _toPdfKacir(k.notlar) || '-')}
+        ${_toAlanSatiri('Yapılan İşlem', _toPdfKacir(k.yapilanIslem) || '-', undefined, undefined, true)}
+        ${_toAlanSatiri('Not', _toPdfKacir(k.notlar) || '-', undefined, undefined, true)}
       </table>
     </div>
 
