@@ -79,7 +79,7 @@ const _TO_KAYIT_STIL = `
          versin" — defterin asıl "elle yazılan" kısmı (Tespit/Öneri/Yapılan
          İşlem/Not) mavi mürekkep rengi ve el yazısı fontuyla basılır; sabit
          alanlar (tarih, isim, kayıt no vb.) normal matbu yazıyla kalır. */
-      #toKayitPdf .uc-el-yazisi{ color:#1e3a8a; font-family:'Segoe Script','Bradley Hand',cursive; font-style:italic; font-size:11pt; transform:rotate(-1deg); }
+      #toKayitPdf .uc-el-yazisi{ color:#1e3a8a; font-family:'Segoe Script','Bradley Hand',cursive; font-style:italic; font-size:11pt; }
 
       #toKayitPdf .uc-rozet{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
       #toKayitPdf .uc-rozet-oncelik{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
