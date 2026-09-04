@@ -99,33 +99,87 @@ const _TO_KAYIT_STIL = `
       #toKayitPdf .uc-onay-imza-baslik{ font-size:7.5pt; color:#64748b; margin-top:1mm; }
 `;
 
+// Kayıttaki her satır/kutu (tablo satırları + onay kutuları satırı) — sayfa
+// kesimi bunların ORTASINA denk gelmemeli. getBoundingClientRect ile
+// kokEleman'a göre göreli piksel konumları çıkarılır.
+function _toBolunmezBloklariBul(kokEleman) {
+  const kokUst = kokEleman.getBoundingClientRect().top;
+  const elemanlar = kokEleman.querySelectorAll('.uc-form-bolum tr, .uc-onay-satir');
+  return Array.from(elemanlar).map(el => {
+    const r = el.getBoundingClientRect();
+    return { ust: r.top - kokUst, alt: r.bottom - kokUst };
+  });
+}
+
 // Kök elemanı yakalayıp, kendi doğal (sayfadan uzun olabilen) yüksekliğini
 // gerçek A4 sayfa yüksekliğine göre PİKSEL BAZINDA dilimleyip PDF'e sayfa
-// sayfa ekler -- modules/egitim/cikti.js _egtGrubuPdfeEkle ile birebir aynı
-// yöntem (bkz. dosya başı yorum). Kaç parça/sayfa gerektiğini geri döner ki
-// çağıran taraf her sayfaya doğru "mevcut/toplam" numarasını basabilsin.
+// sayfa ekler -- modules/egitim/cikti.js _egtGrubuPdfeEkle ile aynı temel
+// yöntem (bkz. dosya başı yorum), ama kesim çizgisi bir tablo satırının veya
+// onay kutusunun ORTASINA denk geliyorsa geriye, o satırın başına çekilir
+// (bkz. _toBolunmezBloklariBul) -- kullanıcı raporu: "ikinci sayfaya
+// geçişte problem var uzun yazıldığında" (Tespit/Öneri metni uzun olunca
+// o satır iki sayfa arasında ortadan kesiliyordu). Kaç parça/sayfa
+// gerektiğini geri döner ki çağıran taraf her sayfaya doğru "mevcut/toplam"
+// numarasını basabilsin.
 async function _toKayitPdfeSayfalaEkle(pdf, kokEleman, icerikGenislikMm, kenarBosluguMm, sayfaYukseklikMm) {
+  const bolunmezBloklarCss = _toBolunmezBloklariBul(kokEleman);
   const canvas = await html2canvas(kokEleman, { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
   const pxPerMm = canvas.width / icerikGenislikMm;
-  const kullanilabilirYukseklikMm = sayfaYukseklikMm - kenarBosluguMm * 2;
-  const sayfaYukseklikPx = Math.floor(kullanilabilirYukseklikMm * pxPerMm);
-  const toplamParca = Math.max(1, Math.ceil(canvas.height / sayfaYukseklikPx));
+  // getBoundingClientRect CSS piksel cinsinden, canvas ise html2canvas'ın
+  // kendi ölçeğinde -- ikisini ORTAK birime (canvas px) çevirmek için
+  // kokEleman'ın gerçek CSS yüksekliğinden kendi ölçek oranı hesaplanır.
+  const cssYukseklik = kokEleman.getBoundingClientRect().height;
+  const cssToCanvas = cssYukseklik > 0 ? canvas.height / cssYukseklik : 1;
+  const bolunmezBloklar = bolunmezBloklarCss.map(b => ({ ust: b.ust * cssToCanvas, alt: b.alt * cssToCanvas }));
 
-  for (let i = 0; i < toplamParca; i++) {
-    const parcaYukseklikPx = Math.min(sayfaYukseklikPx, canvas.height - i * sayfaYukseklikPx);
+  const kullanilabilirYukseklikMm = sayfaYukseklikMm - kenarBosluguMm * 2;
+  const azamiSayfaYukseklikPx = Math.floor(kullanilabilirYukseklikMm * pxPerMm);
+
+  // Bir kesim çizgisi (adayKesimY) bir bloğun ortasına denk geliyorsa, o
+  // bloğun başına (block.ust) geri çekilir -- blok azami sayfa
+  // yüksekliğinden BÜYÜKSE (aşırı uzun tek satır gibi istisnai durum)
+  // kesim olduğu gibi bırakılır, aksi halde sonsuz döngüye/boş sayfalara
+  // yol açar.
+  function _guvenliKesimYBul(baslangicY, adayKesimY) {
+    for (const blok of bolunmezBloklar) {
+      if (adayKesimY > blok.ust && adayKesimY < blok.alt) {
+        if (blok.ust > baslangicY && (blok.alt - baslangicY) <= azamiSayfaYukseklikPx) return blok.ust;
+        return adayKesimY;
+      }
+    }
+    return adayKesimY;
+  }
+
+  const kesimNoktalari = [];
+  let konum = 0;
+  while (konum < canvas.height) {
+    const adayKesim = Math.min(canvas.height, konum + azamiSayfaYukseklikPx);
+    // İlerlemeyi garanti et: geri çekme konum'un altına/eşitine düşerse
+    // (kuramsal olarak olmamalı, ama kayan nokta yuvarlaması için güvenlik
+    // amaçlı) sonsuz döngüye düşmemek için aday kesim aynen kullanılır.
+    let kesim = adayKesim >= canvas.height ? canvas.height : _guvenliKesimYBul(konum, adayKesim);
+    if (kesim <= konum) kesim = adayKesim;
+    kesimNoktalari.push(kesim);
+    konum = kesim;
+  }
+
+  for (let i = 0; i < kesimNoktalari.length; i++) {
+    const baslangicY = i === 0 ? 0 : kesimNoktalari[i - 1];
+    const parcaYukseklikPx = Math.round(kesimNoktalari[i] - baslangicY);
+    if (parcaYukseklikPx <= 0) continue;
     const parcaCanvas = document.createElement('canvas');
     parcaCanvas.width = canvas.width;
     parcaCanvas.height = parcaYukseklikPx;
     const ctx = parcaCanvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, parcaCanvas.width, parcaCanvas.height);
-    ctx.drawImage(canvas, 0, i * sayfaYukseklikPx, canvas.width, parcaYukseklikPx, 0, 0, canvas.width, parcaYukseklikPx);
+    ctx.drawImage(canvas, 0, baslangicY, canvas.width, parcaYukseklikPx, 0, 0, canvas.width, parcaYukseklikPx);
 
     if (i > 0) pdf.addPage('a4', 'p');
     const parcaYukseklikMm = parcaYukseklikPx / pxPerMm;
     pdf.addImage(parcaCanvas.toDataURL('image/jpeg', 0.9), 'JPEG', kenarBosluguMm, kenarBosluguMm, icerikGenislikMm, parcaYukseklikMm);
   }
-  return toplamParca;
+  return kesimNoktalari.length;
 }
 
 async function tespitOneriKaydiPdfOlustur(id) {
