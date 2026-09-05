@@ -22,7 +22,7 @@ const FIREBASE_CONFIG_ANAHTARI = 'isg_firebase_config';
 // Varsayilan proje: Ayarlar sayfasindan farkli bir musteri/firma icin
 // degistirilebilir (localStorage'daki ozel config bunu ezer).
 const VARSAYILAN_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAPE212ptNf9y4GgtFt11Bh1zOdiSEO13s",
+  apiKey: "AIzaSyCEPXNg3Ix9PbP5IAHDP2gfGYr0gcleg4E",
   authDomain: "r360y-8f4d9.firebaseapp.com",
   projectId: "r360y-8f4d9",
   storageBucket: "r360y-8f4d9.firebasestorage.app",
