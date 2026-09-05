@@ -493,7 +493,7 @@ function _firebaseAuthSdkHazirOlduğunda(callback) {
   const script = document.createElement('script');
   script.src = _FIREBASE_AUTH_SDK_URL;
   script.onload = callback;
-  script.onerror = () => console.error('Firebase Auth SDK yüklenemedi.');
+  script.onerror = () => alert('TEŞHİS: Firebase Auth SDK yüklenemedi (ağ/CDN engeli olabilir).');
   document.head.appendChild(script);
 }
 
@@ -523,8 +523,13 @@ function _bulutBaslat() {
   // BAĞLANMIYOR -- mevcut _bulutAktif zamanlamasını (yukarıdaki senkron
   // atama) bozmamak için; Firestore SDK'sı zaten onSnapshot dinleyicilerini
   // kimlik doğrulama durumu değiştiğinde kendiliğinden yeniden bağlar.
+  // GEÇİCİ TEŞHİS (kullanıcı raporu: "Authentication -> Users'ta hiç kullanıcı
+  // görünmüyor") -- DevTools'a erişimi olmayan bir cihazdan sonucu görebilmek
+  // için alert() ile gösteriliyor. Sorun çözülünce bu blok kaldırılmalı.
   _firebaseAuthSdkHazirOlduğunda(() => {
-    app.auth().signInAnonymously().catch(e => console.error('Anonim Firebase oturumu açılamadı (Authentication -> Sign-in method -> Anonymous etkin mi?):', e));
+    app.auth().signInAnonymously()
+      .then(sonuc => alert('TEŞHİS: Anonim giriş BAŞARILI. UID: ' + (sonuc.user ? sonuc.user.uid : '(yok)')))
+      .catch(e => alert('TEŞHİS: Anonim giriş BAŞARISIZ.\nKod: ' + e.code + '\nMesaj: ' + e.message));
   });
 
   _bulutDb.collection('kucuk_veri').onSnapshot(snapshot => {
