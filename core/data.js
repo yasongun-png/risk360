@@ -476,6 +476,27 @@ function bulutDurumu() {
   };
 }
 
+// Firebase Auth SDK'sı her sayfaya elle eklenmesin diye (36 modül sayfası)
+// ihtiyaç anında CDN'den yüklenir -- core/excel.js xlsxHazirOlduğunda ile
+// aynı desen.
+const _FIREBASE_AUTH_SDK_URL = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js';
+
+function _firebaseAuthSdkYuklu() {
+  return typeof firebase !== 'undefined' && !!firebase.auth;
+}
+
+function _firebaseAuthSdkHazirOlduğunda(callback) {
+  if (_firebaseAuthSdkYuklu()) { callback(); return; }
+  const mevcutScript = document.querySelector(`script[src="${_FIREBASE_AUTH_SDK_URL}"]`);
+  if (mevcutScript) { mevcutScript.addEventListener('load', callback); return; }
+
+  const script = document.createElement('script');
+  script.src = _FIREBASE_AUTH_SDK_URL;
+  script.onload = callback;
+  script.onerror = () => console.error('Firebase Auth SDK yüklenemedi.');
+  document.head.appendChild(script);
+}
+
 function _bulutBaslat() {
   if (typeof firebase === 'undefined') return; // SDK script'leri eklenmemis
   const config = firebaseConfigGetir();
@@ -491,6 +512,20 @@ function _bulutBaslat() {
     console.error('Firebase başlatılamadı:', e);
     return;
   }
+
+  // Güvenlik: "Firestore kuralları herkese açık" açığını kapatabilmek için
+  // (bkz. firestore.rules dosya başı notu) en azından ANONİM bir Firebase
+  // Authentication oturumu açılır -- Firebase Console'da Authentication ->
+  // Sign-in method -> Anonymous etkinleştirilmiş olmalı. Bu TEK BAŞINA
+  // kiracı/firma bazlı izolasyon SAĞLAMAZ, sadece "hiçbir kimlik doğrulama
+  // yok" açığını kapatır (kural "if request.auth != null" yapılabilir hâle
+  // gelir). Bilerek hiçbir oku()/yaz() bu oturumun tamamlanmasına
+  // BAĞLANMIYOR -- mevcut _bulutAktif zamanlamasını (yukarıdaki senkron
+  // atama) bozmamak için; Firestore SDK'sı zaten onSnapshot dinleyicilerini
+  // kimlik doğrulama durumu değiştiğinde kendiliğinden yeniden bağlar.
+  _firebaseAuthSdkHazirOlduğunda(() => {
+    app.auth().signInAnonymously().catch(e => console.error('Anonim Firebase oturumu açılamadı (Authentication -> Sign-in method -> Anonymous etkin mi?):', e));
+  });
 
   _bulutDb.collection('kucuk_veri').onSnapshot(snapshot => {
     const gelenAnahtarlar = new Set();
