@@ -525,10 +525,7 @@ function _bulutBaslat() {
   // kimlik doğrulama durumu değiştiğinde kendiliğinden yeniden bağlar.
   _firebaseAuthSdkHazirOlduğunda(() => {
     app.auth().signInAnonymously()
-      .catch(e => {
-        console.error('Anonim giriş başarısız:', e.code, e.message);
-        alert('TEŞHİS: Anonim giriş BAŞARISIZ.\nKod: ' + e.code + '\nMesaj: ' + e.message);
-      });
+      .catch(e => console.error('Anonim giriş başarısız:', e.code, e.message));
   });
 
   _bulutDb.collection('kucuk_veri').onSnapshot(snapshot => {
