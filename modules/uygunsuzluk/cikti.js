@@ -420,12 +420,142 @@ async function uygunsuzlukKayitPdfOlustur(id) {
   const ekFotoSatirlari = ekFotoUrlleri.filter(f => f.oncesi || f.sonrasi);
 
   // Form Ayarları kutusundaki "Sayfa Sayısı" satırı varsayılan olarak sabit
-  // bir metin (ör. "1/1") -- bu form her zaman TAM 2 sayfa ürettiğinden
+  // bir metin (ör. "1/1") -- bu form her zaman en az 2 sayfa ürettiğinden
   // (aşağıdaki sayfalar dizisi), her sayfaya kendi gerçek "mevcut/toplam"
   // değeri (bkz. formAyarlariKutusuHtml'in 4. parametresi) geçilir; aksi
   // halde her iki sayfa da aynı sabit değeri (ör. "1/1") gösteriyordu
   // (kullanıcı bildirdi).
-  const UC_TOPLAM_SAYFA = 2;
+  //
+  // 2. sayfa SABİT 4 parça değildir: Ek Fotoğraflar (0-3 çift) ve Konum
+  // Krokisi (görsel oranına göre değişken yükseklik) yüzünden içerik toplam
+  // yüksekliği kayıttan kayda ciddi oranda değişiyor -- eskiden bu parçalar
+  // hep TEK bir 2. sayfaya sabitlenmişti ve taşan kısım 3. sayfaya
+  // GEÇMİYORDU, sayfa sınırının altında görünmeden kırpılıyordu (kullanıcı
+  // bildirdi: "3. sayfaya geçmiyor"). Şimdi bu parçalar birer "blok" olarak
+  // önce gerçek DOM yüksekliği ölçülüp (bkz. _ucSayfaIcerigiYuksekligiOlcMm),
+  // sığdığı kadarı aynı sayfada, sığmayanı otomatik yeni bir sayfada
+  // basılıyor -- gerekirse 3, 4... sayfaya kadar uzayabilir.
+  let _ucBolumNo = 5;
+  const blokGorselKanitlar = `
+    <div class="uc-form-bolum">
+      <h2>4. Görsel Kanıtlar (Öncesi / Sonrası)</h2>
+      <div style="padding:3mm;">
+        <div class="uc-form-fotograflar">
+          ${_ucFormFotoKutusu(fotoOncesiUrl, 'Uygunsuzluk Anı (Öncesi)')}
+          ${_ucFormFotoKutusu(fotoSonrasiUrl, 'Düzeltici Faaliyet (Sonrası)')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const blokEkFotograflar = ekFotoSatirlari.length ? `
+    <div class="uc-form-bolum">
+      <h2>${_ucBolumNo++}. Ek Fotoğraflar</h2>
+      <table class="uc-ek-foto-tablo">
+        <thead><tr><th>#</th><th>Öncesi</th><th>Sonrası</th></tr></thead>
+        <tbody>
+          ${ekFotoSatirlari.map(f => `
+            <tr>
+              <td class="uc-ek-foto-no">${f.no}</td>
+              <td><div class="uc-ek-foto-govde">${f.oncesi ? `<img src="${f.oncesi}">` : ''}</div></td>
+              <td><div class="uc-ek-foto-govde">${f.sonrasi ? `<img src="${f.sonrasi}">` : ''}</div></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '';
+
+  const blokKroki = `
+    <div class="uc-form-bolum">
+      <h2>${_ucBolumNo++}. Konum Krokisi</h2>
+      <div style="padding:3mm;">
+        ${kroki ? `
+          <div class="uc-kroki-kutu uc-kroki-kutu-buyuk">
+            <img src="${kroki.url}">
+            <div class="uc-kroki-nokta" style="left:${kroki.x}%; top:${kroki.y}%;">
+              <span class="uc-kroki-ikon">🔺</span>
+              <span class="uc-kroki-kod">${_ucKacir(k.aksiyonNo)}</span>
+            </div>
+          </div>
+          <div class="uc-kroki-tesis">${_ucKacir(kroki.tesisAdi)}</div>
+        ` : `<div class="uc-kroki-yok">Bu kayıt için Saha Dijital Haritası'nda bir konum işaretlenmemiş.</div>`}
+      </div>
+    </div>
+  `;
+
+  const blokOnay = `
+    <div class="uc-form-bolum">
+      <h2>${_ucBolumNo}. Onay</h2>
+      <div style="padding:3mm;">
+        <div class="uc-onay-satir">
+          ${_ucOnayKutusu('Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
+          ${_ucOnayKutusu('Bölüm Sorumlusu', k.sorumlu, imzalar.sorumlu, sorumluImzaUrl)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const ikinciSayfaBloklari = [blokGorselKanitlar, blokEkFotograflar, blokKroki, blokOnay].filter(Boolean);
+
+  const mount = document.getElementById('yazdirmaAlani');
+  mount.style.display = 'block';
+
+  function _ucKayitSayfaGovdesiOlustur(sayfaEtiketi, icerikHtml, ekStil) {
+    return `
+      <div id="ucKayitPdf" style="${ekStil || ''}">
+        <style>${_UC_KAYIT_STIL}</style>
+        <div class="uc-form-ustbilgi">
+          <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
+          <div class="uc-form-baslik">UYGUNSUZLUK FORMU</div>
+          <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, sayfaEtiketi)}</div>
+        </div>
+        ${icerikHtml}
+        <div class="uc-form-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
+      </div>
+    `;
+  }
+
+  async function _ucGorsellerYuklensinBekle() {
+    await Promise.all(Array.from(document.getElementById('ucKayitPdf').querySelectorAll('img')).map(img => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
+
+  // CSS'te #ucKayitPdf min-height:297mm sabitlenmiş (tam sayfa render için) --
+  // ölçüm sırasında bunu ezmezsek her ölçüm en az 297mm dönerdi, gerçek
+  // içerik yüksekliğini hiç ayırt edemezdik. Inline style, ID seçiciden
+  // yüksek önceliğe sahip olduğundan min-height:0 ile geçici olarak iptal
+  // edilir (yalnızca ölçüm anında; gerçek yakalama sırasında kullanılmaz).
+  const UC_PX_PER_MM = 96 / 25.4;
+  async function _ucSayfaIcerigiYuksekligiOlcMm(icerikHtml) {
+    mount.innerHTML = _ucKayitSayfaGovdesiOlustur('9/9', icerikHtml, 'min-height:0;');
+    await _ucGorsellerYuklensinBekle();
+    return document.getElementById('ucKayitPdf').offsetHeight / UC_PX_PER_MM;
+  }
+
+  // A4 yüksekliği 297mm; üstbilgi+altbilgi+güvenlik payı düşülünce bir
+  // sayfaya güvenle sığan içerik bütçesi ~290mm olarak alınır.
+  const UC_SAYFA_ICERIK_BUDGET_MM = 290;
+  const ikinciSayfaSonrasiSayfalar = [];
+  let biriktirilenBloklar = [];
+  for (const blok of ikinciSayfaBloklari) {
+    const adayBloklari = [...biriktirilenBloklar, blok];
+    const adayYukseklikMm = await _ucSayfaIcerigiYuksekligiOlcMm(adayBloklari.join(''));
+    if (adayYukseklikMm <= UC_SAYFA_ICERIK_BUDGET_MM || biriktirilenBloklar.length === 0) {
+      biriktirilenBloklar = adayBloklari;
+    } else {
+      ikinciSayfaSonrasiSayfalar.push(biriktirilenBloklar);
+      biriktirilenBloklar = [blok];
+    }
+  }
+  if (biriktirilenBloklar.length) ikinciSayfaSonrasiSayfalar.push(biriktirilenBloklar);
+
+  const UC_TOPLAM_SAYFA = 1 + ikinciSayfaSonrasiSayfalar.length;
 
   const html = `
   <div id="ucKayitPdf">
@@ -475,81 +605,14 @@ async function uygunsuzlukKayitPdfOlustur(id) {
   // -- 1-3. bölümlerin metin uzunluğu kayıttan kayda değiştiğinden, Görsel
   // Kanıtlar (sabit ~56mm yükseklikte foto kutuları) sayfa 1'in altında
   // kalırsa canvas'ın A4 sayfasına sığdırılması sırasında görünmeden
-  // kırpılıyordu (sayfa 2'ye "devam" da etmiyordu, tamamen kayboluyordu).
-  // Bu yüzden Görsel Kanıtlar artık sayfa 1'de DEĞİL, kendi başlık şeridini
-  // tekrar eden sayfa 2'nin EN BAŞINDA sabit konumda basılıyor (Konum
-  // Krokisi/Onay ile aynı mantık — bkz. aşağıdaki yorum).
-  let _ucSayfa2BolumNo = 5;
-  const sayfa2Html = `
-  <div id="ucKayitPdf">
-    <style>${_UC_KAYIT_STIL}</style>
-
-    <div class="uc-form-ustbilgi">
-      <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
-      <div class="uc-form-baslik">UYGUNSUZLUK FORMU</div>
-      <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, `2/${UC_TOPLAM_SAYFA}`)}</div>
-    </div>
-
-    <div class="uc-form-bolum">
-      <h2>4. Görsel Kanıtlar (Öncesi / Sonrası)</h2>
-      <div style="padding:3mm;">
-        <div class="uc-form-fotograflar">
-          ${_ucFormFotoKutusu(fotoOncesiUrl, 'Uygunsuzluk Anı (Öncesi)')}
-          ${_ucFormFotoKutusu(fotoSonrasiUrl, 'Düzeltici Faaliyet (Sonrası)')}
-        </div>
-      </div>
-    </div>
-
-    ${ekFotoSatirlari.length ? `
-      <div class="uc-form-bolum">
-        <h2>${_ucSayfa2BolumNo++}. Ek Fotoğraflar</h2>
-        <table class="uc-ek-foto-tablo">
-          <thead><tr><th>#</th><th>Öncesi</th><th>Sonrası</th></tr></thead>
-          <tbody>
-            ${ekFotoSatirlari.map(f => `
-              <tr>
-                <td class="uc-ek-foto-no">${f.no}</td>
-                <td><div class="uc-ek-foto-govde">${f.oncesi ? `<img src="${f.oncesi}">` : ''}</div></td>
-                <td><div class="uc-ek-foto-govde">${f.sonrasi ? `<img src="${f.sonrasi}">` : ''}</div></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    ` : ''}
-
-    <div class="uc-form-bolum">
-      <h2>${_ucSayfa2BolumNo++}. Konum Krokisi</h2>
-      <div style="padding:3mm;">
-        ${kroki ? `
-          <div class="uc-kroki-kutu uc-kroki-kutu-buyuk">
-            <img src="${kroki.url}">
-            <div class="uc-kroki-nokta" style="left:${kroki.x}%; top:${kroki.y}%;">
-              <span class="uc-kroki-ikon">🔺</span>
-              <span class="uc-kroki-kod">${_ucKacir(k.aksiyonNo)}</span>
-            </div>
-          </div>
-          <div class="uc-kroki-tesis">${_ucKacir(kroki.tesisAdi)}</div>
-        ` : `<div class="uc-kroki-yok">Bu kayıt için Saha Dijital Haritası'nda bir konum işaretlenmemiş.</div>`}
-      </div>
-    </div>
-
-    <div class="uc-form-bolum">
-      <h2>${_ucSayfa2BolumNo}. Onay</h2>
-      <div style="padding:3mm;">
-        <div class="uc-onay-satir">
-          ${_ucOnayKutusu('Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
-          ${_ucOnayKutusu('Bölüm Sorumlusu', k.sorumlu, imzalar.sorumlu, sorumluImzaUrl)}
-        </div>
-      </div>
-    </div>
-
-    <div class="uc-form-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
-  </div>
-  `;
-
-  const mount = document.getElementById('yazdirmaAlani');
-  mount.style.display = 'block';
+  // kırpılıyordu. Bu yüzden Görsel Kanıtlar hep sayfa 1'de DEĞİL, kendi
+  // başlık şeridini tekrar eden 2. sayfanın EN BAŞINDA basılıyor; ondan
+  // sonraki bloklar (Ek Fotoğraflar/Kroki/Onay) yukarıda ölçülüp
+  // paketlenerek gerekirse 3., 4. sayfaya taşıyor (bkz. yukarıdaki
+  // ikinciSayfaSonrasiSayfalar).
+  const digerSayfalar = ikinciSayfaSonrasiSayfalar.map((bloklar, i) =>
+    _ucKayitSayfaGovdesiOlustur(`${i + 2}/${UC_TOPLAM_SAYFA}`, bloklar.join(''))
+  );
 
   // html2pdf'in kenar boşluklu/oto-ölçeklemeli hattı, sağdaki 1-2px'lik
   // box-shadow çerçeve çizgisini büyütme/kesme sırasında kayıp edebiliyordu
@@ -558,7 +621,7 @@ async function uygunsuzlukKayitPdfOlustur(id) {
   // yakalanıp kendi PDF sayfasına eklenir; formun kendi 8mm padding'i görsel
   // kenar boşluğu görevi görür.
   const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-  const sayfalar = [html, sayfa2Html];
+  const sayfalar = [html, ...digerSayfalar];
   for (let i = 0; i < sayfalar.length; i++) {
     mount.innerHTML = sayfalar[i];
     // Kroki data: URL'i olsa bile tarayıcı boyutlarını (naturalWidth/Height)
@@ -566,13 +629,7 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     // kutuyu görünmez yapıyordu (kullanıcı bildirdi, canlı testte doğrulandı).
     // html2canvas çağrılmadan önce sayfadaki TÜM <img>'lerin gerçekten
     // yüklenmesi/decode olması beklenir.
-    await Promise.all(Array.from(document.getElementById('ucKayitPdf').querySelectorAll('img')).map(img => {
-      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-      return new Promise(resolve => {
-        img.addEventListener('load', resolve, { once: true });
-        img.addEventListener('error', resolve, { once: true });
-      });
-    }));
+    await _ucGorsellerYuklensinBekle();
     // Kullanıcı isteği: "uygunsuzluk pdf raporunun mb'ı büyük düşürmek
     // mümkün mü" -- bkz. yukarıdaki genel rapor fonksiyonundaki aynı not.
     const canvas = await html2canvas(document.getElementById('ucKayitPdf'), { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
