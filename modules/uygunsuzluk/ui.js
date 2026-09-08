@@ -619,15 +619,24 @@ function _ucBilgiSecimCiz(mevcutBilgiStr) {
     return;
   }
 
-  kutu.innerHTML = harita.map(h => `
-    <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:12px; padding:2px 0;">
-      <input type="checkbox" data-bilgi-secim value="${_usKacir(h.eposta)}" ${secili.has(h.eposta.toLowerCase()) ? 'checked' : ''} style="width:auto; margin:0;">
-      ${_usKacir(h.ad)} <span style="color:var(--metin-soluk);">(${_usKacir(h.eposta)})</span>
-    </label>
-  `).join('');
+  // Bir pozisyonun birden fazla e-postası olabilir (satırda virgülle ayrılmış
+  // -- bkz. ilgiliEpostaListesiGirdi). Onay kutusu "işaretli" sayılması ve
+  // "ek adres" olarak ayrı gösterilmemesi için TÜM adresler tek tek
+  // karşılaştırılır, tüm satır tek bir metin olarak değil.
+  const haritaAdresleri = new Set();
+  harita.forEach(h => h.eposta.split(',').map(e => e.trim().toLowerCase()).filter(Boolean).forEach(e => haritaAdresleri.add(e)));
 
-  const haritaEpostalari = new Set(harita.map(h => h.eposta.toLowerCase()));
-  const ekAdresler = [...secili].filter(e => !haritaEpostalari.has(e));
+  kutu.innerHTML = harita.map(h => {
+    const buAdresler = h.eposta.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isaretli = buAdresler.some(e => secili.has(e));
+    return `
+    <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:12px; padding:2px 0;">
+      <input type="checkbox" data-bilgi-secim value="${_usKacir(h.eposta)}" ${isaretli ? 'checked' : ''} style="width:auto; margin:0;">
+      ${_usKacir(h.ad)} <span style="color:var(--metin-soluk);">(${_usKacir(h.eposta)})</span>
+    </label>`;
+  }).join('');
+
+  const ekAdresler = [...secili].filter(e => !haritaAdresleri.has(e));
   document.getElementById('ilgiliBilgiEk').value = ekAdresler.join(', ');
 }
 
