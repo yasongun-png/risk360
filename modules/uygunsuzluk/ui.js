@@ -603,15 +603,23 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
 
   const eskiMetin = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Gönderiliyor...';
   try {
+    btn.textContent = 'PDF hazırlanıyor...';
+    // Kaydın "PDF" düğmesiyle indirilenle BİREBİR aynı PDF -- ama burada
+    // indir=false olduğundan tarayıcıda ayrıca bir indirme diyaloğu
+    // açtırmaz, sadece EmailJS'e ek olarak gönderilecek dosyayı üretir.
+    const uretim = await uygunsuzlukKayitPdfOlustur(k.id, false);
+    const pdfDosyasi = uretim ? new File([uretim.pdf.output('blob')], uretim.dosyaAdi, { type: 'application/pdf' }) : null;
+
+    btn.textContent = 'Gönderiliyor...';
     await epostaGonder({
       to_email: k.ilgiliKime,
       bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
-      mesaj: _uygunsuzlukMailMetniDoldur(k)
+      mesaj: _uygunsuzlukMailMetniDoldur(k),
+      attachment: pdfDosyasi
     });
-    alert(`Mail gönderildi: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
+    alert(`Mail gönderildi (PDF ekli): ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
   } catch (hata) {
     console.error(hata);
     alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));

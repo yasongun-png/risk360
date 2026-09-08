@@ -395,9 +395,13 @@ const _UC_KAYIT_STIL = `
       #ucKayitPdf .uc-ek-foto-govde img{ max-width:100%; max-height:100%; object-fit:contain; }
 `;
 
-async function uygunsuzlukKayitPdfOlustur(id) {
+// indir=false: dosyayı indirmez, jsPDF nesnesini döner -- "Mail Gönder"in
+// PDF'i EmailJS eki olarak göndermek için ayrı bir indirme diyaloğu
+// açtırmadan aynı PDF'i üretmesini sağlar (bkz. ui.js
+// _uygunsuzlukMailGonderTiklandi).
+async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
   const k = uygunsuzlukIdIleGetirRepo(id);
-  if (!k) return;
+  if (!k) return null;
 
   const firma = aktifFirmaGetir();
   const logo = firma ? firmaLogoGetir(firma.id) : '';
@@ -641,8 +645,10 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 210 / 2, 297 - 5, { align: 'center' });
   }
-  pdf.save(`Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`);
+  const dosyaAdi = `Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`;
+  if (indir) pdf.save(dosyaAdi);
 
   mount.innerHTML = '';
   mount.style.display = 'none';
+  return { pdf, dosyaAdi };
 }
