@@ -83,6 +83,7 @@
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
           <button type="button" class="ikincil" id="pdfRaporBtn">PDF Raporu</button>
           <button type="button" class="ikincil" id="raporMetniBtn">Rapor Kapak Metni</button>
+          <button type="button" class="ikincil" id="mailMetniBtn">✉️ Mail Metni</button>
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
           <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
         </div>
@@ -129,6 +130,26 @@
         <button type="button" class="birincil" id="raporMetniKaydetBtn">Kaydet</button>
       </div>
       <button type="button" class="tablo-buton" id="raporMetniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="mailMetniKatmani">
+    <div class="modal-kutu" style="max-width:560px;">
+      <h3>Mail Metni</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        "✉️ Mail Gönder" ile atılan tüm e-postaların gövdesi. Bir kez girin,
+        siz değiştirene kadar her mail bu metinle gider. Şu yer tutucuları
+        kullanabilirsiniz: <code>{aksiyonNo}</code>, <code>{baslik}</code>,
+        <code>{bolum}</code>, <code>{riskSeviyesi}</code>, <code>{termin}</code>,
+        <code>{durum}</code>, <code>{aciklama}</code>.
+      </p>
+      <label for="mailMetniGirdi">Mail İçeriği</label>
+      <textarea id="mailMetniGirdi" rows="10" placeholder="Sayın İlgili,&#10;&#10;{baslik} konulu uygunsuzluk kaydı bilgilerinize sunulmuştur..."></textarea>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mailMetniIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="mailMetniKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="mailMetniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 

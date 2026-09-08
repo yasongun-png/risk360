@@ -179,6 +179,10 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('raporMetniKapatBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniKaydetBtn').addEventListener('click', raporMetniKaydet);
+  document.getElementById('mailMetniBtn').addEventListener('click', mailMetniModalAc);
+  document.getElementById('mailMetniKapatBtn').addEventListener('click', mailMetniModalKapat);
+  document.getElementById('mailMetniIptalBtn').addEventListener('click', mailMetniModalKapat);
+  document.getElementById('mailMetniKaydetBtn').addEventListener('click', mailMetniKaydet);
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('uygunsuzluk', 'Uygunsuzluk'));
   document.getElementById('imzaKatmaniKapatBtn').addEventListener('click', imzaModalKapat);
   document.getElementById('imzaKatmaniIptalBtn').addEventListener('click', imzaModalKapat);
@@ -480,6 +484,59 @@ function raporMetniKaydet() {
   raporMetniModalKapat();
 }
 
+// "Mail Gönder" ile atılan tüm e-postaların gövde metni — raporMetniGetir
+// ile aynı desen (tenant-scoped, bir kez girilir, siz değiştirene kadar
+// aynen kullanılır). {aksiyonNo}/{baslik}/{bolum}/{riskSeviyesi}/{termin}/
+// {durum}/{aciklama} yer tutucuları _uygunsuzlukMailMetniDoldur ile kayıt
+// bilgileriyle değiştirilir.
+const MAIL_METNI_VARSAYILANI = [
+  'Sayın İlgili,',
+  '',
+  '{baslik} konulu uygunsuzluk kaydı bilgilerinize sunulmuştur.',
+  '',
+  'Aksiyon No: {aksiyonNo}',
+  'Bölüm: {bolum}',
+  'Risk Seviyesi: {riskSeviyesi}',
+  'Termin: {termin}',
+  'Durum: {durum}',
+  '',
+  'Açıklama:',
+  '{aciklama}'
+].join('\n');
+
+function _mailMetniAnahtari() { return tenantAnahtar('uygunsuzluk_mail_metni'); }
+
+function mailMetniGetir() {
+  return oku(_mailMetniAnahtari(), MAIL_METNI_VARSAYILANI);
+}
+
+function mailMetniModalAc() {
+  document.getElementById('mailMetniGirdi').value = mailMetniGetir();
+  document.getElementById('mailMetniKatmani').classList.add('acik');
+}
+
+function mailMetniModalKapat() {
+  document.getElementById('mailMetniKatmani').classList.remove('acik');
+}
+
+function mailMetniKaydet() {
+  yaz(_mailMetniAnahtari(), document.getElementById('mailMetniGirdi').value.trim() || MAIL_METNI_VARSAYILANI);
+  mailMetniModalKapat();
+}
+
+function _uygunsuzlukMailMetniDoldur(k) {
+  const yerTutucular = {
+    aksiyonNo: k.aksiyonNo || '',
+    baslik: k.baslik || '',
+    bolum: k.bolum || '-',
+    riskSeviyesi: k.riskSeviyesi || '',
+    termin: gunAyYil(k.termin) || '-',
+    durum: k.durum || '',
+    aciklama: k.aciklama || ''
+  };
+  return mailMetniGetir().replace(/\{(\w+)\}/g, (tam, ad) => Object.prototype.hasOwnProperty.call(yerTutucular, ad) ? yerTutucular[ad] : tam);
+}
+
 function gorunumDegistir(gorunum) {
   _usGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
@@ -552,16 +609,7 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
       to_email: k.ilgiliKime,
       bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
-      mesaj: [
-        `Aksiyon No: ${k.aksiyonNo}`,
-        `Başlık: ${k.baslik}`,
-        `Bölüm: ${k.bolum || '-'}`,
-        `Risk Seviyesi: ${k.riskSeviyesi}`,
-        `Termin: ${gunAyYil(k.termin) || '-'}`,
-        `Durum: ${k.durum}`,
-        '',
-        k.aciklama || ''
-      ].join('\n')
+      mesaj: _uygunsuzlukMailMetniDoldur(k)
     });
     alert(`Mail gönderildi: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
   } catch (hata) {
