@@ -160,6 +160,7 @@ function uygunsuzlukKaydiOlustur(veriler) {
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
 
     sorumlu: (veriler.sorumlu || '').trim(),
+    sorumluEposta: (veriler.sorumluEposta || '').trim(),
     atayan: (veriler.atayan || '').trim(),
     bildirimTarihi: veriler.bildirimTarihi || bugunIso(),
     termin: veriler.termin || '',

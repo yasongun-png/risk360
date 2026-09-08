@@ -519,6 +519,10 @@ function _islemButonlariUret(k) {
     `<button class="tablo-buton" data-konu-tasi="${k.id}" style="${k.konuId ? '' : 'color:#d97706; font-weight:700;'}" title="${k.konuId ? 'Başka konuya taşı' : 'Bu kayıt hiçbir konuya atanmamış — taşımak için tıklayın'}">📁 Konu Taşı</button>`
   ];
 
+  if (k.sorumluEposta) {
+    butonlar.push(`<button class="tablo-buton" data-mail="${k.id}" title="Sorumluya (${_usKacir(k.sorumluEposta)}) bu kaydı e-posta ile gönder">✉️ Mail Gönder</button>`);
+  }
+
   if (k.durum === 'Onay Bekliyor') {
     butonlar.push(`<button class="tablo-buton" data-onayla="${k.id}">Onayla</button>`);
     butonlar.push(`<button class="tablo-buton sil" data-reddet="${k.id}">Reddet</button>`);
@@ -526,6 +530,46 @@ function _islemButonlariUret(k) {
 
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return `<div style="display:flex; flex-wrap:wrap; gap:2px;">${butonlar.join('')}</div>`;
+}
+
+// Sorumluya kayıt hakkında bildirim maili atar. E-posta gönderimi
+// yapılandırılmamışsa (bkz. Ayarlar) kullanıcı uyarılır, işlem sessizce
+// atlanmaz -- yoksa "tıkladım ama bir şey olmadı" karışıklığı yaratır.
+async function _uygunsuzlukMailGonderTiklandi(btn) {
+  const k = uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-mail'));
+  if (!k || !k.sorumluEposta) return;
+
+  if (!epostaAktifMi()) {
+    alert('E-posta bildirimleri henüz yapılandırılmamış. Ayarlar sayfasından EmailJS bilgilerini girip etkinleştirin.');
+    return;
+  }
+
+  const eskiMetin = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Gönderiliyor...';
+  try {
+    await epostaGonder({
+      to_email: k.sorumluEposta,
+      konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
+      mesaj: [
+        `Aksiyon No: ${k.aksiyonNo}`,
+        `Başlık: ${k.baslik}`,
+        `Bölüm: ${k.bolum || '-'}`,
+        `Risk Seviyesi: ${k.riskSeviyesi}`,
+        `Termin: ${gunAyYil(k.termin) || '-'}`,
+        `Durum: ${k.durum}`,
+        '',
+        k.aciklama || ''
+      ].join('\n')
+    });
+    alert(`Mail gönderildi: ${k.sorumluEposta}`);
+  } catch (hata) {
+    console.error(hata);
+    alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = eskiMetin;
+  }
 }
 
 function _usFotoHucresiUret(deger, etiket) {
@@ -583,6 +627,7 @@ function kayitlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', async () => {
     try { await uygunsuzlukKayitPdfOlustur(btn.getAttribute('data-pdf')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
+  govde.querySelectorAll('[data-mail]').forEach(btn => btn.addEventListener('click', () => _uygunsuzlukMailGonderTiklandi(btn)));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { uygunsuzlukSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
@@ -873,6 +918,7 @@ function kayitModalAc(kayit) {
 
   document.getElementById('sorumlu').value = kayit ? kayit.sorumlu : '';
   bolumButonlariCiz('sorumluBolumButonlari', 'sorumlu', 'tekli');
+  document.getElementById('sorumluEposta').value = kayit ? (kayit.sorumluEposta || '') : '';
   document.getElementById('atayan').value = kayit ? kayit.atayan : '';
   document.getElementById('bildirimTarihi').value = kayit ? kayit.bildirimTarihi : bugunIso();
   document.getElementById('termin').value = kayit ? kayit.termin : '';
@@ -961,6 +1007,7 @@ function formGonderildi(e) {
     kokNeden: document.getElementById('kokNeden').value,
     duzelticiFaaliyet: document.getElementById('duzelticiFaaliyet').value,
     sorumlu: document.getElementById('sorumlu').value,
+    sorumluEposta: document.getElementById('sorumluEposta').value,
     atayan: document.getElementById('atayan').value,
     bildirimTarihi: document.getElementById('bildirimTarihi').value,
     termin: document.getElementById('termin').value,

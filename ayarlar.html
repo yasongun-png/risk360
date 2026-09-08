@@ -79,11 +79,42 @@
     </div>
   </div>
 
+  <div class="icerik" style="max-width: 640px;">
+    <h2 style="margin-top:0;">E-posta Bildirimleri</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;">
+      Uygunsuzluk kayıtlarında "Mail Gönder" ile sorumluya bildirim
+      atabilmek için <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a>
+      hesabınızdaki Service ID, Template ID ve Public Key bilgilerini girin.
+      Bu bilgiler firma verinizle birlikte senkronize edilir (bir kez
+      girmeniz yeterli). Şablonunuzda <code>to_email</code>, <code>konu</code>
+      ve <code>mesaj</code> değişkenlerini kullanın.
+    </p>
+
+    <div class="hata-mesaji" id="epHataMesaji"></div>
+    <div class="basari-mesaji" id="epBasariMesaji"></div>
+
+    <label for="epServiceId">Service ID</label>
+    <input type="text" id="epServiceId" placeholder="service_xxxxxxx">
+    <label for="epTemplateId">Template ID</label>
+    <input type="text" id="epTemplateId" placeholder="template_xxxxxxx">
+    <label for="epPublicKey">Public Key</label>
+    <input type="text" id="epPublicKey" placeholder="xxxxxxxxxxxxxxxx">
+    <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:6px;">
+      <input type="checkbox" id="epAktif" style="width:auto; margin:0;"> E-posta bildirimlerini etkinleştir
+    </label>
+
+    <div class="modal-eylemler" style="justify-content:flex-start;">
+      <button type="button" class="birincil" id="epKaydetBtn" style="width:auto;">Kaydet</button>
+      <button type="button" class="ikincil" id="epTestBtn">Test E-postası Gönder</button>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="core/data.js"></script>
   <script src="core/auth.js"></script>
   <script src="core/tenant.js"></script>
+  <script src="core/eposta.js"></script>
   <script>
     const kullanici = girisGerekliAdmin();
 
@@ -99,6 +130,70 @@
 
       document.getElementById('kaydetBtn').addEventListener('click', kaydetTiklandi);
       document.getElementById('sifirlaBtn').addEventListener('click', sifirlaTiklandi);
+
+      epostaAyarlariniYukle();
+      document.getElementById('epKaydetBtn').addEventListener('click', epostaKaydetTiklandi);
+      document.getElementById('epTestBtn').addEventListener('click', epostaTestTiklandi);
+    }
+
+    function epostaAyarlariniYukle() {
+      const c = epostaConfigGetir();
+      document.getElementById('epServiceId').value = c.serviceId || '';
+      document.getElementById('epTemplateId').value = c.templateId || '';
+      document.getElementById('epPublicKey').value = c.publicKey || '';
+      document.getElementById('epAktif').checked = !!c.aktif;
+    }
+
+    function epostaMesajlariTemizle() {
+      document.getElementById('epHataMesaji').classList.remove('gorunur');
+      document.getElementById('epBasariMesaji').classList.remove('gorunur');
+    }
+
+    function epostaKaydetTiklandi() {
+      epostaMesajlariTemizle();
+      const config = {
+        serviceId: document.getElementById('epServiceId').value.trim(),
+        templateId: document.getElementById('epTemplateId').value.trim(),
+        publicKey: document.getElementById('epPublicKey').value.trim(),
+        aktif: document.getElementById('epAktif').checked
+      };
+      if (config.aktif && (!config.serviceId || !config.templateId || !config.publicKey)) {
+        const hataEl = document.getElementById('epHataMesaji');
+        hataEl.textContent = 'Etkinleştirmek için Service ID, Template ID ve Public Key alanlarının hepsi gerekli.';
+        hataEl.classList.add('gorunur');
+        return;
+      }
+      epostaConfigKaydet(config);
+      const basariEl = document.getElementById('epBasariMesaji');
+      basariEl.textContent = 'E-posta ayarları kaydedildi.';
+      basariEl.classList.add('gorunur');
+    }
+
+    async function epostaTestTiklandi() {
+      epostaMesajlariTemizle();
+      epostaKaydetTiklandi();
+      if (!epostaAktifMi()) {
+        const hataEl = document.getElementById('epHataMesaji');
+        hataEl.textContent = 'Önce geçerli bilgileri girip etkinleştirin.';
+        hataEl.classList.add('gorunur');
+        return;
+      }
+      const hedef = prompt('Test e-postasının gönderileceği adres:', kullanici.eposta || '');
+      if (!hedef) return;
+      const btn = document.getElementById('epTestBtn');
+      btn.disabled = true;
+      try {
+        await epostaGonder({ to_email: hedef, konu: 'İSG Platform - Test E-postası', mesaj: 'Bu, İSG Platform Ayarlar sayfasından gönderilmiş bir test e-postasıdır.' });
+        const basariEl = document.getElementById('epBasariMesaji');
+        basariEl.textContent = 'Test e-postası gönderildi.';
+        basariEl.classList.add('gorunur');
+      } catch (e) {
+        const hataEl = document.getElementById('epHataMesaji');
+        hataEl.textContent = 'Gönderilemedi: ' + (e.message || e.text || e);
+        hataEl.classList.add('gorunur');
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     function durumuGoster() {
