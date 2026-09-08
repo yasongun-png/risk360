@@ -672,6 +672,15 @@ async function uygunsuzlukKayitPdfUrlOlustur(id) {
   const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
   const yol = 'uygunsuzluk_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
   const blob = uretim.pdf.output('blob');
-  const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
-  return anlik.ref.getDownloadURL();
+
+  // fotoYukle'deki (core/data.js) aynı önlem: Storage isteği ağ/izin
+  // sorunuyla süresiz asılı kalabiliyor (kullanıcı bildirdi: "PDF
+  // hazırlanıyor"da kalıyordu) -- belirli sürede sonuçlanmazsa hata
+  // fırlatılıp linksiz devam edilmesi sağlanır.
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 20000));
+  const yukleme = (async () => {
+    const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
+    return anlik.ref.getDownloadURL();
+  })();
+  return Promise.race([yukleme, zamanAsimi]);
 }
