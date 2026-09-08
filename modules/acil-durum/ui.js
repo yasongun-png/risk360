@@ -1145,7 +1145,18 @@ function ekipmanModalAc(ekipman) {
   _ekipmanMalzemeListesi = ekipman && Array.isArray(ekipman.malzemeListesi) ? ekipman.malzemeListesi.slice() : [];
   _ekipmanMalzemeKontrolleri = ekipman && ekipman.malzemeKontrolleri ? Object.assign({}, ekipman.malzemeKontrolleri) : {};
   _ekipmanMalzemeBolumuCiz();
-  document.getElementById('ekipmanTur').onchange = () => { _ekipmanKontrolListesiCiz(ekipman); _ekipmanMalzemeBolumuCiz(); };
+  document.getElementById('ekipmanTur').onchange = () => {
+    _ekipmanKontrolListesiCiz(ekipman);
+    // Kullanıcı isteği: "olması gereken malzemeler için bir envanter çıkar"
+    // — yeni bir İtfaiye Aracı kaydı açılırken (düzenleme değil, liste de
+    // henüz boşsa) standart malzeme listesi otomatik doldurulur; kayıtlı
+    // bir dolap/aracı düzenlerken veya tür ileri geri değiştirilirken
+    // mevcut liste ASLA üzerine yazılmaz.
+    if (!ekipman && document.getElementById('ekipmanTur').value === 'İtfaiye Aracı' && !_ekipmanMalzemeListesi.length) {
+      _ekipmanMalzemeListesi = ITFAIYE_ARACI_STANDART_MALZEME_LISTESI.map(m => ({ id: rastgeleId(), ad: m.ad, adet: m.adet }));
+    }
+    _ekipmanMalzemeBolumuCiz();
+  };
   _ekipmanKonumAlaniCiz(ekipman);
   temizleFormHatalari('ekipmanForm');
   document.getElementById('ekipmanModalKatman').classList.add('acik');
@@ -1270,7 +1281,10 @@ function _ekipmanKontrolListesiTopla() {
 function _ekipmanMalzemeBolumuCiz() {
   const bolum = document.getElementById('ekipmanMalzemeBolumu');
   if (!bolum) return;
-  const gorunurMu = document.getElementById('ekipmanTur').value === 'Ekipman Dolabı';
+  // İtfaiye Aracı da Ekipman Dolabı ile aynı malzemeListesi/malzemeKontrolleri
+  // (Mevcut/Eksik) alt yapısını kullanır — bkz. model.js
+  // ITFAIYE_ARACI_STANDART_MALZEME_LISTESI ve ekipmanModalAc'taki otomatik doldurma.
+  const gorunurMu = ['Ekipman Dolabı', 'İtfaiye Aracı'].includes(document.getElementById('ekipmanTur').value);
   bolum.style.display = gorunurMu ? '' : 'none';
   if (!gorunurMu) return;
   _ekipmanMalzemeYonetimListesiCiz();

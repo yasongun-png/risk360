@@ -84,7 +84,7 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -105,8 +105,37 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Döküntü Kiti': 'DKT',
   'Ekipman Dolabı': 'ED',
   'Yangın Pompa İstasyonu': 'YPI',
-  'Yangın Tüpü': 'YSC'
+  'Yangın Tüpü': 'YSC',
+  'İtfaiye Aracı': 'ITA'
 };
+
+// Kullanıcı isteği: "itfaiye araçlarını ekleyelim, olması gereken
+// malzemeler için bir envanter çıkar" — Ekipman Dolabı'ndaki
+// malzemeListesi/malzemeKontrolleri (tik/çarpı) alt yapısı İtfaiye
+// Aracı'nda da kullanılır (bkz. ui.js _ekipmanMalzemeBolumuCiz), ama
+// Ekipman Dolabı'nın aksine boş başlamaz: yeni bir İtfaiye Aracı kaydı
+// açıldığında bu standart liste otomatik doldurulur (bkz. ui.js
+// ekipmanModalAc'taki tür değişikliği), İSG uzmanı sahada malzeme adı
+// yazmak zorunda kalmaz, yalnızca Mevcut/Eksik işaretler.
+const ITFAIYE_ARACI_STANDART_MALZEME_LISTESI = [
+  { ad: 'Baskı hortumu', adet: 2 },
+  { ad: 'Emme hortumu', adet: 1 },
+  { ad: 'Lans (nozul)', adet: 2 },
+  { ad: 'Rakor/adaptör takımı', adet: 1 },
+  { ad: 'Taşınabilir yangın söndürücü (kuru kimyevi tozlu)', adet: 2 },
+  { ad: 'El feneri', adet: 2 },
+  { ad: 'Balta', adet: 1 },
+  { ad: 'Yangın kancası', adet: 1 },
+  { ad: 'Kurtarma halatı', adet: 1 },
+  { ad: 'Uzatmalı merdiven', adet: 1 },
+  { ad: 'İlk yardım çantası', adet: 1 },
+  { ad: 'Yangın elbisesi', adet: 1 },
+  { ad: 'Baret', adet: 1 },
+  { ad: 'Yangın eldiveni', adet: 1 },
+  { ad: 'Solunum cihazı (maske/tüp)', adet: 1 },
+  { ad: 'Köpük konsantresi (bidon)', adet: 1 },
+  { ad: 'Telsiz', adet: 1 }
+];
 
 // Ekipman türüne göre madde bazlı kontrol kriterleri — kullanıcı isteği:
 // "kontrol soruları ekleyeceksin ekipmana uygun ama bulgular kısmı da
@@ -248,6 +277,31 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'kontrolPaneli', soru: 'Kontrol paneli/alarm göstergeleri normal' },
     { id: 'ortamKosullari', soru: 'Pompa dairesi ısıtma/havalandırması yeterli' },
     { id: 'egzoz', soru: 'Dizel pompa egzoz sistemi sağlam' }
+  ],
+  // Kullanıcı isteği: "itfaiye araçlarını ekleyelim". Akü/şarj kontrolü ve
+  // motor/mekanik teknik servis kontrolleri (yağ analizi vb.) kapsam
+  // dışıdır — İG uzmanı bu maddeleri yalnızca gözle kontrol eder, teknik
+  // servis kontrolü değildir. Araç üstü bulunması gereken malzemeler ayrı
+  // bir kontrol maddesi olarak DEĞİL, malzemeListesi/malzemeKontrolleri
+  // envanteri üzerinden (Ekipman Dolabı ile aynı Mevcut/Eksik alt yapısı,
+  // bkz. ITFAIYE_ARACI_STANDART_MALZEME_LISTESI) tek tek işaretlenir.
+  'İtfaiye Aracı': [
+    { id: 'belgeler', soru: 'Araç ruhsatı, muayene ve sigorta belgeleri geçerli' },
+    { id: 'karoser', soru: 'Karoser, kapı, basamak, tutamaklar hasarsız' },
+    { id: 'aydinlatmaPlaka', soru: 'Reflektör/şerit, plaka aydınlatması sağlam' },
+    { id: 'yakit', soru: 'Yakıt seviyesi yeterli' },
+    { id: 'sizinti', soru: 'Motor bölmesinde gözle görülür yağ/su/yakıt sızıntısı yok' },
+    { id: 'lastik', soru: 'Lastik diş derinliği ve hava basıncı görsel olarak yeterli, hasar/şişlik yok' },
+    { id: 'yedekLastik', soru: 'Yedek lastik mevcut ve durumu uygun' },
+    { id: 'tank', soru: 'Su/köpük tankı seviyesi dolu ve sızdırmaz' },
+    { id: 'pompa', soru: 'Pompa çalışıyor, basınç göstergeleri normal aralıkta' },
+    { id: 'hortum', soru: 'Hortumlar (baskı/emme) hasarsız, bağlantılar (rakor) sağlam' },
+    { id: 'lansCalisir', soru: 'Lans/nozul takımları eksiksiz ve çalışır durumda' },
+    { id: 'kopukTarih', soru: 'Köpük konsantresi tarihinde ve yeterli seviyede' },
+    { id: 'farlar', soru: 'Far, sis farı, stop, dönüş sinyalleri çalışıyor' },
+    { id: 'tepeLambasi', soru: 'Tepe lambası (rotatif/led) ve siren çalışıyor' },
+    { id: 'icAydinlatma', soru: 'İç aydınlatma çalışıyor' },
+    { id: 'telsizCalisir', soru: 'Telsiz/haberleşme cihazı çalışır durumda' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
