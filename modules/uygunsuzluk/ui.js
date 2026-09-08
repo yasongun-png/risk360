@@ -705,35 +705,36 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
   btn.disabled = true;
   try {
     btn.textContent = 'PDF hazırlanıyor...';
-    // Kaydın "PDF" düğmesiyle indirilenle BİREBİR aynı PDF -- ama burada
-    // indir=false olduğundan tarayıcıda ayrıca bir indirme diyaloğu
-    // açtırmaz, sadece EmailJS'e ek olarak gönderilecek dosyayı üretir.
-    // EmailJS dinamik ek parametresi bir File nesnesi DEĞİL, {name, data}
-    // biçiminde (data = data: önekisiz base64) bekler -- File nesnesi
-    // gönderildiğinde EmailJS bunu sessizce yok sayıp maili eksiz gönderir
-    // (kullanıcı bildirdi: "gelen mailde pdf eki yok", hata da almıyordu).
-    const uretim = await uygunsuzlukKayitPdfOlustur(k.id, false);
-    const pdfBase64 = uretim ? uretim.pdf.output('datauristring').split(',').pop() : '';
-    // EmailJS'in ücretsiz planında toplam mail boyutu (ek dahil) ~50KB ile
-    // sınırlı; fotoğraflı uygunsuzluk PDF'leri bunu kolayca aşabilir --
-    // aşarsa EmailJS eki yine sessizce düşürüp maili eksiz gönderebilir.
-    if (pdfBase64 && pdfBase64.length > 60000) {
-      if (!confirm('Bu kaydın PDF\'i oldukça büyük (yoğun fotoğraf içeriyor olabilir). EmailJS\'in ücretsiz planında ek boyutu sınırlı olduğundan ek düşebilir/mail gitmeyebilir. Yine de göndermeyi denemek ister misiniz?')) {
-        btn.disabled = false;
-        btn.textContent = eskiMetin;
-        return;
-      }
+    // Bu kayıtların PDF'i (fotoğraflı olduğunda) genelde birkaç MB --
+    // EmailJS'in ek olarak kabul ettiği boyutun (ücretsiz planda ~50KB)
+    // çok üzerinde; doğrudan ek olarak göndermek EmailJS'in eki sessizce
+    // düşürüp maili eksiz göndermesine yol açıyordu (kullanıcı bildirdi).
+    // Bunun yerine PDF, fotoğraf yüklemede zaten kullanılan Firebase
+    // Storage'a yüklenir ve mail gövdesine bir indirme linki eklenir --
+    // boyut sınırı yok. Storage yapılandırılmamışsa/başarısız olursa link
+    // olmadan devam edilir (mail yine de gider, kullanıcı bilgilendirilir).
+    let pdfUrl = '';
+    try {
+      pdfUrl = await uygunsuzlukKayitPdfUrlOlustur(k.id) || '';
+    } catch (pdfHata) {
+      console.error('PDF linki oluşturulamadı:', pdfHata);
+    }
+    if (!pdfUrl && !confirm('PDF linki oluşturulamadı (Storage yapılandırılmamış olabilir). Mail PDF olmadan gönderilsin mi?')) {
+      btn.disabled = false;
+      btn.textContent = eskiMetin;
+      return;
     }
 
     btn.textContent = 'Gönderiliyor...';
+    const mesajMetni = _uygunsuzlukMailMetniDoldur(k) + (pdfUrl ? `\n\nPDF Bildirim Formu: ${pdfUrl}` : '');
     await epostaGonder({
       to_email: k.ilgiliKime,
       bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
-      mesaj: _uygunsuzlukMailMetniDoldur(k),
-      attachment: pdfBase64 ? { name: uretim.dosyaAdi, data: pdfBase64 } : ''
+      mesaj: mesajMetni,
+      pdf_url: pdfUrl
     });
-    alert(`Mail gönderildi (PDF ekli): ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
+    alert(`Mail gönderildi${pdfUrl ? ' (PDF linki eklendi)' : ' (PDF linksiz)'}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
   } catch (hata) {
     console.error(hata);
     alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));

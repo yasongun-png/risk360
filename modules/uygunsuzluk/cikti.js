@@ -652,3 +652,26 @@ async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
   mount.style.display = 'none';
   return { pdf, dosyaAdi };
 }
+
+// Mail Gönder'in EmailJS'e doğrudan ek olarak eklemek yerine kullandığı yol:
+// bu PDF'ler (fotoğraflı kayıtlarda ~birkaç MB) EmailJS'in ek boyutu
+// sınırlarını (ücretsiz planda ~50KB) fazlasıyla aşıyor -- ek olarak
+// gönderilince EmailJS bunu sessizce düşürüp maili eksiz gönderiyordu
+// (kullanıcı bildirdi). Bunun yerine PDF, foto yüklemede zaten kullanılan
+// aynı Firebase Storage'a (bkz. core/data.js fotoYukle) yüklenir ve mail
+// gövdesine bir indirme linki eklenir -- boyut sınırı yok, güvenilir.
+// Storage yapılandırılmamışsa/başarısız olursa null döner (çağıran taraf
+// linksiz devam eder, e-posta yine de gider).
+async function uygunsuzlukKayitPdfUrlOlustur(id) {
+  const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
+  if (!storage) return null;
+
+  const uretim = await uygunsuzlukKayitPdfOlustur(id, false);
+  if (!uretim) return null;
+
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const yol = 'uygunsuzluk_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
+  const blob = uretim.pdf.output('blob');
+  const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
+  return anlik.ref.getDownloadURL();
+}

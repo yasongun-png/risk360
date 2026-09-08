@@ -90,11 +90,12 @@
       bağlı <code>bilgi_email</code> (Bilgi/Cc — şablonun Settings sekmesinde
       Cc alanına <code>{'{{bilgi_email}}'}</code> yazarak bağlayın),
       <code>konu</code> ve <code>mesaj</code> değişkenlerini kullanın.
-      Uygunsuzluk kaydının PDF'i mail ekinde otomatik gider — bunun için
-      şablonun <b>Attachments</b> sekmesinde "Attach Dynamically" seçip
-      parametre adına <code>attachment</code> yazmanız yeterli (EmailJS'in
-      ücretsiz planında ek dosya boyutu sınırlıdır; büyük PDF'lerde
-      gönderim başarısız olursa ücretli plana geçmeniz gerekebilir).
+      Uygunsuzluk kaydının PDF'i mail EKİ olarak değil (fotoğraflı PDF'ler
+      birkaç MB'a çıkabildiğinden EmailJS'in ek boyutu sınırını aşıyordu),
+      Firebase Storage'a yüklenip bir <b>indirme linki</b> olarak gönderilir
+      — bu link otomatik olarak <code>mesaj</code> metninin sonuna eklenir,
+      ayrıca isterseniz şablonunuzda ayrı bir buton/link için
+      <code>{'{{pdf_url}}'}</code> değişkenini de kullanabilirsiniz.
     </p>
 
     <div class="hata-mesaji" id="epHataMesaji"></div>
