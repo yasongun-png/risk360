@@ -128,10 +128,6 @@ function toplantiGuncelle(id, veriler) {
     katilimciSayisi: veriler.katilimciSayisi != null && veriler.katilimciSayisi !== '' ? String(veriler.katilimciSayisi) : '',
     gundem: veriler.gundem || [],
     durum: veriler.durum || 'Planlandı',
-    genelDegerlendirme: (veriler.genelDegerlendirme || '').trim(),
-    planlananFaaliyetlerGerceklesme: (veriler.planlananFaaliyetlerGerceklesme || '').trim(),
-    tespitEdilenHususlar: (veriler.tespitEdilenHususlar || '').trim(),
-    calisanBildirimleri: (veriler.calisanBildirimleri || '').trim(),
     faaliyetMetni: (veriler.faaliyetMetni || '').trim(),
     metrikler: (veriler.metrikler || '').trim(),
     calisanTemsilcisiGorusleri: (veriler.calisanTemsilcisiGorusleri || '').trim(),
@@ -735,24 +731,23 @@ function _kurulOtomatikAyIciFaaliyetleriGetir(toplanti) {
     });
   });
 
+  // Kullanıcı isteği: "tek tek detay yazmana gerek yok, şu kadar adet acil
+  // durum ekipmanı kontrol edildi gibi olsa yeterli" — önceden her ekipman
+  // türü (Yangın Tüpü, Hidrant, Ekipman Dolabı, İtfaiye Aracı vb.) için ayrı
+  // bir satır üretiliyordu; artık tüm türler TEK bir toplam satırda özetlenir.
   const ekipmanlar = oku(tenantAnahtar('acil_durum_ekipmanlari'), [])
     .filter(e => String(e.sonKontrol || '').slice(0, 7) === ay)
     .filter(e => !toplanti.tarih || !e.sonKontrol || e.sonKontrol <= toplanti.tarih);
-  const turSayaci = {};
-  ekipmanlar.forEach(e => {
-    const tur = e.tur || 'Diğer';
-    turSayaci[tur] = (turSayaci[tur] || 0) + 1;
-  });
-  Object.keys(turSayaci).sort().forEach(tur => {
+  if (ekipmanlar.length) {
     sonuc.push({
-      id: 'oto-ek-' + tur,
+      id: 'oto-ek-toplam',
       toplantiId: toplanti.id,
-      faaliyet: tur + ' Kontrolü',
-      adet: String(turSayaci[tur]),
-      aciklama: turSayaci[tur] + ' adet ' + tur.toLowerCase() + ' kontrol edildi.',
+      faaliyet: 'Acil Durum Ekipman Kontrolü',
+      adet: String(ekipmanlar.length),
+      aciklama: ekipmanlar.length + ' adet acil durum ekipmanı kontrol edildi.',
       otomatik: true
     });
-  });
+  }
 
   return sonuc;
 }

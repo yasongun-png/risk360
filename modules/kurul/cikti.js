@@ -383,7 +383,7 @@ async function kurulRaporuWordOlustur() {
   });
 
   // "Toplantı Bilgileri" PDF'te ayrı bir kutu (meeting-info) — Word'de aynı
-  // 6 satırı bir tablo olarak kapak sonrası, "1) Genel Değerlendirme"'den önce basar.
+  // 6 satırı bir tablo olarak kapak sonrası, "1) Gündem"'den önce basar.
   const bilgiTablosu = new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
@@ -439,14 +439,7 @@ async function kurulRaporuWordOlustur() {
     bilgiTablosu,
     P(' ', { spacing: { after: 400 } }),
 
-    H('1) Genel Değerlendirme'),
-    P(_varsayilanliMetin(toplanti.genelDegerlendirme, 'genelDegerlendirme'), { spacing: { after: 160 } }),
-    PL('İlgili Dönemde Planlanan Faaliyetlerin Gerçekleşme Durumu', _varsayilanliMetin(toplanti.planlananFaaliyetlerGerceklesme, 'planlananFaaliyetlerGerceklesme')),
-    PL('Tespit Edilen Hususlar', _varsayilanliMetin(toplanti.tespitEdilenHususlar, 'tespitEdilenHususlar')),
-    PL('Çalışanların Bildirimleri', _varsayilanliMetin(toplanti.calisanBildirimleri, 'calisanBildirimleri')),
-    P(' ', { spacing: { after: 400 } }),
-
-    H('2) Gündem'),
+    H('1) Gündem'),
     ...(gundem.length ? gundem.flatMap((g, i) => {
       const satirlar = [P(`${i + 1}. ${g.baslik}${g.not ? ' — ' + g.not : ''}`)];
       if (/^olaylar/i.test(g.baslik.trim())) {
@@ -458,44 +451,44 @@ async function kurulRaporuWordOlustur() {
     P(' ', { spacing: { after: 600 } }),
 
     BR(),
-    H('3) Olaylar'),
+    H('2) Olaylar'),
     ...(olayKartlari.length ? olayKartlari.flat() : [P(_varsayilanliMetin('', 'olaylar'))]),
 
-    H('4) Bu Toplantıda Alınan Kararlar'),
+    H('3) Bu Toplantıda Alınan Kararlar'),
     ...(yeniKartlari.length ? yeniKartlari.flat() : [P('Karar alınmamıştır.')]),
     ...(yeni.some(k => kararOyDokumMetni(k)) ? [P(KARAR_OY_DOKUM_DIPNOTU, { italics: true })] : []),
 
-    H('5) Önceki Toplantılardan Devreden Kararlar'),
+    H('4) Önceki Toplantılardan Devreden Kararlar'),
     ...(devredenKartlari.length ? devredenKartlari.flat() : [P(_varsayilanliMetin('', 'devredenKararlar'))]),
     ...(devreden.some(k => kararOyDokumMetni(k)) ? [P(KARAR_OY_DOKUM_DIPNOTU, { italics: true })] : []),
     BR(),
 
-    H('6) Ay İçinde Yapılan Eğitimler'),
+    H('5) Ay İçinde Yapılan Eğitimler'),
     aylikEgitimler.length ? table(['Eğitim Adı', 'Tarih', 'Katılımcı Sayısı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), k.katilimciSayisi, k.birim])) : P('Bu dönemde verilen eğitim bulunmamaktadır.'),
     P(' ', { spacing: { after: 400 } }),
 
-    H('7) Ay İçi İSG Çalışmaları'),
+    H('6) Ay İçi İSG Çalışmaları'),
     P(_varsayilanliMetin(toplanti.faaliyetMetni, 'ayIciCalismalar')),
     ayIciFaaliyetler.length ? table(['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet, f.aciklama])) : P(' '),
     toplanti.metrikler ? P('Metrikler: ' + toplanti.metrikler) : P(' '),
 
-    H('8) Çalışan Temsilcilerinin Görüş ve Önerileri'),
+    H('7) Çalışan Temsilcilerinin Görüş ve Önerileri'),
     P(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler')),
     P(' ', { spacing: { after: 400 } }),
     BR(),
 
-    H('9) Ay İçinde Tespit Edilen Uygunsuzluklar'),
+    H('8) Ay İçinde Tespit Edilen Uygunsuzluklar'),
     ...(tespitKartlari.length ? tespitKartlari.flat() : [P('Bu dönemde tespit edilen uygunsuzluk bulunmamaktadır.')]),
 
-    H('10) Ay İçinde Kapatılan Uygunsuzluklar'),
+    H('9) Ay İçinde Kapatılan Uygunsuzluklar'),
     ...(kapananKartlari.length ? kapananKartlari.flat() : [P('Bu dönemde kapatılan uygunsuzluk bulunmamaktadır.')]),
     BR(),
 
-    H('11) İSG Kurulları İle İlgili Yasal Düzenleme'),
+    H('10) İSG Kurulları İle İlgili Yasal Düzenleme'),
     ...YONETMELIK_MADDELERI.flatMap(maddeParagraflari),
     BR(),
 
-    H('12) İmza Listesi'),
+    H('11) İmza Listesi'),
     katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
   ];
 
@@ -899,16 +892,8 @@ async function kurulRaporuPdfOlustur() {
         </div>
       </div>
 
-      <div class="section keep">
-        <h2>1) Genel Değerlendirme</h2>
-        <p>${_ciktiKacir(_varsayilanliMetin(toplanti.genelDegerlendirme, 'genelDegerlendirme'))}</p>
-        <p><b>İlgili Dönemde Planlanan Faaliyetlerin Gerçekleşme Durumu:</b> ${_ciktiKacir(_varsayilanliMetin(toplanti.planlananFaaliyetlerGerceklesme, 'planlananFaaliyetlerGerceklesme'))}</p>
-        <p><b>Tespit Edilen Hususlar:</b> ${_ciktiKacir(_varsayilanliMetin(toplanti.tespitEdilenHususlar, 'tespitEdilenHususlar'))}</p>
-        <p><b>Çalışanların Bildirimleri:</b> ${_ciktiKacir(_varsayilanliMetin(toplanti.calisanBildirimleri, 'calisanBildirimleri'))}</p>
-      </div>
-
       <div class="section">
-        <h2>2) Gündem</h2>
+        <h2>1) Gündem</h2>
         ${gundem.length ? gundem.map((g, i) => {
           const olaylarMetni = /^olaylar/i.test(g.baslik.trim()) ? toplantiOlaylarGundemMetni(toplanti.id) : '';
           return `<p class="gundem-satir">${i + 1}. ${_ciktiKacir(g.baslik)}${g.not ? ' — ' + _ciktiKacir(g.not) : ''}</p>` +
@@ -918,56 +903,56 @@ async function kurulRaporuPdfOlustur() {
 
       <div class="section">
         <div class="page-break"></div>
-        <h2>3) Olaylar</h2>
+        <h2>2) Olaylar</h2>
         ${olaylar.length ? olaylar.map(o => _pdfInfoCardGrid(o.tur, gunAyYil(o.tarih), [['Yer', o.yer], ['Birim', o.birim], ['Oluş Şekli', o.olusSekli], ['Kök Neden', o.kokNeden], ['İş Günü Kaybı', o.isGunuKaybi]]) + _pdfOlayKararTakibiBlogu(o) + _pdfOlayFotoBlogu(o)).join('') : `<p class="empty">${_ciktiKacir(_varsayilanliMetin('', 'olaylar'))}</p>`}
       </div>
 
       <div class="section">
-        <h2>4) Bu Toplantıda Alınan Kararlar</h2>
+        <h2>3) Bu Toplantıda Alınan Kararlar</h2>
         ${yeni.length ? yeni.map(_pdfKararKarti).join('') : '<p class="empty">Karar bulunmamaktadır.</p>'}
         ${yeni.some(k => kararOyDokumMetni(k)) ? `<p class="note">${_ciktiKacir(KARAR_OY_DOKUM_DIPNOTU)}</p>` : ''}
       </div>
 
       <div class="section">
-        <h2>5) Önceki Toplantılardan Devreden Kararlar</h2>
+        <h2>4) Önceki Toplantılardan Devreden Kararlar</h2>
         ${devreden.length ? devreden.map(_pdfKararKarti).join('') : `<p class="empty">${_ciktiKacir(_varsayilanliMetin('', 'devredenKararlar'))}</p>`}
         ${devreden.some(k => kararOyDokumMetni(k)) ? `<p class="note">${_ciktiKacir(KARAR_OY_DOKUM_DIPNOTU)}</p>` : ''}
       </div>
 
       <div class="section">
-        <h2>6) Ay İçinde Yapılan Eğitimler</h2>
+        <h2>5) Ay İçinde Yapılan Eğitimler</h2>
         ${_pdfTablo(['Eğitim Adı', 'Tarih', 'Katılımcı Sayısı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), k.katilimciSayisi, k.birim]))}
       </div>
 
       <div class="section">
-        <h2>7) Ay İçi İSG Çalışmaları</h2>
+        <h2>6) Ay İçi İSG Çalışmaları</h2>
         <p>${_ciktiKacir(_varsayilanliMetin(toplanti.faaliyetMetni, 'ayIciCalismalar'))}</p>
         ${ayIciFaaliyetler.length ? _pdfTablo(['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet, f.aciklama])) : ''}
         ${toplanti.metrikler ? `<p><b>Metrikler:</b> ${_ciktiKacir(toplanti.metrikler)}</p>` : ''}
       </div>
 
       <div class="section keep">
-        <h2>8) Çalışan Temsilcilerinin Görüş ve Önerileri</h2>
+        <h2>7) Çalışan Temsilcilerinin Görüş ve Önerileri</h2>
         <p>${_ciktiKacir(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler'))}</p>
       </div>
 
       <div class="section">
-        <h2>9) Ay İçinde Tespit Edilen Uygunsuzluklar</h2>
+        <h2>8) Ay İçinde Tespit Edilen Uygunsuzluklar</h2>
         ${tespitEdilenUygunsuzluklar.length ? tespitEdilenUygunsuzluklar.map(_pdfUygunsuzlukKarti).join('') : '<p class="empty">Bu dönemde tespit edilen uygunsuzluk bulunmamaktadır.</p>'}
       </div>
 
       <div class="section">
-        <h2>10) Ay İçinde Kapatılan Uygunsuzluklar</h2>
+        <h2>9) Ay İçinde Kapatılan Uygunsuzluklar</h2>
         ${kapananUygunsuzluklar.length ? kapananUygunsuzluklar.map(_pdfUygunsuzlukKarti).join('') : '<p class="empty">Bu dönemde kapatılan uygunsuzluk bulunmamaktadır.</p>'}
       </div>
 
       <div class="section">
-        <h2>11) İSG Kurulları İle İlgili Yasal Düzenleme</h2>
+        <h2>10) İSG Kurulları İle İlgili Yasal Düzenleme</h2>
         ${_yonetmelikMaddeleriGoruntuUret()}
       </div>
 
       <div class="section signature-section">
-        <h2>12) İmza Listesi</h2>
+        <h2>11) İmza Listesi</h2>
         ${_pdfTablo(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, '']), 'sign-table', [6, 22, 47, 25])}
       </div>
     </div>
@@ -1072,17 +1057,6 @@ async function pptxOlustur() {
     sl.addText(metin || 'Kayıt bulunmamaktadır.', { x: M, y: 1.5, w: 11.5, h: 4, fontSize: 15, color: TITLE, valign: 'top' });
   };
 
-  // Kullanıcı isteği: "ilgili dönemde planlanan faaliyetlerin gerçekleşme
-  // durumları, tespit edilen hususlar, çalışanların bildirimleri gibi şeyler
-  // ekleyelim" — Word/PDF'deki "1) Genel Değerlendirme" bölümüyle aynı 4
-  // parça, PPTX'te de tek bir metin slaydında.
-  metinSlaydi('GENEL DEĞERLENDİRME', [
-    _varsayilanliMetin(toplanti.genelDegerlendirme, 'genelDegerlendirme'),
-    'İlgili Dönemde Planlanan Faaliyetlerin Gerçekleşme Durumu: ' + _varsayilanliMetin(toplanti.planlananFaaliyetlerGerceklesme, 'planlananFaaliyetlerGerceklesme'),
-    'Tespit Edilen Hususlar: ' + _varsayilanliMetin(toplanti.tespitEdilenHususlar, 'tespitEdilenHususlar'),
-    'Çalışanların Bildirimleri: ' + _varsayilanliMetin(toplanti.calisanBildirimleri, 'calisanBildirimleri')
-  ].join('\n\n'));
-
   tabloSlaydi('GÜNDEM', ['No', 'Konu', 'Not'], gundem.map((g, i) => {
     const olaylarMetni = /^olaylar/i.test(g.baslik.trim()) ? toplantiOlaylarGundemMetni(toplanti.id) : '';
     return [String(i + 1), g.baslik, [g.not, olaylarMetni].filter(Boolean).join(' — ')];
@@ -1145,30 +1119,21 @@ async function pptxOlustur() {
   // (eski üretim uygulamasındaki "karar başına ayrı slayt" kuralıyla aynı).
   const kararIlkFotografi = (k) => k.fotoOncesi || k.fotoSonrasi || (k.fotografEk && k.fotografEk[0] && k.fotografEk[0].url) || '';
 
-  // pptxgenjs metni otomatik sayfalamaz/küçültmez — karar metni ayrılan kutuya
-  // (genişlik x 2.6in, fontSize 15) sığmazsa Sorumlu/Termin/vb. meta
-  // tablosunun üzerine biner. Bu yüzden kabaca satır sayısı tahmin edilir;
-  // sığmıyorsa (kullanıcı isteği) karar metni kendi slaydına, meta bilgiler
-  // ayrı bir "(devam)" slaydına taşınır.
-  const _kararMetniTasarMi = (metin, genislikInc) => {
-    const text = String(metin || '');
-    if (!text) return false;
-    const karakterGenisligi = 0.115; // fontSize 15 için yaklaşık inç/karakter
-    const satirYuksekligi = 0.26; // yaklaşık inç
-    const satirBasinaKarakter = Math.max(15, Math.floor(genislikInc / karakterGenisligi));
-    const sigacakSatir = Math.floor(2.6 / satirYuksekligi);
-    const satirSayisi = text.split('\n').reduce((toplam, satir) => toplam + Math.max(1, Math.ceil(satir.length / satirBasinaKarakter)), 0);
-    return satirSayisi > sigacakSatir;
-  };
-
+  // Kullanıcı isteği: "her karar iki slayt + fotoğraflar olsun, karar metni
+  // sorumlu termin öncelik vb ilk sayfa, ikinci sayfa aksiyon ilerleme
+  // durumu" — hem Yeni Karar hem Devreden Karar için HER ZAMAN 2 slayt
+  // (eskiden metin uzunluğuna göre değişen 1/2 slayt kuralı kaldırıldı):
+  // 1) karar metni + takip bilgileri (sorumlu/termin/öncelik/durum/kaynak
+  // gündem/oy sonucu/kapanış) + varsa fotoğraf, 2) yalnızca aksiyon ilerleme
+  // notu.
   const kararSlaydi = (baslikOnEki, k, sira, toplam) => {
     const foto = kararIlkFotografi(k);
     const metinGenislik = foto ? 7.2 : 11.5;
-    const tasarMi = _kararMetniTasarMi(k.kararMetni, metinGenislik);
 
     const sl = pptx.addSlide();
     sl.background = { color: BG };
     sl.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.kararNo}`, { x: M, y: 0.4, w: 11, fontSize: 22, bold: true, color: TITLE });
+    sl.addText(k.kararMetni || '-', { x: M, y: 1.2, w: metinGenislik, h: 2.4, fontSize: 15, color: TITLE, valign: 'top' });
 
     const metaSatirlari = [
       ['Sorumlu', k.sorumlu || '-'],
@@ -1176,28 +1141,18 @@ async function pptxOlustur() {
       ['Öncelik', k.oncelik || '-'],
       ['Durum', k.durumGoruntu || k.durum || '-'],
       ['Kaynak Gündem', k.kaynakGundem || '-'],
-      ['Aksiyon', k.aksiyonNotu || '-'],
       ['Oy Sonucu', [k.oySonucu, kararOyDokumMetni(k) && `(${kararOyDokumMetni(k)})`].filter(Boolean).join('  ') || '-'],
       ['Kapanış / Kanıt', [k.kapanisTarihi, k.kanit].filter(Boolean).join(' / ') || '-']
     ];
-
-    if (tasarMi) {
-      sl.addText(k.kararMetni || '-', { x: M, y: 1.2, w: 11.5, h: 5.6, fontSize: 15, color: TITLE, valign: 'top' });
-
-      const sl2 = pptx.addSlide();
-      sl2.background = { color: BG };
-      sl2.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.kararNo} (devam)`, { x: M, y: 0.4, w: 11, fontSize: 22, bold: true, color: TITLE });
-      sl2.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 1.3, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 13 });
-      if (foto) {
-        sl2.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.3, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.3, w: 3.4, h: 3.4 });
-      }
-    } else {
-      sl.addText(k.kararMetni || '-', { x: M, y: 1.2, w: metinGenislik, h: 2.6, fontSize: 15, color: TITLE, valign: 'top' });
-      sl.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 4.0, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 12 });
-      if (foto) {
-        sl.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 });
-      }
+    sl.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 3.8, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 12 });
+    if (foto) {
+      sl.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 });
     }
+
+    const sl2 = pptx.addSlide();
+    sl2.background = { color: BG };
+    sl2.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.kararNo} — Aksiyon İlerleme Notu`, { x: M, y: 0.4, w: 11, fontSize: 20, bold: true, color: TITLE });
+    sl2.addText(k.aksiyonNotu || 'Aksiyon ilerleme notu girilmemiştir.', { x: M, y: 1.3, w: 11.5, h: 5.5, fontSize: 16, color: TITLE, valign: 'top' });
   };
 
   // Kararın TÜM fotoğrafları (öncesi/sonrası/en fazla 3 ek — bkz.
@@ -1224,20 +1179,49 @@ async function pptxOlustur() {
   tabloSlaydi('AY İÇİNDE YAPILAN EĞİTİMLER', ['Eğitim Adı', 'Tarih', 'Katılımcı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), String(k.katilimciSayisi), k.birim]), [4, 2.5, 2, 3]);
   tabloSlaydi('AY İÇİ İSG ÇALIŞMALARI', ['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet || '', f.aciklama || '']), [3, 1.5, 7]);
   metinSlaydi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
-  // Öncesi/sonrası fotoğrafı olan her uygunsuzluk için, tablo slaydından
-  // hemen sonra birer tam ekran foto slaydı eklenir (kararlar/olaylardaki
-  // aynı desen — bkz. fotoTamEkranSlaydiEkle).
-  const uygunsuzlukFotoSlaytlariniEkle = (liste) => {
-    liste.forEach(k => {
+  // Kullanıcı isteği: "ay içinde tespit edilen uygunsuzluklar ve kapatılan
+  // uygunsuzluklar da tek tek slaytlarda ayrı slaytlarda olmalı" — önceden
+  // tüm liste TEK bir özet tablo slaydında gösteriliyordu; artık kararlar/
+  // olaylardaki gibi HER uygunsuzluk kendi slaydında (metin + meta bilgiler
+  // + varsa küçük fotoğraf), ardından öncesi/sonrası fotoğrafları için birer
+  // tam ekran slayt (aynı desen — bkz. fotoTamEkranSlaydiEkle).
+  const uygunsuzlukSlaydi = (baslikOnEki, k, sira, toplam) => {
+    const foto = k.fotoOncesi || k.fotoSonrasi || '';
+    const metinGenislik = foto ? 7.2 : 11.5;
+
+    const sl = pptx.addSlide();
+    sl.background = { color: BG };
+    sl.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.konuBasligi || '-'}`, { x: M, y: 0.4, w: 11, fontSize: 20, bold: true, color: TITLE });
+    sl.addText(k.uygunsuzluk || '-', { x: M, y: 1.2, w: metinGenislik, h: 2.4, fontSize: 15, color: TITLE, valign: 'top' });
+
+    const metaSatirlari = [
+      ['Bölüm', k.bolum || '-'],
+      ['Tespit', gunAyYil(k.tespitTarihi) || '-'],
+      ['Kapanış', gunAyYil(k.kapanisTarihi) || '-'],
+      ['Sorumlu', k.sorumlu || '-'],
+      ['Durum', k.durum || '-']
+    ];
+    if (k.alinanOnlem) metaSatirlari.push(['Alınan Önlem', k.alinanOnlem]);
+    sl.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 3.8, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 12 });
+    if (foto) {
+      sl.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 });
+    }
+  };
+
+  const uygunsuzlukSlaytlariniEkle = (baslikOnEki, liste) => {
+    if (!liste.length) {
+      tabloSlaydi(baslikOnEki, ['Bilgi'], [], []);
+      return;
+    }
+    liste.forEach((k, i) => {
+      uygunsuzlukSlaydi(baslikOnEki, k, i + 1, liste.length);
       if (k.fotoOncesi) fotoTamEkranSlaydiEkle(`${k.konuBasligi} — Öncesi`, k.fotoOncesi);
       if (k.fotoSonrasi) fotoTamEkranSlaydiEkle(`${k.konuBasligi} — Sonrası`, k.fotoSonrasi);
     });
   };
 
-  tabloSlaydi('AY İÇİNDE TESPİT EDİLEN UYGUNSUZLUKLAR', ['Konu', 'Bölüm', 'Tespit', 'Durum'], tespitEdilenUygunsuzluklar.map(k => [k.konuBasligi, k.bolum, gunAyYil(k.tespitTarihi), k.durum]), [2.5, 2, 2, 5]);
-  uygunsuzlukFotoSlaytlariniEkle(tespitEdilenUygunsuzluklar);
-  tabloSlaydi('AY İÇİNDE KAPATILAN UYGUNSUZLUKLAR', ['Konu', 'Bölüm', 'Kapanış', 'Alınan Önlem'], kapananUygunsuzluklar.map(k => [k.konuBasligi, k.bolum, gunAyYil(k.kapanisTarihi), k.alinanOnlem]), [2.5, 2, 2, 5]);
-  uygunsuzlukFotoSlaytlariniEkle(kapananUygunsuzluklar);
+  uygunsuzlukSlaytlariniEkle('AY İÇİNDE TESPİT EDİLEN UYGUNSUZLUK', tespitEdilenUygunsuzluklar);
+  uygunsuzlukSlaytlariniEkle('AY İÇİNDE KAPATILAN UYGUNSUZLUK', kapananUygunsuzluklar);
 
   // "İSG Kurulları İle İlgili Yasal Düzenleme" — kullanıcı isteği: "yasal
   // düzenleme referansı raporlarda olmalı"; her madde (bkz. model.js

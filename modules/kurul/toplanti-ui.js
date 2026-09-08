@@ -101,11 +101,9 @@ function toplantiDetaySayfasiniBaslat() {
 
   bilgiKartiniCiz(toplanti);
   _ktBelgeAlaniniKur(toplanti);
-  _genelDegerlendirmeFormunuDoldur(toplanti);
   gundemListesiniCiz(toplanti);
   kararlariCiz();
   document.getElementById('yonetmelikMaddeleriKutusu').innerHTML = _yonetmelikMaddeleriGoruntuUret();
-  document.getElementById('genelDegerlendirmeForm').addEventListener('submit', _genelDegerlendirmeFormGonderildi);
 
   document.getElementById('yeniKararBtn').addEventListener('click', () => kararModalAc());
   document.getElementById('kararModalKapatBtn').addEventListener('click', kararModalKapat);
@@ -325,35 +323,6 @@ function _ktBelgeAlaniniKur() {
   _ktBelgeOnizlemeCiz();
 }
 
-// Genel Değerlendirme, önceden yalnızca ayrı "Toplantıyı Düzenle" formundan
-// (kurul/index.html) girilebiliyordu -- kullanıcı toplantı sayfasında
-// bulamadı ("genel değerlendirme olmamış"). Artık toplantı sayfasında
-// doğrudan görünür/düzenlenebilir, diğer tüm bölümlerle aynı yerde.
-function _genelDegerlendirmeFormunuDoldur(toplanti) {
-  document.getElementById('gdGenelDegerlendirme').value = toplanti.genelDegerlendirme || '';
-  document.getElementById('gdPlanlananFaaliyetlerGerceklesme').value = toplanti.planlananFaaliyetlerGerceklesme || '';
-  document.getElementById('gdTespitEdilenHususlar').value = toplanti.tespitEdilenHususlar || '';
-  document.getElementById('gdCalisanBildirimleri').value = toplanti.calisanBildirimleri || '';
-}
-
-function _genelDegerlendirmeFormGonderildi(e) {
-  e.preventDefault();
-  const mevcut = toplantiIdIleGetirRepo(_toplantiId);
-  if (!mevcut) return;
-
-  const sonuc = toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, {
-    genelDegerlendirme: document.getElementById('gdGenelDegerlendirme').value,
-    planlananFaaliyetlerGerceklesme: document.getElementById('gdPlanlananFaaliyetlerGerceklesme').value,
-    tespitEdilenHususlar: document.getElementById('gdTespitEdilenHususlar').value,
-    calisanBildirimleri: document.getElementById('gdCalisanBildirimleri').value
-  }));
-  if (!sonuc.basarili) return;
-
-  const mesaj = document.getElementById('gdKaydedildiMesaji');
-  mesaj.style.display = '';
-  setTimeout(() => { mesaj.style.display = 'none'; }, 2000);
-}
-
 function gundemListesiniCiz(toplanti) {
   const kutu = document.getElementById('gundemGoruntuKutusu');
   // "Olaylar" gündem maddesinin altında, o toplantının (otomatik + elle
@@ -396,6 +365,17 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
   kararlar.forEach(k => {
     const satir = document.createElement('tr');
     const tamamlandiRozeti = k.durum === 'Kapalı' ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Tamamlandı)</span>' : '';
+    // Kullanıcı isteği: "İSG kuruluna diğer modüllerden gelen bilgileri
+    // silebileyim veya yeniden düzenleyebileyim" — Olay/Kaza modülünden bir
+    // olayın (örn. ramak kala) termin/sorumlu girilerek "karar-benzeri" hale
+    // getirilmesiyle oluşan satırlar (bkz. service.js
+    // _olayKaynakliDevredenKararlariGetir, id = 'olay-' + olayId) gerçek bir
+    // kurul_kararlari kaydı DEĞİLDİR; kararSil/kararModalAc bu id ile hiçbir
+    // kayıt bulamadığından Düzenle/Sil hiçbir şey yapmıyordu. Bu satırlarda
+    // Düzenle/Sil, altındaki gerçek OLAY kaydına yönlendirilir; Taşı ise
+    // (karar başka toplantıya taşınamayacağından, olayın kendi toplantısına
+    // bağlı olduğundan) bu satırlarda gösterilmez.
+    const olayId = k.olayKaynakli ? k.id.replace(/^olay-/, '') : null;
     satir.innerHTML = `
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
@@ -406,9 +386,9 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
       <td>${_ktKacir(k.durumGoruntu)}${tamamlandiRozeti}</td>
       <td>${_kararFotoHucresiUret(k)}</td>
       <td class="sutun-sabit">
-        <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
-        <button class="tablo-buton" data-tasi="${k.id}">Taşı</button>
-        <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
+        ${olayId
+          ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
+          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button><button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
       </td>
     `;
     govde.appendChild(satir);
@@ -419,10 +399,24 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
     btn.addEventListener('click', () => kararModalAc(kararIdIleGetirRepo(btn.getAttribute('data-duzenle'))));
   });
 
+  govde.querySelectorAll('[data-duzenle-olay]').forEach(btn => {
+    btn.addEventListener('click', () => olayModalAc(olayTumunuGetir().find(o => o.id === btn.getAttribute('data-duzenle-olay'))));
+  });
+
   govde.querySelectorAll('[data-sil]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (await onayModali('Bu kararı silmek istediğinize emin misiniz?', 'Sil')) {
         kararSil(btn.getAttribute('data-sil'));
+        kararlariCiz();
+      }
+    });
+  });
+
+  govde.querySelectorAll('[data-sil-olay]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (await onayModali('Bu, ilgili olayı (Olaylar listesindeki asıl kaydı) tamamen silecektir. Devam edilsin mi?', 'Sil')) {
+        kurulOlayiSil(btn.getAttribute('data-sil-olay'));
+        olaylariCiz();
         kararlariCiz();
       }
     });

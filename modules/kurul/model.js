@@ -66,19 +66,10 @@ function toplantiOlustur(veriler) {
     katilimciSayisi: veriler.katilimciSayisi != null && veriler.katilimciSayisi !== '' ? String(veriler.katilimciSayisi) : '',
     gundem: Array.isArray(veriler.gundem) ? veriler.gundem : [],
     durum: veriler.durum || 'Planlandı',
-    // Eski üretim uygulamasındaki m_genel/m_faaliyetMetni/m_metrikler — risk360
+    // Eski üretim uygulamasındaki m_faaliyetMetni/m_metrikler — risk360
     // eskiden bunları tek bir "notlar" alanında birleştiriyordu (bkz. toplanti-ui.js
     // eski JSON içe aktarım), artık ayrı alanlar olarak tutulur; "notlar" serbest
     // ek not alanı olarak kalmaya devam eder.
-    genelDegerlendirme: (veriler.genelDegerlendirme || '').trim(),
-    // Genel Değerlendirme'nin altında ayrı ayrı raporlanan üç alt başlık
-    // (kullanıcı isteği: "ilgili dönemde planlanan faaliyetlerin gerçekleşme
-    // durumları, tespit edilen hususlar, çalışanların bildirimleri gibi
-    // şeyler ekleyelim") — genelDegerlendirme genel özet cümlesi olarak kalır,
-    // bunlar raporda ayrı paragraflar olarak altına eklenir (bkz. cikti.js).
-    planlananFaaliyetlerGerceklesme: (veriler.planlananFaaliyetlerGerceklesme || '').trim(),
-    tespitEdilenHususlar: (veriler.tespitEdilenHususlar || '').trim(),
-    calisanBildirimleri: (veriler.calisanBildirimleri || '').trim(),
     faaliyetMetni: (veriler.faaliyetMetni || '').trim(),
     metrikler: (veriler.metrikler || '').trim(),
     // Gündem maddesi "Çalışan temsilcilerinin görüş ve önerileri" (2026-08-04
@@ -258,10 +249,6 @@ function denetimKaydiOlustur(veriler) {
 // böylece bir toplantı raporu hiçbir alan doldurulmasa bile boş/amatör görünmez.
 // Yalnızca ilgili alan tamamen boşsa kullanılır (bkz. cikti.js _varsayilanliMetin).
 const KURUL_RAPOR_VARSAYILANLARI = {
-  genelDegerlendirme: 'İş sağlığı ve güvenliği uygulamaları kapsamında ilgili dönemde planlanan faaliyetler gerçekleştirilmiş, tespit edilen hususlar kurul gündemine alınarak değerlendirilmiştir.',
-  planlananFaaliyetlerGerceklesme: 'İlgili dönemde planlanan İSG faaliyetleri öngörüldüğü şekilde gerçekleştirilmiştir.',
-  tespitEdilenHususlar: 'İlgili dönemde ayrıca tespit edilen bir husus bulunmamaktadır.',
-  calisanBildirimleri: 'İlgili dönemde çalışanlardan iş sağlığı ve güvenliğine ilişkin herhangi bir bildirim alınmamıştır.',
   ayIciCalismalar: 'İlgili dönemde saha denetimleri, eğitim faaliyetleri ve risk değerlendirme çalışmaları kapsamında planlanan İSG faaliyetleri sürdürülmüştür.',
   olaylar: 'İlgili dönemde kurula bildirilen iş kazası veya ramak kala olayı bulunmamaktadır.',
   devredenKararlar: 'Önceki toplantılardan devreden açık karar bulunmamaktadır.',

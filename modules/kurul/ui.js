@@ -560,10 +560,6 @@ function modalAc(toplanti) {
   document.getElementById('bolum').value = toplanti ? (toplanti.bolum || '') : '';
   document.getElementById('katilimcilar').value = toplanti ? toplanti.katilimcilar.join(', ') : '';
   document.getElementById('durum').innerHTML = TOPLANTI_DURUMLARI.map(d => `<option ${toplanti && toplanti.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('genelDegerlendirme').value = toplanti ? (toplanti.genelDegerlendirme || '') : '';
-  document.getElementById('planlananFaaliyetlerGerceklesme').value = toplanti ? (toplanti.planlananFaaliyetlerGerceklesme || '') : '';
-  document.getElementById('tespitEdilenHususlar').value = toplanti ? (toplanti.tespitEdilenHususlar || '') : '';
-  document.getElementById('calisanBildirimleri').value = toplanti ? (toplanti.calisanBildirimleri || '') : '';
   document.getElementById('faaliyetMetni').value = toplanti ? (toplanti.faaliyetMetni || '') : '';
   document.getElementById('metrikler').value = toplanti ? (toplanti.metrikler || '') : '';
   document.getElementById('calisanTemsilcisiGorusleri').value = toplanti ? (toplanti.calisanTemsilcisiGorusleri || '') : '';
@@ -600,10 +596,6 @@ function formGonderildi(e) {
     katilimcilar: document.getElementById('katilimcilar').value,
     gundem: _gundemTaslak.filter(g => g.baslik.trim()),
     durum: document.getElementById('durum').value,
-    genelDegerlendirme: document.getElementById('genelDegerlendirme').value,
-    planlananFaaliyetlerGerceklesme: document.getElementById('planlananFaaliyetlerGerceklesme').value,
-    tespitEdilenHususlar: document.getElementById('tespitEdilenHususlar').value,
-    calisanBildirimleri: document.getElementById('calisanBildirimleri').value,
     faaliyetMetni: document.getElementById('faaliyetMetni').value,
     metrikler: document.getElementById('metrikler').value,
     calisanTemsilcisiGorusleri: document.getElementById('calisanTemsilcisiGorusleri').value,
