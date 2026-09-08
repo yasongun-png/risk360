@@ -160,8 +160,13 @@ function uygunsuzlukKaydiOlustur(veriler) {
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
 
     sorumlu: (veriler.sorumlu || '').trim(),
-    sorumluEposta: (veriler.sorumluEposta || '').trim(),
     atayan: (veriler.atayan || '').trim(),
+
+    // İlgililer: SADECE "Mail Gönder" için kullanılır -- tabloda, PDF/Excel
+    // çıktılarında veya başka hiçbir yerde gösterilmez (kullanıcı isteği).
+    // Virgülle ayrılmış birden fazla adres girilebilir.
+    ilgiliKime: (veriler.ilgiliKime || '').trim(),
+    ilgiliBilgi: (veriler.ilgiliBilgi || '').trim(),
     bildirimTarihi: veriler.bildirimTarihi || bugunIso(),
     termin: veriler.termin || '',
     kapanisTarihi: veriler.kapanisTarihi || '',

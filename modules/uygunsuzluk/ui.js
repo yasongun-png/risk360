@@ -519,8 +519,8 @@ function _islemButonlariUret(k) {
     `<button class="tablo-buton" data-konu-tasi="${k.id}" style="${k.konuId ? '' : 'color:#d97706; font-weight:700;'}" title="${k.konuId ? 'Başka konuya taşı' : 'Bu kayıt hiçbir konuya atanmamış — taşımak için tıklayın'}">📁 Konu Taşı</button>`
   ];
 
-  if (k.sorumluEposta) {
-    butonlar.push(`<button class="tablo-buton" data-mail="${k.id}" title="Sorumluya (${_usKacir(k.sorumluEposta)}) bu kaydı e-posta ile gönder">✉️ Mail Gönder</button>`);
+  if (k.ilgiliKime) {
+    butonlar.push(`<button class="tablo-buton" data-mail="${k.id}" title="İlgililere (${_usKacir(k.ilgiliKime)}) bu kaydı e-posta ile gönder">✉️ Mail Gönder</button>`);
   }
 
   if (k.durum === 'Onay Bekliyor') {
@@ -537,7 +537,7 @@ function _islemButonlariUret(k) {
 // atlanmaz -- yoksa "tıkladım ama bir şey olmadı" karışıklığı yaratır.
 async function _uygunsuzlukMailGonderTiklandi(btn) {
   const k = uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-mail'));
-  if (!k || !k.sorumluEposta) return;
+  if (!k || !k.ilgiliKime) return;
 
   if (!epostaAktifMi()) {
     alert('E-posta bildirimleri henüz yapılandırılmamış. Ayarlar sayfasından EmailJS bilgilerini girip etkinleştirin.');
@@ -549,7 +549,8 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
   btn.textContent = 'Gönderiliyor...';
   try {
     await epostaGonder({
-      to_email: k.sorumluEposta,
+      to_email: k.ilgiliKime,
+      bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
       mesaj: [
         `Aksiyon No: ${k.aksiyonNo}`,
@@ -562,7 +563,7 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
         k.aciklama || ''
       ].join('\n')
     });
-    alert(`Mail gönderildi: ${k.sorumluEposta}`);
+    alert(`Mail gönderildi: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
   } catch (hata) {
     console.error(hata);
     alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));
@@ -918,7 +919,8 @@ function kayitModalAc(kayit) {
 
   document.getElementById('sorumlu').value = kayit ? kayit.sorumlu : '';
   bolumButonlariCiz('sorumluBolumButonlari', 'sorumlu', 'tekli');
-  document.getElementById('sorumluEposta').value = kayit ? (kayit.sorumluEposta || '') : '';
+  document.getElementById('ilgiliKime').value = kayit ? (kayit.ilgiliKime || '') : '';
+  document.getElementById('ilgiliBilgi').value = kayit ? (kayit.ilgiliBilgi || '') : '';
   document.getElementById('atayan').value = kayit ? kayit.atayan : '';
   document.getElementById('bildirimTarihi').value = kayit ? kayit.bildirimTarihi : bugunIso();
   document.getElementById('termin').value = kayit ? kayit.termin : '';
@@ -1007,8 +1009,9 @@ function formGonderildi(e) {
     kokNeden: document.getElementById('kokNeden').value,
     duzelticiFaaliyet: document.getElementById('duzelticiFaaliyet').value,
     sorumlu: document.getElementById('sorumlu').value,
-    sorumluEposta: document.getElementById('sorumluEposta').value,
     atayan: document.getElementById('atayan').value,
+    ilgiliKime: document.getElementById('ilgiliKime').value,
+    ilgiliBilgi: document.getElementById('ilgiliBilgi').value,
     bildirimTarihi: document.getElementById('bildirimTarihi').value,
     termin: document.getElementById('termin').value,
     onayGerekliMi: document.getElementById('onayGerekliMi').checked,

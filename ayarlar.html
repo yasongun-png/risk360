@@ -86,8 +86,10 @@
       atabilmek için <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a>
       hesabınızdaki Service ID, Template ID ve Public Key bilgilerini girin.
       Bu bilgiler firma verinizle birlikte senkronize edilir (bir kez
-      girmeniz yeterli). Şablonunuzda <code>to_email</code>, <code>konu</code>
-      ve <code>mesaj</code> değişkenlerini kullanın.
+      girmeniz yeterli). Şablonunuzda <code>to_email</code> (Kime), isteğe
+      bağlı <code>bilgi_email</code> (Bilgi/Cc — şablonun Settings sekmesinde
+      Cc alanına <code>{'{{bilgi_email}}'}</code> yazarak bağlayın),
+      <code>konu</code> ve <code>mesaj</code> değişkenlerini kullanın.
     </p>
 
     <div class="hata-mesaji" id="epHataMesaji"></div>

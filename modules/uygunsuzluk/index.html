@@ -233,11 +233,21 @@
             <input type="text" id="atayan">
           </div>
         </div>
-        <div class="form-satir-ikili">
-          <div>
-            <label for="sorumluEposta">Sorumlu E-posta <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — mail gönderebilmek için)</span></label>
-            <input type="email" id="sorumluEposta" placeholder="ornek@firma.com">
-            <div class="alan-hatasi" id="sorumluEpostaHata" style="color:var(--hata); font-size:12px;"></div>
+        <div style="margin-top:4px; padding:10px 12px; border:1px dashed var(--kenarlik); border-radius:8px;">
+          <div style="font-size:12px; font-weight:600; margin-bottom:6px;">
+            İlgililer <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — sadece "Mail Gönder" için kullanılır, başka hiçbir yerde gösterilmez)</span>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ilgiliKime">Kime</label>
+              <input type="text" id="ilgiliKime" placeholder="ornek@firma.com">
+              <div class="alan-hatasi" id="ilgiliKimeHata" style="color:var(--hata); font-size:12px;"></div>
+            </div>
+            <div>
+              <label for="ilgiliBilgi">Bilgi</label>
+              <input type="text" id="ilgiliBilgi" placeholder="ornek2@firma.com">
+              <div class="alan-hatasi" id="ilgiliBilgiHata" style="color:var(--hata); font-size:12px;"></div>
+            </div>
           </div>
         </div>
         <div class="form-satir-ikili">
