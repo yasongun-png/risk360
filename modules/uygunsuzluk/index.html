@@ -184,7 +184,7 @@
   <div class="modal-katman" id="modalKatman">
     <div class="modal-kutu" style="max-width:640px;">
       <h3 id="modalBaslik">Yeni Uygunsuzluk Kaydı</h3>
-      <form id="kayitForm">
+      <form id="kayitForm" novalidate>
 
         <label for="baslik">Uygunsuzluk Tanımı</label>
         <textarea id="baslik"></textarea>
@@ -237,6 +237,7 @@
           <div>
             <label for="sorumluEposta">Sorumlu E-posta <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — mail gönderebilmek için)</span></label>
             <input type="email" id="sorumluEposta" placeholder="ornek@firma.com">
+            <div class="alan-hatasi" id="sorumluEpostaHata" style="color:var(--hata); font-size:12px;"></div>
           </div>
         </div>
         <div class="form-satir-ikili">
