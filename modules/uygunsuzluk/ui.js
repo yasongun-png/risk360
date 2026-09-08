@@ -183,6 +183,11 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('mailMetniKapatBtn').addEventListener('click', mailMetniModalKapat);
   document.getElementById('mailMetniIptalBtn').addEventListener('click', mailMetniModalKapat);
   document.getElementById('mailMetniKaydetBtn').addEventListener('click', mailMetniKaydet);
+  document.getElementById('ilgiliEpostaListesiAcBtn').addEventListener('click', ilgiliEpostaListesiModalAc);
+  document.getElementById('ilgiliEpostaListesiKapatBtn').addEventListener('click', ilgiliEpostaListesiModalKapat);
+  document.getElementById('ilgiliEpostaListesiIptalBtn').addEventListener('click', ilgiliEpostaListesiModalKapat);
+  document.getElementById('ilgiliEpostaListesiKaydetBtn').addEventListener('click', ilgiliEpostaListesiKaydet);
+  document.getElementById('sorumlu').addEventListener('input', _ucKimeAlaniniSorumludanDoldur);
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('uygunsuzluk', 'Uygunsuzluk'));
   document.getElementById('imzaKatmaniKapatBtn').addEventListener('click', imzaModalKapat);
   document.getElementById('imzaKatmaniIptalBtn').addEventListener('click', imzaModalKapat);
@@ -535,6 +540,101 @@ function _uygunsuzlukMailMetniDoldur(k) {
     aciklama: k.aciklama || ''
   };
   return mailMetniGetir().replace(/\{(\w+)\}/g, (tam, ad) => Object.prototype.hasOwnProperty.call(yerTutucular, ad) ? yerTutucular[ad] : tam);
+}
+
+// ---- İlgili E-posta Listesi (Sorumlu/pozisyon adı -> e-posta) ----
+// Bölüm butonlarından (ya da elle) Sorumlu'ya girilen adla eşleşirse Kime
+// kutusu otomatik doldurulur; Bilgi kutusunda bu listeden çoklu seçim
+// yapılır. Sadece bu iki alan için kullanılır, başka hiçbir yerde
+// gösterilmez -- firma.bolumler'den (core/tenant.js) BAĞIMSIZ, kullanıcı
+// istediği pozisyon/kişi adını kendi ekler.
+
+function _ilgiliEpostaListesiAnahtari() { return tenantAnahtar('uygunsuzluk_ilgili_epostalari'); }
+
+function ilgiliEpostaListesiGetir() {
+  return oku(_ilgiliEpostaListesiAnahtari(), []);
+}
+
+function _ilgiliEpostaListesiniMetneCevir(liste) {
+  return liste.map(x => `${x.ad}; ${x.eposta}`).join('\n');
+}
+
+function _ilgiliEpostaMetniniListeyeCevir(metin) {
+  return metin.split('\n').map(satir => {
+    const parcalar = satir.split(';');
+    const ad = (parcalar[0] || '').trim();
+    const eposta = (parcalar[1] || '').trim();
+    return ad && eposta ? { ad, eposta } : null;
+  }).filter(Boolean);
+}
+
+function ilgiliEpostaListesiModalAc() {
+  document.getElementById('ilgiliEpostaListesiGirdi').value = _ilgiliEpostaListesiniMetneCevir(ilgiliEpostaListesiGetir());
+  document.getElementById('ilgiliEpostaListesiKatmani').classList.add('acik');
+}
+
+function ilgiliEpostaListesiModalKapat() {
+  document.getElementById('ilgiliEpostaListesiKatmani').classList.remove('acik');
+}
+
+function ilgiliEpostaListesiKaydet() {
+  const liste = _ilgiliEpostaMetniniListeyeCevir(document.getElementById('ilgiliEpostaListesiGirdi').value);
+  yaz(_ilgiliEpostaListesiAnahtari(), liste);
+  ilgiliEpostaListesiModalKapat();
+  // Kayıt formu açıksa Bilgi seçim kutusu güncel listeyi göstersin.
+  if (document.getElementById('modalKatman').classList.contains('acik')) {
+    _ucBilgiSecimCiz(_ucBilgiDegeriniTopla());
+  }
+}
+
+// Sorumlu alanı değiştiğinde (elle yazılınca ya da bölüm butonuna
+// tıklanınca -- ikisi de 'input' event'i tetikler) Kime kutusunu listeden
+// otomatik doldurur. Kullanıcı Kime'ye zaten elle bir şey yazmışsa
+// EZİLMEZ (silip tekrar bir bölüme tıklayınca yeniden doldurulabilir).
+function _ucKimeAlaniniSorumludanDoldur() {
+  const kimeEl = document.getElementById('ilgiliKime');
+  if (kimeEl.value.trim()) return;
+  const harita = ilgiliEpostaListesiGetir();
+  if (!harita.length) return;
+  const adlar = (document.getElementById('sorumlu').value || '').split(',').map(a => a.trim()).filter(Boolean);
+  const epostalar = [];
+  adlar.forEach(ad => {
+    const eslesme = harita.find(h => h.ad.toLocaleLowerCase('tr-TR') === ad.toLocaleLowerCase('tr-TR'));
+    if (eslesme && !epostalar.includes(eslesme.eposta)) epostalar.push(eslesme.eposta);
+  });
+  if (epostalar.length) kimeEl.value = epostalar.join(', ');
+}
+
+// Bilgi kutusunu listeden gelen onay kutularıyla çizer; kayıtta zaten var
+// olan ama listede bulunmayan adresler "Ek adres(ler)" kutusuna düşer
+// (veri kaybolmasın diye).
+function _ucBilgiSecimCiz(mevcutBilgiStr) {
+  const kutu = document.getElementById('ilgiliBilgiSecim');
+  const harita = ilgiliEpostaListesiGetir();
+  const secili = new Set((mevcutBilgiStr || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+
+  if (!harita.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Önce yukarıdaki "📇 E-posta Listesini Yönet" ile pozisyon/e-posta ekleyin.</div>';
+    document.getElementById('ilgiliBilgiEk').value = mevcutBilgiStr || '';
+    return;
+  }
+
+  kutu.innerHTML = harita.map(h => `
+    <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:12px; padding:2px 0;">
+      <input type="checkbox" data-bilgi-secim value="${_usKacir(h.eposta)}" ${secili.has(h.eposta.toLowerCase()) ? 'checked' : ''} style="width:auto; margin:0;">
+      ${_usKacir(h.ad)} <span style="color:var(--metin-soluk);">(${_usKacir(h.eposta)})</span>
+    </label>
+  `).join('');
+
+  const haritaEpostalari = new Set(harita.map(h => h.eposta.toLowerCase()));
+  const ekAdresler = [...secili].filter(e => !haritaEpostalari.has(e));
+  document.getElementById('ilgiliBilgiEk').value = ekAdresler.join(', ');
+}
+
+function _ucBilgiDegeriniTopla() {
+  const secilenler = Array.from(document.querySelectorAll('#ilgiliBilgiSecim [data-bilgi-secim]:checked')).map(cb => cb.value);
+  const ek = (document.getElementById('ilgiliBilgiEk').value || '').split(',').map(s => s.trim()).filter(Boolean);
+  return [...new Set([...secilenler, ...ek])].join(', ');
 }
 
 function gorunumDegistir(gorunum) {
@@ -976,7 +1076,7 @@ function kayitModalAc(kayit) {
   document.getElementById('sorumlu').value = kayit ? kayit.sorumlu : '';
   bolumButonlariCiz('sorumluBolumButonlari', 'sorumlu', 'tekli');
   document.getElementById('ilgiliKime').value = kayit ? (kayit.ilgiliKime || '') : '';
-  document.getElementById('ilgiliBilgi').value = kayit ? (kayit.ilgiliBilgi || '') : '';
+  _ucBilgiSecimCiz(kayit ? (kayit.ilgiliBilgi || '') : '');
   document.getElementById('atayan').value = kayit ? kayit.atayan : '';
   document.getElementById('bildirimTarihi').value = kayit ? kayit.bildirimTarihi : bugunIso();
   document.getElementById('termin').value = kayit ? kayit.termin : '';
@@ -1067,7 +1167,7 @@ function formGonderildi(e) {
     sorumlu: document.getElementById('sorumlu').value,
     atayan: document.getElementById('atayan').value,
     ilgiliKime: document.getElementById('ilgiliKime').value,
-    ilgiliBilgi: document.getElementById('ilgiliBilgi').value,
+    ilgiliBilgi: _ucBilgiDegeriniTopla(),
     bildirimTarihi: document.getElementById('bildirimTarihi').value,
     termin: document.getElementById('termin').value,
     onayGerekliMi: document.getElementById('onayGerekliMi').checked,
