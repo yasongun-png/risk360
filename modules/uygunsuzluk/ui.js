@@ -735,12 +735,17 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
     }
 
     btn.textContent = 'Gönderiliyor...';
-    const mesajMetni = _uygunsuzlukMailMetniDoldur(k) + (pdfUrl ? `\n\nPDF Bildirim Formu: ${pdfUrl}` : '');
+    // Kullanıcı isteği: "linkin kendisi görünmesin, PDF'in üzerine
+    // tıklandığında form açılsın, 'Uygunsuzluk Formu İndir' yazsın" -- ham
+    // URL artık mesaj metnine eklenmiyor; pdf_url SADECE ayrı bir değişken
+    // olarak gönderiliyor, EmailJS şablonunda gerçek bir link/buton olarak
+    // (Edit Content > köprü ekle > href={{pdf_url}}, metin: "Uygunsuzluk
+    // Formu İndir") kullanılması gerekiyor -- bkz. Ayarlar sayfasındaki not.
     await epostaGonder({
       to_email: k.ilgiliKime,
       bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
-      mesaj: mesajMetni,
+      mesaj: _uygunsuzlukMailMetniDoldur(k),
       pdf_url: pdfUrl
     });
     alert(`Mail gönderildi${pdfUrl ? ' (PDF linki eklendi)' : ' (PDF linksiz)'}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);

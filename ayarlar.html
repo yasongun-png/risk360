@@ -87,15 +87,18 @@
       hesabınızdaki Service ID, Template ID ve Public Key bilgilerini girin.
       Bu bilgiler firma verinizle birlikte senkronize edilir (bir kez
       girmeniz yeterli). Şablonunuzda <code>to_email</code> (Kime), isteğe
-      bağlı <code>bilgi_email</code> (Bilgi/Cc — şablonun Settings sekmesinde
-      Cc alanına <code>{'{{bilgi_email}}'}</code> yazarak bağlayın),
+      bağlı <code>bilgi_email</code> (Bilgi/Cc — şablonun Content sekmesinde
+      sağdaki Cc alanına <code>{'{{bilgi_email}}'}</code> yazarak bağlayın),
       <code>konu</code> ve <code>mesaj</code> değişkenlerini kullanın.
       Uygunsuzluk kaydının PDF'i mail EKİ olarak değil (fotoğraflı PDF'ler
       birkaç MB'a çıkabildiğinden EmailJS'in ek boyutu sınırını aşıyordu),
-      Firebase Storage'a yüklenip bir <b>indirme linki</b> olarak gönderilir
-      — bu link otomatik olarak <code>mesaj</code> metninin sonuna eklenir,
-      ayrıca isterseniz şablonunuzda ayrı bir buton/link için
-      <code>{'{{pdf_url}}'}</code> değişkenini de kullanabilirsiniz.
+      Firebase Storage'a yüklenip bir indirme linki olarak
+      <code>{'{{pdf_url}}'}</code> değişkeniyle gönderilir. Ham linkin mail
+      içinde çıplak metin olarak görünmemesi için, şablonun <b>Edit
+      Content</b> düzenleyicisinde bir metne (ör. "Uygunsuzluk Formu İndir")
+      köprü/link ekleyip hedef adres olarak <code>{'{{pdf_url}}'}</code>
+      yazmanız gerekir — böylece mailde sadece tıklanabilir bir buton/yazı
+      görünür, uzun link metni görünmez.
     </p>
 
     <div class="hata-mesaji" id="epHataMesaji"></div>
