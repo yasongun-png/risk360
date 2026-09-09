@@ -709,6 +709,12 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
     return;
   }
 
+  // Kullanıcı isteği: "uygunsuzluk mail atma bana önce emin misin diye
+  // sormalı" -- yanlışlıkla tıklanan bir maili geri almanın yolu yok,
+  // bu yüzden gönderimden önce onay istenir.
+  const onayMesaji = `${k.ilgiliKime} adresine${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''} "${k.aksiyonNo}" için bildirim maili göndermek istediğinize emin misiniz?`;
+  if (!(await onayModali(onayMesaji, 'Gönder'))) return;
+
   const eskiMetin = btn.textContent;
   btn.disabled = true;
   try {
