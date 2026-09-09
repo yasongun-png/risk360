@@ -7,6 +7,7 @@ function _ktKacir(v) {
 let _toplantiId = null;
 let _duzenlenenKararId = null;
 let _duzenlenenOlayId = null;
+let _duzenlenenAyIciFaaliyetId = null;
 let _kararFotoOncesi = '';
 let _kararFotoSonrasi = '';
 let _kararFotoEk = [];
@@ -904,9 +905,17 @@ function aylikEgitimleriCiz(toplanti) {
   kayitlar.forEach(k => {
     const tarihGoruntu = k.egitimTarihi2 ? `${gunAyYil(k.egitimTarihi)} - ${gunAyYil(k.egitimTarihi2)}` : gunAyYil(k.egitimTarihi);
     const satir = document.createElement('tr');
-    satir.innerHTML = `<td>${k.siraNo}</td><td>${_ktKacir(k.egitimAdi)}</td><td>${tarihGoruntu || '-'}</td><td>${k.katilimciSayisi}</td><td>${_ktKacir(k.birim) || '-'}</td>`;
+    satir.innerHTML = `<td>${k.siraNo}</td><td>${_ktKacir(k.egitimAdi)}</td><td>${tarihGoruntu || '-'}</td><td>${k.katilimciSayisi}</td><td>${_ktKacir(k.birim) || '-'}</td>
+      <td><button class="tablo-buton sil" data-egitim-sil="${_ktKacir(k.id)}">Sil</button></td>`;
     govde.appendChild(satir);
   });
+
+  govde.querySelectorAll('[data-egitim-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu eğitim satırını gündemden kaldırmak istediğinize emin misiniz? Bu toplantı için tekrar görünmeyecektir.', 'Kaldır')) {
+      egitimOtomatikGizle(_toplantiId, btn.getAttribute('data-egitim-sil'));
+      aylikEgitimleriCiz(toplanti);
+    }
+  }));
 }
 
 // ==================== AY İÇİ İSG ÇALIŞMALARI ====================
@@ -926,9 +935,12 @@ function ayIciFaaliyetleriCiz() {
 
   faaliyetler.forEach(f => {
     const satir = document.createElement('tr');
+    const islemler = f.otomatik
+      ? `<button class="tablo-buton sil" data-oto-sil="${_ktKacir(f.id)}">Sil</button>`
+      : `<button class="tablo-buton" data-duzenle="${f.id}">Düzenle</button> <button class="tablo-buton sil" data-sil="${f.id}">Sil</button>`;
     satir.innerHTML = `
       <td>${_ktKacir(f.faaliyet)}${f.otomatik ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Acil Durum modülünden)</span>' : ''}</td><td>${f.adet || '-'}</td><td>${_ktKacir(f.aciklama) || '-'}</td>
-      <td>${f.otomatik ? '-' : `<button class="tablo-buton sil" data-sil="${f.id}">Sil</button>`}</td>
+      <td>${islemler}</td>
     `;
     govde.appendChild(satir);
   });
@@ -936,16 +948,35 @@ function ayIciFaaliyetleriCiz() {
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu faaliyeti silmek istediğinize emin misiniz?', 'Sil')) { ayIciFaaliyetSil(btn.getAttribute('data-sil')); ayIciFaaliyetleriCiz(); }
   }));
+  govde.querySelectorAll('[data-oto-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu faaliyeti gündemden kaldırmak istediğinize emin misiniz? Bu toplantı için tekrar görünmeyecektir.', 'Kaldır')) {
+      ayIciFaaliyetOtomatikGizle(_toplantiId, btn.getAttribute('data-oto-sil'));
+      ayIciFaaliyetleriCiz();
+    }
+  }));
+  govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => {
+    const f = faaliyetler.find(x => x.id === btn.getAttribute('data-duzenle'));
+    if (f) ayIciFaaliyetModalAc(f);
+  }));
 }
 
-function ayIciFaaliyetModalAc() {
+function ayIciFaaliyetModalAc(duzenlenecek) {
   document.getElementById('ayIciFaaliyetForm').reset();
   document.querySelectorAll('#ayIciFaaliyetForm .alan-hatasi').forEach(el => el.textContent = '');
+  _duzenlenenAyIciFaaliyetId = duzenlenecek ? duzenlenecek.id : null;
+  const baslik = document.getElementById('ayIciFaaliyetModalBaslik');
+  if (baslik) baslik.textContent = duzenlenecek ? 'Ay İçi Faaliyeti Düzenle' : 'Yeni Ay İçi Faaliyet';
+  if (duzenlenecek) {
+    document.getElementById('ayIciFaaliyetAdi').value = duzenlenecek.faaliyet || '';
+    document.getElementById('ayIciFaaliyetAdet').value = duzenlenecek.adet || '';
+    document.getElementById('ayIciFaaliyetAciklama').value = duzenlenecek.aciklama || '';
+  }
   document.getElementById('ayIciFaaliyetModalKatman').classList.add('acik');
 }
 
 function ayIciFaaliyetModalKapat() {
   document.getElementById('ayIciFaaliyetModalKatman').classList.remove('acik');
+  _duzenlenenAyIciFaaliyetId = null;
 }
 
 function ayIciFaaliyetFormGonderildi(e) {
@@ -957,7 +988,9 @@ function ayIciFaaliyetFormGonderildi(e) {
     adet: document.getElementById('ayIciFaaliyetAdet').value,
     aciklama: document.getElementById('ayIciFaaliyetAciklama').value
   };
-  const sonuc = ayIciFaaliyetEkle(_toplantiId, veriler);
+  const sonuc = _duzenlenenAyIciFaaliyetId
+    ? ayIciFaaliyetGuncelle(_duzenlenenAyIciFaaliyetId, veriler)
+    : ayIciFaaliyetEkle(_toplantiId, veriler);
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar || {}).forEach(alan => {
       const el = document.getElementById(alan + 'Hata');

@@ -792,9 +792,21 @@ function _kurulOtomatikAyIciFaaliyetleriGetir(toplanti) {
   return sonuc;
 }
 
+// Bir toplantı için, belirli bir türdeki (egitim/ayiciFaaliyet) otomatik
+// satırlardan kullanıcının gündemden kaldırdıklarının id kümesi.
+function _gundemHaricIdSeti(toplantiId, tur) {
+  return new Set(
+    gundemHaricTumunuGetir()
+      .filter(g => g.toplantiId === toplantiId && g.tur === tur)
+      .map(g => g.otomatikId)
+  );
+}
+
 function toplantiAyIciFaaliyetleriniGetir(toplantiId) {
   const manuel = ayIciFaaliyetTumunuGetir().filter(f => f.toplantiId === toplantiId);
-  const otomatik = _kurulOtomatikAyIciFaaliyetleriGetir(toplantiIdIleGetirRepo(toplantiId));
+  const haric = _gundemHaricIdSeti(toplantiId, 'ayiciFaaliyet');
+  const otomatik = _kurulOtomatikAyIciFaaliyetleriGetir(toplantiIdIleGetirRepo(toplantiId))
+    .filter(f => !haric.has(f.id));
   return [...otomatik, ...manuel];
 }
 
@@ -808,12 +820,35 @@ function ayIciFaaliyetEkle(toplantiId, veriler) {
   return { basarili: true, faaliyet: yeni };
 }
 
+function ayIciFaaliyetGuncelle(id, veriler) {
+  const dogrulama = ayIciFaaliyetDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const mevcut = ayIciFaaliyetTumunuGetir().find(f => f.id === id) || null;
+  const guncellenen = ayIciFaaliyetGuncelleRepo(id, {
+    faaliyet: veriler.faaliyet.trim(),
+    adet: veriler.adet != null && veriler.adet !== '' ? String(veriler.adet) : '',
+    aciklama: (veriler.aciklama || '').trim()
+  });
+  _denetimEkle('ayIciFaaliyet', id, 'guncelle', mevcut, guncellenen);
+  return { basarili: true, faaliyet: guncellenen };
+}
+
 function ayIciFaaliyetSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = ayIciFaaliyetTumunuGetir().find(f => f.id === id) || null;
   ayIciFaaliyetSilRepo(id);
   _denetimEkle('ayIciFaaliyet', id, 'sil', mevcut, null);
   return { basarili: true };
+}
+
+// Acil Durum modülünden otomatik gelen (gerçek kaydı olmayan) bir ay içi
+// faaliyet satırını, sadece bu toplantının gündeminden kaldırır.
+function ayIciFaaliyetOtomatikGizle(toplantiId, otomatikId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const yeni = gundemHaricEkleRepo(gundemHaricKaydiOlustur({ toplantiId, tur: 'ayiciFaaliyet', otomatikId }));
+  _denetimEkle('ayIciFaaliyet', otomatikId, 'sil', { otomatik: true }, null);
+  return { basarili: true, kayit: yeni };
 }
 
 // ---- Uygunsuzluk modülünden: Ay İçinde Kapatılan Uygunsuzluklar ----
@@ -904,15 +939,27 @@ function toplantiAylikEgitimleriGetir(toplanti) {
     if (personel && personel.bolum) grup.birimler.add(personel.bolum);
   });
 
-  return Array.from(gruplar.values()).map((g, i) => ({
-    id: g.id,
-    siraNo: i + 1,
-    egitimAdi: g.egitimAdi,
-    egitimTarihi: g.egitimTarihi,
-    egitimTarihi2: g.egitimTarihi2,
-    katilimciSayisi: g.katilimciSayisi,
-    birim: Array.from(g.birimler).join(', ')
-  }));
+  const haric = _gundemHaricIdSeti(toplanti.id, 'egitim');
+  return Array.from(gruplar.values())
+    .filter(g => !haric.has(g.id))
+    .map((g, i) => ({
+      id: g.id,
+      siraNo: i + 1,
+      egitimAdi: g.egitimAdi,
+      egitimTarihi: g.egitimTarihi,
+      egitimTarihi2: g.egitimTarihi2,
+      katilimciSayisi: g.katilimciSayisi,
+      birim: Array.from(g.birimler).join(', ')
+    }));
+}
+
+// Eğitim modülünden otomatik gelen (gerçek kaydı olmayan), bu ay için
+// gruplanmış bir eğitim satırını, sadece bu toplantının gündeminden kaldırır.
+function egitimOtomatikGizle(toplantiId, otomatikId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const yeni = gundemHaricEkleRepo(gundemHaricKaydiOlustur({ toplantiId, tur: 'egitim', otomatikId }));
+  _denetimEkle('egitim', otomatikId, 'sil', { otomatik: true }, null);
+  return { basarili: true, kayit: yeni };
 }
 
 function kurulOzetiHesapla() {

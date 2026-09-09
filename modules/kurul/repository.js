@@ -5,6 +5,7 @@ function _kararAnahtari() { return tenantAnahtar('kurul_kararlari'); }
 function _olayAnahtari() { return tenantAnahtar('kurul_olaylari'); }
 function _imzaAnahtari() { return tenantAnahtar('kurul_imzalari'); }
 function _ayIciFaaliyetAnahtari() { return tenantAnahtar('kurul_ayici_faaliyetler'); }
+function _gundemHaricAnahtari() { return tenantAnahtar('kurul_gundem_haric'); }
 function _denetimAnahtari() { return tenantAnahtar('kurul_denetim'); }
 
 function toplantiTumunuGetir() {
@@ -47,6 +48,7 @@ function toplantiSilRepo(id) {
   _olayKaydet(olayTumunuGetir().filter(o => o.toplantiId !== id));
   _imzaKaydet(imzaTumunuGetir().filter(i => i.toplantiId !== id));
   _ayIciFaaliyetKaydet(ayIciFaaliyetTumunuGetir().filter(f => f.toplantiId !== id));
+  _gundemHaricKaydet(gundemHaricTumunuGetir().filter(g => g.toplantiId !== id));
 }
 
 function toplantiIdIleGetirRepo(id) {
@@ -142,8 +144,36 @@ function ayIciFaaliyetEkleRepo(faaliyet) {
   return faaliyet;
 }
 
+function ayIciFaaliyetGuncelleRepo(id, veriler) {
+  const liste = ayIciFaaliyetTumunuGetir();
+  const index = liste.findIndex(f => f.id === id);
+  if (index === -1) return null;
+  liste[index] = Object.assign({}, liste[index], veriler);
+  _ayIciFaaliyetKaydet(liste);
+  return liste[index];
+}
+
 function ayIciFaaliyetSilRepo(id) {
   _ayIciFaaliyetKaydet(ayIciFaaliyetTumunuGetir().filter(f => f.id !== id));
+}
+
+function gundemHaricTumunuGetir() {
+  return oku(_gundemHaricAnahtari(), []);
+}
+
+function _gundemHaricKaydet(liste) {
+  yaz(_gundemHaricAnahtari(), liste);
+}
+
+function gundemHaricEkleRepo(kayit) {
+  const liste = gundemHaricTumunuGetir();
+  liste.push(kayit);
+  _gundemHaricKaydet(liste);
+  return kayit;
+}
+
+function gundemHaricSilRepo(id) {
+  _gundemHaricKaydet(gundemHaricTumunuGetir().filter(g => g.id !== id));
 }
 
 function denetimTumunuGetir() {
