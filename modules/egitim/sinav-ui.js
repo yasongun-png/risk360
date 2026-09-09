@@ -691,7 +691,7 @@ function _sinavKagidiYazdirOrtak(sinavId, baslikOnEki, cevapGoster) {
     <div class="doc-title">${_sinavKacir(baslikOnEki)}: ${_sinavKacir(sinav.baslik)}</div>
     <div class="doc-meta">
       <b>${_sinavKacir(firma ? firma.ad : '')}</b><br>
-      Konu: ${_sinavKacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${_sinavKacir(sinav.tarih)} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
+      Konu: ${_sinavKacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${sinav.tarih ? _sinavKacir(sinav.tarih) : '______________'} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
       ${cevapGoster ? '' : '<br><br>Ad Soyad: ______________________________ &nbsp;&nbsp; Sicil No: ______________'}
     </div>
     ${_sinavSorularHtmlUret(sinav, cevapGoster)}

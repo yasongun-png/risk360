@@ -123,9 +123,10 @@ function sinavOlusturmaDogrula(veriler, soruSayisiMevcut) {
     hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
   }
 
-  if (!veriler.tarih) {
-    hatalar.sinavTarih = 'Tarih zorunludur.';
-  }
+  // Kullanıcı isteği: "sınav tarihi girmesem de sorular basılabilsin,
+  // sınava giren kendisi yazsın" -- tarih artık opsiyonel; boş bırakılırsa
+  // sınav kağıdında elle doldurulacak bir boşluk basılır (bkz. sinav-ui.js
+  // _sinavKagidiYazdirOrtak).
 
   const soruSayisi = Number(veriler.soruSayisi);
   if (!soruSayisi || soruSayisi < 1) {
@@ -386,7 +387,6 @@ function sinavManuelEkle(veriler, soruIdleri) {
   const hatalar = {};
   if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Sınav başlığı zorunludur.';
   if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
-  if (!veriler.tarih) hatalar.sinavTarih = 'Tarih zorunludur.';
   if (!Array.isArray(soruIdleri) || !soruIdleri.length) hatalar.manuelSoru = 'En az bir soru seçmelisiniz.';
   if (Object.keys(hatalar).length) return { basarili: false, hatalar };
 
