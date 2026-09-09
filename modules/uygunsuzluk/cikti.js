@@ -136,7 +136,10 @@ const _UC_RAPOR_STIL = `
   #ucPdfSayfa .uc-rozet-kapali{ background:#dc2626; color:#fff; }
 `;
 
-async function uygunsuzlukRaporuPdfOlustur() {
+// indir=false: dosyayı indirmez, {pdf, dosyaAdi} döner -- "Mail Gönder"in
+// bu listeyi de EmailJS linki olarak göndermesi için (bkz. ui.js
+// _uygunsuzlukMailGonderTiklandi ve aşağıdaki uygunsuzlukListesiPdfUrlOlustur).
+async function uygunsuzlukRaporuPdfOlustur(indir = true) {
   const filtreler = _usAktifFiltreleriGetir();
   const kayitlarHam = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!kayitlarHam.length) {
@@ -236,10 +239,36 @@ async function uygunsuzlukRaporuPdfOlustur() {
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 297 / 2, 210 - 5, { align: 'center' });
   }
-  pdf.save(`Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.pdf`);
+  const dosyaAdi = `Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.pdf`;
+  if (indir) pdf.save(dosyaAdi);
 
   mount.innerHTML = '';
   mount.style.display = 'none';
+  return { pdf, dosyaAdi };
+}
+
+// Mail Gönder'in EmailJS'e ikinci bir link olarak eklediği "Uygunsuzluk
+// Listesi" raporu -- uygunsuzlukKayitPdfUrlOlustur ile AYNI Storage yükleme
+// deseni (bkz. orada ki uzun yorum: ek boyutu sınırı, CORS vb.). Mail
+// gönderilirken tablodaki O ANKİ arama/filtre neyse onunla üretilir --
+// "PDF Raporu" düğmesiyle birebir aynı davranış.
+async function uygunsuzlukListesiPdfUrlOlustur() {
+  const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
+  if (!storage) return null;
+
+  const uretim = await uygunsuzlukRaporuPdfOlustur(false);
+  if (!uretim) return null;
+
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const yol = 'uygunsuzluk_liste_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
+  const blob = uretim.pdf.output('blob');
+
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Liste PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 20000));
+  const yukleme = (async () => {
+    const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
+    return anlik.ref.getDownloadURL();
+  })();
+  return Promise.race([yukleme, zamanAsimi]);
 }
 
 // ==================== TEKİL KAYIT PDF'İ (İSG UYGUNSUZLUK BİLDİRİM FORMU) ====================

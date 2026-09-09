@@ -733,21 +733,37 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
       return;
     }
 
+    // Kullanıcı isteği: "altında bir de pdf raporunu ekleyelim, uygunsuzluk
+    // listesi indir olarak görünsün" -- tablodaki O ANKİ arama/filtreyle
+    // (tam "PDF Raporu" düğmesiyle aynı) üretilen liste raporu, ikinci bir
+    // Storage linki olarak ayrı bir değişkende (liste_pdf_url) gönderilir.
+    // Bu link olmadan da mail gönderilebilir (opsiyonel, sessizce atlanır).
+    btn.textContent = 'Liste raporu hazırlanıyor...';
+    let listePdfUrl = '';
+    try {
+      listePdfUrl = await uygunsuzlukListesiPdfUrlOlustur() || '';
+    } catch (listeHata) {
+      console.error('Liste PDF linki oluşturulamadı:', listeHata);
+    }
+
     btn.textContent = 'Gönderiliyor...';
     // Kullanıcı isteği: "linkin kendisi görünmesin, PDF'in üzerine
     // tıklandığında form açılsın, 'Uygunsuzluk Formu İndir' yazsın" -- ham
-    // URL artık mesaj metnine eklenmiyor; pdf_url SADECE ayrı bir değişken
-    // olarak gönderiliyor, EmailJS şablonunda gerçek bir link/buton olarak
-    // (Edit Content > köprü ekle > href={{pdf_url}}, metin: "Uygunsuzluk
-    // Formu İndir") kullanılması gerekiyor -- bkz. Ayarlar sayfasındaki not.
+    // URL'ler artık mesaj metnine eklenmiyor; pdf_url ve liste_pdf_url
+    // SADECE ayrı değişkenler olarak gönderiliyor, EmailJS şablonunda
+    // gerçek birer link/buton olarak (Edit Content > köprü ekle >
+    // href={{pdf_url}} / {{liste_pdf_url}}, metin: "Uygunsuzluk Formu
+    // İndir" / "Uygunsuzluk Listesi İndir") kullanılması gerekiyor -- bkz.
+    // Ayarlar sayfasındaki not.
     await epostaGonder({
       to_email: k.ilgiliKime,
       bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
       mesaj: _uygunsuzlukMailMetniDoldur(k),
-      pdf_url: pdfUrl
+      pdf_url: pdfUrl,
+      liste_pdf_url: listePdfUrl
     });
-    alert(`Mail gönderildi${pdfUrl ? ' (PDF linki eklendi)' : ' (PDF linksiz)'}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
+    alert(`Mail gönderildi${pdfUrl ? ' (form linki eklendi)' : ' (form linksiz)'}${listePdfUrl ? ' (liste linki eklendi)' : ''}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
   } catch (hata) {
     console.error(hata);
     alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));
