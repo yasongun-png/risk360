@@ -555,14 +555,21 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
   #yazdirmaAlani table { width: 100%; border-collapse: collapse; }
   #yazdirmaAlani th, #yazdirmaAlani td { border: 1px solid #000; padding: 4px 6px; font-size: 10px; color: #000; }
   @page { size: A4 landscape; margin: 10mm; }
-
-  /* Sınav kağıdı/cevap anahtarı (bkz. modules/egitim/sinav-ui.js
-     _sinavKagidiYazdirOrtak) dikey bir belgedir -- yukarıdaki genel
-     landscape varsayılanı SADECE bu belge için, adlandırılmış bir sayfayla
-     override edilir; diğer modüllerin geniş tablo çıktıları etkilenmez. */
-  @page sinav-sayfa { size: A4 portrait; margin: 15mm; }
-  #yazdirmaAlani.sinav-yazdirma { page: sinav-sayfa; }
 }
+
+/* Sınav kağıdı/cevap anahtarı (bkz. modules/egitim/sinav-ui.js
+   _sinavKagidiYazdirOrtak) dikey bir belgedir. Adlandırılmış @page +
+   page: özelliği (önceki deneme) tarayıcı desteği tutarsız olduğundan
+   çalışmadı (kullanıcı bildirdi: "yine yatay"); bunun yerine yazdırma
+   ANINDA <head>'in sonuna eklenen bir <style id="sinavYazdirmaStili">
+   kullanılıyor -- CSS basamaklamasında yukarıdaki genel @page kuralından
+   SONRA geldiği için onu ezer, tüm tarayıcılarda güvenilir çalışır.
+   Yazdırma bitince bu <style> kaldırılır, diğer modüllerin yazdırmaları
+   yine landscape kalır. Bkz. sinav-ui.js _sinavKagidiYazdirOrtak. */
+   kullanılıyor -- CSS basamaklamasında (cascade) yukarıdaki genel @page
+   kuralından SONRA geldiği için onu ezer, standart ve tüm tarayıcılarda
+   güvenilir çalışır. Yazdırma bitince bu <style> kaldırılır, diğer
+   modüllerin yazdırmaları yine landscape kalır. Bkz. sinav-ui.js.
 
 #yazdirmaAlani .doc-title { text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
 #yazdirmaAlani .doc-meta { font-size: 12px; margin-bottom: 10px; }

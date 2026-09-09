@@ -698,15 +698,26 @@ function _sinavKagidiYazdirOrtak(sinavId, baslikOnEki, cevapGoster) {
   `;
   // Kullanıcı isteği: "verdiği sınav kağıdı yatay olmaması lazım" -- diğer
   // modüllerin geniş tablo çıktıları için #yazdirmaAlani varsayılan olarak
-  // A4 landscape kullanıyor (bkz. assets/style.css); sınav kağıdı/cevap
-  // anahtarı dikey bir belge olduğundan bu SADECE yazdırma sırasında,
-  // sınava özel bir sınıfla (page: sinav-sayfa) portrait'e çevrilir, diğer
-  // modüllerin varsayılanı bozulmaz.
-  mount.classList.add('sinav-yazdirma');
+  // A4 landscape kullanıyor (bkz. assets/style.css @media print @page).
+  // Adlandırılmış @page + page: özelliği denenmiş ama tarayıcı desteği
+  // tutarsız çıktığından çalışmamıştı (kullanıcı bildirdi: "yine yatay").
+  // Bunun yerine yazdırma ANINDA <head>'in SONUNA (dolayısıyla CSS
+  // basamaklamasında en yüksek öncelikle) geçici bir <style> eklenip genel
+  // landscape kuralı ezilir; yazdırma bitince bu <style> kaldırılır, diğer
+  // modüllerin yazdırmaları etkilenmez.
+  const dikeySayfaStili = document.createElement('style');
+  dikeySayfaStili.id = 'sinavYazdirmaStili';
+  dikeySayfaStili.textContent = '@media print { @page { size: A4 portrait; margin: 15mm; } }';
+  document.head.appendChild(dikeySayfaStili);
+
   mount.style.display = 'block';
   setTimeout(() => {
     window.print();
-    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; mount.classList.remove('sinav-yazdirma'); }, 400);
+    setTimeout(() => {
+      mount.innerHTML = '';
+      mount.style.display = 'none';
+      dikeySayfaStili.remove();
+    }, 400);
   }, 80);
 }
 
