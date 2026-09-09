@@ -454,6 +454,46 @@ function toplantiOlaylariniGetir(toplantiId) {
   return [...otomatik, ...manuel];
 }
 
+// Toplantının ait olduğu yıl için Olay/Kaza modülünden (bkz.
+// _kurulOtomatikOlaylariGetir'deki namespace notu -- aynı sebeple burada da
+// tenantAnahtar('olay_kaza_kayitlari') doğrudan okunur) yıl bazlı iş kazası
+// istatistikleri -- kullanıcı isteği: "ilk slaytta/word raporda ilk
+// konularda 2026 yılı içinde gerçekleşen iş kazası sayısı, toplam iş günü
+// kaybı, kaza sıklık hızı ve kaza ağırlık oranı yer alsın". Hesap yöntemi
+// olay-kaza/model.js guvenlikOranlariniHesapla ile AYNI formüller (OSHA
+// benzeri, yıllık çalışılan saate göre): Sıklık Hızı = (LTI x 1.000.000) /
+// yıllık çalışma saati, Ağırlık Oranı = (toplam kayıp gün x 1.000.000) /
+// yıllık çalışma saati. Yıllık çalışma saati Olay/Kaza modülünün Ayarlar
+// bölümünde girilmemişse (0 ise) oranlar hesaplanamaz, null döner.
+function toplantiKazaIstatistikleriHesapla(toplanti) {
+  const yil = String((toplanti && (toplanti.donem || toplanti.tarih)) || '').slice(0, 4);
+  if (!/^\d{4}$/.test(yil)) return null;
+
+  const kayitlar = oku(tenantAnahtar('olay_kaza_kayitlari'), [])
+    .filter(k => String(k.kazaTarihi || '').slice(0, 4) === yil)
+    // Toplantı tarihinden SONRAKİ kazalar henüz "bu döneme kadar" sayılmaz
+    // (_kurulOtomatikOlaylariGetir'deki aynı ilke).
+    .filter(k => !toplanti.tarih || !k.kazaTarihi || k.kazaTarihi <= toplanti.tarih);
+
+  const sayac = tip => kayitlar.filter(k => k.olayTipi === tip).length;
+  const lti = sayac('Kayıp Gün (LTI)');
+  const dart = sayac('Kısıtlı İş / Transfer (DART)');
+  const tibbi = sayac('Tıbbi Tedavi');
+  const olum = sayac('Ölüm');
+  const kazaSayisi = lti + dart + tibbi + olum;
+  const toplamKayipGun = kayitlar.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0);
+
+  const ayarlar = oku(tenantAnahtar('olay_kaza_ayarlari'), {});
+  const saat = Number(ayarlar.yillikCalismaSaati || 0);
+
+  return {
+    yil, kazaSayisi, toplamKayipGun, lti, dart, tibbi, olum,
+    yillikCalismaSaati: saat,
+    kazaSiklikHizi: saat ? (lti * 1000000) / saat : null,
+    kazaAgirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null
+  };
+}
+
 // Gündemdeki "Olaylar" maddesinin altında gösterilmek üzere, bu toplantının
 // (otomatik + elle eklenen, toplantı tarihine kadar olan) olaylarının kısa
 // bir dökümü — kullanıcı isteği: "toplantı tarihine kadar olan olayları da

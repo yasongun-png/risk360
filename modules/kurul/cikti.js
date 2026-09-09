@@ -399,6 +399,25 @@ async function kurulRaporuWordOlustur() {
     ]}))
   });
 
+  // Yıl bazlı iş kazası istatistikleri (bkz. service.js
+  // toplantiKazaIstatistikleriHesapla) — kullanıcı isteği: "word raporda
+  // ilk konularda [yıl] içinde gerçekleşen iş kazası sayısı, toplam iş
+  // günü kaybı, kaza sıklık ağırlık oranı ve kaza sıklık hızı yer alsın".
+  const kazaIst = toplantiKazaIstatistikleriHesapla(toplanti);
+  const oranGoster = v => v == null ? 'Yıllık çalışma saati girilmemiş' : v.toFixed(2);
+  const kazaIstatistikTablosu = kazaIst ? new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Ölüm)', String(kazaIst.kazaSayisi)],
+      ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)],
+      ['Kaza Sıklık Hızı (LTIFR)', oranGoster(kazaIst.kazaSiklikHizi)],
+      ['Kaza Ağırlık Oranı', oranGoster(kazaIst.kazaAgirlikOrani)]
+    ].map(([etiket, deger]) => new docx.TableRow({ children: [
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph(String(deger)), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+    ]}))
+  }) : null;
+
   // Kullanıcı isteği: kapak sayfasındaki logo/yazılar sayfaya düşeyde
   // ortalansın. docx.js'te paragraf listesi kendiliğinden dikeyde
   // ortalanmaz — tam sayfa yüksekliğinde, kenarlıksız TEK hücreli bir
@@ -438,6 +457,12 @@ async function kurulRaporuWordOlustur() {
     H('Toplantı Bilgileri'),
     bilgiTablosu,
     P(' ', { spacing: { after: 400 } }),
+
+    ...(kazaIstatistikTablosu ? [
+      H(`${kazaIst.yil} Yılı İş Kazası İstatistikleri`),
+      kazaIstatistikTablosu,
+      P(' ', { spacing: { after: 400 } })
+    ] : []),
 
     H('1) Gündem'),
     ...(gundem.length ? gundem.flatMap((g, i) => {
@@ -1167,6 +1192,33 @@ async function pptxOlustur() {
     sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: SW - 2 * M, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
     sl.addText(metin || 'Bu dönem için kayıt bulunmamaktadır.', { x: M + 0.3, y: 1.6, w: SW - 2 * M - 0.6, h: 4.9, fontSize: 15, color: R.baslik, valign: 'top' });
   };
+
+  // Yıl bazlı iş kazası istatistikleri (bkz. service.js
+  // toplantiKazaIstatistikleriHesapla) -- kullanıcı isteği: "ilk slaytta
+  // [yıl] içinde gerçekleşen iş kazası sayısı, toplam iş günü kaybı, kaza
+  // sıklık ağırlık oranı ve kaza sıklık hızı yer alsın". Kapaktan hemen
+  // sonra, kurumsal stat-kartı görünümünde tek bir slaytta gösterilir.
+  const kazaIst = toplantiKazaIstatistikleriHesapla(toplanti);
+  if (kazaIst) {
+    const oranGoster = v => v == null ? 'Saat girilmemiş' : v.toFixed(2);
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı İş Kazası İstatistikleri`);
+    const kutular = [
+      { etiket: 'İş Kazası Sayısı', deger: String(kazaIst.kazaSayisi) },
+      { etiket: 'Toplam İş Günü Kaybı', deger: String(kazaIst.toplamKayipGun) },
+      { etiket: 'Kaza Sıklık Hızı (LTIFR)', deger: oranGoster(kazaIst.kazaSiklikHizi) },
+      { etiket: 'Kaza Ağırlık Oranı', deger: oranGoster(kazaIst.kazaAgirlikOrani) }
+    ];
+    const kutuW = (SW - 2 * M - 3 * 0.3) / 4;
+    kutular.forEach((k, i) => {
+      const x = M + i * (kutuW + 0.3);
+      sl.addShape(pptx.ShapeType.roundRect, { x, y: 1.6, w: kutuW, h: 1.9, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addShape(pptx.ShapeType.rect, { x, y: 1.6, w: kutuW, h: 0.08, fill: { color: R.birincil } });
+      sl.addText(k.deger, { x, y: 1.95, w: kutuW, h: 0.9, fontSize: 30, bold: true, color: R.birincil, align: 'center' });
+      sl.addText(k.etiket, { x: x + 0.1, y: 2.85, w: kutuW - 0.2, h: 0.6, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
+    });
+    sl.addText(`(*) LTI: Kayıp Gün, DART: Kısıtlı İş/Transfer. İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Ölüm. Sıklık/ağırlık oranı, Olay/Kaza modülü Ayarlar'daki yıllık çalışma saatine göre hesaplanır.`, { x: M, y: 3.8, w: SW - 2 * M, h: 0.6, fontSize: 9, italic: true, color: R.soluk });
+  }
 
   bolumAraSlaydi('GÜNDEM', 'Toplantı gündem maddeleri');
   tabloSlaydi('GÜNDEM', ['No', 'Konu', 'Not'], gundem.map((g, i) => {

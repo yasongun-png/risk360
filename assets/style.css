@@ -555,6 +555,13 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
   #yazdirmaAlani table { width: 100%; border-collapse: collapse; }
   #yazdirmaAlani th, #yazdirmaAlani td { border: 1px solid #000; padding: 4px 6px; font-size: 10px; color: #000; }
   @page { size: A4 landscape; margin: 10mm; }
+
+  /* Sınav kağıdı/cevap anahtarı (bkz. modules/egitim/sinav-ui.js
+     _sinavKagidiYazdirOrtak) dikey bir belgedir -- yukarıdaki genel
+     landscape varsayılanı SADECE bu belge için, adlandırılmış bir sayfayla
+     override edilir; diğer modüllerin geniş tablo çıktıları etkilenmez. */
+  @page sinav-sayfa { size: A4 portrait; margin: 15mm; }
+  #yazdirmaAlani.sinav-yazdirma { page: sinav-sayfa; }
 }
 
 #yazdirmaAlani .doc-title { text-align: center; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
