@@ -87,6 +87,12 @@ function sinavSayfasiniBaslat() {
   document.getElementById('sinavModalKapatBtn').addEventListener('click', sinavModalKapat);
   document.getElementById('sinavModalIptalBtn').addEventListener('click', sinavModalKapat);
   document.getElementById('sinavForm').addEventListener('submit', sinavFormGonderildi);
+  document.getElementById('sinavYontemOtomatik').addEventListener('change', _sinavYontemDegisti);
+  document.getElementById('sinavYontemManuel').addEventListener('change', _sinavYontemDegisti);
+  document.getElementById('sinavKonuId').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavAltKonuKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavManuelArama').addEventListener('input', _sinavManuelListesiCizGerekirse);
   document.getElementById('sinavAramaKutusu').addEventListener('input', sinavTablosunuCiz);
 
   document.getElementById('sonucAramaKutusu').addEventListener('input', sonucTablosunuCiz);
@@ -423,6 +429,12 @@ function sinavTablosunuCiz() {
   });
 }
 
+// Manuel sınav oluşturma modunda işaretlenen soru id'leri -- filtre
+// değiştikçe liste yeniden çizilse de seçim kaybolmasın diye modal açık
+// olduğu sürece burada tutulur (kullanıcı isteği: "mevcut kütüphaneden
+// istediğim soruları da seçip sınav kağıdı hazırlamak istiyorum").
+let _sinavManuelSeciliIdler = new Set();
+
 function sinavModalAc() {
   _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
@@ -430,11 +442,66 @@ function sinavModalAc() {
   _zorlukKutulariniCiz();
   document.getElementById('sinavForm').reset();
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
+  document.getElementById('sinavManuelArama').value = '';
+  _sinavManuelSeciliIdler = new Set();
+  _sinavYontemDegisti();
   document.getElementById('sinavModalKatman').classList.add('acik');
 }
 
 function sinavModalKapat() {
   document.getElementById('sinavModalKatman').classList.remove('acik');
+}
+
+function _sinavManuelModuMu() {
+  return document.getElementById('sinavYontemManuel').checked;
+}
+
+function _sinavYontemDegisti() {
+  const manuel = _sinavManuelModuMu();
+  document.getElementById('sinavSoruSayisiAlani').style.display = manuel ? 'none' : '';
+  document.getElementById('sinavManuelSoruAlani').style.display = manuel ? '' : 'none';
+  if (manuel) _sinavManuelListesiCiz();
+}
+
+function _sinavManuelListesiCizGerekirse() {
+  if (_sinavManuelModuMu()) _sinavManuelListesiCiz();
+}
+
+// Üstteki Eğitim Türü / Alt Konu / Zorluk filtreleriyle ve arama kutusuyla
+// eşleşen soruları onay kutulu bir liste olarak çizer -- soru bankasındaki
+// aynı sorulariGetir + client-side çoklu konu/zorluk filtresi (sinavEkle'nin
+// havuz filtresiyle aynı mantık).
+function _sinavManuelListesiCiz() {
+  const govde = document.getElementById('sinavManuelSoruListesi');
+  const egitimTuruId = document.getElementById('sinavKonuId').value;
+  const konular = _seciliAltKonulariGetir();
+  const zorluklar = _seciliZorluklariGetir();
+  const aramaMetni = document.getElementById('sinavManuelArama').value;
+
+  let liste = sorulariGetir(egitimTuruId, aramaMetni);
+  if (konular.length) liste = liste.filter(s => konular.includes(s.konu));
+  if (zorluklar.length) liste = liste.filter(s => zorluklar.includes(s.zorluk));
+
+  if (!liste.length) {
+    govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Filtreyle eşleşen soru bulunamadı.</div>';
+  } else {
+    govde.innerHTML = liste.map(s => `
+      <label style="display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
+        <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
+        <span>${_sinavKacir(_sinavKisalt(s.soruMetni, 130))} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></span>
+      </label>
+    `).join('');
+  }
+
+  govde.querySelectorAll('[data-manuel-soru]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.getAttribute('data-manuel-soru');
+      if (cb.checked) _sinavManuelSeciliIdler.add(id);
+      else _sinavManuelSeciliIdler.delete(id);
+      document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
+    });
+  });
+  document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
 }
 
 function sinavFormGonderildi(e) {
@@ -451,7 +518,9 @@ function sinavFormGonderildi(e) {
     gecmeNotu: document.getElementById('sinavGecmeNotu').value
   };
 
-  const sonuc = sinavEkle(veriler);
+  const sonuc = _sinavManuelModuMu()
+    ? sinavManuelEkle(veriler, Array.from(_sinavManuelSeciliIdler))
+    : sinavEkle(veriler);
 
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar).forEach(alan => {

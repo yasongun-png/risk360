@@ -377,6 +377,42 @@ function sinavEkle(veriler) {
   return { basarili: true, sinav: yeniSinav };
 }
 
+// Otomatik/rastgele seçim yerine, kullanıcının soru bankasından tek tek
+// işaretlediği sorularla sınav oluşturur (kullanıcı isteği: "mevcut
+// kütüphaneden istediğim soruları da seçip sınav kağıdı hazırlamak
+// istiyorum"). Doğrulama sinavOlusturmaDogrula ile ORTAK değildir çünkü
+// "soru sayısı"na değil, doğrudan seçilen soru id listesine bakılır.
+function sinavManuelEkle(veriler, soruIdleri) {
+  const hatalar = {};
+  if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Sınav başlığı zorunludur.';
+  if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
+  if (!veriler.tarih) hatalar.sinavTarih = 'Tarih zorunludur.';
+  if (!Array.isArray(soruIdleri) || !soruIdleri.length) hatalar.manuelSoru = 'En az bir soru seçmelisiniz.';
+  if (Object.keys(hatalar).length) return { basarili: false, hatalar };
+
+  const havuz = soruTumunuGetirRepo();
+  const secilenler = soruIdleri.map(id => havuz.find(s => s.id === id)).filter(Boolean);
+  if (!secilenler.length) return { basarili: false, hatalar: { manuelSoru: 'Seçilen sorular soru bankasında bulunamadı (silinmiş olabilir).' } };
+
+  const yeniSinav = sinavOlustur({
+    baslik: veriler.baslik.trim(),
+    egitimTuruId: veriler.egitimTuruId,
+    konular: Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [],
+    zorluklar: Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(Boolean) : [],
+    tarih: veriler.tarih,
+    gecmeNotu: veriler.gecmeNotu ? Number(veriler.gecmeNotu) : SINAV_GECME_NOTU_VARSAYILAN,
+    sorular: secilenler.map(s => ({
+      soruId: s.id,
+      soruMetni: s.soruMetni,
+      secenekler: s.secenekler,
+      dogruCevap: s.dogruCevap,
+      aciklama: s.aciklama || ''
+    }))
+  });
+  sinavEkleRepo(yeniSinav);
+  return { basarili: true, sinav: yeniSinav };
+}
+
 function sinavSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   sinavSilRepo(id);

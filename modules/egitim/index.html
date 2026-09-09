@@ -266,7 +266,8 @@
     <div class="modal-kutu">
       <h3>Yeni Sınav Oluştur</h3>
       <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
-        Seçilen konudaki soru bankasından, belirttiğiniz sayıda soru rastgele seçilerek sınav oluşturulur.
+        Seçilen konudaki soru bankasından, belirttiğiniz sayıda soru rastgele seçilerek sınav
+        oluşturulur — isterseniz "Manuel" yöntemle soruları kendiniz tek tek de seçebilirsiniz.
       </p>
       <form id="sinavForm">
         <label for="sinavBaslik">Sınav Başlığı</label>
@@ -283,17 +284,34 @@
         <label>Zorluk Düzeyi <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — hiçbiri işaretlenmezse tüm zorluklar dahil olur)</span></label>
         <div id="sinavZorlukKutulari" style="display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 10px;"></div>
 
+        <label>Sınav Oluşturma Yöntemi</label>
+        <div style="display:flex; gap:18px; margin:4px 0 10px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+            <input type="radio" name="sinavYontem" value="otomatik" id="sinavYontemOtomatik" checked style="width:auto; margin:0;"> Otomatik (Yukarıdaki filtreden rastgele seç)
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+            <input type="radio" name="sinavYontem" value="manuel" id="sinavYontemManuel" style="width:auto; margin:0;"> Manuel (Soruları kendim seçeyim)
+          </label>
+        </div>
+
         <div class="form-satir-ikili">
           <div>
             <label for="sinavTarih">Tarih</label>
             <input type="date" id="sinavTarih">
             <div class="alan-hatasi" id="sinavTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
-          <div>
+          <div id="sinavSoruSayisiAlani">
             <label for="sinavSoruSayisi">Soru Sayısı</label>
             <input type="number" id="sinavSoruSayisi" min="1">
             <div class="alan-hatasi" id="soruSayisiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
+        </div>
+
+        <div id="sinavManuelSoruAlani" style="display:none;">
+          <label>Sorular <span id="sinavManuelSayac" style="color:var(--metin-soluk); font-weight:400;">(0 soru seçildi)</span></label>
+          <input type="text" id="sinavManuelArama" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin-bottom:6px;">
+          <div id="sinavManuelSoruListesi" style="max-height:260px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+          <div class="alan-hatasi" id="manuelSoruHata" style="color:var(--hata); font-size:12px; margin-top:-6px; margin-bottom:10px;"></div>
         </div>
 
         <label for="sinavGecmeNotu">Geçme Notu (0-100)</label>
