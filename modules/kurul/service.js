@@ -483,8 +483,19 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
   const kazaSayisi = lti + dart + tibbi + olum;
   const toplamKayipGun = kayitlar.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0);
 
+  // Kullanıcı isteği: "bagfaş, servis ve tekniğin toplamını dikkate al" --
+  // departman ayrımı yapılmadan yalnızca aylık toplam çalışma saati tutulur
+  // (bkz. olay-kaza/model.js CALISMA_SAATI_VARSAYILAN ile aynı şekil: {yil:
+  // {ay: {saat, tahmini}}}). Toplantı tarihinin ait olduğu aya kadar (YTD)
+  // toplanır -- kazalar da zaten toplantı tarihine kadar filtrelendiği için
+  // (yukarıdaki filtre) oranlar tutarlı kalır. Aylık tablo henüz girilmemişse
+  // eski tek sayılık yillikCalismaSaati alanına düşülür.
   const ayarlar = oku(tenantAnahtar('olay_kaza_ayarlari'), {});
-  const saat = Number(ayarlar.yillikCalismaSaati || 0);
+  const sonAy = toplanti && toplanti.tarih ? String(toplanti.tarih).slice(5, 7) : '12';
+  const ayVerileri = ayarlar.aylikCalismaSaatleri && ayarlar.aylikCalismaSaatleri[yil];
+  const saat = ayVerileri
+    ? Object.keys(ayVerileri).filter(ay => ay <= sonAy).reduce((t, ay) => t + (Number((ayVerileri[ay] && ayVerileri[ay].saat) || 0)), 0)
+    : Number(ayarlar.yillikCalismaSaati || 0);
 
   return {
     yil, kazaSayisi, toplamKayipGun, lti, dart, tibbi, olum,

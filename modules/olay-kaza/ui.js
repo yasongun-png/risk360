@@ -176,7 +176,11 @@ function olayKazaSayfasiniBaslat() {
     });
   });
 
-  document.getElementById('yillikCalismaSaati').addEventListener('change', ayarKaydet);
+  document.getElementById('calismaSaatiYil').addEventListener('change', () => {
+    _calismaSaatiSeciliYil = document.getElementById('calismaSaatiYil').value;
+    calismaSaatiTablosunuCiz();
+  });
+  document.getElementById('calismaSaatiTabloGovde').addEventListener('change', calismaSaatiKaydet);
 
   document.getElementById('sablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(OLAY_IMPORT_KOLONLARI, 'olay_kaza_sablonu.xlsx');
@@ -777,14 +781,58 @@ async function formGonderildi(e) {
 
 // ==================== RCA İSTATİSTİK ====================
 
-function ayarKaydet() {
-  olayAyarlariniKaydet({ yillikCalismaSaati: document.getElementById('yillikCalismaSaati').value });
+let _calismaSaatiSeciliYil = null;
+
+function _calismaSaatiYillariGetir() {
+  const ayarlar = olayAyarlariniGetir();
+  const yillar = new Set(Object.keys(ayarlar.aylikCalismaSaatleri || {}));
+  Object.keys(CALISMA_SAATI_VARSAYILAN).forEach(y => yillar.add(y));
+  yillar.add(String(new Date().getFullYear()));
+  return Array.from(yillar).sort();
+}
+
+function calismaSaatiTablosunuCiz() {
+  const secici = document.getElementById('calismaSaatiYil');
+  const yillar = _calismaSaatiYillariGetir();
+  if (!_calismaSaatiSeciliYil || !yillar.includes(_calismaSaatiSeciliYil)) {
+    _calismaSaatiSeciliYil = yillar[yillar.length - 1];
+  }
+  secici.innerHTML = yillar.map(y => `<option value="${y}" ${y === _calismaSaatiSeciliYil ? 'selected' : ''}>${y}</option>`).join('');
+
+  const ayarlar = olayAyarlariniGetir();
+  const yil = _calismaSaatiSeciliYil;
+  // Bu yıl için henüz kaydedilmiş bir tablo yoksa, kullanıcının paylaştığı
+  // gerçek/tahmini varsayılan değerlerle (bkz. CALISMA_SAATI_VARSAYILAN)
+  // önceden doldurulur -- "Kaydet" gerekmeden görüntülenir, herhangi bir
+  // hücre değiştirildiğinde otomatik kaydedilir.
+  const kaynak = (ayarlar.aylikCalismaSaatleri && ayarlar.aylikCalismaSaatleri[yil]) || CALISMA_SAATI_VARSAYILAN[yil] || {};
+
+  const govde = document.getElementById('calismaSaatiTabloGovde');
+  govde.innerHTML = CALISMA_SAATI_AY_ANAHTARLARI.map(ay => {
+    const veri = kaynak[ay] || { saat: '', tahmini: false };
+    return `<tr>
+      <td>${CALISMA_SAATI_AY_ADLARI[ay]}</td>
+      <td><input type="number" step="0.5" min="0" data-cs-saat="${ay}" value="${veri.saat !== '' && veri.saat != null ? veri.saat : ''}" style="width:120px;"></td>
+      <td style="text-align:center;"><input type="checkbox" data-cs-tahmini="${ay}" ${veri.tahmini ? 'checked' : ''}></td>
+    </tr>`;
+  }).join('');
+}
+
+function calismaSaatiKaydet() {
+  const yil = _calismaSaatiSeciliYil;
+  const govde = document.getElementById('calismaSaatiTabloGovde');
+  const ayVerileri = {};
+  CALISMA_SAATI_AY_ANAHTARLARI.forEach(ay => {
+    const saatEl = govde.querySelector(`[data-cs-saat="${ay}"]`);
+    const tahminiEl = govde.querySelector(`[data-cs-tahmini="${ay}"]`);
+    ayVerileri[ay] = { saat: Number(saatEl.value || 0), tahmini: !!tahminiEl.checked };
+  });
+  olayCalismaSaatiYiliniKaydet(yil, ayVerileri);
   rcaOzetiCiz();
 }
 
 function rcaOzetiCiz() {
-  const ayarlar = olayAyarlariniGetir();
-  document.getElementById('yillikCalismaSaati').value = ayarlar.yillikCalismaSaati;
+  calismaSaatiTablosunuCiz();
 
   const ozet = olayRCAOzetiHesapla();
   const kart = (etiket, deger) => `<div class="istatistik-kutu"><span>${etiket}</span><b>${deger}</b></div>`;
