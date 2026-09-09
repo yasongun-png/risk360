@@ -132,10 +132,10 @@ function sinavSayfasiniBaslat() {
   _konuSecimleriniDoldur('sinavKonuId', false);
   _altKonuSecimleriniDoldur('soruAltKonuFiltre', true);
   _altKonuSecimleriniDoldur('soruAltKonu', true);
-  _altKonuSecimleriniDoldur('sinavAltKonu', true);
   _zorlukSecimleriniDoldur('soruZorlukFiltre', true);
   _zorlukSecimleriniDoldur('soruZorluk', false);
   _zorlukKutulariniCiz();
+  _altKonuKutulariniCiz();
 
   sinavSekmeDegistir('sorular');
 }
@@ -178,6 +178,21 @@ function _zorlukKutulariniCiz() {
 
 function _seciliZorluklariGetir() {
   return Array.from(document.querySelectorAll('#sinavZorlukKutulari [data-zorluk-secim]:checked')).map(cb => cb.value);
+}
+
+// Sınav oluşturma modalındaki Alt Konu çoklu seçimi (kullanıcı isteği:
+// "birden çok alt konu seçebilmem lazım") — Zorluk kutularıyla aynı desen.
+function _altKonuKutulariniCiz() {
+  const kutu = document.getElementById('sinavAltKonuKutulari');
+  kutu.innerHTML = SINAV_ALT_KONU_LISTESI.map(k => `
+    <label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:13px;">
+      <input type="checkbox" value="${_sinavKacir(k)}" data-altkonu-secim style="width:auto; margin:0;"> ${_sinavKacir(k)}
+    </label>
+  `).join('');
+}
+
+function _seciliAltKonulariGetir() {
+  return Array.from(document.querySelectorAll('#sinavAltKonuKutulari [data-altkonu-secim]:checked')).map(cb => cb.value);
 }
 
 // ---- Hazır Soru Bankası (bkz. modules/egitim/sinav-soru-bankasi.js
@@ -411,7 +426,7 @@ function sinavTablosunuCiz() {
 function sinavModalAc() {
   _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
-  _altKonuSecimleriniDoldur('sinavAltKonu', true);
+  _altKonuKutulariniCiz();
   _zorlukKutulariniCiz();
   document.getElementById('sinavForm').reset();
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
@@ -429,7 +444,7 @@ function sinavFormGonderildi(e) {
   const veriler = {
     baslik: document.getElementById('sinavBaslik').value,
     egitimTuruId: document.getElementById('sinavKonuId').value,
-    konu: document.getElementById('sinavAltKonu').value,
+    konular: _seciliAltKonulariGetir(),
     zorluklar: _seciliZorluklariGetir(),
     tarih: document.getElementById('sinavTarih').value,
     soruSayisi: document.getElementById('sinavSoruSayisi').value,

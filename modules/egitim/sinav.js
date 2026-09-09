@@ -59,7 +59,9 @@ function sinavOlustur(veriler) {
     sorular: veriler.sorular || [],
     // Sınav oluşturulurken uygulanan filtreler -- sadece bilgi amaçlı
     // (sınav kağıdında/listede "hangi kritere göre seçildi" gösterilebilir).
-    konu: (veriler.konu || '').trim(),
+    // konular: kullanıcı isteği "birden çok alt konu seçebilmem lazım" --
+    // çoklu seçim, boşsa tüm alt konular dahildir.
+    konular: Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [],
     zorluklar: Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(z => SINAV_ZORLUK_SEVIYELERI.includes(z)) : [],
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
@@ -338,15 +340,16 @@ function _sinavKaristir(liste) {
   return kopya;
 }
 
-// konu (opsiyonel) ve zorluklar (opsiyonel, seçili zorluk düzeyi dizisi --
-// boşsa/verilmezse tüm zorluklar dahildir) ile soru havuzu daraltılabilir
-// (kullanıcı isteği: "soru seçimi yaparken konu seçimi de ekle, zorluk
-// düzeyi de ekleyelim").
+// konular (opsiyonel, seçili alt konu dizisi -- kullanıcı isteği: "birden
+// çok alt konu seçebilmem lazım", boşsa/verilmezse tüm alt konular
+// dahildir) ve zorluklar (opsiyonel, seçili zorluk düzeyi dizisi --
+// boşsa/verilmezse tüm zorluklar dahildir) ile soru havuzu daraltılabilir.
 function sinavEkle(veriler) {
   const zorluklar = Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(Boolean) : [];
+  const konular = Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [];
   const havuz = soruTumunuGetirRepo().filter(s =>
     s.egitimTuruId === veriler.egitimTuruId &&
-    (!veriler.konu || s.konu === veriler.konu) &&
+    (!konular.length || konular.includes(s.konu)) &&
     (!zorluklar.length || zorluklar.includes(s.zorluk))
   );
   const dogrulama = sinavOlusturmaDogrula(veriler, havuz.length);
@@ -358,7 +361,7 @@ function sinavEkle(veriler) {
   const yeniSinav = sinavOlustur({
     baslik: veriler.baslik.trim(),
     egitimTuruId: veriler.egitimTuruId,
-    konu: veriler.konu || '',
+    konular,
     zorluklar,
     tarih: veriler.tarih,
     gecmeNotu: veriler.gecmeNotu ? Number(veriler.gecmeNotu) : SINAV_GECME_NOTU_VARSAYILAN,
