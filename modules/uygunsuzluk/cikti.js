@@ -263,7 +263,12 @@ async function uygunsuzlukListesiPdfUrlOlustur() {
   const yol = 'uygunsuzluk_liste_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
   const blob = uretim.pdf.output('blob');
 
-  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Liste PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 20000));
+  // Kullanıcı bildirdi: "liste raporu uzun sürüyor" -- tek kayıt PDF'inden
+  // farklı olarak bu, filtreye uyan TÜM kayıtları (çok sayfalı, fotoğraflı
+  // olabilir) içerdiğinden dosya çok daha büyük olabilir; tek kayıt
+  // linkindeki 20 saniyelik süre bu yükleme için gerçekçi çıkabiliyordu,
+  // 60 saniyeye çıkarıldı.
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Liste PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 60000));
   const yukleme = (async () => {
     const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
     return anlik.ref.getDownloadURL();
