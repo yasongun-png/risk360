@@ -502,7 +502,6 @@ const MAIL_METNI_VARSAYILANI = [
   'Aksiyon No: {aksiyonNo}',
   'Bölüm: {bolum}',
   'Risk Seviyesi: {riskSeviyesi}',
-  'Termin: {termin}',
   'Durum: {durum}',
   '',
   'Açıklama:',
