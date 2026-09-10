@@ -453,6 +453,25 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği: "temiz hava solunum setlerinin kontrolünü
+             acil durum ekipman kontrollerine ekleyelim ... test tarihi
+             olsun, basınç değerini girelim" — yalnızca "Temiz Hava Solunum
+             Seti" türünde görünür (bkz. ui.js _ekipmanBasincBolumuCiz). -->
+        <div id="ekipmanBasincBolumu" style="display:none;">
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ekipmanBasincTestTarihi">Basınç / Hidrostatik Test Tarihi</label>
+              <input type="date" id="ekipmanBasincTestTarihi">
+              <div class="alan-hatasi" id="ekipmanBasincTestTarihiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+            </div>
+            <div>
+              <label for="ekipmanBasincDegeri">Ölçülen Basınç Değeri (bar)</label>
+              <input type="number" id="ekipmanBasincDegeri" min="0" placeholder="Örn: 300">
+              <div class="alan-hatasi" id="ekipmanBasincDegeriHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+            </div>
+          </div>
+        </div>
+
         <label>Kontrol Kriterleri <span style="color:var(--metin-soluk); font-weight:400;">(seçilen türe göre)</span></label>
         <div id="ekipmanKontrolListesi" style="margin-bottom:14px;"></div>
 

@@ -11,6 +11,10 @@ function ekipmanDogrula(veriler) {
   const hatalar = {};
   if (!veriler.tur) hatalar.tur = 'Ekipman türü zorunludur.';
   if (!veriler.lokasyon || !veriler.lokasyon.trim()) hatalar.lokasyon = 'Lokasyon zorunludur.';
+  if (veriler.tur === 'Temiz Hava Solunum Seti') {
+    if (!veriler.basincTestTarihi) hatalar.basincTestTarihi = 'Basınç/hidrostatik test tarihi zorunludur.';
+    if (!veriler.basincDegeri || !String(veriler.basincDegeri).trim()) hatalar.basincDegeri = 'Ölçülen basınç değeri (bar) zorunludur.';
+  }
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
 

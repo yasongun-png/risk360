@@ -193,6 +193,8 @@ const EKIPMAN_IMPORT_KOLONLARI = [
   { anahtar: 'periyotGun', baslik: 'Kontrol Periyodu (Gün)' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol Tarihi' },
   { anahtar: 'sorumlu', baslik: 'Sorumlu' },
+  { anahtar: 'basincTestTarihi', baslik: 'Basınç/Hidrostatik Test Tarihi' },
+  { anahtar: 'basincDegeri', baslik: 'Basınç Değeri (bar)' },
   { anahtar: 'bulgular', baslik: 'Bulgular' }
 ];
 
@@ -203,6 +205,8 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'sonKontrol', baslik: 'Son Kontrol' },
   { anahtar: 'sonrakiKontrol', baslik: 'Sonraki Kontrol' },
+  { anahtar: 'basincTestTarihi', baslik: 'Basınç/Hidrostatik Test Tarihi' },
+  { anahtar: 'basincDegeri', baslik: 'Basınç Değeri (bar)' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' },
   { anahtar: 'bulgular', baslik: 'Bulgular' }
 ];
@@ -1131,6 +1135,9 @@ function ekipmanModalAc(ekipman) {
   // _ekipmanZenginlestir), sadece bir eksiklik kaydı olarak listede/
   // raporlarda görünür.
   document.getElementById('ekipmanDurum').innerHTML = ['Aktif', 'Pasif', 'Eksik', 'İptal'].map(d => `<option ${ekipman && ekipman.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('ekipmanBasincTestTarihi').value = ekipman ? (ekipman.basincTestTarihi || '') : '';
+  document.getElementById('ekipmanBasincDegeri').value = ekipman ? (ekipman.basincDegeri || '') : '';
+  _ekipmanBasincBolumuCiz();
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanBakimYapan').value = ekipman ? ekipman.bakimYapan || '' : '';
   document.getElementById('ekipmanYapilanIslem').value = ekipman ? ekipman.yapilanIslem || '' : '';
@@ -1147,6 +1154,7 @@ function ekipmanModalAc(ekipman) {
   _ekipmanMalzemeBolumuCiz();
   document.getElementById('ekipmanTur').onchange = () => {
     _ekipmanKontrolListesiCiz(ekipman);
+    _ekipmanBasincBolumuCiz();
     // Kullanıcı isteği: "olması gereken malzemeler için bir envanter çıkar"
     // — yeni bir İtfaiye Aracı kaydı açılırken (düzenleme değil, liste de
     // henüz boşsa) standart malzeme listesi otomatik doldurulur; kayıtlı
@@ -1278,6 +1286,16 @@ function _ekipmanKontrolListesiTopla() {
 // kontrollerde de. bu kontrol yapılır" — bölüm görünürlüğü seçilen türe
 // göre (yalnızca "Ekipman Dolabı"), tür değiştikçe yeniden çizilir (bkz.
 // ekipmanModalAc'taki onchange).
+// Kullanıcı isteği: "temiz hava solunum setlerinin kontrolünü acil durum
+// ekipman kontrollerine ekleyelim ... test tarihi olsun, basınç değerini
+// girelim" — bölüm görünürlüğü yalnızca "Temiz Hava Solunum Seti" türünde
+// (bkz. model.js ekipmanOlustur basincTestTarihi/basincDegeri).
+function _ekipmanBasincBolumuCiz() {
+  const bolum = document.getElementById('ekipmanBasincBolumu');
+  if (!bolum) return;
+  bolum.style.display = document.getElementById('ekipmanTur').value === 'Temiz Hava Solunum Seti' ? '' : 'none';
+}
+
 function _ekipmanMalzemeBolumuCiz() {
   const bolum = document.getElementById('ekipmanMalzemeBolumu');
   if (!bolum) return;
@@ -1386,6 +1404,8 @@ function ekipmanFormGonderildi(e) {
     sonrakiKontrol: document.getElementById('ekipmanSonrakiKontrol').value,
     sorumlu: document.getElementById('ekipmanSorumlu').value,
     durum: document.getElementById('ekipmanDurum').value,
+    basincTestTarihi: document.getElementById('ekipmanBasincTestTarihi').value,
+    basincDegeri: document.getElementById('ekipmanBasincDegeri').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     bakimYapan: document.getElementById('ekipmanBakimYapan').value,
     yapilanIslem: document.getElementById('ekipmanYapilanIslem').value,

@@ -84,7 +84,7 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -106,7 +106,8 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Ekipman Dolabı': 'ED',
   'Yangın Pompa İstasyonu': 'YPI',
   'Yangın Tüpü': 'YSC',
-  'İtfaiye Aracı': 'ITA'
+  'İtfaiye Aracı': 'ITA',
+  'Temiz Hava Solunum Seti': 'THS'
 };
 
 // Kullanıcı isteği: "itfaiye araçlarını ekleyelim, olması gereken
@@ -302,6 +303,35 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'tepeLambasi', soru: 'Tepe lambası (rotatif/led) ve siren çalışıyor' },
     { id: 'icAydinlatma', soru: 'İç aydınlatma çalışıyor' },
     { id: 'telsizCalisir', soru: 'Telsiz/haberleşme cihazı çalışır durumda' }
+  ],
+  // Kullanıcı isteği: "temiz hava solunum setlerinin kontrolünü acil durum
+  // ekipman kontrollerine ekleyelim ... bağlantı noktaları vs araştır ve
+  // buna göre bir kontrol hazırla". Madde sırası TS EN 137 (solunum cihazı)
+  // ve TS EN 136 (tam yüz maskesi) standartlarındaki fonksiyonel/görsel
+  // muayene kapsamını izler. Tüpün resmi periyodik muayenesi (hidrostatik
+  // test) ve manometreden okunan basınç değeri ayrı, yapılı alanlar olarak
+  // tutulur (bkz. ekipmanOlustur basincTestTarihi/basincDegeri) — bu
+  // listedeki ilgili madde sadece damganın okunaklı olduğunu gözle teyit
+  // eder, laboratuvar/basınç testinin yerine geçmez.
+  'Temiz Hava Solunum Seti': [
+    { id: 'kayisTokalar', soru: 'Sırt taşıyıcı (harness) kayışları ve tokalar sağlam, yırtık/aşınma yok' },
+    { id: 'tupGovde', soru: 'Tüp gövdesinde darbe, çukurlaşma, korozyon izi yok' },
+    { id: 'hidrostatikDamga', soru: 'Tüp üzerindeki periyodik muayene (hidrostatik test) damgası okunaklı ve tarihi geçerli' },
+    { id: 'tupVanasi', soru: 'Tüp vanası kolay açılıp kapanıyor, sızdırmıyor' },
+    { id: 'manometreCam', soru: 'Basınç göstergesi camı sağlam, ibre serbest hareket ediyor' },
+    { id: 'basincYeterli', soru: 'Dolu basınç değeri üreticinin nominal değerine uygun (bkz. ölçülen basınç değeri)' },
+    { id: 'tupRakoru', soru: 'Tüp–regülatör bağlantı rakoru (yoke/DIN) sızdırmaz, diş hasarsız' },
+    { id: 'ortaBasincHortumu', soru: 'Orta basınç hortumunda çatlak/aşınma yok, bağlantıları sızdırmıyor' },
+    { id: 'hizliBaglanti', soru: 'Hızlı bağlantı (quick-connect) soketleri düzgün kilitleniyor' },
+    { id: 'oringConta', soru: 'O-ring/conta elemanları sağlam, deforme/sertleşme yok' },
+    { id: 'birinciKademe', soru: 'Birinci kademe regülatör (basınç düşürücü) sızıntısız çalışıyor' },
+    { id: 'talepValfi', soru: 'İkinci kademe (talep valfi) nefes alışta düzgün açılıyor' },
+    { id: 'bypassValfi', soru: 'Bypass (acil durum) valfi çalışıyor' },
+    { id: 'maskeVizoru', soru: 'Maske vizörü çatlaksız, görüş net' },
+    { id: 'yuzKecesi', soru: 'Yüz keçesi (conta) esnek, deforme/sertleşme yok, yüze tam oturuyor' },
+    { id: 'maskeBaglantiHalkasi', soru: 'Maske–regülatör bağlantı halkası sızdırmaz' },
+    { id: 'dusukBasincDuduk', soru: 'Düşük basınç uyarı düdüğü doğru basınç eşiğinde ötüyor' },
+    { id: 'kapasiteEtiketi', soru: 'Kullanım süresi/kapasite etiketi okunaklı ve güncel' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
@@ -599,6 +629,14 @@ function ekipmanOlustur(veriler) {
       });
       return sonuc;
     })(),
+    // Kullanıcı isteği: "test tarihi olsun, basınç değerini girelim" —
+    // yalnızca "Temiz Hava Solunum Seti" türünde kullanılır (tüpün resmi
+    // periyodik/hidrostatik test tarihi ve kontrol anında manometreden
+    // okunan basınç değeri, bar). Diğer türlerde boş kalır; alan her türde
+    // saklanabilir (tür sonradan değiştirilirse veri kaybolmasın diye
+    // filtrelenmez — malzemeListesi ile aynı yaklaşım, bkz. yukarısı).
+    basincTestTarihi: (veriler.basincTestTarihi || '').trim(),
+    basincDegeri: (veriler.basincDegeri || '').trim(),
     notlar: (veriler.notlar || '').trim(),
     // Kontrol sırasında çekilen kanıt/bulgu fotoğrafları (opsiyonel, en
     // fazla 3 adet — kullanıcı isteği: "her bir kontrol için 3 adet
