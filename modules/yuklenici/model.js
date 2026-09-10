@@ -216,10 +216,10 @@ const YUKLENICI_EGITIM_YIL_HARITASI = { az: 3, tehlikeli: 2, cok: 1 };
 const YUKLENICI_FIRMA_EGITIMI_AY_SECENEKLERI = [1, 2, 3, 4, 5, 6, 9, 12];
 const YUKLENICI_FIRMA_EGITIMI_VARSAYILAN_AY = 6;
 
-// tur: 'var-yok' | 'tarih-manuel' (Geçici Görevlendirme/MYK, exp elle girilir;
-// MYK'de exp boş bırakılırsa süresiz sayılır) | 'tarih-tehlike' (Sağlık/Temel
-// İSG; exp boşsa base+tehlike-sınıfı-yılı ile hesaplanır) | 'egitim' (Firma
-// Eğitimi; exp boşsa base+ay ile hesaplanır, eğitmen adı zorunlu).
+// tur: 'var-yok' | 'tarih-tek' (Geçici Görevlendirme; tek bir "en son giriş
+// yapabileceği tarih" — exp — girilir, başlangıç tutulmaz) | 'tarih-tehlike'
+// (Sağlık/Temel İSG; exp boşsa base+tehlike-sınıfı-yılı ile hesaplanır) |
+// 'egitim' (Firma Eğitimi; exp boşsa base+ay ile hesaplanır, eğitmen adı zorunlu).
 // girisEngelleyici: eksik/süresi geçmişse "Giriş Engeli" (kritik) sayılır —
 // false olanlar (Diploma, İG Uzmanı/Hekim atama belgeleri, operatör belgeleri)
 // eski uygulamada da girişi engellemez, sadece bilgi amaçlıdır.
@@ -243,11 +243,12 @@ const YUKLENICI_BELGE_TANIMLARI = [
   // çıkarılıp Firma modalındaki genel evrak listesine taşındı (bkz.
   // EVRAK_TURLERI: 'İş Güvenliği Uzmanı Sözleşmesi', 'İşyeri Hekimi Sözleşmesi').
   { id: 'diploma', ad: 'Diploma', tur: 'var-yok', girisEngelleyici: false, karsilikliId: 'myk', bolum: 'zorunlu' },
-  { id: 'geciciGorev', ad: 'Geçici Görevlendirme Belgesi', tur: 'tarih-manuel', girisEngelleyici: true, bolum: 'zorunlu' },
-  // NOT: eski uygulamada MYK'nin "base" alanı eksikse Giriş Engeli sayılır
-  // (computeCriticalReason: "MYK yok"), sadece "exp" boş bırakılırsa süresiz
-  // kabul edilir — bu yüzden girisEngelleyici true.
-  { id: 'myk', ad: 'MYK Belgesi', tur: 'tarih-manuel', girisEngelleyici: true, suresizOlabilir: true, karsilikliId: 'diploma', bolum: 'zorunlu' },
+  // Kullanıcı isteği: MYK Belgesi'nde tarih girişi olmasın, SGK/Adli Sicil/KKD
+  // gibi basit Var/Yok olsun (dizi sırası da bu yüzden var-yok grubuna taşındı).
+  { id: 'myk', ad: 'MYK Belgesi', tur: 'var-yok', girisEngelleyici: true, karsilikliId: 'diploma', bolum: 'zorunlu' },
+  // Kullanıcı isteği: iki tarih (başlangıç/bitiş) yerine tek tarih — "en son
+  // giriş yapabileceği tarih".
+  { id: 'geciciGorev', ad: 'Geçici Görevlendirme Belgesi', tur: 'tarih-tek', girisEngelleyici: true, bolum: 'zorunlu' },
   { id: 'saglik', ad: 'Sağlık Raporu', tur: 'tarih-tehlike', girisEngelleyici: true, yilHaritasi: 'saglik', bolum: 'zorunlu' },
   { id: 'temelIsg', ad: 'Temel İSG Eğitimi Belgesi', tur: 'tarih-tehlike', girisEngelleyici: true, yilHaritasi: 'egitim', bolum: 'zorunlu' },
   { id: 'firmaEgitimi', ad: 'Firma Eğitimi', tur: 'egitim', girisEngelleyici: true, bolum: 'zorunlu' },
@@ -314,14 +315,19 @@ function yukleniciBelgeBitisTarihiHesapla(belgeTanimi, kayit, tehlikeSinifi) {
     return yukleniciYilEkle(kayit.base, yilHaritasi[tehlikeSinifi] || 1);
   }
 
-  // tarih-manuel (Geçici Görevlendirme, MYK) — exp elle girilir; MYK'de boş
-  // bırakılırsa süresiz sayılır (eski uygulama: "base var exp yok -> süresiz OK").
+  // tarih-tek (Geçici Görevlendirme) — tek alan (exp) doğrudan "en son giriş
+  // yapabileceği tarih"tir, elle girilir.
   return kayit.exp || '';
 }
 
 function yukleniciBelgeVarMi(kayit) {
   if (!kayit) return false;
-  return String(kayit.deger || '').toLowerCase() === 'var';
+  if (kayit.deger) return String(kayit.deger).toLowerCase() === 'var';
+  // Geriye dönük uyumluluk: MYK Belgesi tarihli (base/exp) bir alanken
+  // Var/Yok'a çevrildi (kullanıcı isteği) — bu değişiklikten önce kaydedilmiş
+  // kişilerde "deger" alanı yok, ama bir Veriliş (base) tarihi girilmişse
+  // belge fiilen mevcuttu; bu durumda "Var" sayılır.
+  return !!kayit.base;
 }
 
 // Öncelik sıralı "kritik sebep" hesabı — eski uygulamadaki computeCriticalReason
@@ -365,20 +371,15 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
     if (kalan !== null && kalan <= 30) return sorunUret(`${ilkBiten.etiket} yaklaşıyor`, ilkBiten.exp, false, ilkBiten.etiket);
   }
 
+  // tarih-tek: tek alan (exp) = en son giriş yapabileceği tarih.
   const gecici = belgeGetir('geciciGorev');
-  if (!gecici.base || !gecici.exp) return sorunUret('Geçici Görevlendirme yok', '', true, 'Geçici Görev');
+  if (!gecici.exp) return sorunUret('Geçici Görevlendirme yok', '', true, 'Geçici Görev');
   const geciciKalan = kalanGunHesapla(gecici.exp);
   if (geciciKalan !== null && geciciKalan < 0) return sorunUret('Geçici Görevlendirme süresi dolmuş', gecici.exp, true, 'Geçici Görev');
   if (geciciKalan !== null && geciciKalan <= 30) return sorunUret('Geçici Görevlendirme yaklaşıyor', gecici.exp, false, 'Geçici Görev');
 
-  const myk = belgeGetir('myk');
-  if (!myk.base) return sorunUret('MYK yok', '', true, 'MYK');
-  if (myk.exp) {
-    const mykKalan = kalanGunHesapla(myk.exp);
-    if (mykKalan !== null && mykKalan < 0) return sorunUret('MYK süresi dolmuş', myk.exp, true, 'MYK');
-    if (mykKalan !== null && mykKalan <= 30) return sorunUret('MYK yaklaşıyor', myk.exp, false, 'MYK');
-  }
-  // exp boşsa MYK süresizdir, sorun yok.
+  // Kullanıcı isteği: MYK artık tarihsiz, basit Var/Yok.
+  if (!yukleniciBelgeVarMi(belgeGetir('myk'))) return sorunUret('MYK yok', '', true, 'MYK');
 
   const firmaEgitimi = belgeGetir('firmaEgitimi');
   const feExp = yukleniciBelgeBitisTarihiHesapla(tanimGetir('firmaEgitimi'), firmaEgitimi, tehlike);
@@ -392,15 +393,18 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
 
 // Tek bir belgenin "Uygun" sayılıp sayılmayacağı — satır renklendirme
 // (getRowClassForPersonel) ve Dashboard KPI'ları için kullanılır. var-yok
-// belgede deger==='Var'; tarihli belgelerde base<=bugün<=exp aralığında
-// olması gerekir (MYK süresizse — base var, exp yok — otomatik uygun sayılır).
+// belgede deger==='Var' (veya eski tarihli kayıtlarda base, bkz.
+// yukleniciBelgeVarMi); tarih-tek'te (Geçici Görevlendirme) sadece
+// bugün<=exp yeterlidir (başlangıç tutulmaz); diğer tarihli belgelerde
+// base<=bugün<=exp aralığında olması gerekir.
 function yukleniciBelgeUygunMu(belgeTanimi, kayit, tehlikeSinifi, referansTarih) {
   const bugun = referansTarih || bugunIso();
   const k = kayit || {};
-  if (belgeTanimi.tur === 'var-yok') return k.deger === 'Var';
-  if (belgeTanimi.suresizOlabilir && k.base && !k.exp) return true;
+  if (belgeTanimi.tur === 'var-yok') return yukleniciBelgeVarMi(k);
   const exp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, k, tehlikeSinifi);
-  if (!k.base || !exp) return false;
+  if (!exp) return false;
+  if (belgeTanimi.tur === 'tarih-tek') return bugun <= exp;
+  if (!k.base) return false;
   return k.base <= bugun && bugun <= exp;
 }
 

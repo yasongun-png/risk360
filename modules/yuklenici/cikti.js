@@ -139,12 +139,9 @@ function yukleniciDetayliExcelAktar() {
         'Temel İSG Başlangıç': bg('temelIsg').base ? formatTarihGoster(bg('temelIsg').base) : '',
         'Temel İSG Bitiş': expHesap('temelIsg') ? formatTarihGoster(expHesap('temelIsg')) : '',
         'Temel İSG Uygun': uygunMu('temelIsg') ? 'Uygun' : 'Uygun Değil',
-        'Geçici Görev Başlangıç': bg('geciciGorev').base ? formatTarihGoster(bg('geciciGorev').base) : '',
         'Geçici Görev Bitiş': bg('geciciGorev').exp ? formatTarihGoster(bg('geciciGorev').exp) : '',
         'Geçici Görev Uygun': uygunMu('geciciGorev') ? 'Uygun' : 'Uygun Değil',
-        'MYK Başlangıç': bg('myk').base ? formatTarihGoster(bg('myk').base) : '',
-        'MYK Bitiş': bg('myk').exp ? formatTarihGoster(bg('myk').exp) : '(Süresiz)',
-        'MYK Uygun': uygunMu('myk') ? 'Uygun' : 'Uygun Değil',
+        'MYK (Var)': yukleniciBelgeVarMi(bg('myk')) ? 'Evet' : 'Hayır',
         'Firma Eğitimi Tarih': bg('firmaEgitimi').base ? formatTarihGoster(bg('firmaEgitimi').base) : '',
         'Firma Eğitimi Bitiş': expHesap('firmaEgitimi') ? formatTarihGoster(expHesap('firmaEgitimi')) : '',
         'Firma Eğitimi Eğitmen': bg('firmaEgitimi').egitmen || '',
@@ -372,17 +369,18 @@ function _yukleniciDetayliExcelIceAktarUygula(dosya, tamamlaninca) {
     // ezmesin diye (bkz. yukleniciKisilerTopluEkle'deki birleştirme kuralı).
     const kayitlar = gecerliSatirlar.map(s => {
       const firma = firmaHaritasi[_basligiNormallestir((s.firma || '').trim())];
-      const mykExpHam = /süresiz/i.test(s.mykBitis || '') ? '' : s.mykBitis;
       const belgeler = yukleniciBosBelgeler();
       if ((s.sgk || '').trim()) belgeler.sgk = { deger: _yukleniciVarYokCoz(s.sgk) };
       if ((s.adliSicil || '').trim()) belgeler.adliSicil = { deger: _yukleniciVarYokCoz(s.adliSicil) };
       if ((s.kkd || '').trim()) belgeler.kkd = { deger: _yukleniciVarYokCoz(s.kkd) };
       if ((s.saglikBaslangic || '').trim()) belgeler.saglik = { base: excelTarihiNormallestir(s.saglikBaslangic) };
       if ((s.temelIsgBaslangic || '').trim()) belgeler.temelIsg = { base: excelTarihiNormallestir(s.temelIsgBaslangic) };
-      if ((s.geciciBaslangic || '').trim() || (s.geciciBitis || '').trim()) {
-        belgeler.geciciGorev = { base: excelTarihiNormallestir(s.geciciBaslangic), exp: excelTarihiNormallestir(s.geciciBitis) };
-      }
-      if ((s.mykBaslangic || '').trim()) belgeler.myk = { base: excelTarihiNormallestir(s.mykBaslangic), exp: excelTarihiNormallestir(mykExpHam) };
+      // geciciGorev artık tek tarih (tarih-tek) — eski dosyadaki başlangıç
+      // sütunu yok sayılır, sadece bitiş (en son giriş tarihi) alınır.
+      if ((s.geciciBitis || '').trim()) belgeler.geciciGorev = { exp: excelTarihiNormallestir(s.geciciBitis) };
+      // MYK artık Var/Yok — eski dosyada bir başlangıç tarihi varsa belge
+      // fiilen mevcuttu demektir, "Var" olarak aktarılır.
+      if ((s.mykBaslangic || '').trim()) belgeler.myk = { deger: 'Var' };
       if ((s.feTarih || '').trim()) {
         belgeler.firmaEgitimi = { base: excelTarihiNormallestir(s.feTarih), exp: excelTarihiNormallestir(s.feBitis), egitmen: s.feEgitmen, ay: YUKLENICI_FIRMA_EGITIMI_VARSAYILAN_AY };
       }

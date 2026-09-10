@@ -264,16 +264,20 @@ function _kisiBelgeSatiriHtml(belgeTanimi, kayit, tehlikeSinifi) {
   let alanlar = '';
 
   if (belgeTanimi.tur === 'var-yok') {
+    // Not: k.deger yerine yukleniciBelgeVarMi(k) kullanılır — MYK gibi
+    // tarihli (base/exp) bir alanken Var/Yok'a çevrilmiş türlerde, eski
+    // kayıtlarda "deger" yok ama "base" varsa bu "Var" olarak gösterilsin
+    // diye (bkz. model.js yukleniciBelgeVarMi).
+    const varMi = yukleniciBelgeVarMi(k);
     alanlar = `
       <select data-belge-alan="deger" data-belge-id="${belgeTanimi.id}" style="width:auto;">
-        <option value="Yok" ${k.deger !== 'Var' ? 'selected' : ''}>Yok</option>
-        <option value="Var" ${k.deger === 'Var' ? 'selected' : ''}>Var</option>
+        <option value="Yok" ${!varMi ? 'selected' : ''}>Yok</option>
+        <option value="Var" ${varMi ? 'selected' : ''}>Var</option>
       </select>
     `;
-  } else if (belgeTanimi.tur === 'tarih-manuel') {
+  } else if (belgeTanimi.tur === 'tarih-tek') {
     alanlar = `
-      <input type="date" data-belge-alan="base" data-belge-id="${belgeTanimi.id}" value="${k.base || ''}" title="Veriliş" style="width:auto;">
-      <input type="date" data-belge-alan="exp" data-belge-id="${belgeTanimi.id}" value="${k.exp || ''}" title="${belgeTanimi.suresizOlabilir ? 'Geçerlilik (boş = süresiz)' : 'Geçerlilik'}" style="width:auto;">
+      <input type="date" data-belge-alan="exp" data-belge-id="${belgeTanimi.id}" value="${k.exp || ''}" title="En son giriş yapabileceği tarih" style="width:auto;">
     `;
   } else if (belgeTanimi.tur === 'tarih-tehlike') {
     const hesapExp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, k, tehlikeSinifi);
