@@ -622,20 +622,9 @@ async function konuBasliklariWordOlustur() {
     children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: toplanti.calisanTemsilcisiGorusleri.trim(), size: 20 })], spacing: { after: 150 } }));
   }
 
-  const tespitEdilenUygunsuzluklar = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
-  const kapananUygunsuzluklar = toplantiKapananUygunsuzluklariGetir(toplanti);
-  if (tespitEdilenUygunsuzluklar.length || kapananUygunsuzluklar.length) {
-    bolumBasligi('F) AY İÇİNDE TESPİT EDİLEN VE KAPATILAN UYGUNSUZLUKLAR');
-    tespitEdilenUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: 20 })], spacing: { after: 100 } }));
-    });
-    kapananUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: 20 })], spacing: { after: 150 } }));
-    });
-  }
-
+  // Kullanıcı isteği: Konu Başlıkları çıktısında uygunsuzluklar bölümü
+  // olmasın — bu bölüm ayrıca Uygunsuzluk modülünün kendi bildirim/rapor
+  // çıktılarında zaten yer alıyor.
   const doc = new docx.Document({ sections: [{ children }] });
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `Konu_Basliklari_${toplanti.toplantiNo}.docx`);
