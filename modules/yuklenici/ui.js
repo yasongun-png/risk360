@@ -326,10 +326,18 @@ function _kisiBelgeListesiniCiz() {
       const alan = el.getAttribute('data-belge-alan');
       if (!_kisiBelgeTaslak[id]) _kisiBelgeTaslak[id] = {};
       _kisiBelgeTaslak[id][alan] = el.value;
-      // Sağlık/Temel İSG'de veriliş tarihi değişince hesaplanan geçerlilik
-      // metnini güncellemek için satırı yeniden çiz.
-      if (alan === 'base' && yukleniciBelgeTanimiGetir(id).tur === 'tarih-tehlike') { _kisiBelgeListesiniCiz(); return; }
       _kisiCanliDurumuGuncelle();
+    });
+    // Sağlık/Temel İSG'de veriliş tarihi (native <input type="date">) her
+    // tuş vuruşunda 'input' olayı fırlatır — bunu dinleyip satırı hemen
+    // yeniden çizmek, kullanıcı tarihi yazarken kutuyu silip yeniden
+    // oluşturuyordu ve girilen yıl bozuluyordu (ör. 2025 -> 0002). Hesaplanan
+    // geçerlilik metni artık sadece tarih TAMAMLANIP onaylandığında ('change')
+    // güncellenir — diğer tarih alanlarıyla aynı, kesintisiz yazma davranışı.
+    el.addEventListener('change', () => {
+      const id = el.getAttribute('data-belge-id');
+      const alan = el.getAttribute('data-belge-alan');
+      if (alan === 'base' && yukleniciBelgeTanimiGetir(id).tur === 'tarih-tehlike') _kisiBelgeListesiniCiz();
     });
   });
 
