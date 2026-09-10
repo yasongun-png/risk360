@@ -326,6 +326,17 @@ function _kisiBelgeListesiniCiz() {
       const alan = el.getAttribute('data-belge-alan');
       if (!_kisiBelgeTaslak[id]) _kisiBelgeTaslak[id] = {};
       _kisiBelgeTaslak[id][alan] = el.value;
+      // Sağlık/Temel İSG/Firma Eğitimi'nde formda DÜZENLENEBİLEN tek tarih
+      // "base" (Veriliş) — "exp" (bitiş) formda hiç gösterilmez, sadece
+      // base'den (ve Firma Eğitimi'nde ay'dan) hesaplanır. Eski Excel içe
+      // aktarımlarında (bkz. cikti.js) bazı kayıtlarda ayrıca ham bir "exp"
+      // alanı da saklanıyor; hesaplama fonksiyonu varsa onu öncelikli
+      // kullandığından, kullanıcı ekranda Veriliş tarihini değiştirse bile
+      // geçerlilik eski/aktarılmış tarihte donuk kalıyordu ("hesap hatası").
+      // Kullanıcı bu alana dokunduğu an eski exp artık geçersiz sayılır ki
+      // yeniden base (+ay) üzerinden hesaplansın.
+      const tur = yukleniciBelgeTanimiGetir(id).tur;
+      if ((alan === 'base' || alan === 'ay') && (tur === 'tarih-tehlike' || tur === 'egitim')) delete _kisiBelgeTaslak[id].exp;
       _kisiCanliDurumuGuncelle();
     });
     // Sağlık/Temel İSG'de veriliş tarihi (native <input type="date">) her
