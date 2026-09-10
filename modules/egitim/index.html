@@ -94,6 +94,8 @@
         <div class="arac-cubugu">
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <select id="soruKonuFiltre" style="width:auto; margin:0;"></select>
+            <select id="soruAltKonuFiltre" style="width:auto; margin:0;"></select>
+            <select id="soruZorlukFiltre" style="width:auto; margin:0;"></select>
             <input type="text" id="soruAramaKutusu" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin:0;">
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -101,6 +103,7 @@
             <button type="button" class="ikincil" id="soruIceAktarBtn">İçe Aktar</button>
             <input type="file" id="soruIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
             <button type="button" class="ikincil" id="soruDisaAktarBtn">Dışa Aktar</button>
+            <button type="button" class="ikincil" id="hazirSoruBankasiBtn">📚 Hazır Soru Bankasını Yükle</button>
             <button type="button" class="birincil" id="yeniSoruBtn" style="width:auto;">+ Yeni Soru</button>
           </div>
         </div>
@@ -110,7 +113,9 @@
             <thead>
               <tr>
                 <th>Soru</th>
-                <th>Konu</th>
+                <th>Eğitim / Konu</th>
+                <th>Alt Konu</th>
+                <th>Zorluk</th>
                 <th>Doğru Cevap</th>
                 <th>İşlemler</th>
               </tr>
@@ -184,6 +189,17 @@
         <select id="soruKonuId"></select>
         <div class="alan-hatasi" id="soruKonuIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
+        <div class="form-satir-ikili">
+          <div>
+            <label for="soruAltKonu">Alt Konu <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+            <select id="soruAltKonu"></select>
+          </div>
+          <div>
+            <label for="soruZorluk">Zorluk</label>
+            <select id="soruZorluk"></select>
+          </div>
+        </div>
+
         <label for="soruMetni">Soru Metni</label>
         <textarea id="soruMetni" rows="3"></textarea>
         <div class="alan-hatasi" id="soruMetniHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
@@ -214,6 +230,9 @@
         </select>
         <div class="alan-hatasi" id="dogruCevapHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
+        <label for="soruAciklama">Açıklama <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — cevap anahtarında gösterilir)</span></label>
+        <textarea id="soruAciklama" rows="2"></textarea>
+
         <div class="modal-eylemler">
           <button type="button" class="ikincil" id="soruModalIptalBtn">İptal</button>
           <button type="submit" class="birincil">Kaydet</button>
@@ -223,12 +242,32 @@
     </div>
   </div>
 
+  <!-- SINAV: Hazır Soru Bankasını Yükle -->
+  <div class="modal-katman" id="hazirSoruBankasiModalKatman">
+    <div class="modal-kutu">
+      <h3>Hazır Soru Bankasını Yükle</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Uygulamayla birlikte gelen <b id="hazirSoruBankasiSayi">0</b> soruluk hazır İSG soru bankası,
+        seçtiğiniz eğitim türüne eklenecektir (mevcut sorularınız silinmez, üzerine eklenir).
+        Sorular konu ve zorluk düzeyine göre etiketlenmiştir.
+      </p>
+      <label for="hazirSoruBankasiKonuId">Hangi Eğitim / Konuya eklensin?</label>
+      <select id="hazirSoruBankasiKonuId"></select>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="hazirSoruBankasiIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="hazirSoruBankasiYukleBtn">Yükle</button>
+      </div>
+      <button type="button" class="tablo-buton" id="hazirSoruBankasiKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <!-- SINAV: Yeni Sınav -->
   <div class="modal-katman" id="sinavModalKatman">
     <div class="modal-kutu">
       <h3>Yeni Sınav Oluştur</h3>
       <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
-        Seçilen konudaki soru bankasından, belirttiğiniz sayıda soru rastgele seçilerek sınav oluşturulur.
+        Seçilen konudaki soru bankasından, belirttiğiniz sayıda soru rastgele seçilerek sınav
+        oluşturulur — isterseniz "Manuel" yöntemle soruları kendiniz tek tek de seçebilirsiniz.
       </p>
       <form id="sinavForm">
         <label for="sinavBaslik">Sınav Başlığı</label>
@@ -239,17 +278,40 @@
         <select id="sinavKonuId"></select>
         <div class="alan-hatasi" id="sinavKonuIdHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
+        <label>Alt Konu <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — birden fazla seçebilirsiniz, hiçbiri işaretlenmezse tüm alt konular dahil olur)</span></label>
+        <div id="sinavAltKonuKutulari" style="display:flex; flex-wrap:wrap; gap:8px 14px; margin:4px 0 10px; max-height:150px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px;"></div>
+
+        <label>Zorluk Düzeyi <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — hiçbiri işaretlenmezse tüm zorluklar dahil olur)</span></label>
+        <div id="sinavZorlukKutulari" style="display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 10px;"></div>
+
+        <label>Sınav Oluşturma Yöntemi</label>
+        <div style="display:flex; gap:18px; margin:4px 0 10px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+            <input type="radio" name="sinavYontem" value="otomatik" id="sinavYontemOtomatik" checked style="width:auto; margin:0;"> Otomatik (Yukarıdaki filtreden rastgele seç)
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+            <input type="radio" name="sinavYontem" value="manuel" id="sinavYontemManuel" style="width:auto; margin:0;"> Manuel (Soruları kendim seçeyim)
+          </label>
+        </div>
+
         <div class="form-satir-ikili">
           <div>
-            <label for="sinavTarih">Tarih</label>
+            <label for="sinavTarih">Tarih <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — boş bırakılırsa sınav kağıdında elle doldurulacak boşluk basılır)</span></label>
             <input type="date" id="sinavTarih">
             <div class="alan-hatasi" id="sinavTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
-          <div>
+          <div id="sinavSoruSayisiAlani">
             <label for="sinavSoruSayisi">Soru Sayısı</label>
             <input type="number" id="sinavSoruSayisi" min="1">
             <div class="alan-hatasi" id="soruSayisiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
+        </div>
+
+        <div id="sinavManuelSoruAlani" style="display:none;">
+          <label>Sorular <span id="sinavManuelSayac" style="color:var(--metin-soluk); font-weight:400;">(0 soru seçildi)</span></label>
+          <input type="text" id="sinavManuelArama" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin-bottom:6px;">
+          <div id="sinavManuelSoruListesi" style="max-height:260px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+          <div class="alan-hatasi" id="manuelSoruHata" style="color:var(--hata); font-size:12px; margin-top:-6px; margin-bottom:10px;"></div>
         </div>
 
         <label for="sinavGecmeNotu">Geçme Notu (0-100)</label>
@@ -508,6 +570,7 @@
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=2"></script>
   <script src="sinav.js?v=1"></script>
+  <script src="sinav-soru-bankasi.js?v=1"></script>
   <script src="sinav-ui.js?v=1"></script>
   <script src="ui.js?v=4"></script>
   <script src="cikti.js?v=2"></script>

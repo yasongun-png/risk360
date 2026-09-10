@@ -103,10 +103,10 @@
     <div class="dashboard-ust" style="margin-top:24px;">
       <h3 style="margin:0;">Ay İçinde Yapılan Eğitimler</h3>
     </div>
-    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 8px;">Toplantı dönemi içinde Eğitim modülünde kayıtlı eğitimlerin özeti — otomatik gelir, buradan eklenemez/silinemez.</p>
+    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 8px;">Toplantı dönemi içinde Eğitim modülünde kayıtlı eğitimlerin özeti — otomatik gelir, buradan eklenemez ama istenirse bu toplantının gündeminden kaldırılabilir.</p>
     <div class="tablo-scroll">
       <table class="veri-tablosu">
-        <thead><tr><th>Sıra</th><th>Eğitim Adı</th><th>Tarih</th><th>Katılımcı Sayısı</th><th>Birim</th></tr></thead>
+        <thead><tr><th>Sıra</th><th>Eğitim Adı</th><th>Tarih</th><th>Katılımcı Sayısı</th><th>Birim</th><th>İşlemler</th></tr></thead>
         <tbody id="aylikEgitimTabloGovde"></tbody>
       </table>
     </div>
@@ -418,7 +418,7 @@
   <!-- AY İÇİ FAALİYET MODAL -->
   <div class="modal-katman" id="ayIciFaaliyetModalKatman">
     <div class="modal-kutu" style="max-width:480px;">
-      <h3>Yeni Ay İçi Faaliyet</h3>
+      <h3 id="ayIciFaaliyetModalBaslik">Yeni Ay İçi Faaliyet</h3>
       <form id="ayIciFaaliyetForm">
         <label for="ayIciFaaliyetAdi">Faaliyet</label>
         <input type="text" id="ayIciFaaliyetAdi" placeholder="Örn: Saha Denetimi">

@@ -73,8 +73,16 @@
     </div>
 
     <div id="bolum-rca" style="display:none;">
-      <div class="rapor-meta-grid" style="grid-template-columns: 260px;">
-        <label>Yıllık Çalışma Saati<input type="number" id="yillikCalismaSaati" min="0"></label>
+      <div class="dashboard-ust">
+        <h3 style="margin:0;">Aylık Çalışma Saati (Bagfaş + Servis + Teknik toplamı)</h3>
+        <select id="calismaSaatiYil" style="width:auto;"></select>
+      </div>
+      <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 8px;">Kaza sıklık/ağırlık oranı hesaplarında kullanılan aylık toplam çalışma saatleri. "Tahmini" işaretli aylar henüz gerçekleşmemiştir; gerçek veri geldiğinde üzerine yazıp işareti kaldırabilirsiniz.</p>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Ay</th><th>Toplam Saat</th><th>Tahmini mi?</th></tr></thead>
+          <tbody id="calismaSaatiTabloGovde"></tbody>
+        </table>
       </div>
       <div id="rcaKutusu"></div>
     </div>

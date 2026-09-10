@@ -234,6 +234,47 @@ function fineKinneyPuaniHesapla(kayit) {
   return riskPuaniHesapla(kayit.fkO, kayit.fkF, kayit.fkS);
 }
 
+const CALISMA_SAATI_AY_ANAHTARLARI = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+const CALISMA_SAATI_AY_ADLARI = { '01': 'Ocak', '02': 'Şubat', '03': 'Mart', '04': 'Nisan', '05': 'Mayıs', '06': 'Haziran', '07': 'Temmuz', '08': 'Ağustos', '09': 'Eylül', '10': 'Ekim', '11': 'Kasım', '12': 'Aralık' };
+
+// Kullanıcının paylaştığı gerçek 2025 (12 ay) ve 2026 (Ocak-Haziran gerçek,
+// Temmuz-Aralık henüz gerçekleşmediği için tahmini) BAGFAŞ+SERVİS+TEKNİK
+// toplam çalışma saatleri -- kaza sıklık/ağırlık oranı hesaplarında "toplam
+// sayı" (departman ayrımı olmadan) dikkate alınır (kullanıcı isteği: "bagfaş,
+// servis ve tekniğin toplamını dikkate al"). Tahmini aylar, gerçekleşen
+// Ocak-Haziran 2026 toplamının aynı dönem 2025 toplamına oranı (~%6 artış)
+// 2025'in Temmuz-Aralık aylarına uygulanarak hesaplandı (kullanıcı isteği:
+// "olmayan aylar için bu doğrultuda hazırlık yap, tahmini bişeyler yaz").
+// Ayarlar ekranında gerçek veri girildikçe üzerine yazılabilir.
+const CALISMA_SAATI_VARSAYILAN = {
+  '2025': {
+    '01': { saat: 50632.5, tahmini: false }, '02': { saat: 50557.5, tahmini: false },
+    '03': { saat: 48525.0, tahmini: false }, '04': { saat: 48247.5, tahmini: false },
+    '05': { saat: 46410.0, tahmini: false }, '06': { saat: 45645.0, tahmini: false },
+    '07': { saat: 48795.0, tahmini: false }, '08': { saat: 47310.0, tahmini: false },
+    '09': { saat: 51525.0, tahmini: false }, '10': { saat: 54022.5, tahmini: false },
+    '11': { saat: 51795.0, tahmini: false }, '12': { saat: 55327.5, tahmini: false }
+  },
+  '2026': {
+    '01': { saat: 52500.0, tahmini: false }, '02': { saat: 51487.5, tahmini: false },
+    '03': { saat: 52980.0, tahmini: false }, '04': { saat: 54960.0, tahmini: false },
+    '05': { saat: 45555.0, tahmini: false }, '06': { saat: 49957.5, tahmini: false },
+    '07': { saat: 51726.5, tahmini: true }, '08': { saat: 50152.0, tahmini: true },
+    '09': { saat: 54620.5, tahmini: true }, '10': { saat: 57267.5, tahmini: true },
+    '11': { saat: 54907.0, tahmini: true }, '12': { saat: 58651.5, tahmini: true }
+  }
+};
+
+// Aylık çalışma saati tablosundan (bkz. CALISMA_SAATI_VARSAYILAN ile aynı
+// şekil, ayarlarda saklanan gerçek değer), istenirse belirli bir aya kadar
+// (YTD) olmak üzere toplamı hesaplar.
+function calismaSaatiYilToplamiHesapla(ayVerileri, sonAyDahil) {
+  if (!ayVerileri) return 0;
+  return Object.keys(ayVerileri)
+    .filter(ay => !sonAyDahil || ay <= sonAyDahil)
+    .reduce((t, ay) => t + (Number((ayVerileri[ay] && ayVerileri[ay].saat) || 0)), 0);
+}
+
 // OSHA benzeri standart iş güvenliği oranları (yıllık çalışılan saate göre).
 // TRIR: Toplam Kayıt Edilebilir Olay Oranı, LTIFR: Kayıp Günlü Olay Sıklık Oranı,
 // Şiddet Oranı: kayıp gün / çalışılan saat, DART Oranı: LTI+DART / çalışılan saat.

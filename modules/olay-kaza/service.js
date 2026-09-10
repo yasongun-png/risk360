@@ -275,7 +275,12 @@ async function olayKayitlariniJsondanIceAktar(kayitlarHam) {
 function olayRCAOzetiHesapla() {
   const kayitlar = olayKayitlariTumunuGetir().map(_olayZenginlestir);
   const ayarlar = olayAyarlariGetirRepo();
-  const oranlar = guvenlikOranlariniHesapla(kayitlar, ayarlar.yillikCalismaSaati);
+  // Aylık tablo (bkz. CALISMA_SAATI_VARSAYILAN) girilmişse tüm yılların
+  // toplamı kullanılır; girilmemişse eski tek sayılık alana düşülür.
+  const aylikToplam = ayarlar.aylikCalismaSaatleri
+    ? Object.values(ayarlar.aylikCalismaSaatleri).reduce((t, ayVerileri) => t + calismaSaatiYilToplamiHesapla(ayVerileri), 0)
+    : 0;
+  const oranlar = guvenlikOranlariniHesapla(kayitlar, aylikToplam || ayarlar.yillikCalismaSaati);
 
   const grupla = (secici) => {
     const sonuc = {};
@@ -315,5 +320,21 @@ function olayAyarlariniGetir() {
 }
 
 function olayAyarlariniKaydet(veriler) {
-  return olayAyarlariKaydetRepo({ yillikCalismaSaati: Number(veriler.yillikCalismaSaati || 0) });
+  const mevcut = olayAyarlariGetirRepo();
+  return olayAyarlariKaydetRepo({
+    yillikCalismaSaati: Number(veriler.yillikCalismaSaati || 0),
+    aylikCalismaSaatleri: veriler.aylikCalismaSaatleri || mevcut.aylikCalismaSaatleri || {}
+  });
+}
+
+// Tek bir yılın aylık çalışma saati tablosunu (o yıl için mevcut değilse
+// CALISMA_SAATI_VARSAYILAN'daki tahmini/gerçek değerlerle, o da yoksa boş
+// aylarla) kaydeder -- Ayarlar ekranındaki yıl bazlı tablo düzenlemesi için.
+function olayCalismaSaatiYiliniKaydet(yil, ayVerileri) {
+  const mevcut = olayAyarlariGetirRepo();
+  const tumYillar = Object.assign({}, mevcut.aylikCalismaSaatleri, { [yil]: ayVerileri });
+  return olayAyarlariKaydetRepo({
+    yillikCalismaSaati: mevcut.yillikCalismaSaati || 0,
+    aylikCalismaSaatleri: tumYillar
+  });
 }

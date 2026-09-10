@@ -399,6 +399,25 @@ async function kurulRaporuWordOlustur() {
     ]}))
   });
 
+  // Yıl bazlı iş kazası istatistikleri (bkz. service.js
+  // toplantiKazaIstatistikleriHesapla) — kullanıcı isteği: "word raporda
+  // ilk konularda [yıl] içinde gerçekleşen iş kazası sayısı, toplam iş
+  // günü kaybı, kaza sıklık ağırlık oranı ve kaza sıklık hızı yer alsın".
+  const kazaIst = toplantiKazaIstatistikleriHesapla(toplanti);
+  const oranGoster = v => v == null ? 'Yıllık çalışma saati girilmemiş' : v.toFixed(2);
+  const kazaIstatistikTablosu = kazaIst ? new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Ölüm)', String(kazaIst.kazaSayisi)],
+      ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)],
+      ['Kaza Sıklık Hızı (LTIFR)', oranGoster(kazaIst.kazaSiklikHizi)],
+      ['Kaza Ağırlık Oranı', oranGoster(kazaIst.kazaAgirlikOrani)]
+    ].map(([etiket, deger]) => new docx.TableRow({ children: [
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph(String(deger)), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+    ]}))
+  }) : null;
+
   // Kullanıcı isteği: kapak sayfasındaki logo/yazılar sayfaya düşeyde
   // ortalansın. docx.js'te paragraf listesi kendiliğinden dikeyde
   // ortalanmaz — tam sayfa yüksekliğinde, kenarlıksız TEK hücreli bir
@@ -438,6 +457,12 @@ async function kurulRaporuWordOlustur() {
     H('Toplantı Bilgileri'),
     bilgiTablosu,
     P(' ', { spacing: { after: 400 } }),
+
+    ...(kazaIstatistikTablosu ? [
+      H(`${kazaIst.yil} Yılı İş Kazası İstatistikleri`),
+      kazaIstatistikTablosu,
+      P(' ', { spacing: { after: 400 } })
+    ] : []),
 
     H('1) Gündem'),
     ...(gundem.length ? gundem.flatMap((g, i) => {
@@ -1021,67 +1046,210 @@ async function pptxOlustur() {
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
 
-  const BG = 'F8FAFC', TITLE = '0F172A', MUTED = '475569';
-  const M = 0.8;
+  // ---- Kurumsal tasarım sistemi (kullanıcı isteği: "daha modern ve etkin",
+  // "bütün müdürlerin olduğu toplantıda kullanıyorum" -- yönetim kurulu
+  // sunumu görünümü olsun). Veri/sıra AYNI kaldı, sadece görsel tasarım
+  // baştan yapıldı: tutarlı üst/alt şerit + sayfa no taşıyan bir slayt
+  // master'ı, durum/öncelik renk kodlu rozetler, kart görünümlü metin/foto
+  // slaytları, bölüm ara slaytları ve gerçek "fotoğraf çekiştirilmesin"
+  // isteği için HER görselde sizing:contain (en-boy oranı bozulmadan,
+  // kutuya sığdırılarak yerleştirilir).
+  const R = { bg: 'F1F5F9', kart: 'FFFFFF', baslik: '0F172A', soluk: '64748B', cizgi: 'E2E8F0', birincil: '1D4ED8', birincilKoyu: '15316B', birincilAcik: 'DBEAFE' };
+  const DURUM_RENK = {
+    'Açık': { fg: 'B45309', bg: 'FEF3C7' },
+    'Devam Ediyor': { fg: '1D4ED8', bg: 'DBEAFE' },
+    'Onay Bekliyor': { fg: '7C3AED', bg: 'EDE9FE' },
+    'Kapalı': { fg: '15803D', bg: 'DCFCE7' },
+    'Tamamlandı': { fg: '15803D', bg: 'DCFCE7' },
+    'İptal': { fg: '64748B', bg: 'E2E8F0' }
+  };
+  const ONCELIK_RENK = {
+    'Düşük': { fg: '15803D', bg: 'DCFCE7' },
+    'Normal': { fg: '1D4ED8', bg: 'DBEAFE' },
+    'Yüksek': { fg: 'B45309', bg: 'FEF3C7' },
+    'Acil': { fg: 'B91C1C', bg: 'FEE2E2' }
+  };
+  const _renkGetir = (harita, deger) => harita[deger] || { fg: R.soluk, bg: R.cizgi };
+  const M = 0.55;
+  const SW = 13.33, SH = 7.5;
 
+  // ---- Slayt master'ı: tüm içerik slaytlarında tekrar eden üst/alt şerit,
+  // firma adı, dönem ve otomatik sayfa numarası (sayfa başına elle yazmak
+  // yerine pptxgenjs'in slideNumber alanı kullanılır, tutarlı ve otomatik).
+  const MASTER = 'ISG_MASTER';
+  const masterNesneleri = [
+    { rect: { x: 0, y: 0, w: '100%', h: 0.09, fill: { color: R.birincil } } },
+    { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
+    { text: { text: _denetimAktifFirmaAdi(), options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
+    { text: { text: 'İSG Kurul Toplantısı  ·  ' + _ciktiDonemMetni(toplanti), options: { x: 7.6, y: SH - 0.4, w: 5.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
+  ];
+  pptx.defineSlideMaster({
+    title: MASTER,
+    background: { color: R.bg },
+    objects: masterNesneleri,
+    slideNumber: { x: SW - 0.7, y: SH - 0.4, w: 0.4, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle' }
+  });
+
+  // ---- Kapak: koyu kurumsal mavi, tam ekran vurgulu.
   let s = pptx.addSlide();
-  s.background = { color: BG };
+  s.background = { color: R.birincilKoyu };
+  s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
+  s.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
   if (logoUrl) {
-    // LAYOUT_WIDE 13.33in genişlik — yatayda ortalanmış, başlığın (y:3.0)
-    // üzerinde kalacak şekilde y:1.2'den başlıyor.
-    const gorsel = { x: 5.87, y: 1.2, w: 1.6, h: 1.6, sizing: { type: 'contain', w: 1.6, h: 1.6 } };
-    s.addImage(/^https?:\/\//i.test(logoUrl) ? Object.assign({ path: logoUrl }, gorsel) : Object.assign({ data: logoUrl }, gorsel));
+    const gorsel = { x: SW / 2 - 0.75, y: 0.85, w: 1.5, h: 1.5, sizing: { type: 'contain', w: 1.5, h: 1.5 } };
+    s.addImage(Object.assign(/^https?:\/\//i.test(logoUrl) ? { path: logoUrl } : { data: logoUrl }, gorsel));
   }
-  s.addText('İŞ SAĞLIĞI VE GÜVENLİĞİ KURUL TOPLANTISI', { x: M, y: 3.0, w: 11, fontSize: 36, bold: true, color: TITLE, align: 'center' });
-  s.addText(_denetimAktifFirmaAdi(), { x: M, y: 4.0, w: 11, fontSize: 20, color: MUTED, align: 'center' });
-  s.addText(_ciktiDonemMetni(toplanti), { x: M, y: 4.7, w: 11, fontSize: 22, bold: true, color: TITLE, align: 'center' });
+  s.addText('İŞ SAĞLIĞI VE GÜVENLİĞİ\nKURUL TOPLANTISI', { x: 1, y: 2.75, w: SW - 2, h: 1.6, fontSize: 38, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', lineSpacingMultiple: 1.08 });
+  s.addText(_denetimAktifFirmaAdi(), { x: 1, y: 4.35, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
+  const donemMetni = _ciktiDonemMetni(toplanti);
+  const cipW = Math.max(2.6, 0.135 * donemMetni.length);
+  s.addShape(pptx.ShapeType.roundRect, { x: SW / 2 - cipW / 2, y: 4.95, w: cipW, h: 0.55, rectRadius: 0.28, fill: { color: R.birincil } });
+  s.addText(donemMetni, { x: SW / 2 - cipW / 2, y: 4.95, w: cipW, h: 0.55, fontSize: 16, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle' });
+  const kapakBilgi = [
+    toplanti.tarih ? `📅 ${gunAyYil(toplanti.tarih)}${toplanti.saat ? ', ' + toplanti.saat : ''}` : '',
+    toplanti.yer ? `📍 ${toplanti.yer}` : '',
+    toplanti.baskan ? `👤 Başkan: ${toplanti.baskan}` : ''
+  ].filter(Boolean).join('      ');
+  if (kapakBilgi) s.addText(kapakBilgi, { x: 1, y: 5.85, w: SW - 2, fontSize: 13, color: '93C5FD', align: 'center' });
+
+  const yeniSlayt = () => pptx.addSlide({ masterName: MASTER });
+
+  // ---- Bölüm ara slaydı: kalın renkli zemin + büyük numara/başlık —
+  // uzun bir sunumda gözü dinlendirip yönetim kurulunun akışı takip
+  // etmesini kolaylaştırır (kart yığını yerine belirgin duraklar).
+  let _bolumNo = 0;
+  const bolumAraSlaydi = (baslik, altBaslik) => {
+    _bolumNo++;
+    const sl = pptx.addSlide();
+    sl.background = { color: R.birincilKoyu };
+    sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
+    sl.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
+    sl.addText(String(_bolumNo).padStart(2, '0'), { x: 0.9, y: 2.5, w: 3.6, h: 2.2, fontSize: 110, bold: true, color: R.birincil, fontFace: 'Calibri' });
+    sl.addShape(pptx.ShapeType.rect, { x: 4.5, y: 3.0, w: 0.05, h: 1.5, fill: { color: R.birincil } });
+    sl.addText(baslik, { x: 4.85, y: 2.85, w: 7.8, h: 1.0, fontSize: 30, bold: true, color: 'FFFFFF', valign: 'top', fontFace: 'Calibri' });
+    if (altBaslik) sl.addText(altBaslik, { x: 4.85, y: 3.75, w: 7.8, h: 0.7, fontSize: 14, color: '93C5FD', valign: 'top' });
+  };
+
+  // ---- Durum/öncelik rozeti (renkli hap) — modern yönetim sunumlarındaki
+  // durum etiketi görünümü.
+  const rozetEkle = (sl, metin, x, y, renk) => {
+    if (!metin) return;
+    const w = Math.max(0.9, 0.1 * metin.length + 0.35);
+    sl.addShape(pptx.ShapeType.roundRect, { x, y, w, h: 0.34, rectRadius: 0.17, fill: { color: renk.bg }, line: { type: 'none' } });
+    sl.addText(metin, { x, y, w, h: 0.34, fontSize: 11, bold: true, color: renk.fg, align: 'center', valign: 'middle' });
+    return w;
+  };
+
+  // Küçük, en-boy oranı bozulmayan "çerçeveli" fotoğraf — kart slaytlarının
+  // sağında kullanılır (kullanıcı isteği: "fotoğraflar gereksiz
+  // çekiştirilmesin" -- sizing:contain ile kutuya sığdırılır, kırpılıp
+  // deforme edilmez).
+  const kucukFotoEkle = (sl, url, x, y, boyut) => {
+    if (!url) return;
+    sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: y - 0.06, w: boyut + 0.12, h: boyut + 0.12, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    const gorsel = { x, y, w: boyut, h: boyut, sizing: { type: 'contain', w: boyut, h: boyut } };
+    sl.addImage(Object.assign(/^https?:\/\//i.test(url) ? { path: url } : { data: url }, gorsel));
+  };
+
+  // Başlık şeridi: sol renkli çubuk + üst bilgi satırı (sıra/toplam) — tüm
+  // "kart" slaytlarında (olay/karar/uygunsuzluk) ortak.
+  const kartBasligi = (sl, ustEtiket, baslik) => {
+    sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
+    sl.addText(ustEtiket, { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
+    sl.addText(baslik, { x: M, y: 0.68, w: 11.8, h: 0.5, fontSize: 21, bold: true, color: R.baslik, fontFace: 'Calibri' });
+  };
+
+  // Meta bilgi tablosu: etiket/değer satırları, ince ayraç çizgili, açık
+  // kurumsal görünüm (eskiden çıplak addTable idi).
+  const metaTablosuEkle = (sl, satirlar, x, y, w) => {
+    sl.addTable(satirlar.map(([e, d]) => [
+      { text: e, options: { bold: true, color: R.soluk, fill: { color: R.bg } } },
+      { text: d, options: { color: R.baslik, fill: { color: 'FFFFFF' } } }
+    ]), { x, y, w, colW: [1.9, w - 1.9], fontSize: 11.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+  };
 
   const tabloSlaydi = (baslik, basliklar, satirlar, colW) => {
-    const sl = pptx.addSlide();
-    sl.background = { color: BG };
-    sl.addText(baslik, { x: M, y: 0.5, w: 11, fontSize: 26, bold: true, color: TITLE });
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'GÜNDEM MADDESİ', baslik);
     if (satirlar.length) {
+      const govde = satirlar.map((satir, i) => satir.map(deger => ({
+        text: String(deger ?? ''),
+        options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik }
+      })));
       sl.addTable([
-        basliklar.map(h => ({ text: h, options: { bold: true } })),
-        ...satirlar
-      ], { x: M, y: 1.3, w: 11.5, colW, fontSize: 11 });
+        basliklar.map(h => ({ text: h, options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } })),
+        ...govde
+      ], { x: M, y: 1.35, w: SW - 2 * M, colW, fontSize: 11, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
     } else {
-      sl.addText('Kayıt bulunmamaktadır.', { x: M, y: 1.6, fontSize: 16, color: MUTED });
+      sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.5, w: SW - 2 * M, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addText('Bu dönem için kayıt bulunmamaktadır.', { x: M, y: 1.5, w: SW - 2 * M, h: 0.9, fontSize: 14, color: R.soluk, align: 'center', valign: 'middle' });
     }
   };
 
   const metinSlaydi = (baslik, metin) => {
-    const sl = pptx.addSlide();
-    sl.background = { color: BG };
-    sl.addText(baslik, { x: M, y: 0.5, w: 11, fontSize: 26, bold: true, color: TITLE });
-    sl.addText(metin || 'Kayıt bulunmamaktadır.', { x: M, y: 1.5, w: 11.5, h: 4, fontSize: 15, color: TITLE, valign: 'top' });
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'DEĞERLENDİRME', baslik);
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: SW - 2 * M, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addText(metin || 'Bu dönem için kayıt bulunmamaktadır.', { x: M + 0.3, y: 1.6, w: SW - 2 * M - 0.6, h: 4.9, fontSize: 15, color: R.baslik, valign: 'top' });
   };
 
+  // Yıl bazlı iş kazası istatistikleri (bkz. service.js
+  // toplantiKazaIstatistikleriHesapla) -- kullanıcı isteği: "ilk slaytta
+  // [yıl] içinde gerçekleşen iş kazası sayısı, toplam iş günü kaybı, kaza
+  // sıklık ağırlık oranı ve kaza sıklık hızı yer alsın". Kapaktan hemen
+  // sonra, kurumsal stat-kartı görünümünde tek bir slaytta gösterilir.
+  const kazaIst = toplantiKazaIstatistikleriHesapla(toplanti);
+  if (kazaIst) {
+    const oranGoster = v => v == null ? 'Saat girilmemiş' : v.toFixed(2);
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı İş Kazası İstatistikleri`);
+    const kutular = [
+      { etiket: 'İş Kazası Sayısı', deger: String(kazaIst.kazaSayisi) },
+      { etiket: 'Toplam İş Günü Kaybı', deger: String(kazaIst.toplamKayipGun) },
+      { etiket: 'Kaza Sıklık Hızı (LTIFR)', deger: oranGoster(kazaIst.kazaSiklikHizi) },
+      { etiket: 'Kaza Ağırlık Oranı', deger: oranGoster(kazaIst.kazaAgirlikOrani) }
+    ];
+    const kutuW = (SW - 2 * M - 3 * 0.3) / 4;
+    kutular.forEach((k, i) => {
+      const x = M + i * (kutuW + 0.3);
+      sl.addShape(pptx.ShapeType.roundRect, { x, y: 1.6, w: kutuW, h: 1.9, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addShape(pptx.ShapeType.rect, { x, y: 1.6, w: kutuW, h: 0.08, fill: { color: R.birincil } });
+      sl.addText(k.deger, { x, y: 1.95, w: kutuW, h: 0.9, fontSize: 30, bold: true, color: R.birincil, align: 'center' });
+      sl.addText(k.etiket, { x: x + 0.1, y: 2.85, w: kutuW - 0.2, h: 0.6, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
+    });
+    sl.addText(`(*) LTI: Kayıp Gün, DART: Kısıtlı İş/Transfer. İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Ölüm. Sıklık/ağırlık oranı, Olay/Kaza modülü Ayarlar'daki yıllık çalışma saatine göre hesaplanır.`, { x: M, y: 3.8, w: SW - 2 * M, h: 0.6, fontSize: 9, italic: true, color: R.soluk });
+  }
+
+  bolumAraSlaydi('GÜNDEM', 'Toplantı gündem maddeleri');
   tabloSlaydi('GÜNDEM', ['No', 'Konu', 'Not'], gundem.map((g, i) => {
     const olaylarMetni = /^olaylar/i.test(g.baslik.trim()) ? toplantiOlaylarGundemMetni(toplanti.id) : '';
     return [String(i + 1), g.baslik, [g.not, olaylarMetni].filter(Boolean).join(' — ')];
   }), [1, 5, 5.5]);
 
   // Tam ekran fotoğraf slaydı — hem kararlar hem olaylar için ortak (kullanıcı
-  // isteği: "fotoğraflar slaytta olsun sonraki slaytta büyük tam ekran olsun").
+  // isteği: "fotoğraflar slaytta olsun sonraki slaytta büyük tam ekran
+  // olsun"). Alt kısımda yarı saydam bir başlık şeridi + sizing:contain ile
+  // fotoğraf hiçbir zaman kırpılıp deforme edilmeden (en-boy oranı korunarak)
+  // kutuya sığdırılır.
   const fotoTamEkranSlaydiEkle = (baslik, url) => {
     if (!url) return;
     const sl = pptx.addSlide();
-    sl.background = { color: '000000' };
-    sl.addText(baslik, { x: 0.4, y: 0.2, w: 12.5, fontSize: 16, bold: true, color: 'FFFFFF' });
-    const gorsel = { x: 1.0, y: 0.9, w: 11.33, h: 6.3, sizing: { type: 'contain', w: 11.33, h: 6.3 } };
-    sl.addImage(/^https?:\/\//i.test(url) ? Object.assign({ path: url }, gorsel) : Object.assign({ data: url }, gorsel));
+    sl.background = { color: '0B1220' };
+    const gorsel = { x: 0.5, y: 0.5, w: SW - 1, h: SH - 1.3, sizing: { type: 'contain', w: SW - 1, h: SH - 1.3 } };
+    sl.addImage(Object.assign(/^https?:\/\//i.test(url) ? { path: url } : { data: url }, gorsel));
+    sl.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.7, w: SW, h: 0.7, fill: { color: R.baslik, transparency: 15 } });
+    sl.addText(baslik, { x: 0.5, y: SH - 0.7, w: SW - 1, h: 0.7, fontSize: 14, bold: true, color: 'FFFFFF', valign: 'middle' });
   };
 
   // Her olay kendi slaydında (karar deseniyle aynı) — varsa ilk fotoğrafı
   // sağda küçük, tüm fotoğrafları da hemen ardından birer tam ekran slaytta.
   const olaySlaydi = (o, sira, toplam) => {
-    const sl = pptx.addSlide();
-    sl.background = { color: BG };
+    const sl = yeniSlayt();
     const foto = o.fotograflar && o.fotograflar[0] && o.fotograflar[0].url;
-    const metinGenislik = foto ? 7.2 : 11.5;
-    sl.addText(`OLAY (${sira}/${toplam}) — ${o.tur || '-'}${o.otomatik ? ' (Olay/Kaza modülünden)' : ''}`, { x: M, y: 0.4, w: 11, fontSize: 22, bold: true, color: TITLE });
-    sl.addText(o.olusSekli || '-', { x: M, y: 1.2, w: metinGenislik, h: 2.6, fontSize: 15, color: TITLE, valign: 'top' });
+    const metinGenislik = foto ? 7.3 : SW - 2 * M;
+    kartBasligi(sl, `OLAY  ·  ${sira} / ${toplam}${o.otomatik ? '  ·  Olay/Kaza modülünden' : ''}`, o.tur || '-');
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.55, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addText(o.olusSekli || '-', { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.25, fontSize: 13.5, color: R.baslik, valign: 'top' });
     const metaSatirlari = [
       ['Tarih', gunAyYil(o.tarih) || '-'],
       ['Yer', o.yer || '-'],
@@ -1094,15 +1262,13 @@ async function pptxOlustur() {
         ['Karar Metni', o.kararMetni || '-'],
         ['Sorumlu', o.sorumlu || '-'],
         ['Termin', gunAyYil(o.termin) || '-'],
-        ['Öncelik', o.oncelik || '-'],
-        ['Durum', o.durum || '-'],
         ['Oy Sonucu', [o.oySonucu, kararOyDokumMetni(o) && `(${kararOyDokumMetni(o)})`].filter(Boolean).join('  ') || '-']
       );
     }
-    sl.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 4.0, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 12 });
-    if (foto) {
-      sl.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 });
-    }
+    metaTablosuEkle(sl, metaSatirlari, M, 3.1, metinGenislik);
+    if (o.oncelik) rozetEkle(sl, o.oncelik, M, 2.98 - 0.42, _renkGetir(ONCELIK_RENK, o.oncelik));
+    if (o.durum) rozetEkle(sl, o.durum, M + 1.3, 2.98 - 0.42, _renkGetir(DURUM_RENK, o.durum));
+    if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
   };
 
   if (olaylar.length) {
@@ -1128,31 +1294,32 @@ async function pptxOlustur() {
   // notu.
   const kararSlaydi = (baslikOnEki, k, sira, toplam) => {
     const foto = kararIlkFotografi(k);
-    const metinGenislik = foto ? 7.2 : 11.5;
+    const metinGenislik = foto ? 7.3 : SW - 2 * M;
 
-    const sl = pptx.addSlide();
-    sl.background = { color: BG };
-    sl.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.kararNo}`, { x: M, y: 0.4, w: 11, fontSize: 22, bold: true, color: TITLE });
-    sl.addText(k.kararMetni || '-', { x: M, y: 1.2, w: metinGenislik, h: 2.4, fontSize: 15, color: TITLE, valign: 'top' });
+    const sl = yeniSlayt();
+    kartBasligi(sl, `${baslikOnEki}  ·  ${sira} / ${toplam}`, k.kararNo);
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addText(k.kararMetni || '-', { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top' });
+
+    const kararDurum = k.durumGoruntu || k.durum || '';
+    let rozetX = M;
+    if (k.oncelik) rozetX += (rozetEkle(sl, k.oncelik, rozetX, 2.9, _renkGetir(ONCELIK_RENK, k.oncelik)) || 0) + 0.15;
+    if (kararDurum) rozetEkle(sl, kararDurum, rozetX, 2.9, _renkGetir(DURUM_RENK, kararDurum));
 
     const metaSatirlari = [
       ['Sorumlu', k.sorumlu || '-'],
       ['Termin', gunAyYil(k.termin) || '-'],
-      ['Öncelik', k.oncelik || '-'],
-      ['Durum', k.durumGoruntu || k.durum || '-'],
       ['Kaynak Gündem', k.kaynakGundem || '-'],
       ['Oy Sonucu', [k.oySonucu, kararOyDokumMetni(k) && `(${kararOyDokumMetni(k)})`].filter(Boolean).join('  ') || '-'],
       ['Kapanış / Kanıt', [k.kapanisTarihi, k.kanit].filter(Boolean).join(' / ') || '-']
     ];
-    sl.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 3.8, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 12 });
-    if (foto) {
-      sl.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 });
-    }
+    metaTablosuEkle(sl, metaSatirlari, M, 3.4, metinGenislik);
+    if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
 
-    const sl2 = pptx.addSlide();
-    sl2.background = { color: BG };
-    sl2.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.kararNo} — Aksiyon İlerleme Notu`, { x: M, y: 0.4, w: 11, fontSize: 20, bold: true, color: TITLE });
-    sl2.addText(k.aksiyonNotu || 'Aksiyon ilerleme notu girilmemiştir.', { x: M, y: 1.3, w: 11.5, h: 5.5, fontSize: 16, color: TITLE, valign: 'top' });
+    const sl2 = yeniSlayt();
+    kartBasligi(sl2, `${baslikOnEki}  ·  ${sira} / ${toplam}  ·  ${k.kararNo}`, 'Aksiyon İlerleme Notu');
+    sl2.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: SW - 2 * M, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl2.addText(k.aksiyonNotu || 'Aksiyon ilerleme notu girilmemiştir.', { x: M + 0.3, y: 1.6, w: SW - 2 * M - 0.6, h: 4.9, fontSize: 15, color: R.baslik, valign: 'top' });
   };
 
   // Kararın TÜM fotoğrafları (öncesi/sonrası/en fazla 3 ek — bkz.
@@ -1174,11 +1341,17 @@ async function pptxOlustur() {
     });
   };
 
+  bolumAraSlaydi('KARARLAR', 'Yeni kararlar ve devreden kararların takibi');
   kararSlaytlariniEkle('YENİ KARAR', yeni);
   kararSlaytlariniEkle('DEVREDEN KARAR', devreden);
+
+  bolumAraSlaydi('EĞİTİM VE FAALİYETLER', 'Ay içinde yapılan eğitimler ve İSG çalışmaları');
   tabloSlaydi('AY İÇİNDE YAPILAN EĞİTİMLER', ['Eğitim Adı', 'Tarih', 'Katılımcı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), String(k.katilimciSayisi), k.birim]), [4, 2.5, 2, 3]);
   tabloSlaydi('AY İÇİ İSG ÇALIŞMALARI', ['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet || '', f.aciklama || '']), [3, 1.5, 7]);
+
+  bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışan temsilcilerinin değerlendirmesi');
   metinSlaydi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
+
   // Kullanıcı isteği: "ay içinde tespit edilen uygunsuzluklar ve kapatılan
   // uygunsuzluklar da tek tek slaytlarda ayrı slaytlarda olmalı" — önceden
   // tüm liste TEK bir özet tablo slaydında gösteriliyordu; artık kararlar/
@@ -1187,25 +1360,23 @@ async function pptxOlustur() {
   // tam ekran slayt (aynı desen — bkz. fotoTamEkranSlaydiEkle).
   const uygunsuzlukSlaydi = (baslikOnEki, k, sira, toplam) => {
     const foto = k.fotoOncesi || k.fotoSonrasi || '';
-    const metinGenislik = foto ? 7.2 : 11.5;
+    const metinGenislik = foto ? 7.3 : SW - 2 * M;
 
-    const sl = pptx.addSlide();
-    sl.background = { color: BG };
-    sl.addText(`${baslikOnEki} (${sira}/${toplam}) — ${k.konuBasligi || '-'}`, { x: M, y: 0.4, w: 11, fontSize: 20, bold: true, color: TITLE });
-    sl.addText(k.uygunsuzluk || '-', { x: M, y: 1.2, w: metinGenislik, h: 2.4, fontSize: 15, color: TITLE, valign: 'top' });
+    const sl = yeniSlayt();
+    kartBasligi(sl, `${baslikOnEki}  ·  ${sira} / ${toplam}`, k.konuBasligi || '-');
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addText(k.uygunsuzluk || '-', { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top' });
+    if (k.durum) rozetEkle(sl, k.durum, M, 2.9, _renkGetir(DURUM_RENK, k.durum));
 
     const metaSatirlari = [
       ['Bölüm', k.bolum || '-'],
       ['Tespit', gunAyYil(k.tespitTarihi) || '-'],
       ['Kapanış', gunAyYil(k.kapanisTarihi) || '-'],
-      ['Sorumlu', k.sorumlu || '-'],
-      ['Durum', k.durum || '-']
+      ['Sorumlu', k.sorumlu || '-']
     ];
     if (k.alinanOnlem) metaSatirlari.push(['Alınan Önlem', k.alinanOnlem]);
-    sl.addTable(metaSatirlari.map(([e, d]) => [{ text: e, options: { bold: true, color: MUTED } }, { text: d }]), { x: M, y: 3.8, w: metinGenislik, colW: [2.5, metinGenislik - 2.5], fontSize: 12 });
-    if (foto) {
-      sl.addImage(/^https?:\/\//i.test(foto) ? { path: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 } : { data: foto, x: 8.4, y: 1.2, w: 3.4, h: 3.4 });
-    }
+    metaTablosuEkle(sl, metaSatirlari, M, 3.4, metinGenislik);
+    if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
   };
 
   const uygunsuzlukSlaytlariniEkle = (baslikOnEki, liste) => {
@@ -1220,18 +1391,20 @@ async function pptxOlustur() {
     });
   };
 
+  bolumAraSlaydi('UYGUNSUZLUKLAR', 'Ay içinde tespit edilen ve kapatılan uygunsuzluklar');
   uygunsuzlukSlaytlariniEkle('AY İÇİNDE TESPİT EDİLEN UYGUNSUZLUK', tespitEdilenUygunsuzluklar);
   uygunsuzlukSlaytlariniEkle('AY İÇİNDE KAPATILAN UYGUNSUZLUK', kapananUygunsuzluklar);
 
   // "İSG Kurulları İle İlgili Yasal Düzenleme" — kullanıcı isteği: "yasal
   // düzenleme referansı raporlarda olmalı"; her madde (bkz. model.js
   // YONETMELIK_MADDELERI) kendi slaydında, küçük yazı tipiyle tam metin.
+  bolumAraSlaydi('YASAL DAYANAK', 'İSG Kurulları ile ilgili mevzuat referansı');
   YONETMELIK_MADDELERI.forEach(m => {
-    const sl = pptx.addSlide();
-    sl.background = { color: BG };
-    sl.addText(`${m.madde} – ${m.baslik}`, { x: M, y: 0.4, w: 11.7, fontSize: 20, bold: true, color: TITLE });
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'YASAL DAYANAK', `${m.madde} – ${m.baslik}`);
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: SW - 2 * M, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
     const metin = m.fikralar.map(f => [f.giris, ...f.bentler].join('\n')).join('\n\n');
-    sl.addText(metin, { x: M, y: 1.2, w: 11.7, h: 5.9, fontSize: 10.5, color: TITLE, valign: 'top' });
+    sl.addText(metin, { x: M + 0.3, y: 1.55, w: SW - 2 * M - 0.6, h: 4.9, fontSize: 10.5, color: R.baslik, valign: 'top' });
   });
 
   await pptx.writeFile({ fileName: `Kurul_Toplantisi_${toplanti.toplantiNo}.pptx` });

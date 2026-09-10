@@ -10,11 +10,32 @@
 const SINAV_GECME_NOTU_VARSAYILAN = 70;
 const SINAV_SIK_HARFLERI = ['A', 'B', 'C', 'D'];
 
+// Zorluk düzeyleri (kullanıcı isteği: "önceki kullandığım uygulamada olduğu
+// gibi konu seçimi de ekle, zorluk düzeyi de ekleyelim"). Alt Konu, mevcut
+// "Eğitim / Konu" (egitimTuruId — eğitim modülündeki eğitim türleri) alanından
+// AYRI, daha ince taneli bir sınıflandırmadır; sınav oluştururken her ikisiyle
+// de filtreleme yapılabilir.
+const SINAV_ZORLUK_SEVIYELERI = ['Kolay', 'Orta', 'Zor', 'Çok Zor'];
+
+const SINAV_ALT_KONU_LISTESI = [
+  '6331 Sayılı Kanun', 'İşveren ve Çalışan Yükümlülükleri', 'İSG Profesyonellerinin Görevleri',
+  'Risk Değerlendirmesi', 'Acil Durumlar', 'İş Kazaları', 'Meslek Hastalıkları', 'Sağlık Gözetimi',
+  'Eğitim', 'KKD', 'İş Ekipmanları', 'Kaldırma Ekipmanları', 'Elektrik', 'Yangın', 'Kimyasallar',
+  'Patlamadan Korunma', 'Basınçlı Kaplar', 'Yüksekte Çalışma', 'Kapalı Alan', 'İskeleler',
+  'Merdivenler', 'İnşaat', 'Maden', 'Gürültü', 'Titreşim', 'Toz', 'Ergonomi', 'Elle Taşıma',
+  'Biyolojik Riskler', 'Kanserojen/Mutajen Maddeler', 'İş Hijyeni', 'Ölçüm ve Analiz',
+  'Taşeron Yönetimi', 'İş İzin Sistemleri', 'Sıcak Çalışma', 'HAZOP', 'LOPA', 'Bow-Tie',
+  'Proses Güvenliği', 'ISO 45001', 'Yönetim Sistemleri', 'Çevre ve İSG Kesişimi', 'Saha Denetimi',
+  'Uygunsuzluk Yönetimi', 'Kök Neden Analizi'
+];
+
 function soruOlustur(veriler) {
   const secenekler = veriler.secenekler || {};
   return {
     id: veriler.id || rastgeleId(),
     egitimTuruId: veriler.egitimTuruId || '',
+    konu: (veriler.konu || '').trim(),
+    zorluk: SINAV_ZORLUK_SEVIYELERI.includes(veriler.zorluk) ? veriler.zorluk : 'Orta',
     soruMetni: (veriler.soruMetni || '').trim(),
     secenekler: {
       A: (secenekler.A || '').trim(),
@@ -23,6 +44,7 @@ function soruOlustur(veriler) {
       D: (secenekler.D || '').trim()
     },
     dogruCevap: veriler.dogruCevap || '',
+    aciklama: (veriler.aciklama || '').trim(),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
@@ -35,6 +57,12 @@ function sinavOlustur(veriler) {
     tarih: veriler.tarih || '',
     gecmeNotu: veriler.gecmeNotu || SINAV_GECME_NOTU_VARSAYILAN,
     sorular: veriler.sorular || [],
+    // Sınav oluşturulurken uygulanan filtreler -- sadece bilgi amaçlı
+    // (sınav kağıdında/listede "hangi kritere göre seçildi" gösterilebilir).
+    // konular: kullanıcı isteği "birden çok alt konu seçebilmem lazım" --
+    // çoklu seçim, boşsa tüm alt konular dahildir.
+    konular: Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [],
+    zorluklar: Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(z => SINAV_ZORLUK_SEVIYELERI.includes(z)) : [],
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
@@ -95,9 +123,10 @@ function sinavOlusturmaDogrula(veriler, soruSayisiMevcut) {
     hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
   }
 
-  if (!veriler.tarih) {
-    hatalar.sinavTarih = 'Tarih zorunludur.';
-  }
+  // Kullanıcı isteği: "sınav tarihi girmesem de sorular basılabilsin,
+  // sınava giren kendisi yazsın" -- tarih artık opsiyonel; boş bırakılırsa
+  // sınav kağıdında elle doldurulacak bir boşluk basılır (bkz. sinav-ui.js
+  // _sinavKagidiYazdirOrtak).
 
   const soruSayisi = Number(veriler.soruSayisi);
   if (!soruSayisi || soruSayisi < 1) {
@@ -143,6 +172,16 @@ function soruEkleRepo(soru) {
   liste.push(soru);
   _soruKaydet(liste);
   return soru;
+}
+
+// Çok sayıda soruyu (ör. hazır soru bankası şablonu) TEK bir bulut yazımıyla
+// ekler -- modules/uygunsuzluk/repository.js uygunsuzlukTopluEkleRepo ile
+// aynı desen (art arda onlarca ayrı yaz() çağrısı yerine).
+function soruTopluEkleRepo(sorular) {
+  if (!sorular.length) return Promise.resolve({ basarili: true });
+  const liste = soruTumunuGetirRepo();
+  liste.push(...sorular);
+  return yazVeSonucuGetir(_soruAnahtari(), liste);
 }
 
 function soruGuncelleRepo(id, veriler) {
@@ -224,12 +263,27 @@ function soruEkle(veriler) {
   return { basarili: true, soru: yeniSoru };
 }
 
+// Hazır soru bankası şablonunu (bkz. modules/egitim/sinav-soru-bankasi.js
+// SINAV_HAZIR_SORU_BANKASI) seçilen bir eğitim türüne TEK seferde ekler.
+// Şablon soruları egitimTuruId taşımaz (herhangi bir firmanın herhangi bir
+// eğitim türüne bağlanabilsin diye), o yüzden burada eklenir.
+async function soruBankasiSablonuYukle(egitimTuruId, sablonSorulari) {
+  if (!egitimTuruId || !egitimTuruGetir(egitimTuruId)) {
+    return { basarili: false, hata: 'Geçerli bir eğitim/konu seçiniz.' };
+  }
+  const yeniSorular = sablonSorulari.map(s => soruOlustur(Object.assign({}, s, { egitimTuruId })));
+  const yazimSonucu = await soruTopluEkleRepo(yeniSorular);
+  return { basarili: yazimSonucu.basarili !== false, eklenen: yeniSorular.length };
+}
+
 function soruGuncelle(id, veriler) {
   const dogrulama = soruDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
   const guncellenen = soruGuncelleRepo(id, {
     egitimTuruId: veriler.egitimTuruId,
+    konu: (veriler.konu || '').trim(),
+    zorluk: SINAV_ZORLUK_SEVIYELERI.includes(veriler.zorluk) ? veriler.zorluk : 'Orta',
     soruMetni: veriler.soruMetni.trim(),
     secenekler: {
       A: veriler.secenekler.A.trim(),
@@ -237,7 +291,8 @@ function soruGuncelle(id, veriler) {
       C: veriler.secenekler.C.trim(),
       D: veriler.secenekler.D.trim()
     },
-    dogruCevap: veriler.dogruCevap
+    dogruCevap: veriler.dogruCevap,
+    aciklama: (veriler.aciklama || '').trim()
   });
   return { basarili: true, soru: guncellenen };
 }
@@ -248,10 +303,16 @@ function soruSil(id) {
   return { basarili: true };
 }
 
-function sorulariGetir(egitimTuruId, aramaMetni) {
+function sorulariGetir(egitimTuruId, aramaMetni, konu, zorluk) {
   let liste = soruTumunuGetirRepo();
   if (egitimTuruId) {
     liste = liste.filter(s => s.egitimTuruId === egitimTuruId);
+  }
+  if (konu) {
+    liste = liste.filter(s => s.konu === konu);
+  }
+  if (zorluk) {
+    liste = liste.filter(s => s.zorluk === zorluk);
   }
   if (aramaMetni) {
     const kucuk = aramaMetni.trim().toLowerCase();
@@ -280,8 +341,18 @@ function _sinavKaristir(liste) {
   return kopya;
 }
 
+// konular (opsiyonel, seçili alt konu dizisi -- kullanıcı isteği: "birden
+// çok alt konu seçebilmem lazım", boşsa/verilmezse tüm alt konular
+// dahildir) ve zorluklar (opsiyonel, seçili zorluk düzeyi dizisi --
+// boşsa/verilmezse tüm zorluklar dahildir) ile soru havuzu daraltılabilir.
 function sinavEkle(veriler) {
-  const havuz = soruTumunuGetirRepo().filter(s => s.egitimTuruId === veriler.egitimTuruId);
+  const zorluklar = Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(Boolean) : [];
+  const konular = Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [];
+  const havuz = soruTumunuGetirRepo().filter(s =>
+    s.egitimTuruId === veriler.egitimTuruId &&
+    (!konular.length || konular.includes(s.konu)) &&
+    (!zorluklar.length || zorluklar.includes(s.zorluk))
+  );
   const dogrulama = sinavOlusturmaDogrula(veriler, havuz.length);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
@@ -291,13 +362,51 @@ function sinavEkle(veriler) {
   const yeniSinav = sinavOlustur({
     baslik: veriler.baslik.trim(),
     egitimTuruId: veriler.egitimTuruId,
+    konular,
+    zorluklar,
     tarih: veriler.tarih,
     gecmeNotu: veriler.gecmeNotu ? Number(veriler.gecmeNotu) : SINAV_GECME_NOTU_VARSAYILAN,
     sorular: secilenler.map(s => ({
       soruId: s.id,
       soruMetni: s.soruMetni,
       secenekler: s.secenekler,
-      dogruCevap: s.dogruCevap
+      dogruCevap: s.dogruCevap,
+      aciklama: s.aciklama || ''
+    }))
+  });
+  sinavEkleRepo(yeniSinav);
+  return { basarili: true, sinav: yeniSinav };
+}
+
+// Otomatik/rastgele seçim yerine, kullanıcının soru bankasından tek tek
+// işaretlediği sorularla sınav oluşturur (kullanıcı isteği: "mevcut
+// kütüphaneden istediğim soruları da seçip sınav kağıdı hazırlamak
+// istiyorum"). Doğrulama sinavOlusturmaDogrula ile ORTAK değildir çünkü
+// "soru sayısı"na değil, doğrudan seçilen soru id listesine bakılır.
+function sinavManuelEkle(veriler, soruIdleri) {
+  const hatalar = {};
+  if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Sınav başlığı zorunludur.';
+  if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
+  if (!Array.isArray(soruIdleri) || !soruIdleri.length) hatalar.manuelSoru = 'En az bir soru seçmelisiniz.';
+  if (Object.keys(hatalar).length) return { basarili: false, hatalar };
+
+  const havuz = soruTumunuGetirRepo();
+  const secilenler = soruIdleri.map(id => havuz.find(s => s.id === id)).filter(Boolean);
+  if (!secilenler.length) return { basarili: false, hatalar: { manuelSoru: 'Seçilen sorular soru bankasında bulunamadı (silinmiş olabilir).' } };
+
+  const yeniSinav = sinavOlustur({
+    baslik: veriler.baslik.trim(),
+    egitimTuruId: veriler.egitimTuruId,
+    konular: Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [],
+    zorluklar: Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(Boolean) : [],
+    tarih: veriler.tarih,
+    gecmeNotu: veriler.gecmeNotu ? Number(veriler.gecmeNotu) : SINAV_GECME_NOTU_VARSAYILAN,
+    sorular: secilenler.map(s => ({
+      soruId: s.id,
+      soruMetni: s.soruMetni,
+      secenekler: s.secenekler,
+      dogruCevap: s.dogruCevap,
+      aciklama: s.aciklama || ''
     }))
   });
   sinavEkleRepo(yeniSinav);

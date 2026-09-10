@@ -1,0 +1,21 @@
+// Firebase Storage Security Rules — risk360
+//
+// Firestore tarafında zaten deploy edilmiş olan kuralla (Firebase Console'da
+// doğrulandı: "allow read, write: if request.auth != null;") BİREBİR aynı
+// mantık: uygulama açılışta core/data.js _bulutBaslat() içinde ANONİM bir
+// Firebase Authentication oturumu açıyor (signInAnonymously) -- bu yüzden
+// "request.auth != null" burada da anlamlı ve geçerli bir kural (tam
+// kimlik doğrulanmamış istek reddedilir, ama uygulamanın normal kullanımını
+// ENGELLEMEZ). "allow if true" (herkese tam açık) YERİNE bunu kullanın.
+//
+// Firebase Console'da Authentication -> Sign-in method -> Anonymous
+// etkinleştirilmiş olmalı (Firestore zaten çalıştığına göre muhtemelen
+// zaten etkin).
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -227,6 +227,20 @@ function ayIciFaaliyetOlustur(veriler) {
   };
 }
 
+// Otomatik gelen ay içi çalışma / eğitim satırlarından, kullanıcının bu
+// toplantı için gündemden kaldırmak istediklerinin izi (satırların kendisi
+// kaynak modülden türetildiği için gerçek kayıt değildir, sadece toplantı +
+// tür + otomatik satır id'sine göre "bu satırı gösterme" bayrağı tutulur).
+function gundemHaricKaydiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    toplantiId: veriler.toplantiId || '',
+    tur: veriler.tur || '',
+    otomatikId: veriler.otomatikId || '',
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+  };
+}
+
 // Kurul modülündeki tüm varlık türlerinde (toplantı/karar/aksiyon/olay/imza)
 // oluşturma-güncelleme-silme işlemlerinin denetim izi (eski uygulamadaki
 // "audit" sekmesinin karşılığı). "once"/"sonra" yalnızca değişen alanları

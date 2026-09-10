@@ -454,6 +454,57 @@ function toplantiOlaylariniGetir(toplantiId) {
   return [...otomatik, ...manuel];
 }
 
+// Toplantının ait olduğu yıl için Olay/Kaza modülünden (bkz.
+// _kurulOtomatikOlaylariGetir'deki namespace notu -- aynı sebeple burada da
+// tenantAnahtar('olay_kaza_kayitlari') doğrudan okunur) yıl bazlı iş kazası
+// istatistikleri -- kullanıcı isteği: "ilk slaytta/word raporda ilk
+// konularda 2026 yılı içinde gerçekleşen iş kazası sayısı, toplam iş günü
+// kaybı, kaza sıklık hızı ve kaza ağırlık oranı yer alsın". Hesap yöntemi
+// olay-kaza/model.js guvenlikOranlariniHesapla ile AYNI formüller (OSHA
+// benzeri, yıllık çalışılan saate göre): Sıklık Hızı = (LTI x 1.000.000) /
+// yıllık çalışma saati, Ağırlık Oranı = (toplam kayıp gün x 1.000.000) /
+// yıllık çalışma saati. Yıllık çalışma saati Olay/Kaza modülünün Ayarlar
+// bölümünde girilmemişse (0 ise) oranlar hesaplanamaz, null döner.
+function toplantiKazaIstatistikleriHesapla(toplanti) {
+  const yil = String((toplanti && (toplanti.donem || toplanti.tarih)) || '').slice(0, 4);
+  if (!/^\d{4}$/.test(yil)) return null;
+
+  const kayitlar = oku(tenantAnahtar('olay_kaza_kayitlari'), [])
+    .filter(k => String(k.kazaTarihi || '').slice(0, 4) === yil)
+    // Toplantı tarihinden SONRAKİ kazalar henüz "bu döneme kadar" sayılmaz
+    // (_kurulOtomatikOlaylariGetir'deki aynı ilke).
+    .filter(k => !toplanti.tarih || !k.kazaTarihi || k.kazaTarihi <= toplanti.tarih);
+
+  const sayac = tip => kayitlar.filter(k => k.olayTipi === tip).length;
+  const lti = sayac('Kayıp Gün (LTI)');
+  const dart = sayac('Kısıtlı İş / Transfer (DART)');
+  const tibbi = sayac('Tıbbi Tedavi');
+  const olum = sayac('Ölüm');
+  const kazaSayisi = lti + dart + tibbi + olum;
+  const toplamKayipGun = kayitlar.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0);
+
+  // Kullanıcı isteği: "bagfaş, servis ve tekniğin toplamını dikkate al" --
+  // departman ayrımı yapılmadan yalnızca aylık toplam çalışma saati tutulur
+  // (bkz. olay-kaza/model.js CALISMA_SAATI_VARSAYILAN ile aynı şekil: {yil:
+  // {ay: {saat, tahmini}}}). Toplantı tarihinin ait olduğu aya kadar (YTD)
+  // toplanır -- kazalar da zaten toplantı tarihine kadar filtrelendiği için
+  // (yukarıdaki filtre) oranlar tutarlı kalır. Aylık tablo henüz girilmemişse
+  // eski tek sayılık yillikCalismaSaati alanına düşülür.
+  const ayarlar = oku(tenantAnahtar('olay_kaza_ayarlari'), {});
+  const sonAy = toplanti && toplanti.tarih ? String(toplanti.tarih).slice(5, 7) : '12';
+  const ayVerileri = ayarlar.aylikCalismaSaatleri && ayarlar.aylikCalismaSaatleri[yil];
+  const saat = ayVerileri
+    ? Object.keys(ayVerileri).filter(ay => ay <= sonAy).reduce((t, ay) => t + (Number((ayVerileri[ay] && ayVerileri[ay].saat) || 0)), 0)
+    : Number(ayarlar.yillikCalismaSaati || 0);
+
+  return {
+    yil, kazaSayisi, toplamKayipGun, lti, dart, tibbi, olum,
+    yillikCalismaSaati: saat,
+    kazaSiklikHizi: saat ? (lti * 1000000) / saat : null,
+    kazaAgirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null
+  };
+}
+
 // Gündemdeki "Olaylar" maddesinin altında gösterilmek üzere, bu toplantının
 // (otomatik + elle eklenen, toplantı tarihine kadar olan) olaylarının kısa
 // bir dökümü — kullanıcı isteği: "toplantı tarihine kadar olan olayları da
@@ -752,9 +803,21 @@ function _kurulOtomatikAyIciFaaliyetleriGetir(toplanti) {
   return sonuc;
 }
 
+// Bir toplantı için, belirli bir türdeki (egitim/ayiciFaaliyet) otomatik
+// satırlardan kullanıcının gündemden kaldırdıklarının id kümesi.
+function _gundemHaricIdSeti(toplantiId, tur) {
+  return new Set(
+    gundemHaricTumunuGetir()
+      .filter(g => g.toplantiId === toplantiId && g.tur === tur)
+      .map(g => g.otomatikId)
+  );
+}
+
 function toplantiAyIciFaaliyetleriniGetir(toplantiId) {
   const manuel = ayIciFaaliyetTumunuGetir().filter(f => f.toplantiId === toplantiId);
-  const otomatik = _kurulOtomatikAyIciFaaliyetleriGetir(toplantiIdIleGetirRepo(toplantiId));
+  const haric = _gundemHaricIdSeti(toplantiId, 'ayiciFaaliyet');
+  const otomatik = _kurulOtomatikAyIciFaaliyetleriGetir(toplantiIdIleGetirRepo(toplantiId))
+    .filter(f => !haric.has(f.id));
   return [...otomatik, ...manuel];
 }
 
@@ -768,12 +831,35 @@ function ayIciFaaliyetEkle(toplantiId, veriler) {
   return { basarili: true, faaliyet: yeni };
 }
 
+function ayIciFaaliyetGuncelle(id, veriler) {
+  const dogrulama = ayIciFaaliyetDogrula(veriler);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const mevcut = ayIciFaaliyetTumunuGetir().find(f => f.id === id) || null;
+  const guncellenen = ayIciFaaliyetGuncelleRepo(id, {
+    faaliyet: veriler.faaliyet.trim(),
+    adet: veriler.adet != null && veriler.adet !== '' ? String(veriler.adet) : '',
+    aciklama: (veriler.aciklama || '').trim()
+  });
+  _denetimEkle('ayIciFaaliyet', id, 'guncelle', mevcut, guncellenen);
+  return { basarili: true, faaliyet: guncellenen };
+}
+
 function ayIciFaaliyetSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = ayIciFaaliyetTumunuGetir().find(f => f.id === id) || null;
   ayIciFaaliyetSilRepo(id);
   _denetimEkle('ayIciFaaliyet', id, 'sil', mevcut, null);
   return { basarili: true };
+}
+
+// Acil Durum modülünden otomatik gelen (gerçek kaydı olmayan) bir ay içi
+// faaliyet satırını, sadece bu toplantının gündeminden kaldırır.
+function ayIciFaaliyetOtomatikGizle(toplantiId, otomatikId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const yeni = gundemHaricEkleRepo(gundemHaricKaydiOlustur({ toplantiId, tur: 'ayiciFaaliyet', otomatikId }));
+  _denetimEkle('ayIciFaaliyet', otomatikId, 'sil', { otomatik: true }, null);
+  return { basarili: true, kayit: yeni };
 }
 
 // ---- Uygunsuzluk modülünden: Ay İçinde Kapatılan Uygunsuzluklar ----
@@ -864,15 +950,27 @@ function toplantiAylikEgitimleriGetir(toplanti) {
     if (personel && personel.bolum) grup.birimler.add(personel.bolum);
   });
 
-  return Array.from(gruplar.values()).map((g, i) => ({
-    id: g.id,
-    siraNo: i + 1,
-    egitimAdi: g.egitimAdi,
-    egitimTarihi: g.egitimTarihi,
-    egitimTarihi2: g.egitimTarihi2,
-    katilimciSayisi: g.katilimciSayisi,
-    birim: Array.from(g.birimler).join(', ')
-  }));
+  const haric = _gundemHaricIdSeti(toplanti.id, 'egitim');
+  return Array.from(gruplar.values())
+    .filter(g => !haric.has(g.id))
+    .map((g, i) => ({
+      id: g.id,
+      siraNo: i + 1,
+      egitimAdi: g.egitimAdi,
+      egitimTarihi: g.egitimTarihi,
+      egitimTarihi2: g.egitimTarihi2,
+      katilimciSayisi: g.katilimciSayisi,
+      birim: Array.from(g.birimler).join(', ')
+    }));
+}
+
+// Eğitim modülünden otomatik gelen (gerçek kaydı olmayan), bu ay için
+// gruplanmış bir eğitim satırını, sadece bu toplantının gündeminden kaldırır.
+function egitimOtomatikGizle(toplantiId, otomatikId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const yeni = gundemHaricEkleRepo(gundemHaricKaydiOlustur({ toplantiId, tur: 'egitim', otomatikId }));
+  _denetimEkle('egitim', otomatikId, 'sil', { otomatik: true }, null);
+  return { basarili: true, kayit: yeni };
 }
 
 function kurulOzetiHesapla() {

@@ -116,6 +116,8 @@ function uygunsuzlukGuncelle(id, veriler) {
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
     sorumlu: veriler.sorumlu.trim(),
     atayan: (veriler.atayan || '').trim(),
+    ilgiliKime: (veriler.ilgiliKime || '').trim(),
+    ilgiliBilgi: (veriler.ilgiliBilgi || '').trim(),
     bildirimTarihi: veriler.bildirimTarihi || bugunIso(),
     termin: veriler.termin,
     onayGerekliMi: veriler.onayGerekliMi,

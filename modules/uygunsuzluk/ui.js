@@ -179,6 +179,15 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('raporMetniKapatBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniKaydetBtn').addEventListener('click', raporMetniKaydet);
+  document.getElementById('mailMetniBtn').addEventListener('click', mailMetniModalAc);
+  document.getElementById('mailMetniKapatBtn').addEventListener('click', mailMetniModalKapat);
+  document.getElementById('mailMetniIptalBtn').addEventListener('click', mailMetniModalKapat);
+  document.getElementById('mailMetniKaydetBtn').addEventListener('click', mailMetniKaydet);
+  document.getElementById('ilgiliEpostaListesiAcBtn').addEventListener('click', ilgiliEpostaListesiModalAc);
+  document.getElementById('ilgiliEpostaListesiKapatBtn').addEventListener('click', ilgiliEpostaListesiModalKapat);
+  document.getElementById('ilgiliEpostaListesiIptalBtn').addEventListener('click', ilgiliEpostaListesiModalKapat);
+  document.getElementById('ilgiliEpostaListesiKaydetBtn').addEventListener('click', ilgiliEpostaListesiKaydet);
+  document.getElementById('sorumlu').addEventListener('input', _ucKimeAlaniniSorumludanDoldur);
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('uygunsuzluk', 'Uygunsuzluk'));
   document.getElementById('imzaKatmaniKapatBtn').addEventListener('click', imzaModalKapat);
   document.getElementById('imzaKatmaniIptalBtn').addEventListener('click', imzaModalKapat);
@@ -480,6 +489,162 @@ function raporMetniKaydet() {
   raporMetniModalKapat();
 }
 
+// "Mail Gönder" ile atılan tüm e-postaların gövde metni — raporMetniGetir
+// ile aynı desen (tenant-scoped, bir kez girilir, siz değiştirene kadar
+// aynen kullanılır). {aksiyonNo}/{baslik}/{bolum}/{riskSeviyesi}/{termin}/
+// {durum}/{aciklama} yer tutucuları _uygunsuzlukMailMetniDoldur ile kayıt
+// bilgileriyle değiştirilir.
+const MAIL_METNI_VARSAYILANI = [
+  'Sayın İlgili,',
+  '',
+  '{baslik} konulu uygunsuzluk kaydı bilgilerinize sunulmuştur.',
+  '',
+  'Aksiyon No: {aksiyonNo}',
+  'Bölüm: {bolum}',
+  'Risk Seviyesi: {riskSeviyesi}',
+  'Durum: {durum}',
+  '',
+  'Açıklama:',
+  '{aciklama}'
+].join('\n');
+
+function _mailMetniAnahtari() { return tenantAnahtar('uygunsuzluk_mail_metni'); }
+
+function mailMetniGetir() {
+  return oku(_mailMetniAnahtari(), MAIL_METNI_VARSAYILANI);
+}
+
+function mailMetniModalAc() {
+  document.getElementById('mailMetniGirdi').value = mailMetniGetir();
+  document.getElementById('mailMetniKatmani').classList.add('acik');
+}
+
+function mailMetniModalKapat() {
+  document.getElementById('mailMetniKatmani').classList.remove('acik');
+}
+
+function mailMetniKaydet() {
+  yaz(_mailMetniAnahtari(), document.getElementById('mailMetniGirdi').value.trim() || MAIL_METNI_VARSAYILANI);
+  mailMetniModalKapat();
+}
+
+function _uygunsuzlukMailMetniDoldur(k) {
+  const yerTutucular = {
+    aksiyonNo: k.aksiyonNo || '',
+    baslik: k.baslik || '',
+    bolum: k.bolum || '-',
+    riskSeviyesi: k.riskSeviyesi || '',
+    termin: gunAyYil(k.termin) || '-',
+    durum: k.durum || '',
+    aciklama: k.aciklama || ''
+  };
+  return mailMetniGetir().replace(/\{(\w+)\}/g, (tam, ad) => Object.prototype.hasOwnProperty.call(yerTutucular, ad) ? yerTutucular[ad] : tam);
+}
+
+// ---- İlgili E-posta Listesi (Sorumlu/pozisyon adı -> e-posta) ----
+// Bölüm butonlarından (ya da elle) Sorumlu'ya girilen adla eşleşirse Kime
+// kutusu otomatik doldurulur; Bilgi kutusunda bu listeden çoklu seçim
+// yapılır. Sadece bu iki alan için kullanılır, başka hiçbir yerde
+// gösterilmez -- firma.bolumler'den (core/tenant.js) BAĞIMSIZ, kullanıcı
+// istediği pozisyon/kişi adını kendi ekler.
+
+function _ilgiliEpostaListesiAnahtari() { return tenantAnahtar('uygunsuzluk_ilgili_epostalari'); }
+
+function ilgiliEpostaListesiGetir() {
+  return oku(_ilgiliEpostaListesiAnahtari(), []);
+}
+
+function _ilgiliEpostaListesiniMetneCevir(liste) {
+  return liste.map(x => `${x.ad}; ${x.eposta}`).join('\n');
+}
+
+function _ilgiliEpostaMetniniListeyeCevir(metin) {
+  return metin.split('\n').map(satir => {
+    const parcalar = satir.split(';');
+    const ad = (parcalar[0] || '').trim();
+    const eposta = (parcalar[1] || '').trim();
+    return ad && eposta ? { ad, eposta } : null;
+  }).filter(Boolean);
+}
+
+function ilgiliEpostaListesiModalAc() {
+  document.getElementById('ilgiliEpostaListesiGirdi').value = _ilgiliEpostaListesiniMetneCevir(ilgiliEpostaListesiGetir());
+  document.getElementById('ilgiliEpostaListesiKatmani').classList.add('acik');
+}
+
+function ilgiliEpostaListesiModalKapat() {
+  document.getElementById('ilgiliEpostaListesiKatmani').classList.remove('acik');
+}
+
+function ilgiliEpostaListesiKaydet() {
+  const liste = _ilgiliEpostaMetniniListeyeCevir(document.getElementById('ilgiliEpostaListesiGirdi').value);
+  yaz(_ilgiliEpostaListesiAnahtari(), liste);
+  ilgiliEpostaListesiModalKapat();
+  // Kayıt formu açıksa Bilgi seçim kutusu güncel listeyi göstersin.
+  if (document.getElementById('modalKatman').classList.contains('acik')) {
+    _ucBilgiSecimCiz(_ucBilgiDegeriniTopla());
+  }
+}
+
+// Sorumlu alanı değiştiğinde (elle yazılınca ya da bölüm butonuna
+// tıklanınca -- ikisi de 'input' event'i tetikler) Kime kutusunu listeden
+// otomatik doldurur. Kullanıcı Kime'ye zaten elle bir şey yazmışsa
+// EZİLMEZ (silip tekrar bir bölüme tıklayınca yeniden doldurulabilir).
+function _ucKimeAlaniniSorumludanDoldur() {
+  const kimeEl = document.getElementById('ilgiliKime');
+  if (kimeEl.value.trim()) return;
+  const harita = ilgiliEpostaListesiGetir();
+  if (!harita.length) return;
+  const adlar = (document.getElementById('sorumlu').value || '').split(',').map(a => a.trim()).filter(Boolean);
+  const epostalar = [];
+  adlar.forEach(ad => {
+    const eslesme = harita.find(h => h.ad.toLocaleLowerCase('tr-TR') === ad.toLocaleLowerCase('tr-TR'));
+    if (eslesme && !epostalar.includes(eslesme.eposta)) epostalar.push(eslesme.eposta);
+  });
+  if (epostalar.length) kimeEl.value = epostalar.join(', ');
+}
+
+// Bilgi kutusunu listeden gelen onay kutularıyla çizer; kayıtta zaten var
+// olan ama listede bulunmayan adresler "Ek adres(ler)" kutusuna düşer
+// (veri kaybolmasın diye).
+function _ucBilgiSecimCiz(mevcutBilgiStr) {
+  const kutu = document.getElementById('ilgiliBilgiSecim');
+  const harita = ilgiliEpostaListesiGetir();
+  const secili = new Set((mevcutBilgiStr || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+
+  if (!harita.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Önce yukarıdaki "📇 E-posta Listesini Yönet" ile pozisyon/e-posta ekleyin.</div>';
+    document.getElementById('ilgiliBilgiEk').value = mevcutBilgiStr || '';
+    return;
+  }
+
+  // Bir pozisyonun birden fazla e-postası olabilir (satırda virgülle ayrılmış
+  // -- bkz. ilgiliEpostaListesiGirdi). Onay kutusu "işaretli" sayılması ve
+  // "ek adres" olarak ayrı gösterilmemesi için TÜM adresler tek tek
+  // karşılaştırılır, tüm satır tek bir metin olarak değil.
+  const haritaAdresleri = new Set();
+  harita.forEach(h => h.eposta.split(',').map(e => e.trim().toLowerCase()).filter(Boolean).forEach(e => haritaAdresleri.add(e)));
+
+  kutu.innerHTML = harita.map(h => {
+    const buAdresler = h.eposta.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isaretli = buAdresler.some(e => secili.has(e));
+    return `
+    <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:12px; padding:2px 0;">
+      <input type="checkbox" data-bilgi-secim value="${_usKacir(h.eposta)}" ${isaretli ? 'checked' : ''} style="width:auto; margin:0;">
+      ${_usKacir(h.ad)} <span style="color:var(--metin-soluk);">(${_usKacir(h.eposta)})</span>
+    </label>`;
+  }).join('');
+
+  const ekAdresler = [...secili].filter(e => !haritaAdresleri.has(e));
+  document.getElementById('ilgiliBilgiEk').value = ekAdresler.join(', ');
+}
+
+function _ucBilgiDegeriniTopla() {
+  const secilenler = Array.from(document.querySelectorAll('#ilgiliBilgiSecim [data-bilgi-secim]:checked')).map(cb => cb.value);
+  const ek = (document.getElementById('ilgiliBilgiEk').value || '').split(',').map(s => s.trim()).filter(Boolean);
+  return [...new Set([...secilenler, ...ek])].join(', ');
+}
+
 function gorunumDegistir(gorunum) {
   _usGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
@@ -519,6 +684,10 @@ function _islemButonlariUret(k) {
     `<button class="tablo-buton" data-konu-tasi="${k.id}" style="${k.konuId ? '' : 'color:#d97706; font-weight:700;'}" title="${k.konuId ? 'Başka konuya taşı' : 'Bu kayıt hiçbir konuya atanmamış — taşımak için tıklayın'}">📁 Konu Taşı</button>`
   ];
 
+  if (k.ilgiliKime) {
+    butonlar.push(`<button class="tablo-buton" data-mail="${k.id}" title="İlgililere (${_usKacir(k.ilgiliKime)}) bu kaydı e-posta ile gönder">✉️ Mail Gönder</button>`);
+  }
+
   if (k.durum === 'Onay Bekliyor') {
     butonlar.push(`<button class="tablo-buton" data-onayla="${k.id}">Onayla</button>`);
     butonlar.push(`<button class="tablo-buton sil" data-reddet="${k.id}">Reddet</button>`);
@@ -526,6 +695,88 @@ function _islemButonlariUret(k) {
 
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return `<div style="display:flex; flex-wrap:wrap; gap:2px;">${butonlar.join('')}</div>`;
+}
+
+// Sorumluya kayıt hakkında bildirim maili atar. E-posta gönderimi
+// yapılandırılmamışsa (bkz. Ayarlar) kullanıcı uyarılır, işlem sessizce
+// atlanmaz -- yoksa "tıkladım ama bir şey olmadı" karışıklığı yaratır.
+async function _uygunsuzlukMailGonderTiklandi(btn) {
+  const k = uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-mail'));
+  if (!k || !k.ilgiliKime) return;
+
+  if (!epostaAktifMi()) {
+    alert('E-posta bildirimleri henüz yapılandırılmamış. Ayarlar sayfasından EmailJS bilgilerini girip etkinleştirin.');
+    return;
+  }
+
+  // Kullanıcı isteği: "uygunsuzluk mail atma bana önce emin misin diye
+  // sormalı" -- yanlışlıkla tıklanan bir maili geri almanın yolu yok,
+  // bu yüzden gönderimden önce onay istenir.
+  const onayMesaji = `${k.ilgiliKime} adresine${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''} "${k.aksiyonNo}" için bildirim maili göndermek istediğinize emin misiniz?`;
+  if (!(await onayModali(onayMesaji, 'Gönder'))) return;
+
+  const eskiMetin = btn.textContent;
+  btn.disabled = true;
+  try {
+    btn.textContent = 'PDF hazırlanıyor...';
+    // Bu kayıtların PDF'i (fotoğraflı olduğunda) genelde birkaç MB --
+    // EmailJS'in ek olarak kabul ettiği boyutun (ücretsiz planda ~50KB)
+    // çok üzerinde; doğrudan ek olarak göndermek EmailJS'in eki sessizce
+    // düşürüp maili eksiz göndermesine yol açıyordu (kullanıcı bildirdi).
+    // Bunun yerine PDF, fotoğraf yüklemede zaten kullanılan Firebase
+    // Storage'a yüklenir ve mail gövdesine bir indirme linki eklenir --
+    // boyut sınırı yok. Storage yapılandırılmamışsa/başarısız olursa link
+    // olmadan devam edilir (mail yine de gider, kullanıcı bilgilendirilir).
+    let pdfUrl = '';
+    try {
+      pdfUrl = await uygunsuzlukKayitPdfUrlOlustur(k.id) || '';
+    } catch (pdfHata) {
+      console.error('PDF linki oluşturulamadı:', pdfHata);
+    }
+    if (!pdfUrl && !confirm('PDF linki oluşturulamadı (Storage yapılandırılmamış olabilir). Mail PDF olmadan gönderilsin mi?')) {
+      btn.disabled = false;
+      btn.textContent = eskiMetin;
+      return;
+    }
+
+    // Kullanıcı isteği: "altında bir de pdf raporunu ekleyelim, uygunsuzluk
+    // listesi indir olarak görünsün" -- tablodaki O ANKİ arama/filtreyle
+    // (tam "PDF Raporu" düğmesiyle aynı) üretilen liste raporu, ikinci bir
+    // Storage linki olarak ayrı bir değişkende (liste_pdf_url) gönderilir.
+    // Bu link olmadan da mail gönderilebilir (opsiyonel, sessizce atlanır).
+    btn.textContent = 'Liste raporu hazırlanıyor...';
+    let listePdfUrl = '';
+    try {
+      listePdfUrl = await uygunsuzlukListesiPdfUrlOlustur() || '';
+    } catch (listeHata) {
+      console.error('Liste PDF linki oluşturulamadı:', listeHata);
+    }
+
+    btn.textContent = 'Gönderiliyor...';
+    // Kullanıcı isteği: "linkin kendisi görünmesin, PDF'in üzerine
+    // tıklandığında form açılsın, 'Uygunsuzluk Formu İndir' yazsın" -- ham
+    // URL'ler artık mesaj metnine eklenmiyor; pdf_url ve liste_pdf_url
+    // SADECE ayrı değişkenler olarak gönderiliyor, EmailJS şablonunda
+    // gerçek birer link/buton olarak (Edit Content > köprü ekle >
+    // href={{pdf_url}} / {{liste_pdf_url}}, metin: "Uygunsuzluk Formu
+    // İndir" / "Uygunsuzluk Listesi İndir") kullanılması gerekiyor -- bkz.
+    // Ayarlar sayfasındaki not.
+    await epostaGonder({
+      to_email: k.ilgiliKime,
+      bilgi_email: k.ilgiliBilgi || '',
+      konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
+      mesaj: _uygunsuzlukMailMetniDoldur(k),
+      pdf_url: pdfUrl,
+      liste_pdf_url: listePdfUrl
+    });
+    alert(`Mail gönderildi${pdfUrl ? ' (form linki eklendi)' : ' (form linksiz)'}${listePdfUrl ? ' (liste linki eklendi)' : ''}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
+  } catch (hata) {
+    console.error(hata);
+    alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = eskiMetin;
+  }
 }
 
 function _usFotoHucresiUret(deger, etiket) {
@@ -583,6 +834,7 @@ function kayitlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', async () => {
     try { await uygunsuzlukKayitPdfOlustur(btn.getAttribute('data-pdf')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   }));
+  govde.querySelectorAll('[data-mail]').forEach(btn => btn.addEventListener('click', () => _uygunsuzlukMailGonderTiklandi(btn)));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { uygunsuzlukSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
   }));
@@ -873,6 +1125,8 @@ function kayitModalAc(kayit) {
 
   document.getElementById('sorumlu').value = kayit ? kayit.sorumlu : '';
   bolumButonlariCiz('sorumluBolumButonlari', 'sorumlu', 'tekli');
+  document.getElementById('ilgiliKime').value = kayit ? (kayit.ilgiliKime || '') : '';
+  _ucBilgiSecimCiz(kayit ? (kayit.ilgiliBilgi || '') : '');
   document.getElementById('atayan').value = kayit ? kayit.atayan : '';
   document.getElementById('bildirimTarihi').value = kayit ? kayit.bildirimTarihi : bugunIso();
   document.getElementById('termin').value = kayit ? kayit.termin : '';
@@ -962,6 +1216,8 @@ function formGonderildi(e) {
     duzelticiFaaliyet: document.getElementById('duzelticiFaaliyet').value,
     sorumlu: document.getElementById('sorumlu').value,
     atayan: document.getElementById('atayan').value,
+    ilgiliKime: document.getElementById('ilgiliKime').value,
+    ilgiliBilgi: _ucBilgiDegeriniTopla(),
     bildirimTarihi: document.getElementById('bildirimTarihi').value,
     termin: document.getElementById('termin').value,
     onayGerekliMi: document.getElementById('onayGerekliMi').checked,

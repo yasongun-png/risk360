@@ -12,12 +12,15 @@ const SINAV_DURUM_SINIF = { gecti: 'durum-gecerli', kaldi: 'durum-gecmis', bilin
 
 const SORU_EXCEL_KOLONLARI = [
   { anahtar: 'konu', baslik: 'Eğitim/Konu' },
+  { anahtar: 'altKonu', baslik: 'Alt Konu' },
+  { anahtar: 'zorluk', baslik: 'Zorluk (Kolay/Orta/Zor/Çok Zor)' },
   { anahtar: 'soruMetni', baslik: 'Soru Metni' },
   { anahtar: 'A', baslik: 'A Şıkkı' },
   { anahtar: 'B', baslik: 'B Şıkkı' },
   { anahtar: 'C', baslik: 'C Şıkkı' },
   { anahtar: 'D', baslik: 'D Şıkkı' },
-  { anahtar: 'dogruCevap', baslik: 'Doğru Cevap (A/B/C/D)' }
+  { anahtar: 'dogruCevap', baslik: 'Doğru Cevap (A/B/C/D)' },
+  { anahtar: 'aciklama', baslik: 'Açıklama' }
 ];
 
 const SINAV_EXCEL_KOLONLARI = [
@@ -44,9 +47,12 @@ function _soruIceAktarSatiriEkle(satir) {
 
   return soruEkle({
     egitimTuruId: tur.id,
+    konu: satir.altKonu || '',
+    zorluk: satir.zorluk || 'Orta',
     soruMetni: satir.soruMetni,
     secenekler: { A: satir.A, B: satir.B, C: satir.C, D: satir.D },
-    dogruCevap: String(satir.dogruCevap || '').trim().toUpperCase()
+    dogruCevap: String(satir.dogruCevap || '').trim().toUpperCase(),
+    aciklama: satir.aciklama || ''
   });
 }
 
@@ -69,12 +75,24 @@ function sinavSayfasiniBaslat() {
   document.getElementById('soruModalIptalBtn').addEventListener('click', soruModalKapat);
   document.getElementById('soruForm').addEventListener('submit', soruFormGonderildi);
   document.getElementById('soruKonuFiltre').addEventListener('change', soruTablosunuCiz);
+  document.getElementById('soruAltKonuFiltre').addEventListener('change', soruTablosunuCiz);
+  document.getElementById('soruZorlukFiltre').addEventListener('change', soruTablosunuCiz);
   document.getElementById('soruAramaKutusu').addEventListener('input', soruTablosunuCiz);
+  document.getElementById('hazirSoruBankasiBtn').addEventListener('click', hazirSoruBankasiModalAc);
+  document.getElementById('hazirSoruBankasiKapatBtn').addEventListener('click', hazirSoruBankasiModalKapat);
+  document.getElementById('hazirSoruBankasiIptalBtn').addEventListener('click', hazirSoruBankasiModalKapat);
+  document.getElementById('hazirSoruBankasiYukleBtn').addEventListener('click', hazirSoruBankasiYukle);
 
   document.getElementById('yeniSinavBtn').addEventListener('click', () => sinavModalAc());
   document.getElementById('sinavModalKapatBtn').addEventListener('click', sinavModalKapat);
   document.getElementById('sinavModalIptalBtn').addEventListener('click', sinavModalKapat);
   document.getElementById('sinavForm').addEventListener('submit', sinavFormGonderildi);
+  document.getElementById('sinavYontemOtomatik').addEventListener('change', _sinavYontemDegisti);
+  document.getElementById('sinavYontemManuel').addEventListener('change', _sinavYontemDegisti);
+  document.getElementById('sinavKonuId').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavAltKonuKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavManuelArama').addEventListener('input', _sinavManuelListesiCizGerekirse);
   document.getElementById('sinavAramaKutusu').addEventListener('input', sinavTablosunuCiz);
 
   document.getElementById('sonucAramaKutusu').addEventListener('input', sonucTablosunuCiz);
@@ -87,9 +105,9 @@ function sinavSayfasiniBaslat() {
   });
   document.getElementById('soruDisaAktarBtn').addEventListener('click', () => {
     const satirlar = sorulariGetir(document.getElementById('soruKonuFiltre').value, '').map(s => ({
-      konu: s.turAdi, soruMetni: s.soruMetni,
+      konu: s.turAdi, altKonu: s.konu || '', zorluk: s.zorluk || '', soruMetni: s.soruMetni,
       A: s.secenekler.A, B: s.secenekler.B, C: s.secenekler.C, D: s.secenekler.D,
-      dogruCevap: s.dogruCevap
+      dogruCevap: s.dogruCevap, aciklama: s.aciklama || ''
     }));
     excelDisaAktar(satirlar, SORU_EXCEL_KOLONLARI, 'soru_bankasi.xlsx');
   });
@@ -118,6 +136,12 @@ function sinavSayfasiniBaslat() {
   _konuSecimleriniDoldur('soruKonuFiltre', true);
   _konuSecimleriniDoldur('soruKonuId', false);
   _konuSecimleriniDoldur('sinavKonuId', false);
+  _altKonuSecimleriniDoldur('soruAltKonuFiltre', true);
+  _altKonuSecimleriniDoldur('soruAltKonu', true);
+  _zorlukSecimleriniDoldur('soruZorlukFiltre', true);
+  _zorlukSecimleriniDoldur('soruZorluk', false);
+  _zorlukKutulariniCiz();
+  _altKonuKutulariniCiz();
 
   sinavSekmeDegistir('sorular');
 }
@@ -130,6 +154,87 @@ function _konuSecimleriniDoldur(selectId, hepsiSecenegiEkle) {
     return `<option value="${t.id}">${_sinavKacir(t.ad)} (${sayi} soru)</option>`;
   }).join('');
   secim.innerHTML = (hepsiSecenegiEkle ? '<option value="">Tüm Konular</option>' : '') + secenekler;
+}
+
+// Alt Konu ve Zorluk, sabit listelerden gelir (bkz. sinav.js
+// SINAV_ALT_KONU_LISTESI / SINAV_ZORLUK_SEVIYELERI) — soru bankasındaki
+// mevcut kayıtlara bağlı değildir, bu yüzden her zaman tam liste gösterilir.
+function _altKonuSecimleriniDoldur(selectId, hepsiSecenegiEkle) {
+  const secim = document.getElementById(selectId);
+  const secenekler = SINAV_ALT_KONU_LISTESI.map(k => `<option value="${_sinavKacir(k)}">${_sinavKacir(k)}</option>`).join('');
+  secim.innerHTML = (hepsiSecenegiEkle ? '<option value="">Tüm Alt Konular</option>' : '<option value="">Seçilmedi</option>') + secenekler;
+}
+
+function _zorlukSecimleriniDoldur(selectId, hepsiSecenegiEkle) {
+  const secim = document.getElementById(selectId);
+  const secenekler = SINAV_ZORLUK_SEVIYELERI.map(z => `<option value="${z}">${z}</option>`).join('');
+  secim.innerHTML = (hepsiSecenegiEkle ? '<option value="">Tüm Zorluklar</option>' : '') + secenekler;
+}
+
+// Sınav oluşturma modalındaki çoklu seçim kutuları (kullanıcı isteği:
+// "zorluk düzeyi de ekleyelim" — birden fazla zorluk birlikte seçilebilsin).
+function _zorlukKutulariniCiz() {
+  const kutu = document.getElementById('sinavZorlukKutulari');
+  kutu.innerHTML = SINAV_ZORLUK_SEVIYELERI.map(z => `
+    <label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:13px;">
+      <input type="checkbox" value="${z}" data-zorluk-secim style="width:auto; margin:0;"> ${z}
+    </label>
+  `).join('');
+}
+
+function _seciliZorluklariGetir() {
+  return Array.from(document.querySelectorAll('#sinavZorlukKutulari [data-zorluk-secim]:checked')).map(cb => cb.value);
+}
+
+// Sınav oluşturma modalındaki Alt Konu çoklu seçimi (kullanıcı isteği:
+// "birden çok alt konu seçebilmem lazım") — Zorluk kutularıyla aynı desen.
+function _altKonuKutulariniCiz() {
+  const kutu = document.getElementById('sinavAltKonuKutulari');
+  kutu.innerHTML = SINAV_ALT_KONU_LISTESI.map(k => `
+    <label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:13px;">
+      <input type="checkbox" value="${_sinavKacir(k)}" data-altkonu-secim style="width:auto; margin:0;"> ${_sinavKacir(k)}
+    </label>
+  `).join('');
+}
+
+function _seciliAltKonulariGetir() {
+  return Array.from(document.querySelectorAll('#sinavAltKonuKutulari [data-altkonu-secim]:checked')).map(cb => cb.value);
+}
+
+// ---- Hazır Soru Bankası (bkz. modules/egitim/sinav-soru-bankasi.js
+// SINAV_HAZIR_SORU_BANKASI) — kullanıcı isteği: "bana bu uygulamaya
+// eklemek için toplam 200 soru hazırla". Sorular herhangi bir firmanın
+// eğitim türüne kullanıcının seçtiği şekilde eklenir.
+function hazirSoruBankasiModalAc() {
+  document.getElementById('hazirSoruBankasiSayi').textContent = String(SINAV_HAZIR_SORU_BANKASI.length);
+  _konuSecimleriniDoldur('hazirSoruBankasiKonuId', false);
+  document.getElementById('hazirSoruBankasiModalKatman').classList.add('acik');
+}
+
+function hazirSoruBankasiModalKapat() {
+  document.getElementById('hazirSoruBankasiModalKatman').classList.remove('acik');
+}
+
+async function hazirSoruBankasiYukle() {
+  const egitimTuruId = document.getElementById('hazirSoruBankasiKonuId').value;
+  const btn = document.getElementById('hazirSoruBankasiYukleBtn');
+  btn.disabled = true;
+  btn.textContent = 'Yükleniyor...';
+  try {
+    const sonuc = await soruBankasiSablonuYukle(egitimTuruId, SINAV_HAZIR_SORU_BANKASI);
+    if (!sonuc.basarili) {
+      alert(sonuc.hata || 'Yüklenemedi.');
+      return;
+    }
+    hazirSoruBankasiModalKapat();
+    soruTablosunuCiz();
+    _konuSecimleriniDoldur('soruKonuFiltre', true);
+    _konuSecimleriniDoldur('sinavKonuId', false);
+    alert(`${sonuc.eklenen} soru soru bankasına eklendi.`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Yükle';
+  }
 }
 
 function sinavSekmeDegistir(sekme) {
@@ -156,14 +261,16 @@ function soruTablosunuCiz() {
   const govde = document.getElementById('soruTabloGovde');
   const bosDurum = document.getElementById('soruBosDurum');
   const konuId = document.getElementById('soruKonuFiltre').value;
+  const altKonu = document.getElementById('soruAltKonuFiltre').value;
+  const zorluk = document.getElementById('soruZorlukFiltre').value;
   const aramaMetni = document.getElementById('soruAramaKutusu').value;
-  const liste = sorulariGetir(konuId, aramaMetni);
+  const liste = sorulariGetir(konuId, aramaMetni, altKonu, zorluk);
 
   govde.innerHTML = '';
 
   if (liste.length === 0) {
     bosDurum.classList.add('gorunur');
-    bosDurum.textContent = aramaMetni || konuId
+    bosDurum.textContent = aramaMetni || konuId || altKonu || zorluk
       ? 'Aramanızla eşleşen soru bulunamadı.'
       : 'Henüz soru bankasına soru eklenmedi.';
     return;
@@ -175,6 +282,8 @@ function soruTablosunuCiz() {
     satir.innerHTML = `
       <td>${_sinavKacir(_sinavKisalt(s.soruMetni, 90))}</td>
       <td>${_sinavKacir(s.turAdi)}</td>
+      <td>${_sinavKacir(s.konu) || '-'}</td>
+      <td>${_sinavKacir(s.zorluk) || '-'}</td>
       <td>${_sinavKacir(s.dogruCevap)}) ${_sinavKacir(_sinavKisalt(s.secenekler[s.dogruCevap], 40))}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${s.id}">Düzenle</button>
@@ -201,21 +310,27 @@ function soruTablosunuCiz() {
 function soruModalAc(soruId) {
   _duzenlenenSoruId = soruId || null;
   _konuSecimleriniDoldur('soruKonuId', false);
+  _altKonuSecimleriniDoldur('soruAltKonu', true);
+  _zorlukSecimleriniDoldur('soruZorluk', false);
   _sinavFormHatalariniTemizle('soruForm');
 
   if (_duzenlenenSoruId) {
     const soru = soruIdIleGetirRepo(_duzenlenenSoruId);
     document.getElementById('soruModalBaslik').textContent = 'Soruyu Düzenle';
     document.getElementById('soruKonuId').value = soru.egitimTuruId;
+    document.getElementById('soruAltKonu').value = soru.konu || '';
+    document.getElementById('soruZorluk').value = soru.zorluk || 'Orta';
     document.getElementById('soruMetni').value = soru.soruMetni;
     document.getElementById('secenekA').value = soru.secenekler.A;
     document.getElementById('secenekB').value = soru.secenekler.B;
     document.getElementById('secenekC').value = soru.secenekler.C;
     document.getElementById('secenekD').value = soru.secenekler.D;
     document.getElementById('dogruCevap').value = soru.dogruCevap;
+    document.getElementById('soruAciklama').value = soru.aciklama || '';
   } else {
     document.getElementById('soruModalBaslik').textContent = 'Yeni Soru';
     document.getElementById('soruForm').reset();
+    document.getElementById('soruZorluk').value = 'Orta';
   }
 
   document.getElementById('soruModalKatman').classList.add('acik');
@@ -231,6 +346,8 @@ function soruFormGonderildi(e) {
 
   const veriler = {
     egitimTuruId: document.getElementById('soruKonuId').value,
+    konu: document.getElementById('soruAltKonu').value,
+    zorluk: document.getElementById('soruZorluk').value,
     soruMetni: document.getElementById('soruMetni').value,
     secenekler: {
       A: document.getElementById('secenekA').value,
@@ -238,7 +355,8 @@ function soruFormGonderildi(e) {
       C: document.getElementById('secenekC').value,
       D: document.getElementById('secenekD').value
     },
-    dogruCevap: document.getElementById('dogruCevap').value
+    dogruCevap: document.getElementById('dogruCevap').value,
+    aciklama: document.getElementById('soruAciklama').value
   };
 
   const sonuc = _duzenlenenSoruId ? soruGuncelle(_duzenlenenSoruId, veriler) : soruEkle(veriler);
@@ -311,16 +429,79 @@ function sinavTablosunuCiz() {
   });
 }
 
+// Manuel sınav oluşturma modunda işaretlenen soru id'leri -- filtre
+// değiştikçe liste yeniden çizilse de seçim kaybolmasın diye modal açık
+// olduğu sürece burada tutulur (kullanıcı isteği: "mevcut kütüphaneden
+// istediğim soruları da seçip sınav kağıdı hazırlamak istiyorum").
+let _sinavManuelSeciliIdler = new Set();
+
 function sinavModalAc() {
   _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
+  _altKonuKutulariniCiz();
+  _zorlukKutulariniCiz();
   document.getElementById('sinavForm').reset();
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
+  document.getElementById('sinavManuelArama').value = '';
+  _sinavManuelSeciliIdler = new Set();
+  _sinavYontemDegisti();
   document.getElementById('sinavModalKatman').classList.add('acik');
 }
 
 function sinavModalKapat() {
   document.getElementById('sinavModalKatman').classList.remove('acik');
+}
+
+function _sinavManuelModuMu() {
+  return document.getElementById('sinavYontemManuel').checked;
+}
+
+function _sinavYontemDegisti() {
+  const manuel = _sinavManuelModuMu();
+  document.getElementById('sinavSoruSayisiAlani').style.display = manuel ? 'none' : '';
+  document.getElementById('sinavManuelSoruAlani').style.display = manuel ? '' : 'none';
+  if (manuel) _sinavManuelListesiCiz();
+}
+
+function _sinavManuelListesiCizGerekirse() {
+  if (_sinavManuelModuMu()) _sinavManuelListesiCiz();
+}
+
+// Üstteki Eğitim Türü / Alt Konu / Zorluk filtreleriyle ve arama kutusuyla
+// eşleşen soruları onay kutulu bir liste olarak çizer -- soru bankasındaki
+// aynı sorulariGetir + client-side çoklu konu/zorluk filtresi (sinavEkle'nin
+// havuz filtresiyle aynı mantık).
+function _sinavManuelListesiCiz() {
+  const govde = document.getElementById('sinavManuelSoruListesi');
+  const egitimTuruId = document.getElementById('sinavKonuId').value;
+  const konular = _seciliAltKonulariGetir();
+  const zorluklar = _seciliZorluklariGetir();
+  const aramaMetni = document.getElementById('sinavManuelArama').value;
+
+  let liste = sorulariGetir(egitimTuruId, aramaMetni);
+  if (konular.length) liste = liste.filter(s => konular.includes(s.konu));
+  if (zorluklar.length) liste = liste.filter(s => zorluklar.includes(s.zorluk));
+
+  if (!liste.length) {
+    govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Filtreyle eşleşen soru bulunamadı.</div>';
+  } else {
+    govde.innerHTML = liste.map(s => `
+      <label style="display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
+        <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
+        <span>${_sinavKacir(_sinavKisalt(s.soruMetni, 130))} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></span>
+      </label>
+    `).join('');
+  }
+
+  govde.querySelectorAll('[data-manuel-soru]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.getAttribute('data-manuel-soru');
+      if (cb.checked) _sinavManuelSeciliIdler.add(id);
+      else _sinavManuelSeciliIdler.delete(id);
+      document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
+    });
+  });
+  document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
 }
 
 function sinavFormGonderildi(e) {
@@ -330,12 +511,16 @@ function sinavFormGonderildi(e) {
   const veriler = {
     baslik: document.getElementById('sinavBaslik').value,
     egitimTuruId: document.getElementById('sinavKonuId').value,
+    konular: _seciliAltKonulariGetir(),
+    zorluklar: _seciliZorluklariGetir(),
     tarih: document.getElementById('sinavTarih').value,
     soruSayisi: document.getElementById('sinavSoruSayisi').value,
     gecmeNotu: document.getElementById('sinavGecmeNotu').value
   };
 
-  const sonuc = sinavEkle(veriler);
+  const sonuc = _sinavManuelModuMu()
+    ? sinavManuelEkle(veriler, Array.from(_sinavManuelSeciliIdler))
+    : sinavEkle(veriler);
 
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar).forEach(alan => {
@@ -506,15 +691,33 @@ function _sinavKagidiYazdirOrtak(sinavId, baslikOnEki, cevapGoster) {
     <div class="doc-title">${_sinavKacir(baslikOnEki)}: ${_sinavKacir(sinav.baslik)}</div>
     <div class="doc-meta">
       <b>${_sinavKacir(firma ? firma.ad : '')}</b><br>
-      Konu: ${_sinavKacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${_sinavKacir(sinav.tarih)} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
+      Konu: ${_sinavKacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${sinav.tarih ? _sinavKacir(sinav.tarih) : '______________'} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
       ${cevapGoster ? '' : '<br><br>Ad Soyad: ______________________________ &nbsp;&nbsp; Sicil No: ______________'}
     </div>
     ${_sinavSorularHtmlUret(sinav, cevapGoster)}
   `;
+  // Kullanıcı isteği: "verdiği sınav kağıdı yatay olmaması lazım" -- diğer
+  // modüllerin geniş tablo çıktıları için #yazdirmaAlani varsayılan olarak
+  // A4 landscape kullanıyor (bkz. assets/style.css @media print @page).
+  // Adlandırılmış @page + page: özelliği denenmiş ama tarayıcı desteği
+  // tutarsız çıktığından çalışmamıştı (kullanıcı bildirdi: "yine yatay").
+  // Bunun yerine yazdırma ANINDA <head>'in SONUNA (dolayısıyla CSS
+  // basamaklamasında en yüksek öncelikle) geçici bir <style> eklenip genel
+  // landscape kuralı ezilir; yazdırma bitince bu <style> kaldırılır, diğer
+  // modüllerin yazdırmaları etkilenmez.
+  const dikeySayfaStili = document.createElement('style');
+  dikeySayfaStili.id = 'sinavYazdirmaStili';
+  dikeySayfaStili.textContent = '@media print { @page { size: A4 portrait; margin: 15mm; } }';
+  document.head.appendChild(dikeySayfaStili);
+
   mount.style.display = 'block';
   setTimeout(() => {
     window.print();
-    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
+    setTimeout(() => {
+      mount.innerHTML = '';
+      mount.style.display = 'none';
+      dikeySayfaStili.remove();
+    }, 400);
   }, 80);
 }
 

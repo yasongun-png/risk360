@@ -136,7 +136,10 @@ const _UC_RAPOR_STIL = `
   #ucPdfSayfa .uc-rozet-kapali{ background:#dc2626; color:#fff; }
 `;
 
-async function uygunsuzlukRaporuPdfOlustur() {
+// indir=false: dosyayı indirmez, {pdf, dosyaAdi} döner -- "Mail Gönder"in
+// bu listeyi de EmailJS linki olarak göndermesi için (bkz. ui.js
+// _uygunsuzlukMailGonderTiklandi ve aşağıdaki uygunsuzlukListesiPdfUrlOlustur).
+async function uygunsuzlukRaporuPdfOlustur(indir = true) {
   const filtreler = _usAktifFiltreleriGetir();
   const kayitlarHam = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!kayitlarHam.length) {
@@ -236,10 +239,41 @@ async function uygunsuzlukRaporuPdfOlustur() {
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 297 / 2, 210 - 5, { align: 'center' });
   }
-  pdf.save(`Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.pdf`);
+  const dosyaAdi = `Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.pdf`;
+  if (indir) pdf.save(dosyaAdi);
 
   mount.innerHTML = '';
   mount.style.display = 'none';
+  return { pdf, dosyaAdi };
+}
+
+// Mail Gönder'in EmailJS'e ikinci bir link olarak eklediği "Uygunsuzluk
+// Listesi" raporu -- uygunsuzlukKayitPdfUrlOlustur ile AYNI Storage yükleme
+// deseni (bkz. orada ki uzun yorum: ek boyutu sınırı, CORS vb.). Mail
+// gönderilirken tablodaki O ANKİ arama/filtre neyse onunla üretilir --
+// "PDF Raporu" düğmesiyle birebir aynı davranış.
+async function uygunsuzlukListesiPdfUrlOlustur() {
+  const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
+  if (!storage) return null;
+
+  const uretim = await uygunsuzlukRaporuPdfOlustur(false);
+  if (!uretim) return null;
+
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const yol = 'uygunsuzluk_liste_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
+  const blob = uretim.pdf.output('blob');
+
+  // Kullanıcı bildirdi: "liste raporu uzun sürüyor" -- tek kayıt PDF'inden
+  // farklı olarak bu, filtreye uyan TÜM kayıtları (çok sayfalı, fotoğraflı
+  // olabilir) içerdiğinden dosya çok daha büyük olabilir; tek kayıt
+  // linkindeki 20 saniyelik süre bu yükleme için gerçekçi çıkabiliyordu,
+  // 60 saniyeye çıkarıldı.
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Liste PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 60000));
+  const yukleme = (async () => {
+    const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
+    return anlik.ref.getDownloadURL();
+  })();
+  return Promise.race([yukleme, zamanAsimi]);
 }
 
 // ==================== TEKİL KAYIT PDF'İ (İSG UYGUNSUZLUK BİLDİRİM FORMU) ====================
@@ -395,9 +429,13 @@ const _UC_KAYIT_STIL = `
       #ucKayitPdf .uc-ek-foto-govde img{ max-width:100%; max-height:100%; object-fit:contain; }
 `;
 
-async function uygunsuzlukKayitPdfOlustur(id) {
+// indir=false: dosyayı indirmez, jsPDF nesnesini döner -- "Mail Gönder"in
+// PDF'i EmailJS eki olarak göndermek için ayrı bir indirme diyaloğu
+// açtırmadan aynı PDF'i üretmesini sağlar (bkz. ui.js
+// _uygunsuzlukMailGonderTiklandi).
+async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
   const k = uygunsuzlukIdIleGetirRepo(id);
-  if (!k) return;
+  if (!k) return null;
 
   const firma = aktifFirmaGetir();
   const logo = firma ? firmaLogoGetir(firma.id) : '';
@@ -641,8 +679,42 @@ async function uygunsuzlukKayitPdfOlustur(id) {
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 210 / 2, 297 - 5, { align: 'center' });
   }
-  pdf.save(`Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`);
+  const dosyaAdi = `Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`;
+  if (indir) pdf.save(dosyaAdi);
 
   mount.innerHTML = '';
   mount.style.display = 'none';
+  return { pdf, dosyaAdi };
+}
+
+// Mail Gönder'in EmailJS'e doğrudan ek olarak eklemek yerine kullandığı yol:
+// bu PDF'ler (fotoğraflı kayıtlarda ~birkaç MB) EmailJS'in ek boyutu
+// sınırlarını (ücretsiz planda ~50KB) fazlasıyla aşıyor -- ek olarak
+// gönderilince EmailJS bunu sessizce düşürüp maili eksiz gönderiyordu
+// (kullanıcı bildirdi). Bunun yerine PDF, foto yüklemede zaten kullanılan
+// aynı Firebase Storage'a (bkz. core/data.js fotoYukle) yüklenir ve mail
+// gövdesine bir indirme linki eklenir -- boyut sınırı yok, güvenilir.
+// Storage yapılandırılmamışsa/başarısız olursa null döner (çağıran taraf
+// linksiz devam eder, e-posta yine de gider).
+async function uygunsuzlukKayitPdfUrlOlustur(id) {
+  const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
+  if (!storage) return null;
+
+  const uretim = await uygunsuzlukKayitPdfOlustur(id, false);
+  if (!uretim) return null;
+
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const yol = 'uygunsuzluk_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
+  const blob = uretim.pdf.output('blob');
+
+  // fotoYukle'deki (core/data.js) aynı önlem: Storage isteği ağ/izin
+  // sorunuyla süresiz asılı kalabiliyor (kullanıcı bildirdi: "PDF
+  // hazırlanıyor"da kalıyordu) -- belirli sürede sonuçlanmazsa hata
+  // fırlatılıp linksiz devam edilmesi sağlanır.
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 20000));
+  const yukleme = (async () => {
+    const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
+    return anlik.ref.getDownloadURL();
+  })();
+  return Promise.race([yukleme, zamanAsimi]);
 }

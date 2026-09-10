@@ -83,6 +83,7 @@
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
           <button type="button" class="ikincil" id="pdfRaporBtn">PDF Raporu</button>
           <button type="button" class="ikincil" id="raporMetniBtn">Rapor Kapak Metni</button>
+          <button type="button" class="ikincil" id="mailMetniBtn">✉️ Mail Metni</button>
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
           <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
         </div>
@@ -129,6 +130,49 @@
         <button type="button" class="birincil" id="raporMetniKaydetBtn">Kaydet</button>
       </div>
       <button type="button" class="tablo-buton" id="raporMetniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="mailMetniKatmani">
+    <div class="modal-kutu" style="max-width:560px;">
+      <h3>Mail Metni</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        "✉️ Mail Gönder" ile atılan tüm e-postaların gövdesi. Bir kez girin,
+        siz değiştirene kadar her mail bu metinle gider. Şu yer tutucuları
+        kullanabilirsiniz: <code>{aksiyonNo}</code>, <code>{baslik}</code>,
+        <code>{bolum}</code>, <code>{riskSeviyesi}</code>, <code>{termin}</code>,
+        <code>{durum}</code>, <code>{aciklama}</code>.
+      </p>
+      <label for="mailMetniGirdi">Mail İçeriği</label>
+      <textarea id="mailMetniGirdi" rows="10" placeholder="Sayın İlgili,&#10;&#10;{baslik} konulu uygunsuzluk kaydı bilgilerinize sunulmuştur..."></textarea>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mailMetniIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="mailMetniKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="mailMetniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- z-index:60 -- kayıt formunun (#modalKatman) İÇİNDEKİ "E-posta Listesini
+       Yönet" düğmesinden açılır, o yüzden onun ÜSTÜNDE görünmesi gerekir. -->
+  <div class="modal-katman" id="ilgiliEpostaListesiKatmani" style="z-index:60;">
+    <div class="modal-kutu" style="max-width:560px;">
+      <h3>İlgili E-posta Listesi</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Pozisyon/kişi adı ve e-postasını bir kez girin — Sorumlu alanına o adı
+        (bölüm butonlarından veya elle) girdiğinizde "Kime" kutusu buradan
+        otomatik dolar; "Bilgi" kutusunda da bu listeden çoklu seçim
+        yapabilirsiniz. Her satıra bir tane, <code>Ad; e-posta</code> biçiminde
+        — bir pozisyonun <b>birden fazla e-postası</b> olacaksa aralarına
+        virgül koyup istediğiniz kadar ekleyebilirsiniz, ör.
+        <code>Bakım ve Onarım Müdürlüğü; ahmet@firma.com, mehmet@firma.com, ayse@firma.com</code>.
+      </p>
+      <textarea id="ilgiliEpostaListesiGirdi" rows="10" placeholder="Bakım ve Onarım Müdürlüğü; bakim@firma.com, ahmet@firma.com&#10;Teknik Hizmetler Müdürlüğü; teknik@firma.com&#10;Ahmet Yılmaz; ahmet@firma.com"></textarea>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ilgiliEpostaListesiIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="ilgiliEpostaListesiKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="ilgiliEpostaListesiKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -184,7 +228,7 @@
   <div class="modal-katman" id="modalKatman">
     <div class="modal-kutu" style="max-width:640px;">
       <h3 id="modalBaslik">Yeni Uygunsuzluk Kaydı</h3>
-      <form id="kayitForm">
+      <form id="kayitForm" novalidate>
 
         <label for="baslik">Uygunsuzluk Tanımı</label>
         <textarea id="baslik"></textarea>
@@ -231,6 +275,27 @@
           <div>
             <label for="atayan">Atayan / Bildiren</label>
             <input type="text" id="atayan">
+          </div>
+        </div>
+        <div style="margin-top:4px; padding:10px 12px; border:1px dashed var(--kenarlik); border-radius:8px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+            <div style="font-size:12px; font-weight:600;">
+              İlgililer <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel — sadece "Mail Gönder" için kullanılır, başka hiçbir yerde gösterilmez)</span>
+            </div>
+            <button type="button" class="tablo-buton" id="ilgiliEpostaListesiAcBtn" style="white-space:nowrap;">📇 E-posta Listesini Yönet</button>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ilgiliKime">Kime <span style="color:var(--metin-soluk); font-weight:400;">(Sorumlu'ya göre otomatik dolar)</span></label>
+              <input type="text" id="ilgiliKime" placeholder="ornek@firma.com">
+              <div class="alan-hatasi" id="ilgiliKimeHata" style="color:var(--hata); font-size:12px;"></div>
+            </div>
+            <div>
+              <label>Bilgi <span style="color:var(--metin-soluk); font-weight:400;">(listeden seçin)</span></label>
+              <div id="ilgiliBilgiSecim" style="max-height:110px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 8px;"></div>
+              <input type="text" id="ilgiliBilgiEk" placeholder="Listede olmayan ek adres(ler), virgülle ayırın" style="margin-top:4px;">
+              <div class="alan-hatasi" id="ilgiliBilgiHata" style="color:var(--hata); font-size:12px;"></div>
+            </div>
           </div>
         </div>
         <div class="form-satir-ikili">
@@ -358,6 +423,7 @@
   <script src="../../core/rapor.js"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/eposta.js"></script>
   <!-- Bildirim Formu PDF'inin sonundaki konum krokisi için (bkz. cikti.js) -->
   <script src="../harita/repository.js"></script>
   <script src="model.js"></script>
