@@ -275,7 +275,7 @@
         <textarea id="sonucDegerlendirme"></textarea>
         </div>
 
-        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Rapor Bilgileri (Hazırlayan / Onaylayan)</div>
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Rapor Bilgileri (Hazırlayan / Bölüm Yöneticisi)</div>
         <div class="form-bolum-icerik kapali">
         <div class="form-satir-ikili">
           <div>
@@ -299,12 +299,12 @@
         </div>
         <div class="form-satir-ikili">
           <div>
-            <label for="raporOnaylayanAdi">Onaylayan (Ad Soyad)</label>
+            <label for="raporOnaylayanAdi">Bölüm Yöneticisi (Ad Soyad)</label>
             <input type="text" id="raporOnaylayanAdi">
           </div>
           <div>
-            <label for="raporOnaylayanUnvan">Onaylayan Unvanı</label>
-            <input type="text" id="raporOnaylayanUnvan" placeholder="örn. Fabrika Müdürü">
+            <label for="raporOnaylayanUnvan">Bölüm Yöneticisi Unvanı</label>
+            <input type="text" id="raporOnaylayanUnvan" placeholder="örn. Bölüm Yöneticisi">
           </div>
         </div>
         <label for="raporKazaSinifi">Kaza Sınıfı</label>
@@ -345,11 +345,8 @@
     </div>
   </div>
 
-  <div id="yazdirmaAlani"></div>
-
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="../../core/data.js"></script>

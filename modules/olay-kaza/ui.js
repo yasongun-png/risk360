@@ -378,7 +378,6 @@ function kayitlariCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${okRozetSinifAdi(k.durum)}">${_okKacir(k.durum)}</span></td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
-        <button class="tablo-buton" data-rapor="${k.id}">Rapor PDF</button>
         <button class="tablo-buton" data-rapor-word="${k.id}">Rapor Word</button>
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
@@ -388,9 +387,6 @@ function kayitlariCiz(aramaMetni) {
   fotoReferanslariCoz(govde);
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(olayKaydiIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
-  govde.querySelectorAll('[data-rapor]').forEach(btn => btn.addEventListener('click', async () => {
-    try { await kazaRaporuPdfOlustur(btn.getAttribute('data-rapor')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
-  }));
   govde.querySelectorAll('[data-rapor-word]').forEach(btn => btn.addEventListener('click', async () => {
     try { await kazaRaporuWordOlustur(btn.getAttribute('data-rapor-word')); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
   }));

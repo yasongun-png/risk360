@@ -1,4 +1,5 @@
-// Olay / Kaza — Olay Araştırma Raporu PDF/Word çıktıları. Kullanıcının
+// Olay / Kaza — Olay Araştırma Raporu Word çıktısı (PDF çıktısı kullanıcı
+// isteğiyle kaldırıldı). Kullanıcının
 // paylaştığı gerçek bir "İş Kazası Araştırma Raporu" örneğinin yapısını izler
 // (modül artık iş kazasının yanında ramak kala/yangın/acil durum gibi genel
 // olayları da kapsadığı için başlık "Olay Araştırma Raporu" olarak
@@ -56,234 +57,10 @@ function _okKidemMetni(iseGirisTarihi, referansTarih) {
   return parcalar.join(' ');
 }
 
-const _OK_PDF_STIL = `
-  #okKazaRaporu{ font-family:"Segoe UI", Arial, sans-serif; color:#111827; background:#fff; width:210mm; margin:0 auto; padding:10mm 12mm 12mm; }
-  #okKazaRaporu *{ box-sizing:border-box; }
-
-  #okKazaRaporu .fa-kutu{ border-collapse:collapse; font-size:6.8pt; width:100%; table-layout:fixed; }
-  #okKazaRaporu .fa-kutu td{ padding:1.5px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #okKazaRaporu .fa-kutu td:first-child{ font-weight:700; background:#fff; width:48%; }
-
-  #okKazaRaporu .ok-form-ustbilgi{ display:flex; align-items:stretch; border:2px solid #111827; margin-bottom:4mm; background:#fff; }
-  #okKazaRaporu .ok-form-ustbilgi > div{ padding:3mm; display:flex; align-items:center; justify-content:center; border-right:2px solid #111827; background:#fff; }
-  #okKazaRaporu .ok-form-ustbilgi > div:last-child{ border-right:none; }
-  #okKazaRaporu .ok-form-logo{ flex:0 0 28mm; width:28mm; text-align:center; color:#111827; font-size:8pt; font-weight:700; }
-  #okKazaRaporu .ok-form-logo img{ max-width:24mm; max-height:16mm; }
-  #okKazaRaporu .ok-form-baslik{ flex:1 1 auto; min-width:0; text-align:center; font-size:13pt; font-weight:900; color:#111827; line-height:1.3; }
-  #okKazaRaporu .ok-form-fa{ flex:0 0 42mm; width:42mm; padding:2mm !important; align-items:stretch !important; }
-
-  #okKazaRaporu .ok-bolum{ page-break-inside:avoid; }
-  #okKazaRaporu .ok-bolum-baslik{ margin:4mm 0 1.5mm; color:#111827; font-size:12.5px; font-weight:900; }
-  #okKazaRaporu .ok-alt-baslik{ margin:2.5mm 0 1mm; color:#111827; font-size:10.8px; font-weight:800; }
-
-  #okKazaRaporu table.ok-tablo{ width:100%; border-collapse:collapse; border:1px solid #111827; table-layout:fixed; font-size:10px; line-height:1.3; margin-bottom:2mm; page-break-inside:avoid; }
-  #okKazaRaporu table.ok-tablo th, #okKazaRaporu table.ok-tablo td{ border:1px solid #111827; padding:1.8mm 2.4mm; vertical-align:top; color:#111827; overflow-wrap:break-word; }
-  #okKazaRaporu table.ok-tablo .lbl{ width:20%; background:#f1f5f9; font-weight:700; }
-  #okKazaRaporu table.ok-tablo .val{ width:30%; }
-  #okKazaRaporu table.ok-tablo thead th{ background:#e5e7eb; font-weight:800; }
-
-  #okKazaRaporu .ok-metin-kutu{ border:1px solid #111827; padding:2.4mm 2.8mm; font-size:10.3px; line-height:1.5; white-space:pre-wrap; color:#111827; page-break-inside:avoid; margin-bottom:2mm; }
-
-  #okKazaRaporu .ok-tanik-kutu{ border:1px solid #111827; padding:2.4mm 3mm; margin-bottom:2.5mm; page-break-inside:avoid; }
-  #okKazaRaporu .ok-tanik-kutu b{ display:block; font-size:10.3px; margin-bottom:1mm; }
-  #okKazaRaporu .ok-tanik-kutu span{ font-size:10px; font-style:italic; color:#111827; }
-
-  #okKazaRaporu .ok-mevzuat-liste{ margin:0 0 2mm; padding-left:5mm; font-size:10.3px; line-height:1.55; }
-  #okKazaRaporu .ok-mevzuat-liste li{ page-break-inside:avoid; break-inside:avoid; margin-bottom:0.8mm; }
-
-  #okKazaRaporu p{ page-break-inside:avoid; break-inside:avoid; orphans:3; widows:3; }
-  #okKazaRaporu .ok-alt-baslik{ page-break-after:avoid; break-after:avoid; }
-
-  #okKazaRaporu .ok-imza-satir{ margin-top:8mm; display:grid; grid-template-columns:repeat(3,1fr); gap:8mm; font-size:10px; page-break-inside:avoid; }
-  #okKazaRaporu .ok-imza-kutu{ min-height:18mm; padding-top:7mm; border-top:1px solid #111827; text-align:center; }
-  #okKazaRaporu .ok-imza-kutu b{ display:block; margin-bottom:1mm; color:#111827; }
-  #okKazaRaporu .ok-imza-kutu span{ color:#4b5563; }
-`;
-
-function _okAlanSatiri(etiket1, deger1, etiket2, deger2) {
-  return `<tr>
-    <td class="lbl">${_okKacir(etiket1)}</td><td class="val">${_okKacir(deger1) || '-'}</td>
-    <td class="lbl">${_okKacir(etiket2)}</td><td class="val">${_okKacir(deger2) || '-'}</td>
-  </tr>`;
-}
-
-function _okAlanSatiriTek(etiket, deger) {
-  return `<tr><td class="lbl">${_okKacir(etiket)}</td><td class="val" colspan="3">${_okKacir(deger) || '-'}</td></tr>`;
-}
-
-// Bölüm içeriği boşsa (hiçbir veri girilmemişse) başlığıyla birlikte HİÇ
-// render edilmez; doluysa numarası, önündeki dolu bölümlerin sayısına göre
-// otomatik verilir (boş bölüm yüzünden numarada atlama olmaz).
-function _okBolumleriBirlestir(bolumler) {
-  let sira = 0;
-  return bolumler
-    .filter(b => b.doluMu)
-    .map(b => { sira++; return `<div class="ok-bolum"><div class="ok-bolum-baslik">${sira}. ${_okKacir(b.baslik)}</div>${b.html}</div>`; })
-    .join('');
-}
-
-async function kazaRaporuPdfOlustur(id) {
-  const k = olayKaydiIdIleGetirRepo(id);
-  if (!k) return;
-
-  const firma = aktifFirmaGetir();
-  const bugun = gunAyYil(bugunIso());
-  const fkRP = fineKinneyPuaniHesapla(k);
-  const kidem = _okKidemMetni(k.iseGirisTarihi, k.kazaTarihi);
-  const gorevKidem = [k.gorev, kidem].filter(Boolean).join(' – ');
-  const magdur = [k.adSoyad, k.magdurYasi != null ? k.magdurYasi + ' yaş' : ''].filter(Boolean).join(', ');
-
-  const kronoloji = Array.isArray(k.kronoloji) ? k.kronoloji.filter(s => s.gelisme) : [];
-  const kronolojiHtml = `
-    <table class="ok-tablo">
-      <thead><tr><th style="width:16%;">Saat</th><th>Gelişme</th></tr></thead>
-      <tbody>${kronoloji.map(s => `<tr><td>${_okKacir(s.saat) || '-'}</td><td>${_okKacir(s.gelisme)}</td></tr>`).join('')}</tbody>
-    </table>`;
-
-  const tanikIfadeleri = Array.isArray(k.tanikIfadeleri) ? k.tanikIfadeleri.filter(t => t.adSoyad || t.ifade) : [];
-  const tanikHtml = tanikIfadeleri.map((t, i) => `
-    <div class="ok-tanik-kutu">
-      <b>Tanık ${i + 1} – ${_okKacir(t.adSoyad)}${t.unvan ? ', ' + _okKacir(t.unvan) : ''}</b>
-      <span>"${_okKacir(t.ifade)}"</span>
-    </div>
-  `).join('');
-
-  const analiz5n1kDoluMu = [k.analizNe, k.analizNerede, k.analizNeZaman, k.analizKim, k.analizNasil, k.analizNeden].some(Boolean);
-  const analiz5n1kHtml = `
-    <table class="ok-tablo">
-      ${_okAlanSatiriTek('Ne', k.analizNe)}
-      ${_okAlanSatiriTek('Nerede', k.analizNerede)}
-      ${_okAlanSatiriTek('Ne Zaman', k.analizNeZaman)}
-      ${_okAlanSatiriTek('Kim', k.analizKim)}
-      ${_okAlanSatiriTek('Nasıl', k.analizNasil)}
-      ${_okAlanSatiriTek('Neden', k.analizNeden)}
-    </table>`;
-
-  const mevzuatSatirlari = (k.ilgiliMevzuat || '').split('\n').map(s => s.trim()).filter(Boolean);
-  const mevzuatHtml = `<ul class="ok-mevzuat-liste">${mevzuatSatirlari.map(m => `<li>${_okKacir(m)}</li>`).join('')}</ul>`;
-
-  const aksiyonlar = Array.isArray(k.aksiyonlar) ? k.aksiyonlar.filter(a => a.baslik || a.duzelticiFaaliyet) : [];
-  const aksiyonHtml = `
-    <table class="ok-tablo">
-      <thead><tr><th style="width:22%;">Uygunsuzluk Tanımı</th><th style="width:30%;">Düzeltici Faaliyet</th><th style="width:16%;">Sorumlu</th><th style="width:14%;">Termin</th><th style="width:18%;">Durum</th></tr></thead>
-      <tbody>${aksiyonlar.map(a => `
-        <tr>
-          <td>${_okKacir(a.baslik)}</td>
-          <td>${_okKacir(a.duzelticiFaaliyet)}</td>
-          <td>${_okKacir(a.sorumlu)}</td>
-          <td>${_okKacir(gunAyYil(a.termin)) || '-'}</td>
-          <td>${_okKacir(a.durum)}</td>
-        </tr>
-      `).join('')}</tbody>
-    </table>`;
-
-  const bolumler = [
-    { baslik: 'Genel Bilgiler', doluMu: true, html: `
-      <table class="ok-tablo">
-        ${_okAlanSatiriTek('İşyeri', firma ? firma.ad : '')}
-        ${_okAlanSatiri('Kaza Yeri', k.kazaYeri, 'Kaza Tarihi / Saati', [gunAyYil(k.kazaTarihi), k.kazaSaati].filter(Boolean).join(' – '))}
-        ${_okAlanSatiri('Mağdur', magdur, 'Görevi / Kıdemi', gorevKidem)}
-        ${_okAlanSatiri('Tehlikeli Madde', k.tehlikeliMadde, 'Tanık Sayısı', k.tanikSayisi ?? '')}
-        ${(OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi) || k.yaralanmaTuru || k.yaralananUzuv) ? _okAlanSatiri('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv) : ''}
-        ${_okAlanSatiri('Kayıp Gün', k.kayipGun ?? '', 'DART Gün', k.dartGun ?? '')}
-        ${(k.fkO && k.fkF && k.fkS) ? `<tr><td class="lbl">Fine-Kinney (O/F/Ş/RP)</td><td class="val" colspan="3">O: ${_okKacir(k.fkO)} &nbsp; F: ${_okKacir(k.fkF)} &nbsp; Ş: ${_okKacir(k.fkS)} &nbsp; RP: ${_okKacir(_okRpRozet(fkRP))}</td></tr>` : ''}
-      </table>` },
-    { baslik: 'Olay Özeti', doluMu: true, html: `
-      <div class="ok-metin-kutu">${_okKacir(k.aciklama)}</div>
-      ${k.potansiyelSonuc ? `<div class="ok-alt-baslik">Potansiyel Sonuç</div><div class="ok-metin-kutu">${_okKacir(k.potansiyelSonuc)}</div>` : ''}` },
-    { baslik: 'Olay Kronolojisi', doluMu: kronoloji.length > 0, html: kronolojiHtml },
-    { baslik: 'Tanık İfadeleri', doluMu: tanikIfadeleri.length > 0, html: tanikHtml },
-    { baslik: '5N1K Analizi', doluMu: analiz5n1kDoluMu, html: analiz5n1kHtml },
-    { baslik: 'İlgili Mevzuat', doluMu: mevzuatSatirlari.length > 0, html: mevzuatHtml },
-    { baslik: 'Düzeltici ve Önleyici Faaliyetler (Uygunsuzluk)', doluMu: aksiyonlar.length > 0, html: aksiyonHtml },
-    { baslik: 'Sonuç ve Değerlendirme', doluMu: !!k.sonucDegerlendirme, html: `<div class="ok-metin-kutu">${_okKacir(k.sonucDegerlendirme)}</div>` }
-  ];
-
-  const html = `
-  <div id="okKazaRaporu">
-    <style>${_OK_PDF_STIL}</style>
-
-    <div class="ok-form-ustbilgi">
-      <div class="ok-form-logo">${firma && firmaLogoGetir(firma.id) ? `<img src="${firmaLogoGetir(firma.id)}">` : 'LOGO YOK'}</div>
-      <div class="ok-form-baslik">OLAY ARAŞTIRMA RAPORU</div>
-      <div class="ok-form-fa">${formAyarlariKutusuHtml('olay-kaza', null, false, null, true)}</div>
-    </div>
-
-    <table class="ok-tablo">
-      ${_okAlanSatiri('Rapor No', k.kayitNo, 'Rapor Tarihi', bugun)}
-      ${_okAlanSatiriTek('Hazırlayan', [k.hazirlayanAdi, k.hazirlayanUnvan].filter(Boolean).join(' – '))}
-      ${_okAlanSatiri('Kaza Sınıfı', _okKazaSinifiMetni(k), 'Soruşturma Süresi', [gunAyYil(k.sorusturmaBaslangic), gunAyYil(k.sorusturmaBitis)].filter(Boolean).join(' – '))}
-    </table>
-
-    ${_okBolumleriBirlestir(bolumler)}
-
-    <div class="ok-imza-satir">
-      <div class="ok-imza-kutu"><b>${_okKacir(k.hazirlayanAdi) || '-'}</b><span>${_okKacir(k.hazirlayanUnvan) || 'Hazırlayan'}</span></div>
-      <div class="ok-imza-kutu"><b>${_okKacir(k.ekipUyesiAdi) || '-'}</b><span>${_okKacir(k.ekipUyesiUnvan) || 'Soruşturma Ekibi Üyesi'}</span></div>
-      <div class="ok-imza-kutu"><b>${_okKacir(k.onaylayanAdi) || '-'}</b><span>${_okKacir(k.onaylayanUnvan) || 'Onaylayan'}</span></div>
-    </div>
-  </div>
-  `;
-
-  const mount = document.getElementById('yazdirmaAlani');
-  mount.innerHTML = html;
-  mount.style.display = 'block';
-
-  // Üst kenar boşluğu, 2. ve sonraki sayfalarda çizilecek üst bant için
-  // ayrılıyor (bkz. aşağıdaki jsPDF son-işleme döngüsü) — 1. sayfada bu boşluk
-  // zaten gerçek ok-form-ustbilgi HTML bandını içeriyor, sadece biraz aşağı kayar.
-  const ustBoslukMm = 14;
-  const worker = html2pdf()
-    .set({
-      margin: [ustBoslukMm, 0, 8, 0],
-      filename: `Kaza_Raporu_${(k.kayitNo || id).replace(/[\\/]/g, '-')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4', compress: true },
-      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'li', 'p', 'table.ok-tablo', '.ok-metin-kutu', '.ok-tanik-kutu', '.ok-bolum', '.ok-imza-satir'] }
-    })
-    .from(mount)
-    .toPdf();
-
-  // Her sayfaya "Sayfa X / N" damgası — kullanıcı isteği: "ilk sayfada sayfa
-  // sayısı 1/2 ikinci sayfada 2/2 ... 3 sayfaysa 1/3 2/3 3/3". Toplam sayfa
-  // sayısı içerik uzunluğuna göre değiştiğinden bu, PDF üretildikten SONRA
-  // jsPDF nesnesi üzerinden (bkz. risk modülündeki aynı desen) yapılır.
-  // 2. sayfadan itibaren ayrıca üst bant çizilir (kullanıcı isteği: "2. ve 3.
-  // sayfa olursa orada da üst bant olacak") — 1. sayfa zaten gerçek HTML
-  // başlık bandını (ok-form-ustbilgi) içerdiğinden tekrar çizilmez; bant,
-  // margin.top'ta yukarıda ayrılan boş alana (0–14mm) çizilir, içeriğin
-  // üzerine binmez.
-  const pdf = await worker.get('pdf');
-  const toplamSayfa = pdf.internal.getNumberOfPages();
-  const genislik = pdf.internal.pageSize.getWidth();
-  const yukseklik = pdf.internal.pageSize.getHeight();
-  for (let i = 1; i <= toplamSayfa; i++) {
-    pdf.setPage(i);
-    if (i > 1) {
-      pdf.setDrawColor(17, 24, 39);
-      pdf.setLineWidth(0.3);
-      pdf.rect(0, 0, genislik, ustBoslukMm);
-      pdf.setFontSize(10);
-      pdf.setTextColor(17, 24, 39);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('OLAY ARAŞTIRMA RAPORU', genislik / 2, ustBoslukMm / 2 - 1, { align: 'center' });
-      pdf.setFontSize(8);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(k.kayitNo || '', 4, ustBoslukMm / 2 + 3.5);
-      pdf.text(`${i}/${toplamSayfa}`, genislik - 4, ustBoslukMm / 2 + 3.5, { align: 'right' });
-    }
-    pdf.setFontSize(8);
-    pdf.setTextColor(100);
-    pdf.text(`Sayfa ${i} / ${toplamSayfa}`, genislik / 2, yukseklik - 5, { align: 'center' });
-  }
-  await worker.save();
-
-  mount.innerHTML = '';
-  mount.style.display = 'none';
-}
-
 // ==================== OLAY ARAŞTIRMA RAPORU (WORD) ====================
+// Kullanıcı isteği: "rapor pdf'i tamamen kaldır" — bu modülde artık yalnızca
+// Word çıktısı üretiliyor (bkz. ui.js: "Rapor PDF" butonu ve kazaRaporuPdfOlustur
+// çağrısı da kaldırıldı).
 // PDF çıktısıyla aynı içerik/bölüm sırası — kullanıcı isteği: "pdf raporunun
 // aynısını word raporunu yap". Kurul modülündeki kart-tablosu deseniyle aynı
 // yaklaşım (kenarlıklı/gölgeli tablo hücreleri), modüller arası script
@@ -413,7 +190,7 @@ async function kazaRaporuWordOlustur(id) {
     { baslik: 'Tanık İfadeleri', doluMu: tanikIfadeleri.length > 0, docx: tanikDocx },
     { baslik: '5N1K Analizi', doluMu: analiz5n1kDoluMu, docx: analiz5n1kDocx },
     { baslik: 'İlgili Mevzuat', doluMu: mevzuatSatirlari.length > 0, docx: mevzuatDocx },
-    { baslik: 'Düzeltici ve Önleyici Faaliyetler (Uygunsuzluk)', doluMu: aksiyonlar.length > 0, docx: aksiyonDocx },
+    { baslik: 'Yapılacak Faaliyetler', doluMu: aksiyonlar.length > 0, docx: aksiyonDocx },
     { baslik: 'Sonuç ve Değerlendirme', doluMu: !!k.sonucDegerlendirme, docx: [_okWordMetinKutusu(k.sonucDegerlendirme)] }
   ];
 
@@ -440,7 +217,7 @@ async function kazaRaporuWordOlustur(id) {
       ] }),
       new docx.TableCell({ borders: { top: _okWordKenar }, margins: { top: 100 }, children: [
         new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.onaylayanAdi || '-', bold: true })] }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.onaylayanUnvan || 'Onaylayan', size: 18 })] })
+        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.onaylayanUnvan || 'Bölüm Yöneticisi', size: 18 })] })
       ] })
     ] })]
   });
