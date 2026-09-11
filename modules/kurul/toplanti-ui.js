@@ -854,10 +854,18 @@ function tespitEdilenUygunsuzluklariCiz(toplanti) {
       <td>${_ktKacir(k.konuBasligi)}</td><td>${gunAyYil(k.tespitTarihi) || '-'}</td>
       <td>${_ktKacir(k.bolum) || '-'}</td><td>${_ktKacir(k.uygunsuzluk) || '-'}</td><td>${_ktKacir(k.sorumlu) || '-'}</td><td>${_ktKacir(k.durum) || '-'}</td>
       <td>${_uygunsuzlukFotoHucresiUret(k)}</td>
+      <td><button class="tablo-buton sil" data-tespit-uygunsuzluk-sil="${_ktKacir(k.id)}">Sil</button></td>
     `;
     govde.appendChild(satir);
   });
   fotoReferanslariCoz(govde);
+
+  govde.querySelectorAll('[data-tespit-uygunsuzluk-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu uygunsuzluğu gündemden kaldırmak istediğinize emin misiniz? Asıl kayıt Uygunsuzluk modülünde kalır, sadece bu toplantı için bir daha görünmeyecektir.', 'Kaldır')) {
+      tespitEdilenUygunsuzlukOtomatikGizle(_toplantiId, btn.getAttribute('data-tespit-uygunsuzluk-sil'));
+      tespitEdilenUygunsuzluklariCiz(toplanti);
+    }
+  }));
 }
 
 // ==================== AY İÇİNDE KAPATILAN UYGUNSUZLUKLAR (salt okunur) ====================
@@ -881,10 +889,18 @@ function kapananUygunsuzluklariCiz(toplanti) {
       <td>${_ktKacir(k.konuBasligi)}</td><td>${gunAyYil(k.tespitTarihi) || '-'}</td><td>${gunAyYil(k.kapanisTarihi) || '-'}</td>
       <td>${_ktKacir(k.bolum) || '-'}</td><td>${_ktKacir(k.uygunsuzluk) || '-'}</td><td>${_ktKacir(k.alinanOnlem) || '-'}</td><td>${_ktKacir(k.sorumlu) || '-'}</td>
       <td>${_uygunsuzlukFotoHucresiUret(k)}</td>
+      <td><button class="tablo-buton sil" data-kapanan-uygunsuzluk-sil="${_ktKacir(k.id)}">Sil</button></td>
     `;
     govde.appendChild(satir);
   });
   fotoReferanslariCoz(govde);
+
+  govde.querySelectorAll('[data-kapanan-uygunsuzluk-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (await onayModali('Bu uygunsuzluğu gündemden kaldırmak istediğinize emin misiniz? Asıl kayıt Uygunsuzluk modülünde kalır, sadece bu toplantı için bir daha görünmeyecektir.', 'Kaldır')) {
+      kapananUygunsuzlukOtomatikGizle(_toplantiId, btn.getAttribute('data-kapanan-uygunsuzluk-sil'));
+      kapananUygunsuzluklariCiz(toplanti);
+    }
+  }));
 }
 
 // ==================== AY İÇİNDE YAPILAN EĞİTİMLER (salt okunur) ====================

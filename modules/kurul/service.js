@@ -895,9 +895,10 @@ function _uygunsuzlukSatiriEsle(k) {
 function toplantiKapananUygunsuzluklariGetir(toplanti) {
   const ay = toplanti && (toplanti.donem || (toplanti.tarih || '').slice(0, 7));
   if (!ay) return [];
+  const haric = _gundemHaricIdSeti(toplanti.id, 'kapananUygunsuzluk');
   const kayitlar = oku(tenantAnahtar('uygunsuzluk_kayitlari'), []);
   return kayitlar
-    .filter(k => k.durum === 'Kapalı' && String(k.kapanisTarihi || '').slice(0, 7) === ay)
+    .filter(k => k.durum === 'Kapalı' && String(k.kapanisTarihi || '').slice(0, 7) === ay && !haric.has(k.id))
     .map(_uygunsuzlukSatiriEsle);
 }
 
@@ -907,10 +908,30 @@ function toplantiKapananUygunsuzluklariGetir(toplanti) {
 function toplantiTespitEdilenUygunsuzluklariGetir(toplanti) {
   const ay = toplanti && (toplanti.donem || (toplanti.tarih || '').slice(0, 7));
   if (!ay) return [];
+  const haric = _gundemHaricIdSeti(toplanti.id, 'tespitEdilenUygunsuzluk');
   const kayitlar = oku(tenantAnahtar('uygunsuzluk_kayitlari'), []);
   return kayitlar
-    .filter(k => String(k.bildirimTarihi || '').slice(0, 7) === ay)
+    .filter(k => String(k.bildirimTarihi || '').slice(0, 7) === ay && !haric.has(k.id))
     .map(_uygunsuzlukSatiriEsle);
+}
+
+// Kullanıcı isteği: "kapatılan/yeni açılan uygunsuzlukları da istersem
+// gündemden çıkarabileyim, ama orijinal (Uygunsuzluk modülündeki asıl kayıt)
+// yerinde kalsın" — ay içi faaliyet/eğitim ile aynı mekanizma: gerçek
+// uygunsuzluk kaydı SİLİNMEZ, sadece bu toplantının gündeminden bir daha
+// görünmeyecek şekilde işaretlenir (bkz. gundemHaricKaydiOlustur).
+function kapananUygunsuzlukOtomatikGizle(toplantiId, otomatikId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const yeni = gundemHaricEkleRepo(gundemHaricKaydiOlustur({ toplantiId, tur: 'kapananUygunsuzluk', otomatikId }));
+  _denetimEkle('uygunsuzluk', otomatikId, 'sil', { otomatik: true }, null);
+  return { basarili: true, kayit: yeni };
+}
+
+function tespitEdilenUygunsuzlukOtomatikGizle(toplantiId, otomatikId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const yeni = gundemHaricEkleRepo(gundemHaricKaydiOlustur({ toplantiId, tur: 'tespitEdilenUygunsuzluk', otomatikId }));
+  _denetimEkle('uygunsuzluk', otomatikId, 'sil', { otomatik: true }, null);
+  return { basarili: true, kayit: yeni };
 }
 
 // ---- Eğitim modülünden: Ay İçinde Yapılan Eğitimler ----
