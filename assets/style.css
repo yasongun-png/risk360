@@ -696,7 +696,7 @@ table.rapor-tablosu input { margin: 0; padding: 5px 6px; font-size: 12px; }
 .genel-rozet.rozet-pasif, .genel-rozet.rozet-iptal, .genel-rozet.rozet-iptal-edildi, .genel-rozet.rozet-ertelendi, .genel-rozet.rozet-egitim-kaydi-yok, .genel-rozet.rozet-iade-edildi, .genel-rozet.rozet-hurda { background: #f3f4f6; color: var(--metin-soluk); }
 .genel-rozet.rozet-devam-ediyor { background: #e0e7ff; color: #4338ca; }
 .genel-rozet.rozet-staj-oncesi-tamamlanmis { background: #dcfce7; color: #15803d; }
-.genel-rozet.rozet-staj-sonrasi-verilmis { background: #fee2e2; color: #b91c1c; }
+.genel-rozet.rozet-staj-sonrasi-verilmis { background: #f3f4f6; color: var(--metin-soluk); }
 
 /* KKD Takibi rozetleri */
 .genel-rozet.rozet-degisim-yaklasiyor, .genel-rozet.rozet-stok-yok, .genel-rozet.rozet-kontrol-bekliyor, .genel-rozet.rozet-degisim-bekliyor, .genel-rozet.rozet-bakimda, .genel-rozet.rozet-sartli-uygun { background: #fef3c7; color: #b45309; }

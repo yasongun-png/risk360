@@ -264,7 +264,7 @@ function isgEgitimUyarisiniGuncelle() {
   if (durum === 'Eğitim Kaydı Yok') {
     kutu.innerHTML = '⚠️ Temel İSG eğitim tarihi girilmemiş. Mevzuata göre staja başlamadan önce eğitim verilmelidir.';
   } else if (durum === 'Staj Sonrası Verilmiş') {
-    kutu.innerHTML = '⚠️ Eğitim tarihi staj başlangıcından sonra görünüyor. Mevzuata aykırı olabilir, kontrol edin.';
+    kutu.innerHTML = 'ℹ️ Eğitim tarihi staj başlangıcından sonra görünüyor.';
   } else {
     kutu.innerHTML = '✅ Temel İSG eğitimi staj başlangıcından önce tamamlanmış görünüyor.';
   }
