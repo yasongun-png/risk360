@@ -497,11 +497,38 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
     ? Object.keys(ayVerileri).filter(ay => ay <= sonAy).reduce((t, ay) => t + (Number((ayVerileri[ay] && ayVerileri[ay].saat) || 0)), 0)
     : Number(ayarlar.yillikCalismaSaati || 0);
 
+  // Kullanıcı isteği: "hangi ay kaç kaza olmuş, hangi ay kaç gün rapor
+  // alınmış, en yüksek raporlu ilk 3 kaza" — PPTX'teki yıllık istatistik
+  // slaydına eklenen aylık kırılım ve en ağır (kayıp günü en yüksek) 3 kaza.
+  const AY_ADLARI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const aylikDagilim = AY_ADLARI.map((ad, i) => {
+    const ayNo = String(i + 1).padStart(2, '0');
+    const ayKayitlari = kayitlar.filter(k => String(k.kazaTarihi || '').slice(5, 7) === ayNo);
+    return {
+      ay: ad,
+      kazaSayisi: ayKayitlari.length,
+      kayipGun: ayKayitlari.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0)
+    };
+  });
+
+  const enYuksekKayipGunlu = kayitlar
+    .filter(k => Number(k.kayipGun) > 0)
+    .slice()
+    .sort((a, b) => (Number(b.kayipGun) || 0) - (Number(a.kayipGun) || 0))
+    .slice(0, 3)
+    .map(k => ({
+      tarih: k.kazaTarihi || '',
+      tur: k.olayTipi || '-',
+      yer: k.kazaYeri || '',
+      kayipGun: Number(k.kayipGun) || 0
+    }));
+
   return {
     yil, kazaSayisi, toplamKayipGun, lti, dart, tibbi, olum,
     yillikCalismaSaati: saat,
     kazaSiklikHizi: saat ? (lti * 1000000) / saat : null,
-    kazaAgirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null
+    kazaAgirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null,
+    aylikDagilim, enYuksekKayipGunlu
   };
 }
 
