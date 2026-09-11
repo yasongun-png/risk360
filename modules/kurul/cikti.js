@@ -569,21 +569,34 @@ async function konuBasliklariWordOlustur() {
   const olaylar = toplantiOlaylariniGetir(_toplantiId);
   const { devreden, yeni } = _ciktiKararVerisi(_toplantiId);
 
-  const children = [
-    new docx.Paragraph({
-      alignment: docx.AlignmentType.CENTER,
-      children: [new docx.TextRun({ text: `${_ciktiDonemMetni(toplanti)} İSG KURUL TOPLANTI KONU BAŞLIKLARI`, bold: true, size: 32 })],
-      spacing: { after: 500 }
-    })
-  ];
+  // Kullanıcı isteği: "yazı karakterini küçült, yerden tasarruf et, boşlukları
+  // değerlendir, başlıklar dışında koyu (bold) renk kullanma" — tek yerden
+  // ayarlanabilen boyut/aralık sabitleri; bold sadece ana başlık ve bölüm
+  // başlıklarında (bolumBasligi), madde metinlerinde kullanılmaz.
+  const ANA_BASLIK_BOYUT = 26;
+  const BOLUM_BASLIK_BOYUT = 20;
+  const METIN_BOYUT = 17;
+  const MADDE_ARASI_BOSLUK = 60;
 
-  const bolumBasligi = (baslik) => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: 24 })], spacing: { before: 300, after: 200 } }));
+  const baslikParagrafi = new docx.Paragraph({
+    alignment: docx.AlignmentType.CENTER,
+    children: [new docx.TextRun({ text: `${_ciktiDonemMetni(toplanti)} İSG KURUL TOPLANTI KONU BAŞLIKLARI`, bold: true, size: ANA_BASLIK_BOYUT })],
+    spacing: { after: 150 }
+  });
+
+  // Kullanıcı isteği: "mümkün mertebe yerden tasarruf et, gerekirse sayfayı
+  // ikiye bölüp yap" — başlık tek sütun genişliğinde ortalanabilsin diye
+  // ayrı (tek sütunlu) bir bölümde, geri kalan tüm liste ise aynı sayfada
+  // (SectionType.CONTINUOUS — yeni sayfaya geçmeden) 2 sütunlu akar.
+  const children = [];
+
+  const bolumBasligi = (baslik) => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: BOLUM_BASLIK_BOYUT })], spacing: { before: 160, after: 90 } }));
 
   // A) Gündem — düz madde listesi.
   if (gundem.length) {
     bolumBasligi('A) GÜNDEM');
     gundem.forEach((g, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${g.baslik}${g.not ? ' — ' + g.not : ''}`, size: 20 })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${g.baslik}${g.not ? ' — ' + g.not : ''}`, size: METIN_BOYUT })] }));
     });
   }
 
@@ -591,26 +604,26 @@ async function konuBasliklariWordOlustur() {
   if (olaylar.length) {
     bolumBasligi('B) OLAYLAR');
     olaylar.forEach((o, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${o.tarih || '—'} – ${o.yer || '—'}`, bold: true, size: 22 })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${o.tarih || '—'} – ${o.yer || '—'}`, size: METIN_BOYUT })] }));
       const detay = o.adSoyad
         ? `Kazalı: ${o.adSoyad} | ${o.tur || '-'} | ${o.olusSekli || '-'}`
         : (o.olusSekli || o.tur || '-');
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: detay, size: 20 })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: detay, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
     });
   }
 
-  // C/D) Kararlar — kısa başlık (bold) + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
+  // C/D) Kararlar — kısa başlık + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
   const kararBolumuEkle = (baslik, kararlar) => {
     if (!kararlar.length) return;
     bolumBasligi(baslik);
     kararlar.forEach((k, i) => {
       const { baslik: kBaslik, govde } = _kararBasligiVeMetni(k.kararMetni);
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${kBaslik}`, bold: true, size: 22 })] }));
-      if (govde) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: govde, size: 20 })] }));
-      if (k.aksiyonNotu) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Aksiyon: ${k.aksiyonNotu}`, size: 20 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Sorumlu: ${k.sorumlu || '-'}`, size: 20 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Durum: ${k.durumGoruntu || k.durum || '-'}`, size: 20 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Termin: ${gunAyYil(k.termin) || '-'}`, size: 20 })], spacing: { after: 150 } }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${kBaslik}`, size: METIN_BOYUT })] }));
+      if (govde) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: govde, size: METIN_BOYUT })] }));
+      if (k.aksiyonNotu) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Aksiyon: ${k.aksiyonNotu}`, size: METIN_BOYUT })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Sorumlu: ${k.sorumlu || '-'}`, size: METIN_BOYUT })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Durum: ${k.durumGoruntu || k.durum || '-'}`, size: METIN_BOYUT })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Termin: ${gunAyYil(k.termin) || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
     });
   };
 
@@ -619,7 +632,7 @@ async function konuBasliklariWordOlustur() {
 
   if ((toplanti.calisanTemsilcisiGorusleri || '').trim()) {
     bolumBasligi('E) ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
-    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: toplanti.calisanTemsilcisiGorusleri.trim(), size: 20 })], spacing: { after: 150 } }));
+    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: toplanti.calisanTemsilcisiGorusleri.trim(), size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
   }
 
   // Kullanıcı isteği: Kararlar (C/D) gibi Uygunsuzluklar da tek birleşik
@@ -630,20 +643,26 @@ async function konuBasliklariWordOlustur() {
   if (kapananUygunsuzluklar.length) {
     bolumBasligi('F) KAPATILAN UYGUNSUZLUKLAR');
     kapananUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: 20 })], spacing: { after: 150 } }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
     });
   }
 
   if (tespitEdilenUygunsuzluklar.length) {
     bolumBasligi('G) YENİ AÇILAN UYGUNSUZLUKLAR');
     tespitEdilenUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: 20 })], spacing: { after: 100 } }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
     });
   }
 
-  const doc = new docx.Document({ sections: [{ children }] });
+  const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
+  const doc = new docx.Document({
+    sections: [
+      { properties: { page: { margin: darKenar } }, children: [baslikParagrafi] },
+      { properties: { type: docx.SectionType.CONTINUOUS, page: { margin: darKenar }, column: { count: 2, space: 360 } }, children }
+    ]
+  });
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `Konu_Basliklari_${toplanti.toplantiNo}.docx`);
 }
