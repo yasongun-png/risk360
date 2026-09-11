@@ -904,7 +904,10 @@ function toplantiKapananUygunsuzluklariGetir(toplanti) {
 
 // Gündem maddesi "Ay içinde tespit edilen, ay içinde kapatılan uygunsuzluklar"
 // (2026-08-04) — kapanan listeden ayrı: TESPİT/bildirim tarihi döneme denk
-// gelen tüm kayıtları (durumdan bağımsız — henüz açık olanlar dahil) gösterir.
+// gelen kayıtları gösterir. Kullanıcı isteği (2026-09-11): aynı ay içinde
+// hem açılıp hem kapatılan bir kayıt SADECE "Kapatılan Uygunsuzluklar"
+// listesinde görünsün — burada (Yeni Açılan) tekrar gösterilirse mükerrer
+// olur, bu yüzden o durumdaki kayıtlar burada hariç tutulur.
 function toplantiTespitEdilenUygunsuzluklariGetir(toplanti) {
   const ay = toplanti && (toplanti.donem || (toplanti.tarih || '').slice(0, 7));
   if (!ay) return [];
@@ -912,6 +915,7 @@ function toplantiTespitEdilenUygunsuzluklariGetir(toplanti) {
   const kayitlar = oku(tenantAnahtar('uygunsuzluk_kayitlari'), []);
   return kayitlar
     .filter(k => String(k.bildirimTarihi || '').slice(0, 7) === ay && !haric.has(k.id))
+    .filter(k => !(k.durum === 'Kapalı' && String(k.kapanisTarihi || '').slice(0, 7) === ay))
     .map(_uygunsuzlukSatiriEsle);
 }
 
