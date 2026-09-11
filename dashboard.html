@@ -96,7 +96,11 @@
       { anahtar: 'olay-kaza', ikon: '📋', baslik: 'Olay / Kaza Takibi', aciklama: 'İş kazası, ramak kala ve kök neden analizi', baglanti: 'modules/olay-kaza/index.html', aktif: true },
       { anahtar: 'uygunsuzluk', ikon: '✅', baslik: 'Uygunsuzluk', aciklama: 'Düzeltici, önleyici faaliyet ve onay akışı', baglanti: 'modules/uygunsuzluk/index.html', aktif: true },
       { anahtar: 'yuklenici', ikon: '🏗️', baslik: 'Yüklenici', aciklama: 'Yüklenici firma ve personel evrak uygunluğu', baglanti: 'modules/yuklenici/index.html', aktif: true },
-      { anahtar: 'stajyer', ikon: '🧑‍🎓', baslik: 'Staj', aciklama: 'Stajyer kayıtları ve Temel Eğitim Belgesi', baglanti: 'modules/stajyer/index.html', aktif: true },
+      // Kullanıcı isteği: Staj ana ekrandan kaldırıldı — artık Personel
+      // modülündeki "🎓 Staj" kısayol butonundan erişiliyor (bkz.
+      // modules/personel/index.html). Modülün kendisi (modules/stajyer/)
+      // ve bildirim eşlemesi (aşağıda stajyer_kayitlari) SİLİNMEDİ, sadece
+      // ana ekran kart listesinden çıkarıldı.
       { anahtar: 'saha-denetim', ikon: '🔍', baslik: 'Saha Denetim', aciklama: 'Konu bazlı kontrol listeleri, puanlama ve DÖF aktarımı', baglanti: 'modules/saha-denetim/index.html', aktif: true },
       { anahtar: 'is-izni', ikon: '🧾', baslik: 'İş İzinleri', aciklama: 'Sıcak çalışma, kapalı alan, yüksekte çalışma vb. çalışma izin belgeleri', baglanti: 'modules/is-izni/index.html', aktif: true },
       { anahtar: 'merkezi-aksiyon', ikon: '📌', baslik: 'Merkezi Aksiyon Takibi', aciklama: 'Tüm modüllerden doğan aksiyonların tekilleştirilmesi', baglanti: 'modules/merkezi-aksiyon/index.html', aktif: true },
