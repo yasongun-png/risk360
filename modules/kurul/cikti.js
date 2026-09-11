@@ -590,19 +590,28 @@ async function konuBasliklariWordOlustur() {
   // (SectionType.CONTINUOUS — yeni sayfaya geçmeden) 2 sütunlu akar.
   const children = [];
 
-  const bolumBasligi = (baslik) => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: BOLUM_BASLIK_BOYUT })], spacing: { before: 160, after: 90 } }));
+  // Kullanıcı isteği: "neden D'den F'e atlıyor" — harfler artık sabit
+  // yazılmıyor, yalnızca fiilen görünen (dolu) bölümlere göre otomatik
+  // sırayla verilir (bkz. _okBolumHarfSayaci) — bir bölüm o toplantı için
+  // boşsa (ör. Çalışan Temsilcisi Görüşü girilmemişse) hiç görünmez VE
+  // harf de atlanmadan sıradaki bölüme geçer.
+  let _bolumHarfSayaci = 0;
+  const bolumBasligi = (baslikMetni) => {
+    const harf = String.fromCharCode('A'.charCodeAt(0) + _bolumHarfSayaci++);
+    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${harf}) ${baslikMetni}`, bold: true, size: BOLUM_BASLIK_BOYUT })], spacing: { before: 160, after: 90 } }));
+  };
 
-  // A) Gündem — düz madde listesi.
+  // Gündem — düz madde listesi.
   if (gundem.length) {
-    bolumBasligi('A) GÜNDEM');
+    bolumBasligi('GÜNDEM');
     gundem.forEach((g, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${g.baslik}${g.not ? ' — ' + g.not : ''}`, size: METIN_BOYUT })] }));
     });
   }
 
-  // B) Olaylar — her olay için başlık satırı + varsa "Kazalı: Ad Soyad | Tür | Açıklama".
+  // Olaylar — her olay için başlık satırı + varsa "Kazalı: Ad Soyad | Tür | Açıklama".
   if (olaylar.length) {
-    bolumBasligi('B) OLAYLAR');
+    bolumBasligi('OLAYLAR');
     olaylar.forEach((o, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${o.tarih || '—'} – ${o.yer || '—'}`, size: METIN_BOYUT })] }));
       const detay = o.adSoyad
@@ -612,10 +621,10 @@ async function konuBasliklariWordOlustur() {
     });
   }
 
-  // C/D) Kararlar — kısa başlık + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
-  const kararBolumuEkle = (baslik, kararlar) => {
+  // Kararlar — kısa başlık + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
+  const kararBolumuEkle = (baslikMetni, kararlar) => {
     if (!kararlar.length) return;
-    bolumBasligi(baslik);
+    bolumBasligi(baslikMetni);
     kararlar.forEach((k, i) => {
       const { baslik: kBaslik, govde } = _kararBasligiVeMetni(k.kararMetni);
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${kBaslik}`, size: METIN_BOYUT })] }));
@@ -627,11 +636,11 @@ async function konuBasliklariWordOlustur() {
     });
   };
 
-  kararBolumuEkle('C) BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR', yeni);
-  kararBolumuEkle('D) ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR', devreden);
+  kararBolumuEkle('BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR', yeni);
+  kararBolumuEkle('ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR', devreden);
 
   if ((toplanti.calisanTemsilcisiGorusleri || '').trim()) {
-    bolumBasligi('E) ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
+    bolumBasligi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
     children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: toplanti.calisanTemsilcisiGorusleri.trim(), size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
   }
 
@@ -641,7 +650,7 @@ async function konuBasliklariWordOlustur() {
   const kapananUygunsuzluklar = toplantiKapananUygunsuzluklariGetir(toplanti);
 
   if (kapananUygunsuzluklar.length) {
-    bolumBasligi('F) KAPATILAN UYGUNSUZLUKLAR');
+    bolumBasligi('KAPATILAN UYGUNSUZLUKLAR');
     kapananUygunsuzluklar.forEach((k, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
@@ -649,7 +658,7 @@ async function konuBasliklariWordOlustur() {
   }
 
   if (tespitEdilenUygunsuzluklar.length) {
-    bolumBasligi('G) YENİ AÇILAN UYGUNSUZLUKLAR');
+    bolumBasligi('YENİ AÇILAN UYGUNSUZLUKLAR');
     tespitEdilenUygunsuzluklar.forEach((k, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
