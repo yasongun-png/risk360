@@ -639,10 +639,11 @@ async function konuBasliklariWordOlustur() {
   kararBolumuEkle('BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR', yeni);
   kararBolumuEkle('ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR', devreden);
 
-  if ((toplanti.calisanTemsilcisiGorusleri || '').trim()) {
-    bolumBasligi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
-    children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: toplanti.calisanTemsilcisiGorusleri.trim(), size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
-  }
+  // Kullanıcı isteği: "çalışan temsilcisi görüşü girilmemiş olsa da başlığı
+  // yaz mutlaka" — diğer bölümlerin aksine bu başlık boş olsa da HER ZAMAN
+  // görünür (girilmemişse "-" yazılır).
+  bolumBasligi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
+  children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: (toplanti.calisanTemsilcisiGorusleri || '').trim() || '-', size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
 
   // Kullanıcı isteği: Kararlar (C/D) gibi Uygunsuzluklar da tek birleşik
   // bölüm yerine, Kapatılan / Yeni Açılan diye AYRI iki bölüm olsun.
