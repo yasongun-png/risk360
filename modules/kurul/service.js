@@ -511,11 +511,15 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
     };
   });
 
-  const enYuksekKayipGunlu = kayitlar
+  // Kullanıcı isteği (2026-09-11): "aylık bazda toplam kayıp gün değil, kaza
+  // başına en yüksekten en düşüğe sırala" — aylık toplam yerine HER kazanın
+  // kendi kayıp günüyle, en yüksekten en düşüğe sıralı tam liste. En yüksek
+  // kayıp günlü ilk 3'ü de (açıklamalı kartlar için) bu aynı sıralı listeden
+  // türetilir, ayrı bir sıralama tekrarlanmaz.
+  const kazalarKayipGuneSirali = kayitlar
     .filter(k => Number(k.kayipGun) > 0)
     .slice()
     .sort((a, b) => (Number(b.kayipGun) || 0) - (Number(a.kayipGun) || 0))
-    .slice(0, 3)
     .map(k => ({
       tarih: k.kazaTarihi || '',
       tur: k.olayTipi || '-',
@@ -526,13 +530,14 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
       // verebilsin diye oluş şekli açıklaması da eklendi.
       aciklama: k.aciklama || ''
     }));
+  const enYuksekKayipGunlu = kazalarKayipGuneSirali.slice(0, 3);
 
   return {
     yil, kazaSayisi, toplamKayipGun, lti, dart, tibbi, olum,
     yillikCalismaSaati: saat,
     kazaSiklikHizi: saat ? (lti * 1000000) / saat : null,
     kazaAgirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null,
-    aylikDagilim, enYuksekKayipGunlu
+    aylikDagilim, kazalarKayipGuneSirali, enYuksekKayipGunlu
   };
 }
 

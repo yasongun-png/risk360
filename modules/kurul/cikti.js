@@ -1263,27 +1263,29 @@ async function pptxOlustur() {
   // ve toplamKayipGun=0) slayt hiç eklenmez.
   if (kazaIst && (kazaIst.kazaSayisi > 0 || kazaIst.toplamKayipGun > 0)) {
     const sl = yeniSlayt();
-    kartBasligi(sl, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı Aylık Kaza Dağılımı`);
+    kartBasligi(sl, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı Kazaların Kayıp Gününe Göre Dağılımı`);
 
     const solW = (SW - 2 * M) * 0.56;
     const sagX = M + solW + 0.3;
     const sagW = SW - 2 * M - solW - 0.3;
 
-    const ayDoluSatirlar = kazaIst.aylikDagilim.filter(a => a.kazaSayisi > 0 || a.kayipGun > 0);
-    if (ayDoluSatirlar.length) {
+    // Kullanıcı isteği (2026-09-11): aylık toplam kayıp gün yerine, HER
+    // kazanın kendi kayıp günüyle en yüksekten en düşüğe sıralı listesi.
+    const kazaSatirlari = kazaIst.kazalarKayipGuneSirali;
+    if (kazaSatirlari.length) {
       sl.addTable([
-        [{ text: 'Ay', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } },
-         { text: 'Kaza Sayısı', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } },
+        [{ text: 'Tarih', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } },
+         { text: 'Tür', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } },
          { text: 'Kayıp Gün', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } }],
-        ...ayDoluSatirlar.map((a, i) => [
-          { text: a.ay, options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik } },
-          { text: String(a.kazaSayisi), options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik, align: 'center' } },
-          { text: String(a.kayipGun), options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik, align: 'center' } }
+        ...kazaSatirlari.map((k, i) => [
+          { text: gunAyYil(k.tarih) || '-', options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik } },
+          { text: k.tur, options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik } },
+          { text: String(k.kayipGun), options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik, align: 'center' } }
         ])
-      ], { x: M, y: 1.35, w: solW, colW: [solW * 0.5, solW * 0.25, solW * 0.25], fontSize: 11, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+      ], { x: M, y: 1.35, w: solW, colW: [solW * 0.32, solW * 0.44, solW * 0.24], fontSize: 10.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
     } else {
       sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: solW, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-      sl.addText('Bu yıl için kaza kaydı bulunmamaktadır.', { x: M, y: 1.35, w: solW, h: 0.9, fontSize: 12, color: R.soluk, align: 'center', valign: 'middle' });
+      sl.addText('Bu yıl için kayıp günlü kaza bulunmamaktadır.', { x: M, y: 1.35, w: solW, h: 0.9, fontSize: 12, color: R.soluk, align: 'center', valign: 'middle' });
     }
 
     sl.addText('EN YÜKSEK KAYIP GÜNLÜ İLK 3 KAZA', { x: sagX, y: 1.35, w: sagW, h: 0.35, fontSize: 11, bold: true, color: R.birincil });
