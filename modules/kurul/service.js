@@ -520,7 +520,11 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
       tarih: k.kazaTarihi || '',
       tur: k.olayTipi || '-',
       yer: k.kazaYeri || '',
-      kayipGun: Number(k.kayipGun) || 0
+      kayipGun: Number(k.kayipGun) || 0,
+      // Kullanıcı isteği: "kazaların nasıl olduğu ile ilgili bilgi yok,
+      // sorarlarsa nasıl cevaplarım" — toplantıda soru gelirse cevap
+      // verebilsin diye oluş şekli açıklaması da eklendi.
+      aciklama: k.aciklama || ''
     }));
 
   return {

@@ -1288,14 +1288,16 @@ async function pptxOlustur() {
 
     sl.addText('EN YÜKSEK KAYIP GÜNLÜ İLK 3 KAZA', { x: sagX, y: 1.35, w: sagW, h: 0.35, fontSize: 11, bold: true, color: R.birincil });
     if (kazaIst.enYuksekKayipGunlu.length) {
+      const kartH = 1.55;
       kazaIst.enYuksekKayipGunlu.forEach((k, i) => {
-        const y = 1.8 + i * 1.35;
-        sl.addShape(pptx.ShapeType.roundRect, { x: sagX, y, w: sagW, h: 1.2, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-        sl.addText(String(k.kayipGun), { x: sagX, y, w: 1.1, h: 1.2, fontSize: 26, bold: true, color: R.birincil, align: 'center', valign: 'middle' });
+        const y = 1.8 + i * (kartH + 0.15);
+        sl.addShape(pptx.ShapeType.roundRect, { x: sagX, y, w: sagW, h: kartH, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+        sl.addText(String(k.kayipGun), { x: sagX, y, w: 1.1, h: kartH, fontSize: 26, bold: true, color: R.birincil, align: 'center', valign: 'middle' });
         sl.addText([
           { text: `${i + 1}. ${gunAyYil(k.tarih) || '-'}  •  ${k.tur}`, options: { fontSize: 12, bold: true, color: R.baslik, breakLine: true } },
-          { text: k.yer || '-', options: { fontSize: 10, color: R.soluk } }
-        ], { x: sagX + 1.25, y, w: sagW - 1.35, h: 1.2, valign: 'middle' });
+          { text: k.yer || '-', options: { fontSize: 10, color: R.soluk, breakLine: true } },
+          { text: k.aciklama ? (k.aciklama.length > 160 ? k.aciklama.slice(0, 160) + '…' : k.aciklama) : 'Oluş şekli açıklaması girilmemiş.', options: { fontSize: 9.5, italic: !k.aciklama, color: R.baslik } }
+        ], { x: sagX + 1.25, y: y + 0.08, w: sagW - 1.35, h: kartH - 0.16, valign: 'top' });
       });
     } else {
       sl.addShape(pptx.ShapeType.roundRect, { x: sagX, y: 1.8, w: sagW, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
