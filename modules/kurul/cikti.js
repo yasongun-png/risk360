@@ -622,17 +622,24 @@ async function konuBasliklariWordOlustur() {
     children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: toplanti.calisanTemsilcisiGorusleri.trim(), size: 20 })], spacing: { after: 150 } }));
   }
 
+  // Kullanıcı isteği: Kararlar (C/D) gibi Uygunsuzluklar da tek birleşik
+  // bölüm yerine, Kapatılan / Yeni Açılan diye AYRI iki bölüm olsun.
   const tespitEdilenUygunsuzluklar = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
   const kapananUygunsuzluklar = toplantiKapananUygunsuzluklariGetir(toplanti);
-  if (tespitEdilenUygunsuzluklar.length || kapananUygunsuzluklar.length) {
-    bolumBasligi('F) AY İÇİNDE TESPİT EDİLEN VE KAPATILAN UYGUNSUZLUKLAR');
-    tespitEdilenUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: 20 })], spacing: { after: 100 } }));
-    });
+
+  if (kapananUygunsuzluklar.length) {
+    bolumBasligi('F) KAPATILAN UYGUNSUZLUKLAR');
     kapananUygunsuzluklar.forEach((k, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: 20 })], spacing: { after: 150 } }));
+    });
+  }
+
+  if (tespitEdilenUygunsuzluklar.length) {
+    bolumBasligi('G) YENİ AÇILAN UYGUNSUZLUKLAR');
+    tespitEdilenUygunsuzluklar.forEach((k, i) => {
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, bold: true, size: 22 })] }));
+      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: 20 })], spacing: { after: 100 } }));
     });
   }
 
