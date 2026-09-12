@@ -543,6 +543,22 @@ function _olayFotoHucresiUret(o) {
   return parcalar.join('') || '-';
 }
 
+// Kullanıcı isteği: "kararlar, olaylar ve önceki toplantı kararları için
+// yönetmelik seçme ekleyelim, uygunsuzluk modülündeki sistemle aynı" — aynı
+// sayfada hem Karar hem Olay modalı bulunduğundan (uygunsuzluk'taki tek
+// #yasalSartlar id'sinin aksine) elementId parametreli, iki modalın da
+// paylaştığı ortak yardımcılar.
+function _ktYasalSartlariDoldur(selectId) {
+  document.getElementById(selectId).innerHTML = YASAL_SART_LISTESI.map(s => `<option value="${s.replace(/"/g, '&quot;')}">${s}</option>`).join('');
+}
+function _ktSeciliYasalSartlariGetir(selectId) {
+  return Array.from(document.getElementById(selectId).selectedOptions).map(o => o.value);
+}
+function _ktYasalSartlariSec(selectId, secili) {
+  const set = new Set(Array.isArray(secili) ? secili : []);
+  Array.from(document.getElementById(selectId).options).forEach(opt => { opt.selected = set.has(opt.value); });
+}
+
 function olayModalAc(olay) {
   _duzenlenenOlayId = olay ? olay.id : null;
   document.getElementById('olayModalBaslik').textContent = olay ? 'Olayı Düzenle' : 'Yeni Olay';
@@ -556,6 +572,10 @@ function olayModalAc(olay) {
   document.getElementById('olayOlusSekli').value = olay ? olay.olusSekli : '';
   document.getElementById('olayKokNeden').value = olay ? olay.kokNeden : '';
   document.getElementById('olayIsGunuKaybi').value = olay ? olay.isGunuKaybi : '';
+
+  _ktYasalSartlariDoldur('olayYasalSartlar');
+  _ktYasalSartlariSec('olayYasalSartlar', olay ? olay.yasalSartlar : []);
+  document.getElementById('olayYasalDayanak').value = olay ? (olay.yasalDayanak || '') : '';
 
   document.getElementById('olayKararMetni').value = olay ? (olay.kararMetni || '') : '';
   document.getElementById('olaySorumlu').value = olay ? (olay.sorumlu || '') : '';
@@ -595,6 +615,8 @@ function olayFormGonderildi(e) {
     olusSekli: document.getElementById('olayOlusSekli').value,
     kokNeden: document.getElementById('olayKokNeden').value,
     isGunuKaybi: document.getElementById('olayIsGunuKaybi').value,
+    yasalSartlar: _ktSeciliYasalSartlariGetir('olayYasalSartlar'),
+    yasalDayanak: document.getElementById('olayYasalDayanak').value,
     kararMetni: document.getElementById('olayKararMetni').value,
     sorumlu: document.getElementById('olaySorumlu').value,
     termin: document.getElementById('olayTermin').value,
@@ -746,6 +768,9 @@ function kararModalAc(karar) {
   document.getElementById('kararNo').value = karar ? karar.kararNo : '';
   document.getElementById('kararMetni').value = karar ? karar.kararMetni : '';
   document.getElementById('kararKaynakGundem').value = karar ? karar.kaynakGundem : '';
+  _ktYasalSartlariDoldur('kararYasalSartlar');
+  _ktYasalSartlariSec('kararYasalSartlar', karar ? karar.yasalSartlar : []);
+  document.getElementById('kararYasalDayanak').value = karar ? (karar.yasalDayanak || '') : '';
   document.getElementById('kararSorumlu').value = karar ? karar.sorumlu : '';
   bolumButonlariCiz('kararSorumluBolumButonlari', 'kararSorumlu', 'tekli');
   document.getElementById('kararTermin').value = karar ? karar.termin : '';
@@ -793,6 +818,8 @@ function kararFormGonderildi(e) {
     kararNo: document.getElementById('kararNo').value,
     kararMetni: document.getElementById('kararMetni').value,
     kaynakGundem: document.getElementById('kararKaynakGundem').value,
+    yasalSartlar: _ktSeciliYasalSartlariGetir('kararYasalSartlar'),
+    yasalDayanak: document.getElementById('kararYasalDayanak').value,
     sorumlu: document.getElementById('kararSorumlu').value,
     termin: document.getElementById('kararTermin').value,
     oncelik: document.getElementById('kararOncelik').value,

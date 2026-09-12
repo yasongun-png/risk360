@@ -4,6 +4,85 @@ const TOPLANTI_DURUMLARI = ['Planlandı', 'Tamamlandı', 'Ertelendi', 'İptal'];
 const KARAR_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Kapalı', 'İptal'];
 const GUNDEM_TURLERI = ['Genel', 'İş Kazası', 'Risk', 'Uygunsuzluk', 'Eğitim', 'Yasal Şart', 'Yüklenici', 'Acil Durum', 'Diğer'];
 
+// Kullanıcı isteği: "kararlar, olaylar ve önceki toplantı kararları için
+// yönetmelik seçme ekleyelim, uygunsuzluk modülündeki sistemle aynı olsun" —
+// Uygunsuzluk modülündeki YASAL_SART_LISTESI (modules/uygunsuzluk/model.js)
+// ile BİREBİR AYNI liste; modüller arası script paylaşımı olmadığından
+// burada da yerel olarak tanımlanır (aynı desen: bkz. kurul/cikti.js'teki
+// _word*/_pdf* yardımcılarının olay-kaza'dan bağımsız kopyaları).
+const YASAL_SART_LISTESI = [
+  '4857 sayılı İş Kanunu',
+  '6331 sayılı İş Sağlığı ve Güvenliği Kanunu',
+  'Alt İşverenlik Yönetmeliği',
+  'Asansör İşletme, Bakım ve Periyodik Kontrol Yönetmeliği',
+  'Asbestle Çalışmalarda Sağlık ve Güvenlik Önlemleri Hakkında Yönetmelik',
+  'Asgari Ücret Yönetmeliği',
+  'Basınçlı Ekipmanlar Yönetmeliği',
+  'Basınçlı Kaplar ve Bu Kapların Muayene Yöntemlerinin Ortak Hükümlerine Dair Yönetmelik',
+  'Basit Basınçlı Kaplar Yönetmeliği',
+  'Binaların Yangından Korunması Hakkında Yönetmelik',
+  'Biyolojik Etkenlerle Maruziyet Risklerinin Önlenmesi Hakkında Yönetmelik',
+  'Büyük Endüstriyel Kazaların Önlenmesi ve Etkilerinin Azaltılması Hakkında Yönetmelik',
+  'Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik',
+  'Çalışanların Gürültü ile İlgili Risklerden Korunmalarına Dair Yönetmelik',
+  'Çalışanların Patlayıcı Ortamların Tehlikelerinden Korunması Hakkında Yönetmelik',
+  'Çalışanların Titreşimle İlgili Risklerden Korunmalarına Dair Yönetmelik',
+  'Çocuk ve Genç İşçilerin Çalıştırılma Usul ve Esasları Hakkında Yönetmelik',
+  'Ekranlı Araçlarla Çalışmalarda Sağlık ve Güvenlik Önlemleri Hakkında Yönetmelik',
+  'Elle Taşıma İşleri Yönetmeliği',
+  'Gebelik ve Emzirme Dönemindeki Çalışanların Çalıştırılma Şartları Hakkında Yönetmelik',
+  'Geçici veya Belirli Süreli İşlerde İş Sağlığı ve Güvenliği Hakkında Yönetmelik',
+  'İlkyardım Yönetmeliği',
+  'İş Ekipmanlarının Kullanımında Sağlık ve Güvenlik Şartları Yönetmeliği',
+  'İş Hijyeni Ölçüm, Test ve Analizi Hakkında Yönetmelik',
+  'İş Güvenliği Uzmanlarının Görev, Yetki, Sorumluluk ve Eğitimleri Hakkında Yönetmelik',
+  'İş Kanununa İlişkin Çalışma Süreleri Yönetmeliği',
+  'İş Kanununa İlişkin Fazla Çalışma ve Fazla Sürelerle Çalışma Yönetmeliği',
+  'İş Sağlığı ve Güvenliği Hizmetleri Yönetmeliği',
+  'İş Sağlığı ve Güvenliği Kurulları Hakkında Yönetmelik',
+  'İş Sağlığı ve Güvenliği Risk Değerlendirmesi Yönetmeliği',
+  'İşyeri Bina ve Eklentilerinde Alınacak Sağlık ve Güvenlik Önlemlerine İlişkin Yönetmelik',
+  'İşyeri Hekimi ve Diğer Sağlık Personelinin Görev, Yetki, Sorumluluk ve Eğitimleri Hakkında Yönetmelik',
+  'İşyerinde Acil Durumlar Hakkında Yönetmelik',
+  'İşyerlerinde İşin Durdurulmasına Dair Yönetmelik',
+  'Kadın Çalışanların Gece Postalarında Çalıştırılma Koşulları Hakkında Yönetmelik',
+  'Kanserojen ve Mutajen Maddelerle Çalışmalarda Sağlık ve Güvenlik Önlemleri Hakkında Yönetmelik',
+  'Kimyasal Maddelerle Çalışmalarda Sağlık ve Güvenlik Önlemleri Hakkında Yönetmelik',
+  'Kişisel Koruyucu Donanım Yönetmeliği',
+  'Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik',
+  'Makina Emniyeti Yönetmeliği',
+  'Maden İşyerlerinde İş Sağlığı ve Güvenliği Yönetmeliği',
+  'Muhtemel Patlayıcı Ortamda Kullanılan Teçhizat ve Koruyucu Sistemler ile İlgili Yönetmelik',
+  'Patlamadan Korunma Dokümanı Rehberi',
+  'Parlayıcı, Patlayıcı, Tehlikeli ve Zararlı Maddelerle Çalışılan İşyerlerinde ve İşlerde Alınacak Tedbirler Hakkında Tüzük',
+  'Postalar Halinde İşçi Çalıştırılarak Yürütülen İşlerde Çalışmalara İlişkin Özel Usul ve Esaslar Hakkında Yönetmelik',
+  'Sağlık ve Güvenlik İşaretleri Yönetmeliği',
+  'Sağlık ve Güvenlik Dokümanı Hakkında Yönetmelik',
+  'Tehlikeli ve Çok Tehlikeli Sınıfta Yer Alan İşlerde Çalıştırılacakların Mesleki Eğitimlerine Dair Yönetmelik',
+  'Tehlikeli Maddelerin Karayoluyla Taşınması Hakkında Yönetmelik (ADR)',
+  'Tehlikeli Kimyasallar Yönetmeliği',
+  'Tozla Mücadele Yönetmeliği',
+  'Yapı İşlerinde Sağlık ve Güvenlik Yönetmeliği',
+  'Yüksekte Çalışmalarda İş Sağlığı ve Güvenliği Rehberi',
+  'Elektrik İç Tesisleri Yönetmeliği',
+  'Elektrik Tesislerinde Topraklamalar Yönetmeliği',
+  'Elektrik Kuvvetli Akım Tesisleri Yönetmeliği',
+  'Kaldırma ve İletme Ekipmanlarının Periyodik Kontrollerine İlişkin Tebliğ',
+  'Basınçlı Kap ve Tesisatların Periyodik Kontrollerine İlişkin Tebliğ',
+  'Atık Yönetimi Yönetmeliği',
+  'Çevre İzin ve Lisans Yönetmeliği',
+  'Su Kirliliği Kontrolü Yönetmeliği',
+  'Hava Kalitesi Değerlendirme ve Yönetimi Yönetmeliği',
+  'Endüstriyel Kaynaklı Hava Kirliliğinin Kontrolü Yönetmeliği',
+  'Tehlikeli Atıkların Kontrolü Yönetmeliği',
+  'Kapalı Alanlarda Güvenli Çalışma Prosedürleri',
+  'Sıcak İşler (Kaynak, Kesme vb.) Güvenlik Kuralları',
+  'LOTO (Lockout-Tagout) Enerji İzolasyon Prosedürleri',
+  'SEVESO Direktifi Uyum Yönetmelikleri',
+  'ISO 45001 İş Sağlığı ve Güvenliği Yönetim Sistemi',
+  'ISO 14001 Çevre Yönetim Sistemi'
+];
+
 // İSG Kurulları Hakkında Yönetmelik Madde 6 (a-f bentleri) — kısa biçimde.
 // "Kurul Başkanı" ve "Kurul Sekreteri" yönetmelikteki üyelik kategorileri
 // değil, bu belirli toplantı için işlevsel rollerdir; işaretlenen kişi
@@ -140,6 +219,13 @@ function kararOlustur(veriler) {
     fotoOncesi: veriler.fotoOncesi || '',
     fotoSonrasi: veriler.fotoSonrasi || '',
     fotografEk: (Array.isArray(veriler.fotografEk) ? veriler.fotografEk : []).slice(0, 3),
+    // Kullanıcı isteği: "kararlar için yönetmelik seçme ekleyelim, uygunsuzluk
+    // modülündeki sistemle aynı" — Uygunsuzluk modülündeki yasalSartlar (çoklu
+    // seçim) ve yasalDayanak (serbest madde/açıklama) alanlarıyla birebir aynı
+    // isim ve şekil. "devreden" kararlar da bu AYNI kararOlustur şemasını
+    // kullandığı için ek bir değişikliğe gerek kalmadan onlarda da geçerlidir.
+    yasalSartlar: Array.isArray(veriler.yasalSartlar) ? veriler.yasalSartlar.filter(Boolean) : [],
+    yasalDayanak: (veriler.yasalDayanak || '').trim(),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }
@@ -187,6 +273,10 @@ function kurulOlayiOlustur(veriler) {
     // (_pdfOlaylarFotoCoz, _wordOlayKarti, PPTX olaySlaydi) kaynaktan bağımsız
     // tek bir yol olarak çalışabilsin.
     fotograflar: Array.isArray(veriler.fotograflar) ? veriler.fotograflar.slice(0, 3) : [],
+    // Kararlardakiyle aynı yönetmelik seçimi (bkz. kararOlustur, kullanıcı
+    // isteği: "olaylar için de yönetmelik seçme ekleyelim").
+    yasalSartlar: Array.isArray(veriler.yasalSartlar) ? veriler.yasalSartlar.filter(Boolean) : [],
+    yasalDayanak: (veriler.yasalDayanak || '').trim(),
     // Aynı toplantı içindeki elle eklenen olaylar arasında yukarı/aşağı
     // taşıma sırası (kullanıcı isteği: "isg kurulu olay içinde yukarı aşağı
     // taşıma olsun" — toplantılar arası değil). Yeni kayıtlar en sona eklenir.

@@ -348,6 +348,8 @@ function kararGuncelle(id, veriler) {
     kararNo,
     kararMetni: veriler.kararMetni.trim(),
     kaynakGundem: (veriler.kaynakGundem || '').trim(),
+    yasalSartlar: Array.isArray(veriler.yasalSartlar) ? veriler.yasalSartlar.filter(Boolean) : [],
+    yasalDayanak: (veriler.yasalDayanak || '').trim(),
     sorumlu: veriler.sorumlu.trim(),
     termin: veriler.termin || '',
     oncelik: veriler.oncelik || 'Normal',
