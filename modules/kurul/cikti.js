@@ -187,6 +187,11 @@ async function _wordFotoParagraflari(fotoListesi) {
 const _wordKenar = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
 const _wordKenarSet = { top: _wordKenar, bottom: _wordKenar, left: _wordKenar, right: _wordKenar };
 const _wordGolge = { fill: 'E5E7EB', color: 'auto', type: docx.ShadingType.CLEAR };
+// Kullanıcı isteği: "yazı karakterleri arasında boyutlarında farklılıklar
+// var, görüntüyü bozuyor" — kurulRaporuWordOlustur'daki (kapak hariç) TÜM
+// gövde metni artık bu TEK boyutu kullanıyor; vurgu boyutla değil sadece
+// bold ile yapılıyor (bkz. aşağıdaki _wordEtiketDeger, table(), P()).
+const KURUL_WORD_METIN_BOYUT = 18;
 const _wordHucre = (children, opts = {}) => new docx.TableCell({
   children: Array.isArray(children) ? children : [children],
   borders: _wordKenarSet,
@@ -194,8 +199,8 @@ const _wordHucre = (children, opts = {}) => new docx.TableCell({
   ...opts
 });
 const _wordEtiketDeger = (etiket, deger) => [
-  new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: 15, color: '111827' })] }),
-  new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger ?? '') || '-', size: 17 })] })
+  new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT, color: '111827' })] }),
+  new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger ?? '') || '-', size: KURUL_WORD_METIN_BOYUT })] })
 ];
 
 // Olayın Karar Metni/Sorumlu/Termin/Öncelik/Durum/Oy alanları (bkz. model.js
@@ -229,8 +234,8 @@ async function _wordOlayKarti(o) {
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
       new docx.TableRow({ children: [
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: o.tur || '-', bold: true })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: gunAyYil(o.tarih) || '-', bold: true })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge })
+        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: o.tur || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: gunAyYil(o.tarih) || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge })
       ]}),
       new docx.TableRow({ children: [
         _wordHucre(_wordEtiketDeger('Yer', o.yer)),
@@ -263,10 +268,10 @@ async function _wordKararKarti(k) {
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
       new docx.TableRow({ children: [
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kararNo || '-', bold: true })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kaynakGundem || '', bold: true })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
+        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kararNo || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
+        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kaynakGundem || '', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
       ]}),
-      new docx.TableRow({ children: [ _wordHucre(new docx.Paragraph(k.kararMetni || ''), { columnSpan: 4 }) ] }),
+      new docx.TableRow({ children: [ _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kararMetni || '', size: KURUL_WORD_METIN_BOYUT })] }), { columnSpan: 4 }) ] }),
       new docx.TableRow({ children: [
         _wordHucre(_wordEtiketDeger('Sorumlu', k.sorumlu)),
         _wordHucre(_wordEtiketDeger('Termin', gunAyYil(k.termin))),
@@ -290,10 +295,10 @@ async function _wordUygunsuzlukKarti(k) {
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
       new docx.TableRow({ children: [
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.bolum || '-', bold: true })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.konuBasligi || '', bold: true })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
+        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.bolum || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
+        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.konuBasligi || '', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
       ]}),
-      new docx.TableRow({ children: [ _wordHucre(new docx.Paragraph(k.uygunsuzluk || ''), { columnSpan: 4 }) ] }),
+      new docx.TableRow({ children: [ _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.uygunsuzluk || '', size: KURUL_WORD_METIN_BOYUT })] }), { columnSpan: 4 }) ] }),
       new docx.TableRow({ children: [
         _wordHucre(_wordEtiketDeger('Tespit', gunAyYil(k.tespitTarihi))),
         _wordHucre(_wordEtiketDeger('Kapanış', gunAyYil(k.kapanisTarihi))),
@@ -348,24 +353,24 @@ async function kurulRaporuWordOlustur() {
     Promise.all(olaylar.map(_wordOlayKarti))
   ]);
 
-  const P = (t, opts = {}) => new docx.Paragraph({ children: [new docx.TextRun({ text: String(t), ...opts })] });
+  const P = (t, opts = {}) => new docx.Paragraph({ children: [new docx.TextRun({ text: String(t), size: KURUL_WORD_METIN_BOYUT, ...opts })] });
   const H = (t) => new docx.Paragraph({ text: t, heading: docx.HeadingLevel.HEADING_2 });
   const BR = () => new docx.Paragraph({ children: [new docx.PageBreak()] });
   // Genel Değerlendirme'nin alt başlıkları için ("Etiket: değer", etiket kalın) —
   // kullanıcı isteği: "planlanan faaliyetlerin gerçekleşme durumları, tespit
   // edilen hususlar, çalışanların bildirimleri gibi şeyler ekleyelim".
   const PL = (etiket, deger) => new docx.Paragraph({
-    children: [new docx.TextRun({ text: etiket + ': ', bold: true }), new docx.TextRun({ text: String(deger) })],
+    children: [new docx.TextRun({ text: etiket + ': ', bold: true, size: KURUL_WORD_METIN_BOYUT }), new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })],
     spacing: { after: 120 }
   });
   // "İSG Kurulları İle İlgili Yasal Düzenleme" bölümü için (bkz. model.js
   // YONETMELIK_MADDELERI) — kullanıcı isteği: "yasal düzenleme referansı
   // raporlarda olmalı".
   const maddeParagraflari = (m) => [
-    new docx.Paragraph({ children: [new docx.TextRun({ text: `${m.madde} – ${m.baslik}`, bold: true })], spacing: { before: 200, after: 80 } }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: `${m.madde} – ${m.baslik}`, bold: true, size: KURUL_WORD_METIN_BOYUT })], spacing: { before: 200, after: 80 } }),
     ...m.fikralar.flatMap(f => [
       P(f.giris, { spacing: { after: 60 } }),
-      ...f.bentler.map(b => new docx.Paragraph({ text: b, indent: { left: 360 }, spacing: { after: 60 } }))
+      ...f.bentler.map(b => new docx.Paragraph({ children: [new docx.TextRun({ text: b, size: KURUL_WORD_METIN_BOYUT })], indent: { left: 360 }, spacing: { after: 60 } }))
     ])
   ];
 
@@ -374,10 +379,10 @@ async function kurulRaporuWordOlustur() {
     rows: [
       new docx.TableRow({
         tableHeader: true,
-        children: headers.map(h => new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: 20 })] })] }))
+        children: headers.map(h => new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: KURUL_WORD_METIN_BOYUT })] })] }))
       }),
       ...rows.map(r => new docx.TableRow({
-        children: r.map(c => new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(c ?? ''), size: 18 })] })] }))
+        children: r.map(c => new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(c ?? ''), size: KURUL_WORD_METIN_BOYUT })] })] }))
       }))
     ]
   });
@@ -394,8 +399,8 @@ async function kurulRaporuWordOlustur() {
       ['Kurul Sekreteri', bsRapor.yazman || '-'],
       ['Katılımcı Sayısı', katilanlar.length || '-']
     ].map(([etiket, deger]) => new docx.TableRow({ children: [
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true })] }), { width: { size: 30, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-      _wordHucre(new docx.Paragraph(String(deger)), { width: { size: 70, type: docx.WidthType.PERCENTAGE } })
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 30, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 70, type: docx.WidthType.PERCENTAGE } })
     ]}))
   });
 
@@ -413,8 +418,8 @@ async function kurulRaporuWordOlustur() {
       ['Kaza Sıklık Hızı (LTIFR)', oranGoster(kazaIst.kazaSiklikHizi)],
       ['Kaza Ağırlık Oranı', oranGoster(kazaIst.kazaAgirlikOrani)]
     ].map(([etiket, deger]) => new docx.TableRow({ children: [
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-      _wordHucre(new docx.Paragraph(String(deger)), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
     ]}))
   }) : null;
 
@@ -437,10 +442,10 @@ async function kurulRaporuWordOlustur() {
             children: [
               ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 110, height: 110 } })], spacing: { after: 200 } })] : []),
               new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _denetimAktifFirmaAdi(), bold: true, size: 32 })], spacing: { after: 200 } }),
-              new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İŞ SAĞLIĞI VE GÜVENLİĞİ KURULU', bold: true })], spacing: { after: 800 } }),
+              new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İŞ SAĞLIĞI VE GÜVENLİĞİ KURULU', bold: true, size: 24 })], spacing: { after: 800 } }),
               new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İSG KURULU TOPLANTI RAPORU', bold: true, size: 30 })], spacing: { after: 400 } }),
-              new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _ciktiDonemMetni(toplanti), bold: true })], spacing: { after: 1200 } }),
-              new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: '6331 Sayılı İş Sağlığı ve Güvenliği Kanunu', italics: true })] }),
+              new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _ciktiDonemMetni(toplanti), bold: true, size: 24 })], spacing: { after: 1200 } }),
+              new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: '6331 Sayılı İş Sağlığı ve Güvenliği Kanunu', italics: true, size: 20 })] }),
               new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'MADDE 22 – Elli ve daha fazla çalışanın bulunduğu işyerlerinde işveren, iş sağlığı ve güvenliği kurulu oluşturur.', size: 18 })] }),
               new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İSG Kurulları Hakkında Yönetmelik (Madde 4)', size: 18 })] })
             ]
