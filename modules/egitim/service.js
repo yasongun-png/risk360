@@ -62,8 +62,13 @@ function _kayitZenginlestir(kayit, firma) {
   });
 }
 
-function egitimKayitlariniGetir(aramaMetni, firma) {
-  const liste = egitimKayitlariTumunuGetir().map(k => _kayitZenginlestir(k, firma));
+// Kullanıcı isteği: "eğitim modülünde de personel modülündeki gibi sıralama
+// ve filtreleme istiyorum" -- turId opsiyonel Eğitim Türü filtresi (bkz.
+// ui.js turFiltre); sütuna göre sıralama render aşamasında (ui.js
+// kayitTablosunuCiz) ayrıca uygulanır.
+function egitimKayitlariniGetir(aramaMetni, firma, turId) {
+  let liste = egitimKayitlariTumunuGetir().map(k => _kayitZenginlestir(k, firma));
+  if (turId) liste = liste.filter(k => k.egitimTuruId === turId);
   if (!aramaMetni) return liste;
 
   const kucuk = aramaMetni.trim().toLowerCase();

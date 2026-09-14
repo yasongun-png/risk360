@@ -550,15 +550,104 @@ function turYonetModalKapat() {
   document.getElementById('turYonetModal').classList.remove('acik');
 }
 
+// Kullanıcı isteği: "eğitim modülünde de aynı şekilde sıralama ve filtreleme
+// istiyorum" -- personel modülündeki desenin aynısı (bkz. modules/personel/ui.js
+// _prsSiralamaAlani/_prsSutunSiraliListe): Eğitim Türü filtresi (turFiltre) ve
+// tablo başlığına tıklayarak sıralama.
+let _egtSiralamaAlani = null;
+let _egtSiralamaYon = 'asc';
+
+const EGT_SIRALANABILIR_ALANLAR = {
+  personelAdi: { tip: 'metin' },
+  personelIsveren: { tip: 'metin' },
+  turAdi: { tip: 'metin' },
+  tarih: { tip: 'metin' },
+  bitisTarihi: { tip: 'metin' },
+  durum: { tip: 'metin' }
+};
+
+function _egtTurFiltreDoldur() {
+  const secim = document.getElementById('turFiltre');
+  if (!secim) return;
+  const mevcutDeger = secim.value;
+  const turler = egitimTurleriTumu();
+  secim.innerHTML = '<option value="">Tüm Eğitim Türleri</option>' + turler.map(t => `<option value="${t.id}">${_egKacir(t.ad)}</option>`).join('');
+  if (turler.some(t => t.id === mevcutDeger)) secim.value = mevcutDeger;
+}
+
+function _egtSutunSiraliListe(liste) {
+  const alan = _egtSiralamaAlani;
+  const bilgi = EGT_SIRALANABILIR_ALANLAR[alan];
+  if (!bilgi) return liste;
+  const yon = _egtSiralamaYon === 'desc' ? -1 : 1;
+  return liste.slice().sort((a, b) => String(a[alan] || '').localeCompare(String(b[alan] || ''), 'tr') * yon);
+}
+
+function _egtBaslikSiralamayiKur() {
+  document.querySelectorAll('#tabloBasligi [data-sirala]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const alan = th.getAttribute('data-sirala');
+      if (_egtSiralamaAlani === alan) {
+        _egtSiralamaYon = _egtSiralamaYon === 'asc' ? 'desc' : 'asc';
+      } else {
+        _egtSiralamaAlani = alan;
+        _egtSiralamaYon = 'asc';
+      }
+      kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
+    });
+  });
+}
+
+function _egtBaslikOklariniGuncelle() {
+  document.querySelectorAll('#tabloBasligi [data-sirala]').forEach(th => {
+    const alan = th.getAttribute('data-sirala');
+    const temizAd = th.textContent.replace(/ ▲| ▼/g, '');
+    th.textContent = temizAd + (alan === _egtSiralamaAlani ? (_egtSiralamaYon === 'asc' ? ' ▲' : ' ▼') : '');
+  });
+}
+
+// bkz. modules/personel/ui.js _prsUstAltScrollKur/_prsUstAltScrollGenisligiGuncelle
+function _egtUstAltScrollKur() {
+  const ust = document.getElementById('tabloScrollUst');
+  const alt = document.getElementById('tabloScrollAlt');
+  if (!ust || !alt) return;
+  let _senkronizeEdiliyor = false;
+  ust.addEventListener('scroll', () => {
+    if (_senkronizeEdiliyor) return;
+    _senkronizeEdiliyor = true;
+    alt.scrollLeft = ust.scrollLeft;
+    _senkronizeEdiliyor = false;
+  });
+  alt.addEventListener('scroll', () => {
+    if (_senkronizeEdiliyor) return;
+    _senkronizeEdiliyor = true;
+    ust.scrollLeft = alt.scrollLeft;
+    _senkronizeEdiliyor = false;
+  });
+}
+
+function _egtUstAltScrollGenisligiGuncelle() {
+  const alt = document.getElementById('tabloScrollAlt');
+  const icerik = document.getElementById('tabloScrollUstIcerik');
+  if (!alt || !icerik) return;
+  const tablo = alt.querySelector('table');
+  icerik.style.width = (tablo ? tablo.scrollWidth : alt.scrollWidth) + 'px';
+}
+
 function egitimSayfasiniBaslat(firma) {
   _aktifFirma = firma;
   egitimTurleriniAyarla(_aktifFirma);
+  _egtUstAltScrollKur();
+  _egtBaslikSiralamayiKur();
+  _egtTurFiltreDoldur();
 
   document.getElementById('yeniKayitBtn').addEventListener('click', () => modalAc());
   document.getElementById('modalKapatBtn').addEventListener('click', modalKapat);
   document.getElementById('modalIptalBtn').addEventListener('click', modalKapat);
   document.getElementById('egitimForm').addEventListener('submit', formGonderildi);
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitTablosunuCiz(e.target.value));
+  document.getElementById('turFiltre').addEventListener('change', () => kayitTablosunuCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('egitimTuruId').addEventListener('change', turAlanlariniGuncelle);
   document.getElementById('suresizMi').addEventListener('change', turAlanlariniGuncelle);
   document.getElementById('belgePdfSecBtn').addEventListener('click', () => document.getElementById('belgePdfDosya').click());
@@ -768,8 +857,12 @@ function kayitTablosunuCiz(aramaMetni) {
   // Kullanıcı isteği: "eğitimler düzenlenme tarihine göre sıralansın" --
   // eğitimin kendi tarihi değil, kaydın oluşturulma/son düzenlenme zamanı
   // (en yeni en üstte); toplu girişte eklenen kayıtlar böylece bir arada görünür.
-  const kayitlar = egitimKayitlariniGetir(aramaMetni, _aktifFirma)
-    .sort((a, b) => (b.guncellemeTarihi || b.olusturmaTarihi || '').localeCompare(a.guncellemeTarihi || a.olusturmaTarihi || ''));
+  const turFiltre = document.getElementById('turFiltre');
+  let kayitlar = egitimKayitlariniGetir(aramaMetni, _aktifFirma, turFiltre ? turFiltre.value : '');
+  kayitlar = _egtSiralamaAlani
+    ? _egtSutunSiraliListe(kayitlar)
+    : kayitlar.sort((a, b) => (b.guncellemeTarihi || b.olusturmaTarihi || '').localeCompare(a.guncellemeTarihi || a.olusturmaTarihi || ''));
+  _egtBaslikOklariniGuncelle();
 
   govde.innerHTML = '';
 
@@ -779,6 +872,7 @@ function kayitTablosunuCiz(aramaMetni) {
       ? 'Aramanızla eşleşen kayıt bulunamadı.'
       : 'Henüz eğitim/sertifika kaydı eklenmedi.';
     _topluSilDurumunuGuncelle([]);
+    _egtUstAltScrollGenisligiGuncelle();
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -787,6 +881,13 @@ function kayitTablosunuCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" class="satir-secim" data-secim="${k.id}" ${_seciliKayitIdleri.has(k.id) ? 'checked' : ''}></td>
+      <td style="white-space:nowrap;">
+        <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
+        <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
+        <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika (Word)</button>
+        ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}">📄 Belge</button>` : ''}
+        <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
+      </td>
       <td>${_egKacir(k.personelAdi)}</td>
       <td>${_egKacir(k.personelIsveren) || '-'}</td>
       <td>${_egKacir(k.turAdi)}${k.aciklama ? ' — ' + _egKacir(k.aciklama) : ''}</td>
@@ -794,13 +895,6 @@ function kayitTablosunuCiz(aramaMetni) {
       <td>${_egKacir(k.saat) || '-'}</td>
       <td>${k.bitisTarihi ? _egitimTarihGoruntu(k.bitisTarihi) : '-'}</td>
       <td><span class="durum-rozet durum-${k.durum}">${DURUM_METIN[k.durum]}</span></td>
-      <td>
-        <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
-        <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
-        <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika (Word)</button>
-        ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}">📄 Belge</button>` : ''}
-        <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
-      </td>
     `;
     govde.appendChild(satir);
   });
@@ -871,6 +965,7 @@ function kayitTablosunuCiz(aramaMetni) {
   });
 
   _topluSilDurumunuGuncelle(kayitlar);
+  _egtUstAltScrollGenisligiGuncelle();
 }
 
 function _topluSilDurumunuGuncelle(gorunenler) {

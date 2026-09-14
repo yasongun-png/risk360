@@ -12,6 +12,10 @@
 <link rel="icon" href="../../assets/icons/favicon-32.png">
 <title>İSG Platform - Personel</title>
 <link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .tablo-scroll-ust { overflow-x: auto; overflow-y: hidden; }
+  .tablo-scroll-ust > div { height: 1px; }
+</style>
 </head>
 <body>
   <div class="ust-cubuk">
@@ -32,6 +36,8 @@
       <button type="button" id="sekmeArsiv" class="sekme-seciliDegil">İşten Ayrılanlar</button>
       <a href="../stajyer/index.html" class="ikincil" style="margin-left:auto; padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🎓 Staj</a>
       <a href="org-semasi.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">🗂️ Organizasyon Şeması</a>
+      <a href="../egitim/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">📚 Eğitim</a>
+      <a href="../raporlar/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">📊 Raporlar</a>
     </div>
 
     <div class="arac-cubugu">
@@ -48,11 +54,13 @@
       </div>
     </div>
 
-    <div class="tablo-scroll">
+    <div class="tablo-scroll-ust" id="tabloScrollUst"><div id="tabloScrollUstIcerik"></div></div>
+    <div class="tablo-scroll" id="tabloScrollAlt">
       <table class="veri-tablosu">
         <thead>
           <tr id="tabloBasligi">
             <th><input type="checkbox" id="tumunuSecCheckbox"></th>
+            <th>İşlemler</th>
             <th data-sirala="sicilNo">Sicil No</th>
             <th data-sirala="adSoyad">Ad Soyad</th>
             <th data-sirala="isveren">İşyeri Sicili</th>
@@ -68,7 +76,6 @@
             <th>Kapsamı</th>
             <th data-sirala="kidemYil">Kıdem Yıl</th>
             <th>Lojman</th>
-            <th>İşlemler</th>
           </tr>
         </thead>
         <tbody id="tabloGovde"></tbody>

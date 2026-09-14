@@ -12,6 +12,10 @@
 <link rel="icon" href="../../assets/icons/favicon-32.png">
 <title>İSG Platform - Eğitim</title>
 <link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .tablo-scroll-ust { overflow-x: auto; overflow-y: hidden; }
+  .tablo-scroll-ust > div { height: 1px; }
+</style>
 </head>
 <body>
   <div class="ust-cubuk">
@@ -31,11 +35,14 @@
       <button type="button" id="sekmeKayitlar">Eğitim Kayıtları</button>
       <button type="button" id="sekmeDurum" class="sekme-seciliDegil">Durum Tablosu</button>
       <button type="button" id="sekmeSinav" class="sekme-seciliDegil">Sınav Oluşturucu</button>
+      <a href="../personel/index.html" class="ikincil" style="margin-left:auto; padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">👤 Personel</a>
+      <a href="../raporlar/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">📊 Raporlar</a>
     </div>
 
     <div id="kayitlarBolumu">
       <div class="arac-cubugu">
         <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Personel veya eğitim türüne göre ara...">
+        <select id="turFiltre" style="width:auto; min-width:160px;"><option value="">Tüm Eğitim Türleri</option></select>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
@@ -52,19 +59,20 @@
         </div>
       </div>
 
-      <div class="tablo-scroll">
+      <div class="tablo-scroll-ust" id="tabloScrollUst"><div id="tabloScrollUstIcerik"></div></div>
+      <div class="tablo-scroll" id="tabloScrollAlt">
         <table class="veri-tablosu">
           <thead>
-            <tr>
+            <tr id="tabloBasligi">
               <th><input type="checkbox" id="tumunuSecCheckbox"></th>
-              <th>Personel</th>
-              <th>İşyeri Sicili</th>
-              <th>Eğitim / Sertifika</th>
-              <th>Tarih</th>
-              <th>Saat</th>
-              <th>Geçerlilik Bitiş</th>
-              <th>Durum</th>
               <th>İşlemler</th>
+              <th data-sirala="personelAdi">Personel</th>
+              <th data-sirala="personelIsveren">İşyeri Sicili</th>
+              <th data-sirala="turAdi">Eğitim / Sertifika</th>
+              <th data-sirala="tarih">Tarih</th>
+              <th>Saat</th>
+              <th data-sirala="bitisTarihi">Geçerlilik Bitiş</th>
+              <th data-sirala="durum">Durum</th>
             </tr>
           </thead>
           <tbody id="tabloGovde"></tbody>

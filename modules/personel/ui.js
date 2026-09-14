@@ -205,7 +205,40 @@ async function imzaListesiOlusturTiklandi() {
   }
 }
 
+// Kullanıcı isteği: "sağa sola kaydırma sadece altta var üstte de olsun" --
+// üstteki ince şerit alttaki gerçek tablo kapsayıcısıyla scrollLeft'i
+// birbirine senkronize eder; genişliği tablonun gerçek scrollWidth'i kadar
+// tutulur (bölüm filtresi/arama sonuçlarına göre tablo genişliği değişebildiği
+// için her tabloyuCiz çiziminden sonra yeniden hesaplanır, bkz. _prsUstAltScrollSenkronizeEt).
+function _prsUstAltScrollKur() {
+  const ust = document.getElementById('tabloScrollUst');
+  const alt = document.getElementById('tabloScrollAlt');
+  if (!ust || !alt) return;
+  let _senkronizeEdiliyor = false;
+  ust.addEventListener('scroll', () => {
+    if (_senkronizeEdiliyor) return;
+    _senkronizeEdiliyor = true;
+    alt.scrollLeft = ust.scrollLeft;
+    _senkronizeEdiliyor = false;
+  });
+  alt.addEventListener('scroll', () => {
+    if (_senkronizeEdiliyor) return;
+    _senkronizeEdiliyor = true;
+    ust.scrollLeft = alt.scrollLeft;
+    _senkronizeEdiliyor = false;
+  });
+}
+
+function _prsUstAltScrollGenisligiGuncelle() {
+  const alt = document.getElementById('tabloScrollAlt');
+  const icerik = document.getElementById('tabloScrollUstIcerik');
+  if (!alt || !icerik) return;
+  const tablo = alt.querySelector('table');
+  icerik.style.width = (tablo ? tablo.scrollWidth : alt.scrollWidth) + 'px';
+}
+
 function personelSayfasiniBaslat() {
+  _prsUstAltScrollKur();
   document.getElementById('yeniPersonelBtn').addEventListener('click', () => modalAc());
   document.getElementById('modalKapatBtn').addEventListener('click', modalKapat);
   document.getElementById('modalIptalBtn').addEventListener('click', modalKapat);
@@ -331,6 +364,7 @@ function tabloyuCiz(aramaMetni) {
         ? 'Henüz işten ayrılan personel yok.'
         : 'Henüz personel eklenmedi. "+ Yeni Personel" ile başlayın.');
     _topluSilDurumunuGuncelle([]);
+    _prsUstAltScrollGenisligiGuncelle();
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -339,6 +373,10 @@ function tabloyuCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" class="satir-secim" data-secim="${p.id}" ${_seciliPersonelIdleri.has(p.id) ? 'checked' : ''}></td>
+      <td style="white-space:nowrap;">
+        <button class="tablo-buton" data-duzenle="${p.id}">Düzenle</button>
+        <button class="tablo-buton sil" data-sil="${p.id}">Sil</button>
+      </td>
       <td>${_prsKacir(p.sicilNo)}</td>
       <td>${_prsKacir(p.adSoyad)}</td>
       <td>${_prsKacir(p.isveren) || '-'}</td>
@@ -354,10 +392,6 @@ function tabloyuCiz(aramaMetni) {
       <td>${_prsKacir(p.kapsami) || '-'}</td>
       <td>${p.kidemYil ?? '-'}</td>
       <td>${_prsKacir(p.lojman) || 'YOK'}</td>
-      <td>
-        <button class="tablo-buton" data-duzenle="${p.id}">Düzenle</button>
-        <button class="tablo-buton sil" data-sil="${p.id}">Sil</button>
-      </td>
     `;
     govde.appendChild(satir);
   });
@@ -391,6 +425,7 @@ function tabloyuCiz(aramaMetni) {
   });
 
   _topluSilDurumunuGuncelle(personeller);
+  _prsUstAltScrollGenisligiGuncelle();
 }
 
 function pozisyonSecimleriniDoldur(seciliId) {
