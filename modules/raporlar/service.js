@@ -51,13 +51,18 @@ function _rpEgitimEfektifTarihi(kayit) {
   return (kayit.tarih2 && kayit.tarih2 > kayit.tarih) ? kayit.tarih2 : kayit.tarih;
 }
 
-function _rpEgitimBitisTarihiHesapla(kayit, tur, firma) {
+// Kullanıcı isteği: "işyerine göre tehlike sınıfı farklı olmalı" — bkz.
+// core/tenant.js firmaIsverenTehlikeSinifiGetir (modules/egitim/service.js
+// egitimBitisTarihiHesapla ile aynı mantık, modüller arası script paylaşımı
+// olmadığı için burada tekrar yazılır).
+function _rpEgitimBitisTarihiHesapla(kayit, tur, firma, personel) {
   if (!tur || !kayit.tarih) return null;
   if (tur.hesaplama === 'tek') return null;
   if (tur.hesaplama === 'dogrudan') return kayit.tarih;
   if (tur.hesaplama === 'sabit') return _rpYilEkle(_rpEgitimEfektifTarihi(kayit), tur.yil);
   if (tur.hesaplama === 'tehlikeSinifi') {
-    const yil = (firma && _RP_TEMEL_ISG_YENILEME_YILI[firma.tehlikeSinifi]) || 1;
+    const tehlikeSinifi = firmaIsverenTehlikeSinifiGetir(firma, personel && personel.isveren);
+    const yil = _RP_TEMEL_ISG_YENILEME_YILI[tehlikeSinifi] || 1;
     return _rpYilEkle(_rpEgitimEfektifTarihi(kayit), yil);
   }
   return null;
@@ -87,7 +92,7 @@ function raporPersonelEgitimOzeti(firma) {
         .filter(k => k.personelId === p.id && k.egitimTuruId === tur.id)
         .sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
       const son = kPersonel[0] || null;
-      const bitis = son ? _rpEgitimBitisTarihiHesapla(son, tur, firma) : null;
+      const bitis = son ? _rpEgitimBitisTarihiHesapla(son, tur, firma, p) : null;
       const durum = son ? _rpEgitimDurumHesapla(tur, bitis) : 'kayit_yok';
 
       toplamHucre++;

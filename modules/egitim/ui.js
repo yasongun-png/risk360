@@ -17,7 +17,8 @@ function sertifikaAyarModalAc(id) {
   if (!kayit || !_aktifFirma) return;
   _sertifikaKayitId = id;
 
-  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, _aktifFirma);
+  const personel = personelIdIleGetirRepo(kayit.personelId);
+  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, _aktifFirma, personel);
   document.getElementById('sertTehlikeSinifi').innerHTML = TEHLIKE_SINIFLARI.map(t => `<option ${t === varsayilan.tehlikeSinifi ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('sertEgitimTuru').value = varsayilan.ilkTekrar;
   _sertifikaSureOnizlemesiGuncelle();

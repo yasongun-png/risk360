@@ -15,7 +15,12 @@ function egitimEfektifTarihi(kayit) {
   return (kayit.tarih2 && kayit.tarih2 > kayit.tarih) ? kayit.tarih2 : kayit.tarih;
 }
 
-function egitimBitisTarihiHesapla(kayit, tur, firma) {
+// Kullanıcı isteği: "işyerine göre tehlike sınıfı farklı olmalı" — Temel İSG
+// Eğitimi'nin geçerlilik süresi (yenileme yılı), personelin İşyeri Sicili'ne
+// tanımlı özel tehlike sınıfından, yoksa firma genelinden gelir (bkz.
+// core/tenant.js firmaIsverenTehlikeSinifiGetir). personel opsiyoneldir
+// (bilinmiyorsa firma geneline düşülür).
+function egitimBitisTarihiHesapla(kayit, tur, firma, personel) {
   if (!tur) return null;
   // MYK belgelerinin çoğu belirli bir süre sonunda yenilenir, ama bazıları
   // (ör. "Sanayi Tipi Buhar Kazanı Yakma") SÜRESİZ düzenlenir; bu durumda
@@ -27,7 +32,8 @@ function egitimBitisTarihiHesapla(kayit, tur, firma) {
   if (tur.hesaplama === 'dogrudan') return kayit.tarih;
   if (tur.hesaplama === 'sabit') return _yilEkle(egitimEfektifTarihi(kayit), tur.yil);
   if (tur.hesaplama === 'tehlikeSinifi') {
-    const yil = (firma && TEMEL_ISG_YENILEME_YILI[firma.tehlikeSinifi]) || 1;
+    const tehlikeSinifi = firmaIsverenTehlikeSinifiGetir(firma, personel && personel.isveren);
+    const yil = TEMEL_ISG_YENILEME_YILI[tehlikeSinifi] || 1;
     return _yilEkle(egitimEfektifTarihi(kayit), yil);
   }
   return null;
@@ -51,7 +57,7 @@ function egitimDurumHesapla(tur, bitisTarihi, suresizMi) {
 function _kayitZenginlestir(kayit, firma) {
   const tur = egitimTuruGetir(kayit.egitimTuruId);
   const personel = personelIdIleGetirRepo(kayit.personelId);
-  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma);
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma, personel);
 
   return Object.assign({}, kayit, {
     turAdi: tur ? tur.ad : 'Bilinmeyen Tür',
@@ -159,7 +165,7 @@ function egitimDurumTablosuOlustur(firma) {
         .sort((a, b) => b.tarih.localeCompare(a.tarih));
 
       const sonKayit = kayitlar[0] || null;
-      const bitisTarihi = sonKayit ? egitimBitisTarihiHesapla(sonKayit, tur, firma) : null;
+      const bitisTarihi = sonKayit ? egitimBitisTarihiHesapla(sonKayit, tur, firma, p) : null;
 
       return {
         turId: tur.id,
@@ -184,7 +190,7 @@ function _egitimTuruDurumu(personelId, turId, firma) {
   const sonKayit = kayitlar[0] || null;
   if (!sonKayit) return { varMi: false, tarihMetni: '', durum: 'kayit_yok' };
 
-  const bitisTarihi = egitimBitisTarihiHesapla(sonKayit, tur, firma);
+  const bitisTarihi = egitimBitisTarihiHesapla(sonKayit, tur, firma, personelIdIleGetirRepo(personelId));
   const durum = egitimDurumHesapla(tur, bitisTarihi, sonKayit.suresizMi);
   return {
     varMi: durum === 'gecerli' || durum === 'yaklasiyor' || durum === 'suresiz',

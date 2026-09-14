@@ -145,7 +145,9 @@
     <div class="modal-kutu">
       <h3 id="isverenlerModalBaslik">İşyeri Sicilleri</h3>
       <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Aynı sahada birden fazla sicil/tüzel işyeri varsa (ör. aynı yerde çalışan ama farklı sicilli birden fazla şirket) her satıra bir işyeri sicili adı yazın. Bu liste, Personel kaydındaki "İşyeri Sicili" alanında seçenek olarak gösterilir.</p>
-      <textarea id="isverenlerTextarea" rows="8" placeholder="Bağfaş Bandırma Gübre Fabrikaları&#10;Bağfaş Servis Pazarlama&#10;Bağfaş Teknik Müteahhitlik"></textarea>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-4px;">Tehlike Sınıfı boş bırakılırsa o işyeri firma genelindeki tehlike sınıfını kullanır; farklıysa buradan seçilebilir (kullanıcı isteği: aynı firmada farklı sicilli işyerlerinin tehlike sınıfı farklı olabilir — Temel İSG sertifikası süresi buna göre hesaplanır).</p>
+      <div id="isverenSatirlari"></div>
+      <button type="button" class="ikincil" id="isverenSatiriEkleBtn" style="margin-top:8px;">+ İşyeri Ekle</button>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="isverenlerModalIptalBtn">İptal</button>
         <button type="button" class="birincil" id="isverenlerModalKaydetBtn">Kaydet</button>
@@ -206,6 +208,7 @@
       document.getElementById('isverenlerModalIptalBtn').addEventListener('click', () => {
         document.getElementById('isverenlerModalKatman').classList.remove('acik');
       });
+      document.getElementById('isverenSatiriEkleBtn').addEventListener('click', () => _isverenSatiriEkle('', ''));
 
       document.getElementById('isIzniSifreIptalBtn').addEventListener('click', () => {
         document.getElementById('isIzniSifreModalKatman').classList.remove('acik');
@@ -261,8 +264,11 @@
         else { qrImg.addEventListener('load', yazdirVeTemizle); qrImg.addEventListener('error', yazdirVeTemizle); }
       });
       document.getElementById('isverenlerModalKaydetBtn').addEventListener('click', () => {
-        const satirlar = document.getElementById('isverenlerTextarea').value.split('\n');
-        firmaIsverenleriAyarla(_duzenlenenIsverenlerFirmaId, satirlar);
+        const satirlar = Array.from(document.querySelectorAll('#isverenSatirlari [data-isveren-satiri]')).map(satir => ({
+          ad: satir.querySelector('[data-isveren-ad]').value,
+          tehlikeSinifi: satir.querySelector('[data-isveren-tehlike]').value
+        }));
+        firmaIsverenleriVeTehlikeSiniflariAyarla(_duzenlenenIsverenlerFirmaId, satirlar);
         document.getElementById('isverenlerModalKatman').classList.remove('acik');
       });
     }
@@ -272,6 +278,32 @@
     let _duzenlenenIsIzniSifreFirmaId = null;
     let _barkodAktifFirma = null;
     let _barkodAktifTip = 'ramak-kala';
+
+    // bkz. isverenlerModalKatman — her satır bir işyeri sicili adı + isteğe
+    // bağlı kendi tehlike sınıfı (boşsa firma genelini kullanır).
+    function _isverenSatiriEkle(ad, tehlikeSinifi) {
+      const kutu = document.getElementById('isverenSatirlari');
+      const satir = document.createElement('div');
+      satir.setAttribute('data-isveren-satiri', '1');
+      satir.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;';
+      satir.innerHTML = `
+        <input type="text" data-isveren-ad value="${_fyKacir(ad)}" placeholder="İşyeri sicili adı" style="flex:1;">
+        <select data-isveren-tehlike style="width:auto; min-width:170px;">
+          <option value="">Firma Geneli</option>
+        </select>
+        <button type="button" class="ikincil sil" data-isveren-satiri-sil>Sil</button>
+      `;
+      const secim = satir.querySelector('[data-isveren-tehlike]');
+      TEHLIKE_SINIFLARI.forEach(sinif => {
+        const secenek = document.createElement('option');
+        secenek.value = sinif;
+        secenek.textContent = sinif;
+        if (sinif === tehlikeSinifi) secenek.selected = true;
+        secim.appendChild(secenek);
+      });
+      satir.querySelector('[data-isveren-satiri-sil]').addEventListener('click', () => satir.remove());
+      kutu.appendChild(satir);
+    }
 
     // ramak-kala-bildir.html bu sayfayla aynı dizinde (repo kökünde) —
     // bu sayfanın konumundan (GitHub Pages alt yolu/özel domain fark etmeksizin)
@@ -474,7 +506,11 @@
           _duzenlenenIsverenlerFirmaId = btn.getAttribute('data-isverenler');
           const firma = getFirmaById(_duzenlenenIsverenlerFirmaId);
           document.getElementById('isverenlerModalBaslik').textContent = `${firma.ad} — İşyeri Sicilleri`;
-          document.getElementById('isverenlerTextarea').value = (Array.isArray(firma.isverenler) ? firma.isverenler : []).join('\n');
+          const harita = firma.isverenTehlikeSiniflari || {};
+          const isimler = Array.isArray(firma.isverenler) ? firma.isverenler : [];
+          document.getElementById('isverenSatirlari').innerHTML = '';
+          if (isimler.length === 0) _isverenSatiriEkle('', '');
+          else isimler.forEach(ad => _isverenSatiriEkle(ad, harita[ad] || ''));
           document.getElementById('isverenlerModalKatman').classList.add('acik');
         });
       });

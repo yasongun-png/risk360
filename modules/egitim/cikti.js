@@ -171,12 +171,14 @@ function _egitimKonuSatirlariHtml(baslik, konular, sureler) {
 // ---- Temel İSG Eğitimi: iki sayfalı resmi belge ----
 
 // Sertifika oluşturmadan önce kullanıcının değiştirebileceği varsayılanlar
-// (tehlike sınıfı firmadan, ilk/tekrar personelin kayıt geçmişinden gelir).
-function egitimTemelSertifikaVarsayilaniHesapla(kayit, firma) {
+// (tehlike sınıfı önce personelin İşyeri Sicili'ne tanımlı özel sınıftan,
+// yoksa firma genelinden gelir — bkz. core/tenant.js firmaIsverenTehlikeSinifiGetir;
+// ilk/tekrar personelin kayıt geçmişinden gelir).
+function egitimTemelSertifikaVarsayilaniHesapla(kayit, firma, personel) {
   const tumKayitlar = egitimKayitlariTumunuGetir();
   return {
     ilkTekrar: _egitimIlkMiTekrarMi(kayit, tumKayitlar),
-    tehlikeSinifi: TEHLIKE_SINIFLARI.includes(firma && firma.tehlikeSinifi) ? firma.tehlikeSinifi : 'Az Tehlikeli'
+    tehlikeSinifi: firmaIsverenTehlikeSinifiGetir(firma, personel && personel.isveren)
   };
 }
 
@@ -187,12 +189,12 @@ function egitimTemelSertifikaSuresiHesapla(tehlikeSinifi, ilkTekrar) {
 }
 
 async function _egitimTemelSertifikasiOlustur(kayit, personel, firma, secim) {
-  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, firma);
+  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, firma, personel);
   const ilkTekrar = (secim && secim.ilkTekrar) || varsayilan.ilkTekrar;
   const tehlikeSinifi = (secim && TEHLIKE_SINIFLARI.includes(secim.tehlikeSinifi)) ? secim.tehlikeSinifi : varsayilan.tehlikeSinifi;
   const plan = _EGITIM_SURE_PLANI[ilkTekrar][tehlikeSinifi];
   const dakika = _egitimToplamDakika(plan);
-  const bitisTarihi = egitimBitisTarihiHesapla(kayit, egitimTuruGetir('temel_isg'), firma);
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, egitimTuruGetir('temel_isg'), firma, personel);
   const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
   const logo = firmaLogoGetir(firma.id);
   const egitimAdiBaslik = 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ';
@@ -286,7 +288,7 @@ async function _egitimSayfaCanvasaCevir(el) {
 // ---- Diğer eğitim/sertifika türleri: tek sayfalık sade belge ----
 
 async function _egitimGenelSertifikasiOlustur(kayit, personel, tur, firma) {
-  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma);
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma, personel);
   const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
   const logo = firmaLogoGetir(firma.id);
   const gecerlilikMetni = tur.hesaplama === 'tek' ? 'Süresiz' : (bitisTarihi ? gunAyYil(bitisTarihi) : '-');
@@ -423,12 +425,12 @@ function _egitimWordUstbilgi(logoBytes, baslik, belgeNo) {
 }
 
 async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim) {
-  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, firma);
+  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, firma, personel);
   const ilkTekrar = (secim && secim.ilkTekrar) || varsayilan.ilkTekrar;
   const tehlikeSinifi = (secim && TEHLIKE_SINIFLARI.includes(secim.tehlikeSinifi)) ? secim.tehlikeSinifi : varsayilan.tehlikeSinifi;
   const plan = _EGITIM_SURE_PLANI[ilkTekrar][tehlikeSinifi];
   const dakika = _egitimToplamDakika(plan);
-  const bitisTarihi = egitimBitisTarihiHesapla(kayit, egitimTuruGetir('temel_isg'), firma);
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, egitimTuruGetir('temel_isg'), firma, personel);
   const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
   const logoBytes = await _egitimGorselBaytlari(firmaLogoGetir(firma.id));
   const egitimTarihiGoruntu = kayit.tarih2 ? `${gunAyYil(kayit.tarih)} - ${gunAyYil(kayit.tarih2)}` : gunAyYil(kayit.tarih);
@@ -516,7 +518,7 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
 }
 
 async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
-  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma);
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma, personel);
   const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
   const logoBytes = await _egitimGorselBaytlari(firmaLogoGetir(firma.id));
   const gecerlilikMetni = tur.hesaplama === 'tek' ? 'Süresiz' : (bitisTarihi ? gunAyYil(bitisTarihi) : '-');

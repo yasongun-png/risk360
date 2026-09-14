@@ -79,6 +79,16 @@ function firmaEkle(ad, kullaniciId, tehlikeSinifi, sektor) {
     // paylaşılan sistemler bölünmez (tek firma), sadece Personel kaydına bu
     // listeden seçilen bir "İşveren" etiketi eklenir (bkz. modules/personel).
     isverenler: [],
+    // Kullanıcı isteği: "işyerine göre tehlike sınıfı farklı olmalı" — eski
+    // sistemde (BAGFAŞ) her işyeri sicili (Bandırma Gübre Fabrikaları/Servis
+    // Pazarlama/Teknik Müteahhitlik) kendi tehlike sınıfına sahipti (bkz.
+    // eski egitim-takip/certificate.js hazardFromGroup) ve Temel İSG
+    // sertifikası süresi buna göre değişiyordu. Burada { işverenAdı:
+    // tehlikeSinifi } eşlemesi tutulur; bir işveren için değer yoksa
+    // firma.tehlikeSinifi'ne (firma geneli) düşülür (bkz.
+    // firmaIsverenTehlikeSinifiGetir, modules/egitim/cikti.js
+    // egitimTemelSertifikaVarsayilaniHesapla).
+    isverenTehlikeSiniflari: {},
     // Standart kataloğa (modules/egitim/model.js EGITIM_TURLERI) ek olarak
     // firmaya özel eğitim/sertifika türleri (kullanıcı isteği: "yeni eğitim
     // türü de ekleyebilmem lazım") — her biri { id, ad, yil }, geçerlilik
@@ -205,6 +215,39 @@ function firmaIsverenleriAyarla(firmaId, isverenler) {
   firma.isverenler = temiz;
   yaz('isg_firmalar', tumFirmalar);
   return { basarili: true, firma };
+}
+
+// Kullanıcı isteği: "işyerine göre tehlike sınıfı farklı olmalı" — bkz.
+// firma.isverenTehlikeSiniflari başındaki not. satirlar = [{ad, tehlikeSinifi}],
+// hem isim listesini (firma.isverenler, mevcut tüketiciler string bekliyor)
+// hem tehlike sınıfı eşlemesini tek çağrıda günceller.
+function firmaIsverenleriVeTehlikeSiniflariAyarla(firmaId, satirlar) {
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  const isimler = [];
+  const harita = {};
+  (Array.isArray(satirlar) ? satirlar : []).forEach(s => {
+    const ad = String((s && s.ad) || '').trim();
+    if (!ad || isimler.includes(ad)) return;
+    isimler.push(ad);
+    if (s && TEHLIKE_SINIFLARI.includes(s.tehlikeSinifi)) harita[ad] = s.tehlikeSinifi;
+  });
+
+  firma.isverenler = isimler;
+  firma.isverenTehlikeSiniflari = harita;
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
+// bkz. firma.isverenTehlikeSiniflari başındaki not — bir işveren için özel
+// tehlike sınıfı tanımlı değilse firma geneline (firma.tehlikeSinifi) düşer.
+function firmaIsverenTehlikeSinifiGetir(firma, isverenAdi) {
+  const harita = (firma && firma.isverenTehlikeSiniflari) || {};
+  const ozel = isverenAdi ? harita[isverenAdi] : null;
+  if (TEHLIKE_SINIFLARI.includes(ozel)) return ozel;
+  return TEHLIKE_SINIFLARI.includes(firma && firma.tehlikeSinifi) ? firma.tehlikeSinifi : TEHLIKE_SINIFLARI[0];
 }
 
 function firmaOzelEgitimTuruEkle(firmaId, ad, yil) {
