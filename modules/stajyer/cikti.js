@@ -2,8 +2,10 @@
 // sertifikasıyla (bkz. modules/egitim/cikti.js) aynı teknik ve görsel desen:
 // html2canvas + jsPDF ile iki sayfalı gerçek PDF (ön yüz: katılımcı bilgisi +
 // imzalar, arka yüz: konu/süre tablosu), Sertifika Ayarları penceresinden
-// tehlike sınıfı seçimi, İG Uzmanı/İşyeri Hekimi imzaları Hizmet
-// Sözleşmeleri'nden. Konu listesi/süre tablosu zaten stajyer/model.js'te
+// tehlike sınıfı seçimi. İG Uzmanı/İşyeri Hekimi/İşveren Vekili satırları
+// kullanıcı isteğiyle isim doldurmadan, sadece boş imza satırı olarak basılır
+// (bkz. _sjImzaSatirlariHtml/_sjWordImzaTablosu). Konu listesi/süre tablosu
+// zaten stajyer/model.js'te
 // (SERTIFIKA_KONULARI/SERTIFIKA_PLANLARI) tanımlı — burada tekrar edilmez.
 // Stajyerler için "ilk/tekrar" ayrımı yoktur (her zaman ilk temel eğitim).
 
@@ -17,40 +19,14 @@ function _sjBelgeNoUret(stajyer, firma) {
   return `${onEk}-STJ-${tarih}-${stajyer.stajNo || '0000'}`;
 }
 
-// En güncel, feshedilmemiş Hizmet Sözleşmesi kaydından ad soyad getirir.
-// Kullanıcı isteği: "staj modülündeki İş Güvenliği Uzmanı ve İşyeri Hekimi
-// Bağfaş sicilinin uzmanı/hekimi olsun" — bir OSGB admin'i aynı anda birden
-// fazla sicil (ör. Bağfaş, Servis, Teknik) yönetebildiğinden, Hizmet
-// Sözleşmeleri'nde bu sicillerin HER BİRİ için ayrı ayrı kayıt olabilir
-// (bkz. model.js firmaId alanı). Önceden sadece "en son başlangıç tarihli"
-// kayıt alınıyordu — bu, aktif sicilde değil BAŞKA bir sicilde daha yeni bir
-// sözleşme varsa yanlış kişiyi getiriyordu. Artık önce AKTİF sicile
-// (aktifFirmaGetir) ait kayıtlar tercih edilir; hiç yoksa sicil belirtilmemiş
-// (firmaId boş) genel kayıtlara, o da yoksa (geriye dönük uyumluluk için)
-// eski davranışa döner.
-function _sjGorevliAdiGetir(gorevTuru) {
-  const tumu = (typeof hizmetSozlesmeleriTumunuGetir === 'function' ? hizmetSozlesmeleriTumunuGetir() : [])
-    .filter(k => k.gorevTuru === gorevTuru && k.durum !== 'Feshedildi');
-  const enGuncel = (liste) => liste.slice().sort((a, b) => (b.sozlesmeBaslangicTarihi || '').localeCompare(a.sozlesmeBaslangicTarihi || ''))[0];
-
-  const aktifFirma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-  const aktifSicilKaydi = aktifFirma ? enGuncel(tumu.filter(k => k.firmaId === aktifFirma.id)) : null;
-  if (aktifSicilKaydi) return aktifSicilKaydi.adSoyad;
-
-  const sicilsizKayit = enGuncel(tumu.filter(k => !k.firmaId));
-  if (sicilsizKayit) return sicilsizKayit.adSoyad;
-
-  const herhangiBirKayit = enGuncel(tumu);
-  return herhangiBirKayit ? herhangiBirKayit.adSoyad : '';
-}
-
+// Kullanıcı isteği: "stajda İş Güvenliği Uzmanı ve İşyeri Hekimi isimleri
+// yazmasın" — Hizmet Sözleşmeleri'nden otomatik çekilen ad soyad artık
+// gösterilmiyor, İşveren Vekili'nde olduğu gibi sadece boş imza satırı basılır.
 function _sjImzaSatirlariHtml() {
-  const isg = _sjGorevliAdiGetir('İG Uzmanı');
-  const hekim = _sjGorevliAdiGetir('İşyeri Hekimi');
   return `
     <div class="egt-imzalar">
-      <div><span>${_sjSertKacir(isg) || '&nbsp;'}</span><b>İş Güvenliği Uzmanı</b><em>İmza</em></div>
-      <div><span>${_sjSertKacir(hekim) || '&nbsp;'}</span><b>İşyeri Hekimi</b><em>İmza</em></div>
+      <div><span>&nbsp;</span><b>İş Güvenliği Uzmanı</b><em>İmza</em></div>
+      <div><span>&nbsp;</span><b>İşyeri Hekimi</b><em>İmza</em></div>
       <div><span>&nbsp;</span><b>İşveren Vekili</b><em>İmza</em></div>
     </div>
   `;
@@ -175,9 +151,10 @@ function _sjWordUstbilgi(logoBytes, baslik, belgeNo) {
   });
 }
 
+// Kullanıcı isteği: "stajda İş Güvenliği Uzmanı ve İşyeri Hekimi isimleri
+// yazmasın" — bkz. yukarısı _sjImzaSatirlariHtml (PDF), burada da aynı
+// şekilde ad soyad artık gösterilmiyor.
 function _sjWordImzaTablosu() {
-  const isg = _sjGorevliAdiGetir('İG Uzmanı');
-  const hekim = _sjGorevliAdiGetir('İşyeri Hekimi');
   const kenar = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const ustCizgi = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
   const hucre = (ad, unvan) => new docx.TableCell({
@@ -192,7 +169,7 @@ function _sjWordImzaTablosu() {
   return new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     borders: { top: kenar, bottom: kenar, left: kenar, right: kenar, insideHorizontal: kenar, insideVertical: kenar },
-    rows: [new docx.TableRow({ children: [hucre(isg, 'İş Güvenliği Uzmanı'), hucre(hekim, 'İşyeri Hekimi'), hucre('', 'İşveren Vekili')] })]
+    rows: [new docx.TableRow({ children: [hucre('', 'İş Güvenliği Uzmanı'), hucre('', 'İşyeri Hekimi'), hucre('', 'İşveren Vekili')] })]
   });
 }
 
