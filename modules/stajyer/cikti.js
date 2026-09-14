@@ -147,6 +147,34 @@ function _sjWordDegerHucre(deger, opts = {}) {
 function _sjWordBilgiSatiri(e1, d1, e2, d2, d2Opts) {
   return new docx.TableRow({ children: [_sjWordEtiketHucre(e1), _sjWordDegerHucre(d1), _sjWordEtiketHucre(e2), _sjWordDegerHucre(d2, d2Opts)] });
 }
+// PDF'teki .egt-ustbilgi ile aynı görünüm: logo solda, başlık+belge no sağında
+// yan yana (ortalanmış değil), altında ayırıcı çizgi.
+function _sjWordUstbilgi(logoBytes, baslik, belgeNo) {
+  const kenar = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const altCizgi = { style: docx.BorderStyle.SINGLE, size: 8, color: '0B2C52' };
+  const logoHucre = new docx.TableCell({
+    borders: { top: kenar, left: kenar, right: kenar, bottom: altCizgi },
+    width: { size: 20, type: docx.WidthType.PERCENTAGE },
+    margins: { bottom: 150 },
+    children: [logoBytes ? new docx.Paragraph({ children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })] }) : new docx.Paragraph({ text: '' })]
+  });
+  const baslikHucre = new docx.TableCell({
+    borders: { top: kenar, left: kenar, right: kenar, bottom: altCizgi },
+    width: { size: 80, type: docx.WidthType.PERCENTAGE },
+    verticalAlign: docx.VerticalAlign.CENTER,
+    margins: { bottom: 150 },
+    children: [
+      new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: 28, color: '0B2C52' })] }),
+      new docx.Paragraph({ children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 15, color: '374151' })], spacing: { before: 40 } })
+    ]
+  });
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    borders: { top: kenar, bottom: kenar, left: kenar, right: kenar, insideHorizontal: kenar, insideVertical: kenar },
+    rows: [new docx.TableRow({ children: [logoHucre, baslikHucre] })]
+  });
+}
+
 function _sjWordImzaTablosu() {
   const isg = _sjGorevliAdiGetir('İG Uzmanı');
   const hekim = _sjGorevliAdiGetir('İşyeri Hekimi');
@@ -157,7 +185,8 @@ function _sjWordImzaTablosu() {
     margins: { top: 100 },
     children: [
       new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || ' ', bold: true, size: _SJ_WORD_METIN_BOYUT })] }),
-      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] })
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İmza', size: 13, color: '94A3B8' })], spacing: { before: 40 } })
     ]
   });
   return new docx.Table({
@@ -174,9 +203,8 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
   const sonGunTarihi = isgEgitimEfektifTarihi(stajyer);
 
   const onCocuklari = [
-    ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })], spacing: { after: 150 } })] : []),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ', bold: true, size: 28, color: '0B2C52' })], spacing: { after: 80 } }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 17, color: '374151' })], spacing: { after: 250 } }),
+    _sjWordUstbilgi(logoBytes, 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ', belgeNo),
+    new docx.Paragraph({ text: '', spacing: { after: 150 } }),
     new docx.Paragraph({
       children: [new docx.TextRun({ text: `İşbu belge, `, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: stajyer.adSoyad, bold: true, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik kapsamında `, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: 'Temel İş Sağlığı ve Güvenliği Eğitimi', bold: true, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _SJ_WORD_METIN_BOYUT })],
       spacing: { after: 250 }
@@ -189,7 +217,7 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
         _sjWordBilgiSatiri('Staj Yapılan Bölüm', stajyer.bolum, 'Sınıf / Dönem', stajyer.sinif),
         _sjWordBilgiSatiri('İşyeri Ünvanı', firma.ad, 'Tehlike Sınıfı', tehlikeSinifi),
         _sjWordBilgiSatiri('Eğitim Tarihi', egitimTarihiGoruntu, 'Geçerlilik Tarihi', gunAyYil(veri.gecerlilikTarihi)),
-        _sjWordBilgiSatiri('Eğitim Süresi', `${veri.toplamSure} (${veri.toplamDakika} dk)`, 'Eğitim Şekli', 'Yüz yüze')
+        _sjWordBilgiSatiri('Eğitim Süresi', `${veri.toplamSure} (${veri.toplamDakika} dk)`, 'Eğitim Şekli', '☑ Yüz yüze   ☐ Uzaktan')
       ]
     }),
     new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [new docx.TextRun({ text: gunAyYil(sonGunTarihi), size: 17, color: '374151' })], spacing: { before: 200, after: 300 } }),

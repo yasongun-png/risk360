@@ -383,13 +383,42 @@ function _egitimWordImzaTablosu() {
     margins: { top: 100 },
     children: [
       new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || ' ', bold: true, size: _EGT_WORD_METIN_BOYUT })] }),
-      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] })
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İmza', size: 13, color: '94A3B8' })], spacing: { before: 40 } })
     ]
   });
   return new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     borders: { top: kenar, bottom: kenar, left: kenar, right: kenar, insideHorizontal: kenar, insideVertical: kenar },
     rows: [new docx.TableRow({ children: [hucre(isg, 'İş Güvenliği Uzmanı'), hucre(hekim, 'İşyeri Hekimi'), hucre('', 'İşveren Vekili')] })]
+  });
+}
+
+// PDF'teki .egt-ustbilgi ile aynı görünüm: logo solda, başlık+belge no
+// sağında yan yana (ortalanmış değil), altında ayırıcı çizgi.
+function _egitimWordUstbilgi(logoBytes, baslik, belgeNo) {
+  const kenar2 = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const altCizgi = { style: docx.BorderStyle.SINGLE, size: 8, color: '0B2C52' };
+  const logoHucre = new docx.TableCell({
+    borders: { top: kenar2, left: kenar2, right: kenar2, bottom: altCizgi },
+    width: { size: 20, type: docx.WidthType.PERCENTAGE },
+    margins: { bottom: 150 },
+    children: [logoBytes ? new docx.Paragraph({ children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })] }) : new docx.Paragraph({ text: '' })]
+  });
+  const baslikHucre = new docx.TableCell({
+    borders: { top: kenar2, left: kenar2, right: kenar2, bottom: altCizgi },
+    width: { size: 80, type: docx.WidthType.PERCENTAGE },
+    verticalAlign: docx.VerticalAlign.CENTER,
+    margins: { bottom: 150 },
+    children: [
+      new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: 28, color: '0B2C52' })] }),
+      new docx.Paragraph({ children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 15, color: '374151' })], spacing: { before: 40 } })
+    ]
+  });
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    borders: { top: kenar2, bottom: kenar2, left: kenar2, right: kenar2, insideHorizontal: kenar2, insideVertical: kenar2 },
+    rows: [new docx.TableRow({ children: [logoHucre, baslikHucre] })]
   });
 }
 
@@ -405,9 +434,8 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
   const egitimTarihiGoruntu = kayit.tarih2 ? `${gunAyYil(kayit.tarih)} - ${gunAyYil(kayit.tarih2)}` : gunAyYil(kayit.tarih);
 
   const onCocuklari = [
-    ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })], spacing: { after: 150 } })] : []),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ', bold: true, size: 28, color: '0B2C52' })], spacing: { after: 80 } }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 17, color: '374151' })], spacing: { after: 250 } }),
+    _egitimWordUstbilgi(logoBytes, 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ', belgeNo),
+    new docx.Paragraph({ text: '', spacing: { after: 150 } }),
     new docx.Paragraph({
       children: [new docx.TextRun({ text: `İşbu belge, `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: personel.adSoyad, bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik kapsamında `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: 'Temel İş Sağlığı ve Güvenliği Eğitimi', bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _EGT_WORD_METIN_BOYUT })],
       spacing: { after: 250 }
@@ -419,7 +447,7 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
         _egitimWordBilgiSatiri('Görevi', personel.gorev, 'Bölüm', personel.bolum),
         _egitimWordBilgiSatiri('İşyeri Ünvanı', personel.isveren || firma.ad, 'Tehlike Sınıfı', tehlikeSinifi),
         _egitimWordBilgiSatiri('Eğitim Tarihi', egitimTarihiGoruntu, 'Geçerlilik Tarihi', gunAyYil(bitisTarihi)),
-        _egitimWordBilgiSatiri('Eğitim Süresi', `${_egitimSaatMetni(dakika)} (${dakika} dk)`, 'Eğitim Şekli', 'Yüz yüze'),
+        _egitimWordBilgiSatiri('Eğitim Süresi', `${_egitimSaatMetni(dakika)} (${dakika} dk)`, 'Eğitim Şekli', '☑ Yüz yüze   ☐ Uzaktan'),
         new docx.TableRow({ children: [_egitimWordEtiketHucre('Eğitim Türü'), _egitimWordDegerHucre(ilkTekrar === 'tekrar' ? 'Tekrar verilen temel eğitim' : 'İlk defa verilen temel eğitim', { columnSpan: 3, width: { size: 78, type: docx.WidthType.PERCENTAGE } })] })
       ]
     }),
@@ -494,9 +522,8 @@ async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
   const gecerlilikMetni = tur.hesaplama === 'tek' ? 'Süresiz' : (bitisTarihi ? gunAyYil(bitisTarihi) : '-');
 
   const cocuklar = [
-    ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })], spacing: { after: 150 } })] : []),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${tur.ad.toUpperCase()} BELGESİ`, bold: true, size: 28, color: '0B2C52' })], spacing: { after: 80 } }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 17, color: '374151' })], spacing: { after: 250 } }),
+    _egitimWordUstbilgi(logoBytes, `${tur.ad.toUpperCase()} BELGESİ`, belgeNo),
+    new docx.Paragraph({ text: '', spacing: { after: 150 } }),
     new docx.Paragraph({
       children: [new docx.TextRun({ text: `İşbu belge, `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: personel.adSoyad, bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: tur.ad, bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _EGT_WORD_METIN_BOYUT })],
       spacing: { after: 250 }
