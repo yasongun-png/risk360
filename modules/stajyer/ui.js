@@ -99,9 +99,8 @@ function stajyerSayfasiniBaslat(firma) {
       btn.disabled = false;
     }
   };
-  document.getElementById('sertAyarOlusturBtn').addEventListener('click', e => _sjSertifikaOlusturVeKapat(e.target, 'pdf'));
-  // Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
-  // formatında da indirmek istiyorum".
+  // Kullanıcı isteği: "sertifika sadece word olsun pdf istemiyorum" — PDF
+  // seçeneği kaldırıldı, sertifika artık her zaman Word olarak üretiliyor.
   document.getElementById('sertAyarWordBtn').addEventListener('click', e => _sjSertifikaOlusturVeKapat(e.target, 'word'));
 
   document.getElementById('sablonIndirBtn').addEventListener('click', () => {

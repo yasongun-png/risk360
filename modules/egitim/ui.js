@@ -687,9 +687,8 @@ function egitimSayfasiniBaslat(firma) {
       btn.disabled = false;
     }
   };
-  document.getElementById('sertAyarOlusturBtn').addEventListener('click', e => _sertifikaOlusturVeKapat(e.target, 'pdf'));
-  // Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
-  // formatında da indirmek istiyorum".
+  // Kullanıcı isteği: "sertifika sadece word olsun pdf istemiyorum" — PDF
+  // seçeneği kaldırıldı, sertifika artık her zaman Word olarak üretiliyor.
   document.getElementById('sertAyarWordBtn').addEventListener('click', e => _sertifikaOlusturVeKapat(e.target, 'word'));
 
   document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
@@ -886,8 +885,7 @@ function kayitTablosunuCiz(aramaMetni) {
         <div style="display:grid; grid-template-columns:repeat(2, auto); gap:4px;">
           <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
           <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
-          <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
-          <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika (Word)</button>
+          <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika</button>
           ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}" style="grid-column:1 / -1;">📄 Belge</button>` : ''}
         </div>
       </td>
@@ -913,25 +911,9 @@ function kayitTablosunuCiz(aramaMetni) {
     });
   });
 
-  govde.querySelectorAll('[data-sertifika]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-sertifika');
-      const kayit = egitimKaydiIdIleGetirRepo(id);
-      if (kayit && kayit.egitimTuruId === 'temel_isg') {
-        sertifikaAyarModalAc(id);
-        return;
-      }
-      btn.disabled = true;
-      try { await egitimSertifikasiOlustur(id); }
-      catch (hata) { console.error(hata); alert('Sertifika oluşturulamadı: ' + (hata.message || hata)); }
-      finally { btn.disabled = false; }
-    });
-  });
-
-  // Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
-  // formatında da indirmek istiyorum" — Temel İSG için ayar modalı zaten
-  // format seçimi sunuyor (Word/PDF butonları); diğer türlerde ayar
-  // gerekmediğinden burada doğrudan Word olarak üretilir.
+  // Kullanıcı isteği: "sertifika sadece word olsun pdf istemiyorum" — PDF
+  // seçeneği tamamen kaldırıldı, tek "Sertifika" butonu her zaman Word üretir
+  // (Temel İSG için ayar modalı açılır, diğer türlerde doğrudan üretilir).
   govde.querySelectorAll('[data-sertifika-word]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-sertifika-word');
