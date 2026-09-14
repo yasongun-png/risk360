@@ -881,12 +881,14 @@ function kayitTablosunuCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td><input type="checkbox" class="satir-secim" data-secim="${k.id}" ${_seciliKayitIdleri.has(k.id) ? 'checked' : ''}></td>
-      <td style="white-space:nowrap;">
-        <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
-        <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
-        <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika (Word)</button>
-        ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}">📄 Belge</button>` : ''}
-        <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
+      <td>
+        <div style="display:grid; grid-template-columns:repeat(2, auto); gap:4px;">
+          <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
+          <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
+          <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
+          <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika (Word)</button>
+          ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}" style="grid-column:1 / -1;">📄 Belge</button>` : ''}
+        </div>
       </td>
       <td>${_egKacir(k.personelAdi)}</td>
       <td>${_egKacir(k.personelIsveren) || '-'}</td>
