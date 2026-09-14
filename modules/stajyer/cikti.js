@@ -18,11 +18,30 @@ function _sjBelgeNoUret(stajyer, firma) {
 }
 
 // En güncel, feshedilmemiş Hizmet Sözleşmesi kaydından ad soyad getirir.
+// Kullanıcı isteği: "staj modülündeki İş Güvenliği Uzmanı ve İşyeri Hekimi
+// Bağfaş sicilinin uzmanı/hekimi olsun" — bir OSGB admin'i aynı anda birden
+// fazla sicil (ör. Bağfaş, Servis, Teknik) yönetebildiğinden, Hizmet
+// Sözleşmeleri'nde bu sicillerin HER BİRİ için ayrı ayrı kayıt olabilir
+// (bkz. model.js firmaId alanı). Önceden sadece "en son başlangıç tarihli"
+// kayıt alınıyordu — bu, aktif sicilde değil BAŞKA bir sicilde daha yeni bir
+// sözleşme varsa yanlış kişiyi getiriyordu. Artık önce AKTİF sicile
+// (aktifFirmaGetir) ait kayıtlar tercih edilir; hiç yoksa sicil belirtilmemiş
+// (firmaId boş) genel kayıtlara, o da yoksa (geriye dönük uyumluluk için)
+// eski davranışa döner.
 function _sjGorevliAdiGetir(gorevTuru) {
-  const liste = (typeof hizmetSozlesmeleriTumunuGetir === 'function' ? hizmetSozlesmeleriTumunuGetir() : [])
-    .filter(k => k.gorevTuru === gorevTuru && k.durum !== 'Feshedildi')
-    .sort((a, b) => (b.sozlesmeBaslangicTarihi || '').localeCompare(a.sozlesmeBaslangicTarihi || ''));
-  return liste[0] ? liste[0].adSoyad : '';
+  const tumu = (typeof hizmetSozlesmeleriTumunuGetir === 'function' ? hizmetSozlesmeleriTumunuGetir() : [])
+    .filter(k => k.gorevTuru === gorevTuru && k.durum !== 'Feshedildi');
+  const enGuncel = (liste) => liste.slice().sort((a, b) => (b.sozlesmeBaslangicTarihi || '').localeCompare(a.sozlesmeBaslangicTarihi || ''))[0];
+
+  const aktifFirma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const aktifSicilKaydi = aktifFirma ? enGuncel(tumu.filter(k => k.firmaId === aktifFirma.id)) : null;
+  if (aktifSicilKaydi) return aktifSicilKaydi.adSoyad;
+
+  const sicilsizKayit = enGuncel(tumu.filter(k => !k.firmaId));
+  if (sicilsizKayit) return sicilsizKayit.adSoyad;
+
+  const herhangiBirKayit = enGuncel(tumu);
+  return herhangiBirKayit ? herhangiBirKayit.adSoyad : '';
 }
 
 function _sjImzaSatirlariHtml() {
