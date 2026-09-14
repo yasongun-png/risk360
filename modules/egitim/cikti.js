@@ -336,9 +336,186 @@ async function _egitimGenelSertifikasiOlustur(kayit, personel, tur, firma) {
   mount.style.display = 'none';
 }
 
+// ==================== WORD SERTİFİKALARI ====================
+// Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
+// formatında da indirmek istiyorum" — PDF'teki metin/tablo içeriğiyle AYNI
+// bilgiler, sade bir Word belgesi olarak. PDF'in html2canvas ile "resme
+// çevrilmiş" görünümü (kenarlık, gölge vb.) yerine gerçek, düzenlenebilir
+// Word metni/tablosu kullanılır — biçim %100 pixel-eş değil ama içerik eksiksiz.
+async function _egitimGorselBaytlari(url) {
+  if (!url) return null;
+  try {
+    if (url.startsWith('data:')) {
+      const b64 = url.slice(url.indexOf(',') + 1);
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+    const res = await fetch(url);
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (e) {
+    return null;
+  }
+}
+
+const _EGT_WORD_METIN_BOYUT = 19;
+
+function _egitimWordHucre(children, opts = {}) {
+  return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 60, bottom: 60, left: 100, right: 100 }, ...opts });
+}
+function _egitimWordEtiketHucre(etiket) {
+  return _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: _EGT_WORD_METIN_BOYUT })] }), { width: { size: 22, type: docx.WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } });
+}
+function _egitimWordDegerHucre(deger, opts = {}) {
+  return _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger ?? '') || '-', size: _EGT_WORD_METIN_BOYUT })] }), { width: { size: 28, type: docx.WidthType.PERCENTAGE }, ...opts });
+}
+function _egitimWordBilgiSatiri(e1, d1, e2, d2, d2Opts) {
+  return new docx.TableRow({ children: [_egitimWordEtiketHucre(e1), _egitimWordDegerHucre(d1), _egitimWordEtiketHucre(e2), _egitimWordDegerHucre(d2, d2Opts)] });
+}
+function _egitimWordImzaTablosu() {
+  const isg = _egitimGorevliAdiGetir('İG Uzmanı');
+  const hekim = _egitimGorevliAdiGetir('İşyeri Hekimi');
+  const kenar = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const ustCizgi = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
+  const hucre = (ad, unvan) => new docx.TableCell({
+    borders: { top: ustCizgi, bottom: kenar, left: kenar, right: kenar },
+    margins: { top: 100 },
+    children: [
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || ' ', bold: true, size: _EGT_WORD_METIN_BOYUT })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] })
+    ]
+  });
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    borders: { top: kenar, bottom: kenar, left: kenar, right: kenar, insideHorizontal: kenar, insideVertical: kenar },
+    rows: [new docx.TableRow({ children: [hucre(isg, 'İş Güvenliği Uzmanı'), hucre(hekim, 'İşyeri Hekimi'), hucre('', 'İşveren Vekili')] })]
+  });
+}
+
+async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim) {
+  const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, firma);
+  const ilkTekrar = (secim && secim.ilkTekrar) || varsayilan.ilkTekrar;
+  const tehlikeSinifi = (secim && TEHLIKE_SINIFLARI.includes(secim.tehlikeSinifi)) ? secim.tehlikeSinifi : varsayilan.tehlikeSinifi;
+  const plan = _EGITIM_SURE_PLANI[ilkTekrar][tehlikeSinifi];
+  const dakika = _egitimToplamDakika(plan);
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, egitimTuruGetir('temel_isg'), firma);
+  const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
+  const logoBytes = await _egitimGorselBaytlari(firmaLogoGetir(firma.id));
+  const egitimTarihiGoruntu = kayit.tarih2 ? `${gunAyYil(kayit.tarih)} - ${gunAyYil(kayit.tarih2)}` : gunAyYil(kayit.tarih);
+
+  const onCocuklari = [
+    ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })], spacing: { after: 150 } })] : []),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ', bold: true, size: 28, color: '0B2C52' })], spacing: { after: 80 } }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 17, color: '374151' })], spacing: { after: 250 } }),
+    new docx.Paragraph({
+      children: [new docx.TextRun({ text: `İşbu belge, `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: personel.adSoyad, bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik kapsamında `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: 'Temel İş Sağlığı ve Güvenliği Eğitimi', bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _EGT_WORD_METIN_BOYUT })],
+      spacing: { after: 250 }
+    }),
+    new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        _egitimWordBilgiSatiri('Adı Soyadı', personel.adSoyad, 'Sicil No', personel.sicilNo),
+        _egitimWordBilgiSatiri('Görevi', personel.gorev, 'Bölüm', personel.bolum),
+        _egitimWordBilgiSatiri('İşyeri Ünvanı', personel.isveren || firma.ad, 'Tehlike Sınıfı', tehlikeSinifi),
+        _egitimWordBilgiSatiri('Eğitim Tarihi', egitimTarihiGoruntu, 'Geçerlilik Tarihi', gunAyYil(bitisTarihi)),
+        _egitimWordBilgiSatiri('Eğitim Süresi', `${_egitimSaatMetni(dakika)} (${dakika} dk)`, 'Eğitim Şekli', 'Yüz yüze'),
+        new docx.TableRow({ children: [_egitimWordEtiketHucre('Eğitim Türü'), _egitimWordDegerHucre(ilkTekrar === 'tekrar' ? 'Tekrar verilen temel eğitim' : 'İlk defa verilen temel eğitim', { columnSpan: 3, width: { size: 78, type: docx.WidthType.PERCENTAGE } })] })
+      ]
+    }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [new docx.TextRun({ text: gunAyYil(kayit.tarih2 || kayit.tarih), size: 17, color: '374151' })], spacing: { before: 200, after: 300 } }),
+    _egitimWordImzaTablosu()
+  ];
+
+  const konuSatirlari = (baslik, konular, sureler) => {
+    const toplam = sureler.reduce((a, b) => a + (Number(b) || 0), 0);
+    return [
+      new docx.TableRow({ children: [_egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: _EGT_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+      ...konular.map((k, i) => new docx.TableRow({ children: [
+        _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _EGT_WORD_METIN_BOYUT })] })),
+        _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${sureler[i] || 0} dk`, size: _EGT_WORD_METIN_BOYUT })] }))
+      ]})),
+      new docx.TableRow({ children: [
+        _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: `${baslik} toplamı`, bold: true, size: _EGT_WORD_METIN_BOYUT })] })),
+        _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(toplam), bold: true, size: _EGT_WORD_METIN_BOYUT })] }))
+      ]})
+    ];
+  };
+  const digerToplam = plan.diger.reduce((a, r) => a + (Number(r[1]) || 0), 0);
+
+  const arkaCocuklari = [
+    new docx.Paragraph({ text: 'EĞİTİM KONULARI VE SÜRELERİ', heading: docx.HeadingLevel.HEADING_2 }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: `Katılımcı: ${personel.adSoyad}   •   Tehlike Sınıfı: ${tehlikeSinifi}   •   Toplam: ${_egitimSaatMetni(dakika)}`, size: 16, color: '374151' })], spacing: { after: 200 } }),
+    new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        new docx.TableRow({ tableHeader: true, children: ['EĞİTİM KONULARI', 'SÜRE'].map(h => _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: _EGT_WORD_METIN_BOYUT, color: 'FFFFFF' })] }), { shading: { fill: '0B2C52', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
+        ...konuSatirlari('1. Genel Konular', _EGITIM_KONULARI.genel, plan.genel),
+        ...konuSatirlari('2. Sağlık Konuları', _EGITIM_KONULARI.saglik, plan.saglik),
+        ...konuSatirlari('3. Teknik Konular', _EGITIM_KONULARI.teknik, plan.teknik),
+        new docx.TableRow({ children: [_egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. İşe ve işyerine özgü riskler / risk değerlendirmesine dayalı konular', bold: true, size: _EGT_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+        ...plan.diger.map(([k, s]) => new docx.TableRow({ children: [
+          _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _EGT_WORD_METIN_BOYUT })] })),
+          _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${s} dk`, size: _EGT_WORD_METIN_BOYUT })] }))
+        ]})),
+        new docx.TableRow({ children: [
+          _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. Diğer konular toplamı', bold: true, size: _EGT_WORD_METIN_BOYUT })] })),
+          _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(digerToplam), bold: true, size: _EGT_WORD_METIN_BOYUT })] }))
+        ]}),
+        new docx.TableRow({ children: [
+          _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: 'GENEL TOPLAM', bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } }),
+          _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(dakika), bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })
+        ]})
+      ]
+    })
+  ];
+
+  const kenar = { top: 720, right: 720, bottom: 720, left: 720 };
+  const doc = new docx.Document({
+    sections: [
+      { properties: { page: { margin: kenar } }, children: onCocuklari },
+      { properties: { page: { margin: kenar } }, children: arkaCocuklari }
+    ]
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `${personel.adSoyad}_Temel_ISG_Sertifikasi`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx');
+}
+
+async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
+  const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma);
+  const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
+  const logoBytes = await _egitimGorselBaytlari(firmaLogoGetir(firma.id));
+  const gecerlilikMetni = tur.hesaplama === 'tek' ? 'Süresiz' : (bitisTarihi ? gunAyYil(bitisTarihi) : '-');
+
+  const cocuklar = [
+    ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })], spacing: { after: 150 } })] : []),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${tur.ad.toUpperCase()} BELGESİ`, bold: true, size: 28, color: '0B2C52' })], spacing: { after: 80 } }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 17, color: '374151' })], spacing: { after: 250 } }),
+    new docx.Paragraph({
+      children: [new docx.TextRun({ text: `İşbu belge, `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: personel.adSoyad, bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; `, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: tur.ad, bold: true, size: _EGT_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _EGT_WORD_METIN_BOYUT })],
+      spacing: { after: 250 }
+    }),
+    new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        _egitimWordBilgiSatiri('Adı Soyadı', personel.adSoyad, 'Sicil No', personel.sicilNo),
+        _egitimWordBilgiSatiri('Görevi', personel.gorev, 'Bölüm', personel.bolum),
+        _egitimWordBilgiSatiri('Firma', personel.isveren || firma.ad, 'Eğitim/Belge Tarihi', gunAyYil(kayit.tarih)),
+        _egitimWordBilgiSatiri('Geçerlilik', gecerlilikMetni, 'Süre', kayit.saat ? `${kayit.saat} Saat` : '-')
+      ]
+    }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [new docx.TextRun({ text: gunAyYil(kayit.tarih), size: 17, color: '374151' })], spacing: { before: 200, after: 300 } }),
+    _egitimWordImzaTablosu()
+  ];
+
+  const doc = new docx.Document({ sections: [{ properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: cocuklar }] });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `${personel.adSoyad}_${tur.ad}_Sertifikasi`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx');
+}
+
 // ---- Genel API ----
 
-async function egitimSertifikasiOlustur(id, secim) {
+async function egitimSertifikasiOlustur(id, secim, format) {
   const kayit = egitimKaydiIdIleGetirRepo(id);
   if (!kayit) return;
   const personel = personelIdIleGetirRepo(kayit.personelId);
@@ -351,9 +528,11 @@ async function egitimSertifikasiOlustur(id, secim) {
   }
 
   if (tur.id === 'temel_isg') {
-    await _egitimTemelSertifikasiOlustur(kayit, personel, firma, secim);
+    if (format === 'word') await _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim);
+    else await _egitimTemelSertifikasiOlustur(kayit, personel, firma, secim);
   } else {
-    await _egitimGenelSertifikasiOlustur(kayit, personel, tur, firma);
+    if (format === 'word') await _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma);
+    else await _egitimGenelSertifikasiOlustur(kayit, personel, tur, firma);
   }
 }
 

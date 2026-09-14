@@ -579,17 +579,16 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('sertEgitimTuru').addEventListener('change', _sertifikaSureOnizlemesiGuncelle);
   document.getElementById('sertAyarIptalBtn').addEventListener('click', sertifikaAyarModalKapat);
   document.getElementById('sertAyarKapatBtn').addEventListener('click', sertifikaAyarModalKapat);
-  document.getElementById('sertAyarOlusturBtn').addEventListener('click', async () => {
+  const _sertifikaOlusturVeKapat = async (btn, format) => {
     const id = _sertifikaKayitId;
     if (!id) return;
     const secim = {
       tehlikeSinifi: document.getElementById('sertTehlikeSinifi').value,
       ilkTekrar: document.getElementById('sertEgitimTuru').value
     };
-    const btn = document.getElementById('sertAyarOlusturBtn');
     btn.disabled = true;
     try {
-      await egitimSertifikasiOlustur(id, secim);
+      await egitimSertifikasiOlustur(id, secim, format);
       sertifikaAyarModalKapat();
     } catch (hata) {
       console.error(hata);
@@ -597,7 +596,11 @@ function egitimSayfasiniBaslat(firma) {
     } finally {
       btn.disabled = false;
     }
-  });
+  };
+  document.getElementById('sertAyarOlusturBtn').addEventListener('click', e => _sertifikaOlusturVeKapat(e.target, 'pdf'));
+  // Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
+  // formatında da indirmek istiyorum".
+  document.getElementById('sertAyarWordBtn').addEventListener('click', e => _sertifikaOlusturVeKapat(e.target, 'word'));
 
   document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
     const gorunenler = egitimKayitlariniGetir(document.getElementById('aramaKutusu').value, _aktifFirma);
@@ -794,6 +797,7 @@ function kayitTablosunuCiz(aramaMetni) {
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-sertifika="${k.id}">Sertifika</button>
+        <button class="tablo-buton" data-sertifika-word="${k.id}">Sertifika (Word)</button>
         ${k.belgeDosyasi ? `<button class="tablo-buton" data-belge-ac="${k.belgeDosyasi}">📄 Belge</button>` : ''}
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
@@ -822,6 +826,25 @@ function kayitTablosunuCiz(aramaMetni) {
       }
       btn.disabled = true;
       try { await egitimSertifikasiOlustur(id); }
+      catch (hata) { console.error(hata); alert('Sertifika oluşturulamadı: ' + (hata.message || hata)); }
+      finally { btn.disabled = false; }
+    });
+  });
+
+  // Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
+  // formatında da indirmek istiyorum" — Temel İSG için ayar modalı zaten
+  // format seçimi sunuyor (Word/PDF butonları); diğer türlerde ayar
+  // gerekmediğinden burada doğrudan Word olarak üretilir.
+  govde.querySelectorAll('[data-sertifika-word]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-sertifika-word');
+      const kayit = egitimKaydiIdIleGetirRepo(id);
+      if (kayit && kayit.egitimTuruId === 'temel_isg') {
+        sertifikaAyarModalAc(id);
+        return;
+      }
+      btn.disabled = true;
+      try { await egitimSertifikasiOlustur(id, null, 'word'); }
       catch (hata) { console.error(hata); alert('Sertifika oluşturulamadı: ' + (hata.message || hata)); }
       finally { btn.disabled = false; }
     });

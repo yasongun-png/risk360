@@ -111,7 +111,146 @@ function stajyerSertifikaSuresiHesapla(tehlikeSinifi) {
   return sertifikaToplamDakikaHesapla(plan);
 }
 
-async function stajyerSertifikasiOlustur(id, secim) {
+// ==================== WORD SERTİFİKASI ====================
+// Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
+// formatında da indirmek istiyorum" — bkz. modules/egitim/cikti.js
+// _egitimTemelSertifikasiWordOlustur ile aynı desen (modüller arası script
+// paylaşımı olmadığından burada yerel olarak yeniden tanımlandı).
+async function _sjGorselBaytlari(url) {
+  if (!url) return null;
+  try {
+    if (url.startsWith('data:')) {
+      const b64 = url.slice(url.indexOf(',') + 1);
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+    const res = await fetch(url);
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (e) {
+    return null;
+  }
+}
+
+const _SJ_WORD_METIN_BOYUT = 19;
+
+function _sjWordHucre(children, opts = {}) {
+  return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 60, bottom: 60, left: 100, right: 100 }, ...opts });
+}
+function _sjWordEtiketHucre(etiket) {
+  return _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: _SJ_WORD_METIN_BOYUT })] }), { width: { size: 22, type: docx.WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } });
+}
+function _sjWordDegerHucre(deger, opts = {}) {
+  return _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger ?? '') || '-', size: _SJ_WORD_METIN_BOYUT })] }), { width: { size: 28, type: docx.WidthType.PERCENTAGE }, ...opts });
+}
+function _sjWordBilgiSatiri(e1, d1, e2, d2, d2Opts) {
+  return new docx.TableRow({ children: [_sjWordEtiketHucre(e1), _sjWordDegerHucre(d1), _sjWordEtiketHucre(e2), _sjWordDegerHucre(d2, d2Opts)] });
+}
+function _sjWordImzaTablosu() {
+  const isg = _sjGorevliAdiGetir('İG Uzmanı');
+  const hekim = _sjGorevliAdiGetir('İşyeri Hekimi');
+  const kenar = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const ustCizgi = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
+  const hucre = (ad, unvan) => new docx.TableCell({
+    borders: { top: ustCizgi, bottom: kenar, left: kenar, right: kenar },
+    margins: { top: 100 },
+    children: [
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || ' ', bold: true, size: _SJ_WORD_METIN_BOYUT })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] })
+    ]
+  });
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    borders: { top: kenar, bottom: kenar, left: kenar, right: kenar, insideHorizontal: kenar, insideVertical: kenar },
+    rows: [new docx.TableRow({ children: [hucre(isg, 'İş Güvenliği Uzmanı'), hucre(hekim, 'İşyeri Hekimi'), hucre('', 'İşveren Vekili')] })]
+  });
+}
+
+async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, plan) {
+  const belgeNo = _sjBelgeNoUret(stajyer, firma);
+  const logoBytes = await _sjGorselBaytlari(firmaLogoGetir(firma.id));
+  const egitimTarihiGoruntu = stajyer.isgEgitimTarihi2 ? `${gunAyYil(stajyer.isgEgitimTarihi)} - ${gunAyYil(stajyer.isgEgitimTarihi2)}` : gunAyYil(stajyer.isgEgitimTarihi);
+  const sonGunTarihi = isgEgitimEfektifTarihi(stajyer);
+
+  const onCocuklari = [
+    ...(logoBytes ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })], spacing: { after: 150 } })] : []),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'TEMEL İŞ SAĞLIĞI VE GÜVENLİĞİ EĞİTİMİ', bold: true, size: 28, color: '0B2C52' })], spacing: { after: 80 } }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 17, color: '374151' })], spacing: { after: 250 } }),
+    new docx.Paragraph({
+      children: [new docx.TextRun({ text: `İşbu belge, `, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: stajyer.adSoyad, bold: true, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik kapsamında `, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: 'Temel İş Sağlığı ve Güvenliği Eğitimi', bold: true, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _SJ_WORD_METIN_BOYUT })],
+      spacing: { after: 250 }
+    }),
+    new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        new docx.TableRow({ children: [_sjWordEtiketHucre('Adı Soyadı'), _sjWordDegerHucre(stajyer.adSoyad, { columnSpan: 3, width: { size: 78, type: docx.WidthType.PERCENTAGE } })] }),
+        _sjWordBilgiSatiri('Okul', stajyer.okul, 'Okul Bölümü', stajyer.okulBolumu),
+        _sjWordBilgiSatiri('Staj Yapılan Bölüm', stajyer.bolum, 'Sınıf / Dönem', stajyer.sinif),
+        _sjWordBilgiSatiri('İşyeri Ünvanı', firma.ad, 'Tehlike Sınıfı', tehlikeSinifi),
+        _sjWordBilgiSatiri('Eğitim Tarihi', egitimTarihiGoruntu, 'Geçerlilik Tarihi', gunAyYil(veri.gecerlilikTarihi)),
+        _sjWordBilgiSatiri('Eğitim Süresi', `${veri.toplamSure} (${veri.toplamDakika} dk)`, 'Eğitim Şekli', 'Yüz yüze')
+      ]
+    }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [new docx.TextRun({ text: gunAyYil(sonGunTarihi), size: 17, color: '374151' })], spacing: { before: 200, after: 300 } }),
+    _sjWordImzaTablosu()
+  ];
+
+  const konuSatirlari = (baslik, konular, sureler) => {
+    const toplam = sureler.reduce((a, b) => a + (Number(b) || 0), 0);
+    return [
+      new docx.TableRow({ children: [_sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: _SJ_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+      ...konular.map((k, i) => new docx.TableRow({ children: [
+        _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _SJ_WORD_METIN_BOYUT })] })),
+        _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${sureler[i] || 0} dk`, size: _SJ_WORD_METIN_BOYUT })] }))
+      ]})),
+      new docx.TableRow({ children: [
+        _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: `${baslik} toplamı`, bold: true, size: _SJ_WORD_METIN_BOYUT })] })),
+        _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: dakikayiSaateCevir(toplam), bold: true, size: _SJ_WORD_METIN_BOYUT })] }))
+      ]})
+    ];
+  };
+  const digerToplam = plan.diger.reduce((a, r) => a + (Number(r[1]) || 0), 0);
+
+  const arkaCocuklari = [
+    new docx.Paragraph({ text: 'EĞİTİM KONULARI VE SÜRELERİ', heading: docx.HeadingLevel.HEADING_2 }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: `Katılımcı: ${stajyer.adSoyad}   •   Tehlike Sınıfı: ${tehlikeSinifi}   •   Toplam: ${veri.toplamSure}`, size: 16, color: '374151' })], spacing: { after: 200 } }),
+    new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        new docx.TableRow({ tableHeader: true, children: ['EĞİTİM KONULARI', 'SÜRE'].map(h => _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: _SJ_WORD_METIN_BOYUT, color: 'FFFFFF' })] }), { shading: { fill: '0B2C52', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
+        ...konuSatirlari('1. Genel Konular', SERTIFIKA_KONULARI.genel, plan.genel),
+        ...konuSatirlari('2. Sağlık Konuları', SERTIFIKA_KONULARI.saglik, plan.saglik),
+        ...konuSatirlari('3. Teknik Konular', SERTIFIKA_KONULARI.teknik, plan.teknik),
+        new docx.TableRow({ children: [_sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. İşe ve işyerine özgü riskler / risk değerlendirmesine dayalı konular', bold: true, size: _SJ_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+        ...plan.diger.map(([k, s]) => new docx.TableRow({ children: [
+          _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _SJ_WORD_METIN_BOYUT })] })),
+          _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${s} dk`, size: _SJ_WORD_METIN_BOYUT })] }))
+        ]})),
+        new docx.TableRow({ children: [
+          _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. Diğer konular toplamı', bold: true, size: _SJ_WORD_METIN_BOYUT })] })),
+          _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: dakikayiSaateCevir(digerToplam), bold: true, size: _SJ_WORD_METIN_BOYUT })] }))
+        ]}),
+        new docx.TableRow({ children: [
+          _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: 'GENEL TOPLAM', bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } }),
+          _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: veri.toplamSure, bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })
+        ]})
+      ]
+    })
+  ];
+
+  const kenar = { top: 720, right: 720, bottom: 720, left: 720 };
+  const doc = new docx.Document({
+    sections: [
+      { properties: { page: { margin: kenar } }, children: onCocuklari },
+      { properties: { page: { margin: kenar } }, children: arkaCocuklari }
+    ]
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `${stajyer.adSoyad}_Temel_ISG_Sertifikasi`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx');
+}
+
+async function stajyerSertifikasiOlustur(id, secim, format) {
   const stajyer = stajyerIdIleGetirRepo(id);
   if (!stajyer || !stajyer.isgEgitimTarihi) {
     alert('Sertifika oluşturulamadı: Temel İSG Eğitim Tarihi girilmemiş.');
@@ -122,6 +261,11 @@ async function stajyerSertifikasiOlustur(id, secim) {
   if (!firma) { alert('Sertifika oluşturulamadı: firma bilgisi eksik.'); return; }
 
   const tehlikeSinifi = (secim && TEHLIKE_SINIFLARI.includes(secim.tehlikeSinifi)) ? secim.tehlikeSinifi : ((TEHLIKE_SINIFLARI.includes(firma.tehlikeSinifi) ? firma.tehlikeSinifi : 'Az Tehlikeli'));
+  if (format === 'word') {
+    const veriOnizleme = sertifikaVerisiOlustur(stajyer, { tehlikeSinifi });
+    await _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veriOnizleme, veriOnizleme.plan);
+    return;
+  }
   const veri = sertifikaVerisiOlustur(stajyer, { tehlikeSinifi });
   const plan = veri.plan;
   const belgeNo = _sjBelgeNoUret(stajyer, firma);

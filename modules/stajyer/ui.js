@@ -84,14 +84,13 @@ function stajyerSayfasiniBaslat(firma) {
   document.getElementById('sertTehlikeSinifi').addEventListener('change', _sertifikaSureOnizlemesiGuncelle);
   document.getElementById('sertAyarIptalBtn').addEventListener('click', sertifikaAyarModalKapat);
   document.getElementById('sertAyarKapatBtn').addEventListener('click', sertifikaAyarModalKapat);
-  document.getElementById('sertAyarOlusturBtn').addEventListener('click', async () => {
+  const _sjSertifikaOlusturVeKapat = async (btn, format) => {
     const id = _sertifikaKayitId;
     if (!id) return;
     const secim = { tehlikeSinifi: document.getElementById('sertTehlikeSinifi').value };
-    const btn = document.getElementById('sertAyarOlusturBtn');
     btn.disabled = true;
     try {
-      await stajyerSertifikasiOlustur(id, secim);
+      await stajyerSertifikasiOlustur(id, secim, format);
       sertifikaAyarModalKapat();
     } catch (hata) {
       console.error(hata);
@@ -99,7 +98,11 @@ function stajyerSayfasiniBaslat(firma) {
     } finally {
       btn.disabled = false;
     }
-  });
+  };
+  document.getElementById('sertAyarOlusturBtn').addEventListener('click', e => _sjSertifikaOlusturVeKapat(e.target, 'pdf'));
+  // Kullanıcı isteği: "eğitim ve stajdaki sertifikaların aynısını Word
+  // formatında da indirmek istiyorum".
+  document.getElementById('sertAyarWordBtn').addEventListener('click', e => _sjSertifikaOlusturVeKapat(e.target, 'word'));
 
   document.getElementById('sablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(STAJYER_IMPORT_KOLONLARI, 'stajyer_sablonu.xlsx');
