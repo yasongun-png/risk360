@@ -240,10 +240,15 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
   ];
 
   const kenar = { top: 720, right: 720, bottom: 720, left: 720 };
+  // Kullanıcı isteği: "yaptığın sertifikalar PDF raporu ile aynı olmalı,
+  // ilk sayfa yatay ikincisi dikey olacak" — PDF'teki .egt-sayfa çerçevesiyle
+  // (border:3px solid #0b2c52) aynı görünüm için sayfa kenarlığı da eklendi.
+  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '0B2C52', space: 24 };
+  const cerceveKenari = { borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' } };
   const doc = new docx.Document({
     sections: [
-      { properties: { page: { margin: kenar } }, children: onCocuklari },
-      { properties: { page: { margin: kenar } }, children: arkaCocuklari }
+      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: kenar, ...cerceveKenari } }, children: onCocuklari },
+      { properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: kenar, ...cerceveKenari } }, children: arkaCocuklari }
     ]
   });
   const blob = await docx.Packer.toBlob(doc);

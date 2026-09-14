@@ -471,10 +471,16 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
   ];
 
   const kenar = { top: 720, right: 720, bottom: 720, left: 720 };
+  // Kullanıcı isteği: "yaptığın sertifikalar PDF raporu ile aynı olmalı" —
+  // PDF'teki gibi ilk sayfa YATAY (297x210mm ön yüz), ikinci sayfa DİKEY
+  // (210x297mm konu/süre tablosu); ayrıca PDF'teki .egt-sayfa çerçevesiyle
+  // (border:3px solid #0b2c52) aynı görünüm için sayfa kenarlığı eklendi.
+  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '0B2C52', space: 24 };
+  const cerceveKenari = { borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' } };
   const doc = new docx.Document({
     sections: [
-      { properties: { page: { margin: kenar } }, children: onCocuklari },
-      { properties: { page: { margin: kenar } }, children: arkaCocuklari }
+      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: kenar, ...cerceveKenari } }, children: onCocuklari },
+      { properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: kenar, ...cerceveKenari } }, children: arkaCocuklari }
     ]
   });
   const blob = await docx.Packer.toBlob(doc);
@@ -508,7 +514,12 @@ async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
     _egitimWordImzaTablosu()
   ];
 
-  const doc = new docx.Document({ sections: [{ properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children: cocuklar }] });
+  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '0B2C52', space: 24 };
+  const doc = new docx.Document({ sections: [{ properties: { page: {
+    size: { orientation: docx.PageOrientation.LANDSCAPE },
+    margin: { top: 720, right: 720, bottom: 720, left: 720 },
+    borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' }
+  } }, children: cocuklar }] });
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `${personel.adSoyad}_${tur.ad}_Sertifikasi`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx');
 }
