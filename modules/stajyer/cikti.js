@@ -111,8 +111,10 @@ async function _sjGorselBaytlari(url) {
 
 const _SJ_WORD_METIN_BOYUT = 19;
 
+// Kullanıcı isteği: "pdf de sayfaya daha fazla yayılıyor word de üstte
+// toplanıyor" — bkz. modules/egitim/cikti.js _egitimWordHucre aynı düzeltme.
 function _sjWordHucre(children, opts = {}) {
-  return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 60, bottom: 60, left: 100, right: 100 }, ...opts });
+  return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 140, bottom: 140, left: 120, right: 120 }, ...opts });
 }
 function _sjWordEtiketHucre(etiket) {
   return _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: _SJ_WORD_METIN_BOYUT })] }), { width: { size: 22, type: docx.WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } });
@@ -131,14 +133,14 @@ function _sjWordUstbilgi(logoBytes, baslik, belgeNo) {
   const logoHucre = new docx.TableCell({
     borders: { top: kenar, left: kenar, right: kenar, bottom: altCizgi },
     width: { size: 20, type: docx.WidthType.PERCENTAGE },
-    margins: { bottom: 150 },
+    margins: { bottom: 340, top: 100 },
     children: [logoBytes ? new docx.Paragraph({ children: [new docx.ImageRun({ data: logoBytes, transformation: { width: 90, height: 60 } })] }) : new docx.Paragraph({ text: '' })]
   });
   const baslikHucre = new docx.TableCell({
     borders: { top: kenar, left: kenar, right: kenar, bottom: altCizgi },
     width: { size: 80, type: docx.WidthType.PERCENTAGE },
     verticalAlign: docx.VerticalAlign.CENTER,
-    margins: { bottom: 150 },
+    margins: { bottom: 340, top: 100 },
     children: [
       new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: 28, color: '0B2C52' })] }),
       new docx.Paragraph({ children: [new docx.TextRun({ text: `Belge No: ${belgeNo}`, size: 15, color: '374151' })], spacing: { before: 40 } })
@@ -159,7 +161,7 @@ function _sjWordImzaTablosu() {
   const ustCizgi = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
   const hucre = (ad, unvan) => new docx.TableCell({
     borders: { top: ustCizgi, bottom: kenar, left: kenar, right: kenar },
-    margins: { top: 100 },
+    margins: { top: 200, bottom: 150 },
     children: [
       new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || ' ', bold: true, size: _SJ_WORD_METIN_BOYUT })] }),
       new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] }),
@@ -184,7 +186,7 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
     new docx.Paragraph({ text: '', spacing: { after: 150 } }),
     new docx.Paragraph({
       children: [new docx.TextRun({ text: `İşbu belge, `, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: stajyer.adSoyad, bold: true, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: ` adına; Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik kapsamında `, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: 'Temel İş Sağlığı ve Güvenliği Eğitimi', bold: true, size: _SJ_WORD_METIN_BOYUT }), new docx.TextRun({ text: `'ni tamamlaması üzerine düzenlenmiştir.`, size: _SJ_WORD_METIN_BOYUT })],
-      spacing: { after: 250 }
+      spacing: { after: 400 }
     }),
     new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
@@ -197,7 +199,7 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
         _sjWordBilgiSatiri('Eğitim Süresi', `${veri.toplamSure} (${veri.toplamDakika} dk)`, 'Eğitim Şekli', '☑ Yüz yüze   ☐ Uzaktan')
       ]
     }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [new docx.TextRun({ text: gunAyYil(sonGunTarihi), size: 17, color: '374151' })], spacing: { before: 200, after: 300 } }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [new docx.TextRun({ text: gunAyYil(sonGunTarihi), size: 17, color: '374151' })], spacing: { before: 400, after: 900 } }),
     _sjWordImzaTablosu()
   ];
 
