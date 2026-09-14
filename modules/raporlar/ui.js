@@ -44,8 +44,24 @@ function _rpYeterlilikTablosu(satirlar) {
   </table></div>`;
 }
 
+// Kullanıcı isteği: "raporlarda yıllık devirdaim + aylık bazda devirdaim
+// oranı görünsün" -- bkz. service.js raporDevirDaimOzeti (aylık liste bu
+// yılın başından bugüne kadar, ileri aylar hesaba katılmadan).
+function _rpDevirDaimAylikTablosu(aylikListe) {
+  return `<div class="tablo-scroll"><table class="veri-tablosu">
+    <thead><tr><th>Ay</th><th>İşe Başlayan</th><th>İşten Ayrılan</th><th>Devir Daim Oranı</th></tr></thead>
+    <tbody>${aylikListe.map(a => `
+      <tr>
+        <td>${_raporKacir(a.ay)}</td>
+        <td>${a.baslayan}</td>
+        <td>${a.ayrilan}</td>
+        <td>%${a.oran.toLocaleString('tr-TR')}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
 function raporlarSayfasiniCiz(ozet) {
-  const pe = ozet.personelEgitim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
+  const pe = ozet.personelEgitim, dd = ozet.devirDaim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
     mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi, ma = ozet.merkeziAksiyon;
 
@@ -70,6 +86,18 @@ function raporlarSayfasiniCiz(ozet) {
       ${_rpKart('30 Gün İçinde Yenilenecek', pe.yaklasan)}
       ${_rpKart('Süresi Geçmiş / Eksik Eğitim', pe.gecmisVeyaYok, pe.gecmisVeyaYok > 0)}
     </div>
+
+    ${_rpBolumBasligi('Personel Devir Daim')}
+    <div class="istatistik-grid">
+      ${_rpKart('Bu Ay İşe Başlayan', dd.buAyIseBaslayan)}
+      ${_rpKart('Bu Yıl İşe Başlayan', dd.buYilIseBaslayan)}
+      ${_rpKart('Bu Ay İşten Ayrılan', dd.buAyAyrilan)}
+      ${_rpKart('Bu Yıl İşten Ayrılan', dd.buYilAyrilan)}
+      ${_rpKart('Aylık Devir Daim Oranı', '%' + dd.aylikDevirDaimOrani.toLocaleString('tr-TR'))}
+      ${_rpKart('Yıllık Devir Daim Oranı', '%' + dd.yillikDevirDaimOrani.toLocaleString('tr-TR'))}
+    </div>
+    <p style="font-size:12px; font-weight:700; color:var(--metin-soluk); margin:14px 0 4px;">Aylık Bazda Devir Daim Oranı</p>
+    ${_rpDevirDaimAylikTablosu(dd.aylikListe)}
 
     ${_rpBolumBasligi('Risk Değerlendirmesi')}
     <div class="istatistik-grid">
@@ -170,7 +198,7 @@ function raporlarSayfasiniCiz(ozet) {
 }
 
 function raporOzetiYazdir(ozet, firmaAdi) {
-  const pe = ozet.personelEgitim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
+  const pe = ozet.personelEgitim, dd = ozet.devirDaim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
     mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi, ma = ozet.merkeziAksiyon;
 
@@ -182,6 +210,9 @@ function raporOzetiYazdir(ozet, firmaAdi) {
     <table>
       ${satir('Aktif Personel', pe.personelSayisi)}
       ${satir('Eğitim Uyum Oranı', pe.uyumYuzdesi + '%')}
+      ${satir('Bu Ay/Bu Yıl İşe Başlayan', dd.buAyIseBaslayan + ' / ' + dd.buYilIseBaslayan)}
+      ${satir('Bu Ay/Bu Yıl İşten Ayrılan', dd.buAyAyrilan + ' / ' + dd.buYilAyrilan)}
+      ${satir('Aylık/Yıllık Devir Daim Oranı', '%' + dd.aylikDevirDaimOrani.toLocaleString('tr-TR') + ' / %' + dd.yillikDevirDaimOrani.toLocaleString('tr-TR'))}
       ${satir('Açık Risk Değerlendirmesi / Gecikmiş', r.acikSayisi + ' / ' + r.gecikmis)}
       ${satir('Son 12 Ay Olay/Kaza Sayısı / Toplam Kayıp Gün', ok.son12AySayisi + ' / ' + ok.toplamKayipGun)}
       ${satir('Açık Uygunsuzluk-DÖF / Gecikmiş', u.acikSayisi + ' / ' + u.gecikmis)}

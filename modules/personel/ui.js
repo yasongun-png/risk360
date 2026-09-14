@@ -342,8 +342,26 @@ function sekmeSayilariniGuncelle() {
   document.getElementById('sekmeArsiv').textContent = `İşten Ayrılanlar (${sayilar.arsiv})`;
 }
 
+function _prsKart(etiket, deger) {
+  return `<div class="istatistik-kutu"><span>${etiket}</span><b>${deger}</b></div>`;
+}
+
+function _prsDevirDaimIstatistikleriniCiz() {
+  const kutu = document.getElementById('devirDaimIstatistikleri');
+  if (!kutu) return;
+  const dd = personelDevirDaimIstatistikleri();
+  kutu.innerHTML = [
+    _prsKart('Bu Ay İşe Başlayan', dd.buAyIseBaslayan),
+    _prsKart('Bu Yıl İşe Başlayan', dd.buYilIseBaslayan),
+    _prsKart('Bu Ay İşten Ayrılan', dd.buAyAyrilan),
+    _prsKart('Bu Yıl İşten Ayrılan', dd.buYilAyrilan),
+    _prsKart('Yıllık Devir Daim Oranı', '%' + dd.yillikDevirDaimOrani.toLocaleString('tr-TR'))
+  ].join('');
+}
+
 function tabloyuCiz(aramaMetni) {
   sekmeSayilariniGuncelle();
+  _prsDevirDaimIstatistikleriniCiz();
 
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');

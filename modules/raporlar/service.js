@@ -105,6 +105,58 @@ function raporPersonelEgitimOzeti(firma) {
   };
 }
 
+// Kullanıcı isteği: "bu ay/bu yıl işe başlayan-ayrılan sayıları ve yıllık
+// devir daim oranı + raporlarda aylık bazda devir daim oranı görünsün" --
+// devir daim oranı = (dönem içinde ayrılan sayısı / dönemin ortalama aktif
+// personel sayısı [dönem başı+dönem sonu ortalaması]) x 100. Personel arşive
+// düşse de (istenCikisTarihi doluysa) geçmiş tarihte aktif sayılabilmesi için
+// arşivlenmiş kayıtlar dahil TÜM personel (filtre uygulanmadan) okunur.
+function _rpAktifPersonelSayisi(tumu, tarihStr) {
+  return tumu.filter(p => p.iseGirisTarihi && p.iseGirisTarihi <= tarihStr && (!p.istenCikisTarihi || p.istenCikisTarihi > tarihStr)).length;
+}
+
+function _rpDevirDaimOraniHesapla(tumu, basTarihi, sonTarihi, ayrilanSayisi) {
+  const ortalama = (_rpAktifPersonelSayisi(tumu, basTarihi) + _rpAktifPersonelSayisi(tumu, sonTarihi)) / 2;
+  return ortalama > 0 ? Math.round((ayrilanSayisi / ortalama) * 1000) / 10 : 0;
+}
+
+function raporDevirDaimOzeti() {
+  const tumu = oku(tenantAnahtar('personel'), []);
+  const bugun = new Date();
+  const yil = bugun.getFullYear();
+  const bugunStr = _rpBugun();
+  const yilBasi = `${yil}-01-01`;
+  const ayBasi = `${yil}-${String(bugun.getMonth() + 1).padStart(2, '0')}-01`;
+
+  const buAyIseBaslayan = tumu.filter(p => p.iseGirisTarihi >= ayBasi && p.iseGirisTarihi <= bugunStr).length;
+  const buYilIseBaslayan = tumu.filter(p => p.iseGirisTarihi >= yilBasi && p.iseGirisTarihi <= bugunStr).length;
+  const buAyAyrilan = tumu.filter(p => p.istenCikisTarihi && p.istenCikisTarihi >= ayBasi && p.istenCikisTarihi <= bugunStr).length;
+  const buYilAyrilan = tumu.filter(p => p.istenCikisTarihi && p.istenCikisTarihi >= yilBasi && p.istenCikisTarihi <= bugunStr).length;
+
+  const yillikDevirDaimOrani = _rpDevirDaimOraniHesapla(tumu, yilBasi, bugunStr, buYilAyrilan);
+  const aylikDevirDaimOrani = _rpDevirDaimOraniHesapla(tumu, ayBasi, bugunStr, buAyAyrilan);
+
+  const AY_ADLARI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const aylikListe = [];
+  for (let ay = 0; ay < 12; ay++) {
+    const ayBasiStr = `${yil}-${String(ay + 1).padStart(2, '0')}-01`;
+    const aySonuGun = new Date(yil, ay + 1, 0).getDate();
+    const aySonuStr = `${yil}-${String(ay + 1).padStart(2, '0')}-${String(aySonuGun).padStart(2, '0')}`;
+    if (ayBasiStr > bugunStr) break;
+    const efektifSon = aySonuStr > bugunStr ? bugunStr : aySonuStr;
+    const ayrilan = tumu.filter(p => p.istenCikisTarihi && p.istenCikisTarihi >= ayBasiStr && p.istenCikisTarihi <= efektifSon).length;
+    const baslayan = tumu.filter(p => p.iseGirisTarihi >= ayBasiStr && p.iseGirisTarihi <= efektifSon).length;
+    aylikListe.push({
+      ay: AY_ADLARI[ay],
+      baslayan,
+      ayrilan,
+      oran: _rpDevirDaimOraniHesapla(tumu, ayBasiStr, efektifSon, ayrilan)
+    });
+  }
+
+  return { buAyIseBaslayan, buYilIseBaslayan, buAyAyrilan, buYilAyrilan, yillikDevirDaimOrani, aylikDevirDaimOrani, aylikListe };
+}
+
 // ---- Risk Değerlendirmesi ----
 
 const _RP_RISK_DUZEYLERI = [
@@ -410,6 +462,7 @@ function raporGenelOzetiHesapla(firma) {
   const personelEgitim = raporPersonelEgitimOzeti(firma);
   return {
     personelEgitim,
+    devirDaim: raporDevirDaimOzeti(),
     risk: raporRiskOzeti(),
     olayKaza: raporOlayKazaOzeti(),
     uygunsuzluk: raporUygunsuzlukOzeti(),

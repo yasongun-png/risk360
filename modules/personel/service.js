@@ -30,6 +30,44 @@ function personelBolumleriGetir(arsivMi) {
   return Array.from(new Set(tumu.map(p => (p.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
 }
 
+// Kullanıcı isteği: "personel modülünün üst boşluğunda bu ay/bu yıl işe
+// başlayan, bu ay/bu yıl işten ayrılan sayıları ve yıllık devir daim oranı
+// görünsün" -- devir daim oranı = (dönem içinde ayrılan / dönemin ortalama
+// aktif personel sayısı [dönem başı+dönem sonu ortalaması]) x 100. Arşivdeki
+// (işten ayrılmış) personel de geçmiş tarihte aktif sayılabilmesi için dahil
+// edilir (bkz. modules/raporlar/service.js raporDevirDaimOzeti — aynı desen,
+// modüller arası script paylaşımı olmadığından burada tekrar yazılır).
+function _prsAktifPersonelSayisi(tumu, tarihStr) {
+  return tumu.filter(p => p.iseGirisTarihi && p.iseGirisTarihi <= tarihStr && (!p.istenCikisTarihi || p.istenCikisTarihi > tarihStr)).length;
+}
+
+function _prsDevirDaimOraniHesapla(tumu, basTarihi, sonTarihi, ayrilanSayisi) {
+  const ortalama = (_prsAktifPersonelSayisi(tumu, basTarihi) + _prsAktifPersonelSayisi(tumu, sonTarihi)) / 2;
+  return ortalama > 0 ? Math.round((ayrilanSayisi / ortalama) * 1000) / 10 : 0;
+}
+
+function personelDevirDaimIstatistikleri() {
+  const tumu = personelTumunuGetir();
+  const bugun = new Date();
+  const yil = bugun.getFullYear();
+  const bugunStr = bugun.toISOString().slice(0, 10);
+  const yilBasi = `${yil}-01-01`;
+  const ayBasi = `${yil}-${String(bugun.getMonth() + 1).padStart(2, '0')}-01`;
+
+  const buAyIseBaslayan = tumu.filter(p => p.iseGirisTarihi >= ayBasi && p.iseGirisTarihi <= bugunStr).length;
+  const buYilIseBaslayan = tumu.filter(p => p.iseGirisTarihi >= yilBasi && p.iseGirisTarihi <= bugunStr).length;
+  const buAyAyrilan = tumu.filter(p => p.istenCikisTarihi && p.istenCikisTarihi >= ayBasi && p.istenCikisTarihi <= bugunStr).length;
+  const buYilAyrilan = tumu.filter(p => p.istenCikisTarihi && p.istenCikisTarihi >= yilBasi && p.istenCikisTarihi <= bugunStr).length;
+
+  return {
+    buAyIseBaslayan,
+    buYilIseBaslayan,
+    buAyAyrilan,
+    buYilAyrilan,
+    yillikDevirDaimOrani: _prsDevirDaimOraniHesapla(tumu, yilBasi, bugunStr, buYilAyrilan)
+  };
+}
+
 function personelSayilari() {
   const tumu = personelTumunuGetir();
   return {
