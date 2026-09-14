@@ -4,6 +4,73 @@ let _duzenlenenPersonelId = null;
 let _arsivGorunumu = false;
 let _seciliPersonelIdleri = new Set();
 
+// Kullanıcı isteği: "personel modülünde filtreleme ve sütuna göre sıralama
+// ekleyelim" — Bölüm filtresi (bkz. _bolumFiltreDoldur) ve tablo başlığına
+// tıklayarak sıralama (bkz. _prsSutunSiraliListe, tıklama _prsBaslikTiklandi).
+let _prsSiralamaAlani = 'sicilNo';
+let _prsSiralamaYon = 'asc';
+
+const PRS_SIRALANABILIR_ALANLAR = {
+  sicilNo: { tip: 'metin' },
+  adSoyad: { tip: 'metin' },
+  isveren: { tip: 'metin' },
+  bolum: { tip: 'metin' },
+  gorev: { tip: 'metin' },
+  iseGirisTarihi: { tip: 'metin' },
+  kidemYil: { tip: 'sayi' }
+};
+
+function _bolumFiltreDoldur() {
+  const secim = document.getElementById('bolumFiltre');
+  if (!secim) return;
+  const mevcutDeger = secim.value;
+  const bolumler = personelBolumleriGetir(_arsivGorunumu);
+  secim.innerHTML = '<option value="">Tüm Bölümler</option>' + bolumler.map(b => `<option value="${_prsKacir(b)}">${_prsKacir(b)}</option>`).join('');
+  if (bolumler.includes(mevcutDeger)) secim.value = mevcutDeger;
+}
+
+function _prsSutunSiraliListe(liste) {
+  const alan = _prsSiralamaAlani;
+  const bilgi = PRS_SIRALANABILIR_ALANLAR[alan];
+  if (!bilgi) return liste;
+  const yon = _prsSiralamaYon === 'desc' ? -1 : 1;
+  return liste.slice().sort((a, b) => {
+    if (bilgi.tip === 'sayi') {
+      const av = a[alan] == null ? -Infinity : Number(a[alan]);
+      const bv = b[alan] == null ? -Infinity : Number(b[alan]);
+      return (av - bv) * yon;
+    }
+    return String(a[alan] || '').localeCompare(String(b[alan] || ''), 'tr') * yon;
+  });
+}
+
+// Tablo başlıklarındaki data-sirala niteliğine göre tıklama olayı bağlar ve
+// aktif sıralama sütununda ▲/▼ okunu gösterir.
+function _prsBaslikSiralamayiKur() {
+  document.querySelectorAll('#tabloBasligi [data-sirala]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const alan = th.getAttribute('data-sirala');
+      if (_prsSiralamaAlani === alan) {
+        _prsSiralamaYon = _prsSiralamaYon === 'asc' ? 'desc' : 'asc';
+      } else {
+        _prsSiralamaAlani = alan;
+        _prsSiralamaYon = 'asc';
+      }
+      tabloyuCiz(document.getElementById('aramaKutusu').value);
+    });
+  });
+}
+
+function _prsBaslikOklariniGuncelle() {
+  document.querySelectorAll('#tabloBasligi [data-sirala]').forEach(th => {
+    const alan = th.getAttribute('data-sirala');
+    const temizMetin = th.getAttribute('data-baslik-metni') || th.textContent.replace(/[▲▼]\s*$/, '').trim();
+    th.setAttribute('data-baslik-metni', temizMetin);
+    th.textContent = temizMetin + (alan === _prsSiralamaAlani ? (_prsSiralamaYon === 'asc' ? ' ▲' : ' ▼') : '');
+  });
+}
+
 function _prsKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
@@ -208,6 +275,9 @@ function personelSayfasiniBaslat() {
     });
   });
 
+  document.getElementById('bolumFiltre').addEventListener('change', () => tabloyuCiz(document.getElementById('aramaKutusu').value));
+  _bolumFiltreDoldur();
+  _prsBaslikSiralamayiKur();
   tabloyuCiz('');
 }
 
@@ -217,6 +287,7 @@ function sekmeDegistir(arsivMi) {
   document.getElementById('sekmeAktif').classList.toggle('sekme-seciliDegil', arsivMi);
   document.getElementById('sekmeArsiv').classList.toggle('sekme-seciliDegil', !arsivMi);
   document.getElementById('yeniPersonelBtn').style.display = arsivMi ? 'none' : '';
+  _bolumFiltreDoldur();
   tabloyuCiz(document.getElementById('aramaKutusu').value);
 }
 
@@ -246,7 +317,9 @@ function tabloyuCiz(aramaMetni) {
   const cikisBaslik = document.getElementById('cikisBaslik');
   cikisBaslik.style.display = _arsivGorunumu ? '' : 'none';
 
-  const personeller = personelleriGetir(aramaMetni, _arsivGorunumu);
+  const bolumFiltre = document.getElementById('bolumFiltre');
+  const personeller = _prsSutunSiraliListe(personelleriGetir(aramaMetni, _arsivGorunumu, bolumFiltre ? bolumFiltre.value : ''));
+  _prsBaslikOklariniGuncelle();
 
   govde.innerHTML = '';
 

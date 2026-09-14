@@ -2,9 +2,15 @@
 // İşten çıkış tarihi girilen personel otomatik olarak arşive düşer; aktif
 // listede görünmez (ayrı bir "arşivle" işlemi gerekmez).
 
-function personelleriGetir(aramaMetni, arsivMi) {
+// Kullanıcı isteği: "personel modülünde filtreleme ve sütuna göre sıralama
+// ekleyelim" — bolum parametresi opsiyonel Bölüm filtresi (bkz. ui.js
+// bolumFiltre); sütuna göre sıralama render aşamasında (ui.js tabloyuCiz)
+// ayrıca uygulanır, burada sadece arama+bölüm filtrelemesi yapılır.
+function personelleriGetir(aramaMetni, arsivMi, bolum) {
   const tumu = personelTumunuGetir();
-  const kapsam = tumu.filter(p => arsivMi ? !!p.istenCikisTarihi : !p.istenCikisTarihi);
+  let kapsam = tumu.filter(p => arsivMi ? !!p.istenCikisTarihi : !p.istenCikisTarihi);
+
+  if (bolum) kapsam = kapsam.filter(p => p.bolum === bolum);
 
   if (!aramaMetni) return kapsam;
 
@@ -15,6 +21,13 @@ function personelleriGetir(aramaMetni, arsivMi) {
     p.bolum.toLowerCase().includes(kucuk) ||
     p.gorev.toLowerCase().includes(kucuk)
   );
+}
+
+// Mevcut (aktif ya da arşiv) personellerdeki benzersiz Bölüm listesi —
+// Bölüm filtresi dropdown'ını doldurmak için.
+function personelBolumleriGetir(arsivMi) {
+  const tumu = personelTumunuGetir().filter(p => arsivMi ? !!p.istenCikisTarihi : !p.istenCikisTarihi);
+  return Array.from(new Set(tumu.map(p => (p.bolum || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
 }
 
 function personelSayilari() {

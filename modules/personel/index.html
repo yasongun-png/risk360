@@ -36,6 +36,7 @@
 
     <div class="arac-cubugu">
       <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Ad, Sicil No, bölüm veya göreve göre ara...">
+      <select id="bolumFiltre" style="width:auto; min-width:160px;"><option value="">Tüm Bölümler</option></select>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
         <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
@@ -50,14 +51,14 @@
     <div class="tablo-scroll">
       <table class="veri-tablosu">
         <thead>
-          <tr>
+          <tr id="tabloBasligi">
             <th><input type="checkbox" id="tumunuSecCheckbox"></th>
-            <th>Sicil No</th>
-            <th>Ad Soyad</th>
-            <th>İşyeri Sicili</th>
-            <th>Bölüm</th>
-            <th>Görev</th>
-            <th>İşe Giriş Tarihi</th>
+            <th data-sirala="sicilNo">Sicil No</th>
+            <th data-sirala="adSoyad">Ad Soyad</th>
+            <th data-sirala="isveren">İşyeri Sicili</th>
+            <th data-sirala="bolum">Bölüm</th>
+            <th data-sirala="gorev">Görev</th>
+            <th data-sirala="iseGirisTarihi">İşe Giriş Tarihi</th>
             <th id="cikisBaslik" style="display:none;">İşten Çıkış Tarihi</th>
             <th>Eğitim Seviyesi</th>
             <th>Okulu</th>
@@ -65,7 +66,7 @@
             <th>Engelli mi?</th>
             <th>Sendikalı mı?</th>
             <th>Kapsamı</th>
-            <th>Kıdem Yıl</th>
+            <th data-sirala="kidemYil">Kıdem Yıl</th>
             <th>Lojman</th>
             <th>İşlemler</th>
           </tr>
