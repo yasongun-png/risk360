@@ -413,7 +413,7 @@ async function kurulRaporuWordOlustur() {
   const kazaIstatistikTablosu = kazaIst ? new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Ölüm)', String(kazaIst.kazaSayisi)],
+      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Vefat)', String(kazaIst.kazaSayisi)],
       ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)],
       ['Kaza Sıklık Hızı (LTIFR)', oranGoster(kazaIst.kazaSiklikHizi)],
       ['Kaza Ağırlık Oranı', oranGoster(kazaIst.kazaAgirlikOrani)]
@@ -1258,7 +1258,7 @@ async function pptxOlustur() {
       sl.addText(k.deger, { x, y: 1.95, w: kutuW, h: 0.9, fontSize: 30, bold: true, color: R.birincil, align: 'center' });
       sl.addText(k.etiket, { x: x + 0.1, y: 2.85, w: kutuW - 0.2, h: 0.6, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
     });
-    sl.addText(`(*) LTI: Kayıp Gün, DART: Kısıtlı İş/Transfer. İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Ölüm. Sıklık/ağırlık oranı, Olay/Kaza modülü Ayarlar'daki yıllık çalışma saatine göre hesaplanır.`, { x: M, y: 3.8, w: SW - 2 * M, h: 0.6, fontSize: 9, italic: true, color: R.soluk });
+    sl.addText(`(*) LTI: Kayıp Gün, DART: Kısıtlı İş/Transfer. İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Vefat. Sıklık/ağırlık oranı, Olay/Kaza modülü Ayarlar'daki yıllık çalışma saatine göre hesaplanır.`, { x: M, y: 3.8, w: SW - 2 * M, h: 0.6, fontSize: 9, italic: true, color: R.soluk });
   }
 
   // Kullanıcı isteği: "hangi ay kaç kaza olmuş ve hangi ay kaç gün rapor

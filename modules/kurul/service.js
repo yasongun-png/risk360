@@ -304,11 +304,17 @@ function kararEkle(toplantiId, veriler) {
 
   // Kullanıcı Karar No'yu elle girmişse onu kullan; boş bırakılırsa eski
   // üretim uygulamasındaki AY.YIL/SIRA sistemiyle otomatik üretilir (bkz.
-  // model.js ayYilSiraNoUret): toplantının kendi tarihi + o toplantı
-  // içindeki sıradaki karar numarası.
+  // model.js ayYilSiraNoUret): toplantının DEĞERLENDİRDİĞİ DÖNEM + o toplantı
+  // içindeki sıradaki karar numarası. Kullanıcı isteği (2026-09-14): "ağustos
+  // kurulunu 09 ile başlatmış" — toplantı Eylül'de yapılıp Ağustos dönemini
+  // görüştüğünde numaralandırma toplantının kendi TARİHİNİ değil, raporlarda/
+  // istatistiklerde zaten kullanılan aynı öncelik sırasını (dönem, yoksa
+  // tarih) izlemeliydi (bkz. _ciktiDonemMetni, toplantiKazaIstatistikleriHesapla
+  // ve diğerleri — hepsi toplanti.donem || toplanti.tarih kullanır).
   const toplanti = toplantiIdIleGetirRepo(toplantiId);
+  const numaralandirmaTarihi = toplanti ? (toplanti.donem ? toplanti.donem + '-01' : toplanti.tarih) : '';
   const buToplantininKararSayisi = kararTumunuGetir().filter(k => k.toplantiId === toplantiId).length;
-  const kararNo = (veriler.kararNo || '').trim() || ayYilSiraNoUret(toplanti ? toplanti.tarih : '', buToplantininKararSayisi + 1);
+  const kararNo = (veriler.kararNo || '').trim() || ayYilSiraNoUret(numaralandirmaTarihi, buToplantininKararSayisi + 1);
   const yeniKarar = kararOlustur(Object.assign({}, veriler, { toplantiId, kararNo }));
   kararEkleRepo(yeniKarar);
   _denetimEkle('karar', yeniKarar.id, 'ekle', null, yeniKarar);
