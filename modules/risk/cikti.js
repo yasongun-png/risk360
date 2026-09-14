@@ -340,6 +340,200 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
   mount.style.display = 'none';
 }
 
+// ==================== WORD RAPORU ====================
+// Kullanıcı isteği: "risk değerlendirmesi PDF raporu var, bunu ayrıca Word
+// olarak da istiyorum" — PDF ile aynı içerik/bölüm sırası (kapak, yöntem
+// tabloları, özet, risk listesi, imza), Kurul modülündeki _word* yardımcı
+// desenine benzer şekilde yerel olarak tanımlandı (modüller arası script
+// paylaşımı yok). Görsel sadeleştirme: öncesi/sonrası fotoğrafları PDF'teki
+// gibi küçük resim olarak DEĞİL, "Var/-" olarak gösterilir (çok satırlı geniş
+// tabloya onlarca görsel gömmek performans/karmaşıklık açısından orantısız);
+// tam görsel karşılaştırma için PDF/PPTX çıktıları kullanılmaya devam eder.
+const _RSK_WORD_METIN_BOYUT = 16;
+const _RSK_WORD_BASLIK_BOYUT = 20;
+
+function _riskWordDuzeyRengi(etiket) {
+  const harita = {
+    'Önemsiz Risk': 'DCFCE7', 'Olası Risk': 'FEF3C7', 'Önemli Risk': 'FFEDD5', 'Esaslı Risk': 'FEE2E2', 'Tolerans Gösterilemez': '450A0A',
+    'Düşük Risk': 'DCFCE7', 'Orta Risk': 'FEF3C7', 'Yüksek Risk': 'FFEDD5', 'Kritik Risk': '450A0A'
+  };
+  return harita[etiket] || 'E5E7EB';
+}
+
+function _riskWordHucre(children, opts = {}) {
+  return new docx.TableCell({
+    children: Array.isArray(children) ? children : [children],
+    margins: { top: 40, bottom: 40, left: 80, right: 80 },
+    ...opts
+  });
+}
+function _riskWordMetinHucre(metin, opts = {}) {
+  return _riskWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(metin ?? '') || '-', size: _RSK_WORD_METIN_BOYUT })] }), opts);
+}
+function _riskWordBaslikHucre(metin, opts = {}) {
+  return _riskWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: metin, bold: true, size: _RSK_WORD_METIN_BOYUT, color: 'FFFFFF' })] }), { shading: { fill: '1D4ED8', color: 'auto', type: docx.ShadingType.CLEAR }, ...opts });
+}
+
+function _riskWordOlcekTablosu(baslik, secenekler) {
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      new docx.TableRow({ children: [_riskWordBaslikHucre(baslik, { columnSpan: 2 })] }),
+      ...secenekler.map(s => new docx.TableRow({ children: [
+        _riskWordMetinHucre(s.deger, { width: { size: 20, type: docx.WidthType.PERCENTAGE } }),
+        _riskWordMetinHucre(s.etiket.replace(/^[-\d.]+\s*-\s*/, ''), { width: { size: 80, type: docx.WidthType.PERCENTAGE } })
+      ]}))
+    ]
+  });
+}
+
+function _riskWordDuzeyAraligiTablosu(duzeyler) {
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      new docx.TableRow({ children: ['Risk Puanı (RP) Aralığı', 'Risk Düzeyi', 'Gerekli Aksiyon'].map(h => _riskWordBaslikHucre(h)) }),
+      ...duzeyler.map((d, i) => {
+        const ustSinir = i === 0 ? null : duzeyler[i - 1].minExclusive;
+        const aralik = d.minExclusive === -Infinity ? `RP ≤ ${ustSinir}` : (ustSinir === null ? `RP > ${d.minExclusive}` : `${d.minExclusive} < RP ≤ ${ustSinir}`);
+        return new docx.TableRow({ children: [
+          _riskWordMetinHucre(aralik),
+          _riskWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: d.etiket, bold: true, size: _RSK_WORD_METIN_BOYUT })] }), { shading: { fill: _riskWordDuzeyRengi(d.etiket), color: 'auto', type: docx.ShadingType.CLEAR } }),
+          _riskWordMetinHucre(d.aksiyon)
+        ]});
+      })
+    ]
+  });
+}
+
+function _riskWordYontemBolumu(riskler) {
+  const fineKinneyVarMi = !riskler || riskler.length === 0 || riskler.some(r => r.yontem !== '5x5');
+  const matrisVarMi = (riskler || []).some(r => r.yontem === '5x5');
+  const cocuklar = [];
+
+  if (fineKinneyVarMi) {
+    cocuklar.push(new docx.Paragraph({ text: 'Değerlendirme Yöntemi (Fine-Kinney)', heading: docx.HeadingLevel.HEADING_2 }));
+    cocuklar.push(new docx.Paragraph({ children: [new docx.TextRun({ text: 'Risk Puanı (RP) = Olasılık (O) × Frekans (F) × Şiddet (Ş) formülüyle hesaplanır. Önlem sonrası (RP2) aynı yöntemle, önlemler uygulandıktan sonraki O/F/Ş değerleriyle yeniden hesaplanır.', size: _RSK_WORD_METIN_BOYUT })], spacing: { after: 150 } }));
+    cocuklar.push(new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [new docx.TableRow({ children: [
+        _riskWordHucre(_riskWordOlcekTablosu('Olasılık (O)', OLASILIK_SECENEKLERI), { width: { size: 34, type: docx.WidthType.PERCENTAGE } }),
+        _riskWordHucre(_riskWordOlcekTablosu('Frekans (F)', FREKANS_SECENEKLERI), { width: { size: 33, type: docx.WidthType.PERCENTAGE } }),
+        _riskWordHucre(_riskWordOlcekTablosu('Şiddet (Ş)', SIDDET_SECENEKLERI), { width: { size: 33, type: docx.WidthType.PERCENTAGE } })
+      ]})],
+      borders: { top: { style: docx.BorderStyle.NONE, size: 0 }, bottom: { style: docx.BorderStyle.NONE, size: 0 }, left: { style: docx.BorderStyle.NONE, size: 0 }, right: { style: docx.BorderStyle.NONE, size: 0 }, insideHorizontal: { style: docx.BorderStyle.NONE, size: 0 }, insideVertical: { style: docx.BorderStyle.NONE, size: 0 } }
+    }));
+    cocuklar.push(new docx.Paragraph({ text: '', spacing: { after: 100 } }));
+    cocuklar.push(_riskWordDuzeyAraligiTablosu(RISK_DUZEYLERI));
+    cocuklar.push(new docx.Paragraph({ text: '', spacing: { after: 300 } }));
+  }
+
+  if (matrisVarMi) {
+    cocuklar.push(new docx.Paragraph({ text: 'Değerlendirme Yöntemi (5x5 Matris)', heading: docx.HeadingLevel.HEADING_2 }));
+    cocuklar.push(new docx.Paragraph({ children: [new docx.TextRun({ text: 'Risk Puanı (RP) = Olasılık (O) × Şiddet (Ş) formülüyle hesaplanır (5x5 skala, frekans boyutu yoktur). Önlem sonrası (RP2) aynı yöntemle, önlemler uygulandıktan sonraki O/Ş değerleriyle yeniden hesaplanır.', size: _RSK_WORD_METIN_BOYUT })], spacing: { after: 150 } }));
+    cocuklar.push(new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [new docx.TableRow({ children: [
+        _riskWordHucre(_riskWordOlcekTablosu('Olasılık (O)', MATRIS_OLASILIK_SECENEKLERI), { width: { size: 50, type: docx.WidthType.PERCENTAGE } }),
+        _riskWordHucre(_riskWordOlcekTablosu('Şiddet (Ş)', MATRIS_SIDDET_SECENEKLERI), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+      ]})],
+      borders: { top: { style: docx.BorderStyle.NONE, size: 0 }, bottom: { style: docx.BorderStyle.NONE, size: 0 }, left: { style: docx.BorderStyle.NONE, size: 0 }, right: { style: docx.BorderStyle.NONE, size: 0 }, insideHorizontal: { style: docx.BorderStyle.NONE, size: 0 }, insideVertical: { style: docx.BorderStyle.NONE, size: 0 } }
+    }));
+    cocuklar.push(new docx.Paragraph({ text: '', spacing: { after: 100 } }));
+    cocuklar.push(_riskWordDuzeyAraligiTablosu(MATRIS_DUZEYLERI));
+    cocuklar.push(new docx.Paragraph({ text: '', spacing: { after: 300 } }));
+  }
+
+  return cocuklar;
+}
+
+function _riskWordListesiTablosu(riskler) {
+  const basliklar = ['No', 'Bölüm', 'Yer / Ekipman', 'Tehlike', 'Risk', 'RP1', 'Düzey', 'Öncesi Foto', 'RP2', 'Azalma', 'Sonrası Foto', 'Sorumlu', 'Termin', 'Durum'];
+  return new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      new docx.TableRow({ tableHeader: true, children: basliklar.map(h => _riskWordBaslikHucre(h)) }),
+      ...riskler.map(r => new docx.TableRow({ children: [
+        _riskWordMetinHucre(r.riskNo),
+        _riskWordMetinHucre(r.bolum),
+        _riskWordMetinHucre(r.yer),
+        _riskWordMetinHucre(r.tehlike),
+        _riskWordMetinHucre(r.risk),
+        _riskWordMetinHucre(r.RP1),
+        _riskWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: r.duzey1, bold: true, size: _RSK_WORD_METIN_BOYUT })] }), { shading: { fill: _riskWordDuzeyRengi(r.duzey1), color: 'auto', type: docx.ShadingType.CLEAR } }),
+        _riskWordMetinHucre(r.fotoOncesi ? 'Var' : '-'),
+        _riskWordMetinHucre(r.RP2 !== null ? r.RP2 : '-'),
+        _riskWordMetinHucre(r.azalma || '-'),
+        _riskWordMetinHucre(r.fotoSonrasi ? 'Var' : '-'),
+        _riskWordMetinHucre(r.sorumlu),
+        _riskWordMetinHucre(gunAyYil(r.termin)),
+        _riskWordMetinHucre(r.durumGoruntu)
+      ]}))
+    ]
+  });
+}
+
+async function riskRaporuWordOlustur(hazirlayanAdi) {
+  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const risklerHam = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
+  if (!risklerHam.length) {
+    alert('Seçili filtreler için Word raporu oluşturulacak risk kaydı yok.');
+    return;
+  }
+  const riskler = risklerHam.slice();
+  riskler.sort((a, b) => {
+    const siraFarki = riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1);
+    if (siraFarki !== 0) return siraFarki;
+    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
+    return goreliPuan(b) - goreliPuan(a);
+  });
+
+  const firma = aktifFirmaGetir();
+  const bugun = gunAyYil(_bugun());
+  const ozet = riskOzetiHesapla();
+
+  const kapakCocuklari = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 24 })], spacing: { after: 300 } }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'RİSK DEĞERLENDİRME RAPORU', bold: true, size: 32 })], spacing: { after: 200 } }),
+    ...(filtreler.bolum ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: filtreler.bolum, size: 24 })], spacing: { after: 400 } })] : []),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Rapor Tarihi: ${bugun}`, size: _RSK_WORD_METIN_BOYUT })] }),
+    new docx.Paragraph({ children: [new docx.PageBreak()] })
+  ];
+
+  const ozetSatiri = new docx.Paragraph({
+    children: [new docx.TextRun({ text: `Toplam: ${ozet.toplam}   •   Açık: ${ozet.acik}   •   Gecikmiş: ${ozet.gecikmis}   •   Önemli+: ${ozet.onemliVeUstu}`, bold: true, size: _RSK_WORD_METIN_BOYUT })],
+    spacing: { after: 150 }
+  });
+  const kisaltmaSatiri = new docx.Paragraph({
+    children: [new docx.TextRun({ text: 'Düzey kısaltmaları: ' + Object.keys(_RISK_DUZEY_KISALTMA).map(e => `${_RISK_DUZEY_KISALTMA[e]} = ${e}`).join('  •  '), italics: true, size: 14, color: '4B5563' })],
+    spacing: { after: 200 }
+  });
+
+  const cocuklar = [
+    ..._riskWordYontemBolumu(riskler),
+    new docx.Paragraph({ text: 'Risk Listesi', heading: docx.HeadingLevel.HEADING_2 }),
+    ozetSatiri,
+    kisaltmaSatiri,
+    _riskWordListesiTablosu(riskler),
+    new docx.Paragraph({ text: '', spacing: { after: 300 } }),
+    new docx.Paragraph({ children: [
+      new docx.TextRun({ text: 'Hazırlayan: ', bold: true, size: _RSK_WORD_METIN_BOYUT }),
+      new docx.TextRun({ text: (hazirlayanAdi || '_____________________'), size: _RSK_WORD_METIN_BOYUT }),
+      new docx.TextRun({ text: '     İmza: _____________________     Tarih: ', bold: true, size: _RSK_WORD_METIN_BOYUT }),
+      new docx.TextRun({ text: bugun, size: _RSK_WORD_METIN_BOYUT })
+    ]})
+  ];
+
+  const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
+  const doc = new docx.Document({
+    sections: [
+      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, children: kapakCocuklari },
+      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, children: cocuklar }
+    ]
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.docx`);
+}
+
 // ==================== PPTX ====================
 // Eski isg platformundaki risk-defteri aracının PPTX çıktısıyla aynı kalıp:
 // kapak + genel özet + risk başına bir slayt (öncesi/sonrası fotoğraflı).

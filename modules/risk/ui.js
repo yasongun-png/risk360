@@ -238,7 +238,8 @@ function riskSayfasiniBaslat() {
     }
   });
 
-  document.getElementById('pdfRaporBtn').addEventListener('click', hazirlayanModalAc);
+  document.getElementById('pdfRaporBtn').addEventListener('click', () => hazirlayanModalAc('pdf'));
+  document.getElementById('wordRaporBtn').addEventListener('click', () => hazirlayanModalAc('word'));
   document.getElementById('hazirlayanModalKapatBtn').addEventListener('click', hazirlayanModalKapat);
   document.getElementById('hazirlayanPersonelSec').addEventListener('change', () => {
     if (document.getElementById('hazirlayanPersonelSec').value) document.getElementById('hazirlayanManuel').value = '';
@@ -255,11 +256,12 @@ function riskSayfasiniBaslat() {
     dugme.disabled = true;
     dugme.textContent = 'Hazırlanıyor...';
     try {
-      await riskRaporuPdfOlustur(hazirlayanAdi);
+      if (_hazirlayanFormat === 'word') await riskRaporuWordOlustur(hazirlayanAdi);
+      else await riskRaporuPdfOlustur(hazirlayanAdi);
       hazirlayanModalKapat();
     } catch (hata) {
       console.error(hata);
-      alert('PDF üretilemedi: ' + (hata.message || hata));
+      alert((_hazirlayanFormat === 'word' ? 'Word' : 'PDF') + ' üretilemedi: ' + (hata.message || hata));
     } finally {
       dugme.disabled = false;
       dugme.textContent = eskiMetin;
@@ -309,7 +311,14 @@ function riskSayfasiniBaslat() {
 
 // ---- PDF Raporu: hazırlayan seçimi ----
 
-function hazirlayanModalAc() {
+// Kullanıcı isteği: "PDF raporu var, bunu ayrıca Word olarak da istiyorum" —
+// PDF Raporu ve Word Raporu butonları AYNI hazırlayan seçim modalını
+// paylaşır; hangi formatın istendiği bu değişkende tutulur (bkz. onaylaBtn
+// handler'ındaki dallanma).
+let _hazirlayanFormat = 'pdf';
+
+function hazirlayanModalAc(format) {
+  _hazirlayanFormat = format || 'pdf';
   const secim = document.getElementById('hazirlayanPersonelSec');
   const personeller = personelleriGetir('', false);
   secim.innerHTML = '<option value="">— Seçiniz —</option>' +
