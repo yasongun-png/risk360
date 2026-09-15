@@ -83,6 +83,11 @@ function sinavSayfasiniBaslat() {
   document.getElementById('hazirSoruBankasiIptalBtn').addEventListener('click', hazirSoruBankasiModalKapat);
   document.getElementById('hazirSoruBankasiYukleBtn').addEventListener('click', hazirSoruBankasiYukle);
 
+  document.getElementById('sinavImzaListesiBtn').addEventListener('click', () => sinavImzaListesiModalAc());
+  document.getElementById('sinavImzaListesiKapatBtn').addEventListener('click', sinavImzaListesiModalKapat);
+  document.getElementById('sinavImzaListesiIptalBtn').addEventListener('click', sinavImzaListesiModalKapat);
+  document.getElementById('sinavImzaListesiForm').addEventListener('submit', sinavImzaListesiFormGonderildi);
+
   document.getElementById('yeniSinavBtn').addEventListener('click', () => sinavModalAc());
   document.getElementById('sinavModalKapatBtn').addEventListener('click', sinavModalKapat);
   document.getElementById('sinavModalIptalBtn').addEventListener('click', sinavModalKapat);
@@ -434,6 +439,50 @@ function sinavTablosunuCiz() {
 // olduğu sürece burada tutulur (kullanıcı isteği: "mevcut kütüphaneden
 // istediğim soruları da seçip sınav kağıdı hazırlamak istiyorum").
 let _sinavManuelSeciliIdler = new Set();
+
+// Kullanıcı isteği: "sınav bölümünde imza listesi oluşturucu olsun — konu,
+// bölüm ve kaç kişi katılacağını sorsun, ona göre liste hazırlasın" — kayıt
+// oluşturmaz, sadece boş satırlı (Sicil No/Ad Soyad/İmza elle doldurulacak)
+// bir PDF üretir; bkz. modules/personel/cikti.js imzaListesiPdfOlustur
+// (aynı fonksiyon Personel modülündeki genel İmza Listesi özelliğinde de
+// kullanılıyor, burada boş katılımcı satırlarıyla çağrılıyor).
+function sinavImzaListesiModalAc() {
+  _sinavFormHatalariniTemizle('sinavImzaListesiForm');
+  document.getElementById('sinavImzaListesiForm').reset();
+  document.getElementById('sinavImzaKisiSayisi').value = 20;
+  document.getElementById('sinavImzaListesiModalKatman').classList.add('acik');
+}
+
+function sinavImzaListesiModalKapat() {
+  document.getElementById('sinavImzaListesiModalKatman').classList.remove('acik');
+}
+
+async function sinavImzaListesiFormGonderildi(e) {
+  e.preventDefault();
+  _sinavFormHatalariniTemizle('sinavImzaListesiForm');
+
+  const konu = document.getElementById('sinavImzaKonu').value.trim();
+  const bolum = document.getElementById('sinavImzaBolum').value.trim();
+  const kisiSayisi = parseInt(document.getElementById('sinavImzaKisiSayisi').value, 10);
+
+  let gecerli = true;
+  if (!konu) { document.getElementById('sinavImzaKonuHata').textContent = 'Konu zorunludur.'; gecerli = false; }
+  if (!kisiSayisi || kisiSayisi < 1) { document.getElementById('sinavImzaKisiSayisiHata').textContent = 'Geçerli bir kişi sayısı girin.'; gecerli = false; }
+  if (!gecerli) return;
+
+  const katilimcilar = Array.from({ length: kisiSayisi }, () => ({ sicilNo: '', adSoyad: '', isveren: '' }));
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    await imzaListesiPdfOlustur(konu, katilimcilar, { tarih: new Date().toISOString().slice(0, 10), bolum });
+    sinavImzaListesiModalKapat();
+  } catch (hata) {
+    console.error(hata);
+    alert('İmza listesi oluşturulamadı: ' + (hata.message || hata));
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 function sinavModalAc() {
   _sinavFormHatalariniTemizle('sinavForm');

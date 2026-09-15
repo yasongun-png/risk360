@@ -56,6 +56,7 @@ function _prsImzaSayfasiHtml(egitimTuruAdi, firma, egitimBilgi, sayfaNo, toplamS
       <div class="eil-bilgi">
         <span><b>Eğitim/Sertifika Türü:</b> ${_prsSertKacir(egitimTuruAdi)}</span>
         <span><b>Tarih:</b> ${_prsSertKacir(_prsEgitimTarihiGoruntu(egitimBilgi))}</span>
+        ${egitimBilgi.bolum ? `<span><b>Bölüm:</b> ${_prsSertKacir(egitimBilgi.bolum)}</span>` : ''}
       </div>
       <div class="eil-imzalar">
         <div><span>${_prsSertKacir(egitimBilgi.egitimci) || '&nbsp;'}</span><b>Eğitimi Veren (Eğitimci)</b><em>İmza</em></div>
@@ -129,6 +130,7 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilg
         <span><b>Eğitim/Sertifika Türü:</b> ${_prsSertKacir(egitimTuruAdi)}</span>
         <span><b>Tarih:</b> ${_prsSertKacir(_prsEgitimTarihiGoruntu(egitimBilgi))}</span>
         ${egitimBilgi.saat ? `<span><b>Süre:</b> ${_prsSertKacir(egitimBilgi.saat)} Saat</span>` : ''}
+        ${egitimBilgi.bolum ? `<span><b>Bölüm:</b> ${_prsSertKacir(egitimBilgi.bolum)}</span>` : ''}
       </div>
       <table class="eil-tablo">
         <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İşyeri Sicili</th><th>İmza</th></tr></thead>
