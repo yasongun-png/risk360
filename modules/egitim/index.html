@@ -35,6 +35,7 @@
       <button type="button" id="sekmeKayitlar">Eğitim Kayıtları</button>
       <button type="button" id="sekmeDurum" class="sekme-seciliDegil">Durum Tablosu</button>
       <button type="button" id="sekmeSinav" class="sekme-seciliDegil">Sınav Oluşturucu</button>
+      <button type="button" id="sekmeMateryal" class="sekme-seciliDegil">Eğitim Materyalleri</button>
       <a href="../personel/index.html" class="ikincil" style="margin-left:auto; padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">👤 Personel</a>
       <a href="../raporlar/index.html" class="ikincil" style="padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">📊 Raporlar</a>
     </div>
@@ -186,6 +187,25 @@
         </div>
         <div class="bos-durum" id="sonucBosDurum"></div>
       </div>
+    </div>
+
+    <!-- Kullanıcı isteği: "hazırladığım toolbox, pdf, pptx eğitimleri
+         kaydedebileceğim, istediğimde oradan indirebileceğim bir yer olsun"
+         -- bkz. materyal.js/materyal-ui.js. -->
+    <div id="materyalBolumu" style="display:none;">
+      <p style="color:var(--metin-soluk); font-size:12px; margin-top:-8px;">Hazırladığınız Toolbox Talk, PDF veya PowerPoint (PPTX) eğitim materyallerini burada saklayıp istediğinizde indirebilirsiniz. Kayıt/sertifika oluşturmaz, sadece dosya kütüphanesidir.</p>
+      <div class="arac-cubugu">
+        <input type="text" id="materyalAramaKutusu" class="arama-kutusu" placeholder="Materyal başlığına göre ara...">
+        <button type="button" class="birincil" id="materyalYukleBtn" style="width:auto;">+ Materyal Yükle</button>
+        <input type="file" id="materyalDosya" accept=".pdf,.ppt,.pptx,.doc,.docx" style="display:none;">
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Başlık</th><th>Dosya Adı</th><th>Boyut</th><th>Yükleme Tarihi</th><th>İşlemler</th></tr></thead>
+          <tbody id="materyalTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="materyalBosDurum"></div>
     </div>
   </div>
 
@@ -584,6 +604,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
@@ -615,6 +636,8 @@
   <script src="sinav.js?v=1"></script>
   <script src="sinav-soru-bankasi.js?v=1"></script>
   <script src="sinav-ui.js?v=1"></script>
+  <script src="materyal.js?v=1"></script>
+  <script src="materyal-ui.js?v=1"></script>
   <script src="ui.js?v=4"></script>
   <script src="cikti.js?v=2"></script>
   <script>
