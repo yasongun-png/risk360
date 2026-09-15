@@ -35,6 +35,7 @@
       <button type="button" data-sekme="ziyaretciler" class="sekme-seciliDegil">Ziyaretçiler</button>
       <button type="button" data-sekme="kayitlar" class="sekme-seciliDegil">Kayıtlar</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
+      <button type="button" data-sekme="detayli-arama" class="sekme-seciliDegil">Detaylı Arama</button>
     </div>
 
     <div id="bolum-dashboard">
@@ -52,7 +53,9 @@
           <option value="all">Tümü</option>
           <option value="critical">Bugün Uygunsuz (Giriş Engeli)</option>
           <option value="warn">30 Gün İçinde Düşecek</option>
+          <option value="ok">Tam Uygun</option>
         </select>
+        <button type="button" class="ikincil" id="dashYenileBtn" style="width:auto;">Yenile</button>
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
@@ -113,6 +116,15 @@
           <button type="button" class="ikincil" id="kisiSablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="kisiIceAktarBtn">İçe Aktar</button>
           <input type="file" id="kisiIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <!-- Kullanıcı isteği: eski uygulamadaki gibi tüm belge bilgileri
+               (SGK/Adli Sicil/KKD/Sağlık/Temel İSG/Geçici Görev/MYK/Firma
+               Eğitimi) TEK dosyadan içe aktarılabilsin — üstteki "İçe Aktar"
+               sadece 6 temel alan taşıyor, bu buton "Kayıtlar" sekmesindeki
+               tam belgeli içe aktarımı (yukleniciKayitlariniIceAktar) burada
+               da kullanılabilir kılar, kullanıcı sekme değiştirmek zorunda
+               kalmaz. -->
+          <button type="button" class="ikincil" id="kisiDetayliIceAktarBtn" title="SGK/Adli Sicil/KKD/Sağlık/Temel İSG/Geçici Görev/MYK/Firma Eğitimi dahil tüm belge bilgilerini tek dosyadan içe aktarır">Belgeleriyle Birlikte İçe Aktar</button>
+          <input type="file" id="kisiDetayliIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="kisiDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="birincil" id="yeniKisiBtn" style="width:auto;">+ Personel Ekle</button>
         </div>
@@ -207,6 +219,27 @@
 
     <div id="bolum-ozet" style="display:none;">
       <div id="ozetKutusu"></div>
+    </div>
+
+    <!-- Kullanıcı isteği: eski uygulamadaki "Detaylı Arama" sekmesi (firma/
+         personel/plaka bulanık arama + belge türüne göre filtre, BELGE
+         BAZLI sonuç satırları) risk360'a taşınırken UI'ya bağlanmamıştı;
+         mantık zaten service.js'teki yukleniciDetayliArama'da hazırdı. -->
+    <div id="bolum-detayli-arama" style="display:none;">
+      <p style="color:var(--metin-soluk); font-size:12px; margin-top:-4px;">Firma, personel adı veya araç/ekipman kimliğine göre arayın; isteğe bağlı olarak tek bir belge türüne daraltın. Sonuçlar belge bazlıdır — bir kişi/aracın birden fazla eksik belgesi varsa her biri ayrı satırda görünür.</p>
+      <div class="arac-cubugu">
+        <input type="text" id="detayliAramaKutusu" class="arama-kutusu" placeholder="Firma, personel adı veya plaka/seri no ile ara...">
+        <select id="detayliBelgeFiltre" style="width:auto; min-width:220px;">
+          <option value="">Tüm Belge Türleri</option>
+        </select>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Tür</th><th>Firma</th><th>Ad / Kimlik</th><th>Belge</th><th>Belge Tarihi / Değeri</th><th>Geçerlilik</th><th>Durum</th></tr></thead>
+          <tbody id="detayliAramaGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="detayliAramaBosDurum"></div>
     </div>
   </div>
 

@@ -78,6 +78,14 @@ function yukleniciSayfasiniBaslat() {
     });
   });
 
+  document.getElementById('kisiDetayliIceAktarBtn').addEventListener('click', () => document.getElementById('kisiDetayliIceAktarDosya').click());
+  document.getElementById('kisiDetayliIceAktarDosya').addEventListener('change', e => {
+    yukleniciKayitlariniIceAktar(e.target.files[0], () => {
+      e.target.value = '';
+      kisileriCiz(document.getElementById('kisiAramaKutusu').value);
+    });
+  });
+
   document.getElementById('yeniAracBtn').addEventListener('click', () => aracModalAc());
   document.getElementById('aracModalKapatBtn').addEventListener('click', aracModalKapat);
   document.getElementById('aracModalIptalBtn').addEventListener('click', aracModalKapat);
@@ -91,6 +99,7 @@ function yukleniciSayfasiniBaslat() {
 
   document.getElementById('dashAramaKutusu').addEventListener('input', dashboardCiz);
   document.getElementById('dashKapsamFiltre').addEventListener('change', dashboardCiz);
+  document.getElementById('dashYenileBtn').addEventListener('click', dashboardCiz);
 
   document.getElementById('kayitAramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
   document.getElementById('kayitTumunuSecCheckbox').addEventListener('change', e => {
@@ -106,6 +115,12 @@ function yukleniciSayfasiniBaslat() {
     yukleniciKayitlariniIceAktar(e.target.files[0], () => { e.target.value = ''; });
   });
   document.getElementById('kayitPdfBtn').addEventListener('click', yukleniciPdfIndir);
+
+  document.getElementById('detayliAramaKutusu').addEventListener('input', detayliAramaCiz);
+  document.getElementById('detayliBelgeFiltre').addEventListener('change', detayliAramaCiz);
+  document.getElementById('detayliBelgeFiltre').innerHTML += YUKLENICI_BELGE_TANIMLARI.map(b => `<option>${_ykKacir(b.ad)}</option>`)
+    .concat(Object.values(YUKLENICI_ARAMA_ARAC_BELGE_ADLARI).map(ad => `<option>${_ykKacir(ad)}</option>`))
+    .join('');
 
   gorunumDegistir('dashboard');
 }
@@ -156,7 +171,7 @@ function _yukleniciKisiIceAktarSatiriEkle(satir) {
 function gorunumDegistir(gorunum) {
   _ykGorunum = gorunum;
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum));
-  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
+  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
 
   if (gorunum === 'dashboard') dashboardCiz();
   else if (gorunum === 'firmalar') firmalariCiz('');
@@ -164,7 +179,40 @@ function gorunumDegistir(gorunum) {
   else if (gorunum === 'araclar') araclariCiz('');
   else if (gorunum === 'ziyaretciler') ziyaretcileriCiz();
   else if (gorunum === 'kayitlar') kayitlariCiz('');
+  else if (gorunum === 'detayli-arama') detayliAramaCiz();
   else ozetiCiz();
+}
+
+// Kullanıcı isteği: eski uygulamadaki "Detaylı Arama" sekmesini geri getir —
+// mantık zaten service.js'teki yukleniciDetayliArama'da hazırdı, sadece UI
+// eksikti (bkz. index.html bolum-detayli-arama).
+function detayliAramaCiz() {
+  const aramaMetni = document.getElementById('detayliAramaKutusu').value;
+  const belgeFiltre = document.getElementById('detayliBelgeFiltre').value;
+  const govde = document.getElementById('detayliAramaGovde');
+  const bosDurum = document.getElementById('detayliAramaBosDurum');
+  const sonuclar = yukleniciDetayliArama(aramaMetni, belgeFiltre);
+
+  govde.innerHTML = '';
+
+  if (sonuclar.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Arama kriterlerinize uyan belge bulunamadı.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  govde.innerHTML = sonuclar.map(r => `
+    <tr>
+      <td>${_ykKacir(r.tur)}</td>
+      <td>${_ykKacir(r.firma)}</td>
+      <td>${_ykKacir(r.kimlik)}</td>
+      <td>${_ykKacir(r.belge)}</td>
+      <td>${_ykKacir(r.belgeTarihiDeger) || '-'}</td>
+      <td>${r.gecerlilik ? formatTarihGoster(r.gecerlilik) : '-'}</td>
+      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(r.durum)}">${_ykKacir(r.durum)}</span></td>
+    </tr>
+  `).join('');
 }
 
 // ==================== DASHBOARD / AKSİYON MERKEZİ ====================
@@ -179,7 +227,10 @@ function dashboardCiz() {
   const aramaMetni = document.getElementById('dashAramaKutusu').value.trim().toLowerCase();
   const kapsam = document.getElementById('dashKapsamFiltre').value;
 
-  let satirlar = veri.aksiyonSatirlari;
+  // Kullanıcı isteği: eski uygulamadaki "Tam Uygun" kapsam seçeneği geri
+  // getirildi — aksiyonSatirlari'nda sadece sorunlu kayıtlar olduğu için bu
+  // seçimde ayrı listeye (tamUygunSatirlari) geçilir.
+  let satirlar = kapsam === 'ok' ? veri.tamUygunSatirlari : veri.aksiyonSatirlari;
   if (aramaMetni) {
     satirlar = satirlar.filter(r => r.firma.toLowerCase().includes(aramaMetni) || r.kimlik.toLowerCase().includes(aramaMetni));
   }
@@ -193,9 +244,9 @@ function dashboardCiz() {
         <td>${_ykKacir(r.tur)}</td>
         <td>${_ykKacir(r.firma)}</td>
         <td>${_ykKacir(r.kimlik)}</td>
-        <td><span class="genel-rozet ${r.durum === 'Giriş Engeli' ? 'rozet-uygun-degil' : 'rozet-yaklasiyor'}">${_ykKacir(r.durum)}</span></td>
-        <td>${_ykKacir(r.sebep)}</td>
-        <td>${r.sonTarih ? formatTarihGoster(r.sonTarih) : 'İSG ile görüşün'}</td>
+        <td><span class="genel-rozet ${r.durum === 'Giriş Engeli' ? 'rozet-uygun-degil' : (r.durum ? 'rozet-yaklasiyor' : 'rozet-uygun')}">${_ykKacir(r.durum || 'Tam Uygun')}</span></td>
+        <td>${_ykKacir(r.sebep) || '-'}</td>
+        <td>${r.sonTarih ? formatTarihGoster(r.sonTarih) : (r.durum ? 'İSG ile görüşün' : '-')}</td>
         <td>${r.kalanGun === null || r.kalanGun === undefined ? '-' : r.kalanGun}</td>
         <td>
           <span class="genel-rozet ${r.pasif ? 'rozet-pasif' : 'rozet-uygun'}" style="font-size:10px;">${r.pasif ? 'Pasif' : 'Aktif'}</span>
@@ -526,7 +577,7 @@ function kisileriCiz(aramaMetni) {
       <td>${k.personelNo}</td>
       <td>${_ykKacir(k.adSoyad)}${k.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
       <td>${_ykKacir(k.firmaAdi)}</td>
-      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(k.durumGoruntu)}">${_ykKacir(k.durumGoruntu)}</span>${k.kritikSebep ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">${_ykKacir(k.kritikSebep.sebep)}</div>` : ''}</td>
+      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(k.durumGoruntu)}">${_ykKacir(k.durumGoruntu)}</span>${k.kritikSebep ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">${_ykKacir(k.kritikSebep.sebep)}${k.eksikBelgeSayisi > 1 ? ` (+${k.eksikBelgeSayisi - 1} diğer)` : ''}</div>` : ''}</td>
       <td>${sonTarihMetni}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>

@@ -19,11 +19,20 @@ function _kisiZenginlestir(kisi) {
     else durumGoruntu = kritikSebep.girisEngeli ? 'Girişe Kapalı' : 'Eksik Evrak';
   }
 
+  // Kullanıcı isteği: eski uygulamada 16 belgenin tamamının durumu tek
+  // tabloda görünüyordu; kritikSebep sadece İLK (öncelikli) eksik belgeyi
+  // döndürdüğü için modal açmadan "kaç belge eksik" sorusu cevapsız
+  // kalıyordu — bkz. ui.js kisileriCiz "(+N diğer)" etiketi.
+  const bugun = bugunIso();
+  const tanimlar = kisi.durum === 'İptal' ? [] : yukleniciGecerliBelgeTanimlari(kisi.personelTuru);
+  const eksikBelgeSayisi = tanimlar.filter(b => !yukleniciBelgeUygunMu(b, (kisi.belgeler || {})[b.id], kisi.tehlikeSinifi, bugun)).length;
+
   return Object.assign({}, kisi, {
     kritikSebep,
     girisSonTarih,
     uygunMu: !kritikSebep,
-    durumGoruntu
+    durumGoruntu,
+    eksikBelgeSayisi
   });
 }
 
@@ -350,11 +359,21 @@ function yukleniciDashboardVerisiHesapla() {
   let uygunSayisi = 0;
   let uygunsuzSayisi = 0;
   const aksiyonSatirlari = [];
+  // Kullanıcı isteği: eski uygulamadaki Dashboard kapsam filtresindeki "Tam
+  // Uygun" seçeneği geri getirildi — aksiyonSatirlari sadece SORUNLU
+  // kayıtları tuttuğu için (aşağıdaki erken return), bu filtre için ayrı bir
+  // liste tutulur.
+  const tamUygunSatirlari = [];
   const firmaAgg = {};
   const belgeAgg = {};
 
   kisiler.forEach(k => {
-    if (yukleniciKisiSatirSinifiHesapla(k, bugun) === 'row-ok') uygunSayisi++; else uygunsuzSayisi++;
+    if (yukleniciKisiSatirSinifiHesapla(k, bugun) === 'row-ok') {
+      uygunSayisi++;
+      tamUygunSatirlari.push({ id: k.id, tur: 'Personel', firma: k.firmaAdi || '', kimlik: k.adSoyad, pasif: !!k.pasif });
+    } else {
+      uygunsuzSayisi++;
+    }
 
     const kritik = yukleniciKisiKritikSebepHesapla(k, bugun);
     if (!kritik) return;
@@ -408,6 +427,7 @@ function yukleniciDashboardVerisiHesapla() {
     uygunSayisi,
     uygunsuzSayisi,
     aksiyonSatirlari,
+    tamUygunSatirlari,
     firmaBazliSorun,
     belgeBazliSorun
   };
