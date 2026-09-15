@@ -45,9 +45,15 @@ const DURUM_METIN = {
   kayit_yok: 'Kayıt Yok'
 };
 
+// Kullanıcı isteği: "elimdeki imza listesini (kağıt formu) toplu yüklemem
+// için içe aktarma ver" -- kağıt formlarda sicil no genelde yazmaz, sadece
+// Ad Soyad olur; bu yüzden Sicil No artık zorunlu değil, Ad Soyad da kabul
+// edilir (bkz. _egitimIceAktarSatiriEkle eşleştirme sırası: önce Sicil No,
+// yoksa Ad Soyad).
 const EGITIM_IMPORT_KOLONLARI = [
-  { anahtar: 'sicilNo', baslik: 'Sicil No' },
-  { anahtar: 'egitimTuru', baslik: 'Eğitim/Sertifika Türü' },
+  { anahtar: 'sicilNo', baslik: 'Sicil No (boşsa Ad Soyad ile eşleştirilir)' },
+  { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
+  { anahtar: 'egitimTuru', baslik: 'Eğitim/Sertifika Türü (kataloğa yoksa otomatik özel tür olarak eklenir)' },
   { anahtar: 'tarih', baslik: 'Tarih' },
   { anahtar: 'tarih2', baslik: '2. Gün Tarihi (Temel İSG için)' },
   { anahtar: 'saat', baslik: 'Süre (Saat)' },
@@ -72,11 +78,37 @@ function _excelDegeriEvetMi(deger) {
 }
 
 function _egitimIceAktarSatiriEkle(satir) {
-  const personel = personelleriGetir('', false).find(p => p.sicilNo === satir.sicilNo);
-  if (!personel) return { basarili: false, hatalar: { genel: `Sicil No "${satir.sicilNo}" ile eşleşen personel bulunamadı.` } };
+  const tumPersonel = personelleriGetir('', false);
+  let personel = null;
+  if ((satir.sicilNo || '').trim()) {
+    personel = tumPersonel.find(p => p.sicilNo === satir.sicilNo);
+    if (!personel) return { basarili: false, hatalar: { genel: `Sicil No "${satir.sicilNo}" ile eşleşen personel bulunamadı.` } };
+  } else if ((satir.adSoyad || '').trim()) {
+    const ad = _basligiNormallestir(satir.adSoyad);
+    const eslesenler = tumPersonel.filter(p => _basligiNormallestir(p.adSoyad) === ad);
+    if (eslesenler.length === 0) return { basarili: false, hatalar: { genel: `"${satir.adSoyad}" adıyla eşleşen personel bulunamadı.` } };
+    if (eslesenler.length > 1) return { basarili: false, hatalar: { genel: `"${satir.adSoyad}" adında birden fazla personel var, Sicil No belirtin.` } };
+    personel = eslesenler[0];
+  } else {
+    return { basarili: false, hatalar: { genel: 'Sicil No veya Ad Soyad belirtilmeli.' } };
+  }
 
-  const tur = egitimTurleriTumu().find(t => _basligiNormallestir(t.ad) === _basligiNormallestir(satir.egitimTuru));
-  if (!tur) return { basarili: false, hatalar: { genel: `Eğitim türü "${satir.egitimTuru}" tanınmadı.` } };
+  let tur = egitimTurleriTumu().find(t => _basligiNormallestir(t.ad) === _basligiNormallestir(satir.egitimTuru));
+  if (!tur) {
+    // Kullanıcı isteği: "toolbox talk gibi kataloğa önceden eklenmemiş
+    // eğitimler de toplu içe aktarılabilsin" -- kataloğa/özel türlere
+    // uymayan bir isim geldiğinde eğitim türü listesinde tıkanmak yerine
+    // firmaya otomatik özel eğitim türü olarak (1 yıl geçerlilik varsayımıyla,
+    // "Eğitim Türlerini Yönet" ekranındaki varsayılanla aynı) eklenir.
+    const sonuc = firmaOzelEgitimTuruEkle(_aktifFirma.id, satir.egitimTuru, 1);
+    if (!sonuc.basarili) return { basarili: false, hatalar: { genel: `Eğitim türü "${satir.egitimTuru}" eklenemedi: ${sonuc.hata}` } };
+    // sonuc.firma güncel ozelEgitimTurleri listesini içerir — _aktifFirma'nın
+    // kendisi güncellenmezse bir sonraki satırda egitimTurleriniAyarla eski
+    // (yeni türü İÇERMEYEN) listeyle çağrılıp bu türü siler.
+    _aktifFirma = sonuc.firma;
+    egitimTurleriniAyarla(_aktifFirma);
+    tur = egitimTurleriTumu().find(t => t.id === sonuc.tur.id);
+  }
 
   return egitimKaydiEkle({
     personelId: personel.id,
