@@ -42,9 +42,7 @@ function materyalTablosunuCiz(aramaMetni) {
   });
 }
 
-async function _materyalDosyaSecildi(e) {
-  const dosya = e.target.files[0];
-  e.target.value = '';
+async function _materyalDosyayiYukle(dosya) {
   if (!dosya) return;
 
   const varsayilanAd = dosya.name.replace(/\.[^.]+$/, '');
@@ -65,8 +63,47 @@ async function _materyalDosyaSecildi(e) {
   }
 }
 
+function _materyalDosyaSecildi(e) {
+  const dosya = e.target.files[0];
+  e.target.value = '';
+  _materyalDosyayiYukle(dosya);
+}
+
+// Kullanıcı isteği: "bu alana sürüklediğimde de kayıt olsun" -- tüm
+// materyal sekmesi (tablo dahil) bir bırakma (drop) alanı, dosya sürükleme
+// sırasında hafif bir vurgu (kesikli çerçeve) gösterilir.
+function _materyalSurukleBirakKur() {
+  const alan = document.getElementById('materyalBolumu');
+  let surukleSayaci = 0;
+
+  alan.addEventListener('dragover', e => { e.preventDefault(); });
+  alan.addEventListener('dragenter', e => {
+    e.preventDefault();
+    surukleSayaci++;
+    alan.classList.add('materyal-surukle-aktif');
+  });
+  alan.addEventListener('dragleave', e => {
+    e.preventDefault();
+    surukleSayaci = Math.max(0, surukleSayaci - 1);
+    if (surukleSayaci === 0) alan.classList.remove('materyal-surukle-aktif');
+  });
+  alan.addEventListener('drop', e => {
+    e.preventDefault();
+    surukleSayaci = 0;
+    alan.classList.remove('materyal-surukle-aktif');
+    const dosya = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!dosya) return;
+    if (!EGITIM_MATERYAL_IZIN_VERILEN_UZANTILAR.some(u => dosya.name.toLowerCase().endsWith(u))) {
+      alert('Sadece PDF, PPT/PPTX veya Word dosyaları yüklenebilir.');
+      return;
+    }
+    _materyalDosyayiYukle(dosya);
+  });
+}
+
 function materyalSayfasiniBaslat() {
   document.getElementById('materyalAramaKutusu').addEventListener('input', e => materyalTablosunuCiz(e.target.value));
   document.getElementById('materyalYukleBtn').addEventListener('click', () => document.getElementById('materyalDosya').click());
   document.getElementById('materyalDosya').addEventListener('change', _materyalDosyaSecildi);
+  _materyalSurukleBirakKur();
 }

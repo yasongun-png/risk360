@@ -15,6 +15,7 @@
 <style>
   .tablo-scroll-ust { overflow-x: auto; overflow-y: hidden; }
   .tablo-scroll-ust > div { height: 1px; }
+  #materyalBolumu.materyal-surukle-aktif { outline: 3px dashed var(--birincil, #1d4ed8); outline-offset: -3px; background: rgba(29, 78, 216, 0.04); border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -193,7 +194,7 @@
          kaydedebileceğim, istediğimde oradan indirebileceğim bir yer olsun"
          -- bkz. materyal.js/materyal-ui.js. -->
     <div id="materyalBolumu" style="display:none;">
-      <p style="color:var(--metin-soluk); font-size:12px; margin-top:-8px;">Hazırladığınız Toolbox Talk, PDF veya PowerPoint (PPTX) eğitim materyallerini burada saklayıp istediğinizde indirebilirsiniz. Kayıt/sertifika oluşturmaz, sadece dosya kütüphanesidir.</p>
+      <p style="color:var(--metin-soluk); font-size:12px; margin-top:-8px;">Hazırladığınız Toolbox Talk, PDF veya PowerPoint (PPTX) eğitim materyallerini burada saklayıp istediğinizde indirebilirsiniz — "+ Materyal Yükle" ile ya da dosyayı doğrudan bu alana sürükleyip bırakarak. Kayıt/sertifika oluşturmaz, sadece dosya kütüphanesidir.</p>
       <div class="arac-cubugu">
         <input type="text" id="materyalAramaKutusu" class="arama-kutusu" placeholder="Materyal başlığına göre ara...">
         <button type="button" class="birincil" id="materyalYukleBtn" style="width:auto;">+ Materyal Yükle</button>
