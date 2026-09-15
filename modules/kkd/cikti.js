@@ -199,7 +199,6 @@ async function kkdIhlalTutanagiWordOlustur(ihlalId) {
   const fa = formAyarlariGetir('kkd');
   const dokumanSatiri = [
     fa.dokumanNo ? `Doküman No: ${fa.dokumanNo}` : '',
-    fa.surumNo ? `Sürüm No: ${fa.surumNo}` : '',
     fa.surumTarihi ? `Sürüm Tarihi: ${fa.surumTarihi}` : ''
   ].filter(Boolean).join('   |   ');
 
