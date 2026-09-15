@@ -534,7 +534,7 @@ function ihlalleriCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ihlalModalAc(ihlalIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-tutanak]').forEach(btn => btn.addEventListener('click', async () => {
-    try { await kkdIhlalTutanagiPdfOlustur(btn.getAttribute('data-tutanak')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
+    try { await kkdIhlalTutanagiWordOlustur(btn.getAttribute('data-tutanak')); } catch (hata) { console.error(hata); alert('Tutanak üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ihlal kaydını silmek istediğinize emin misiniz?', 'Sil')) { ihlalSil(btn.getAttribute('data-sil')); ihlalleriCiz(document.getElementById('ihlalAramaKutusu').value); }

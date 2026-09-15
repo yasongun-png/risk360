@@ -174,78 +174,101 @@ async function kkdZimmetFormuPdfOlustur(zimmetId) {
 }
 
 // ==================== İHLAL TUTANAĞI ====================
+// Kullanıcı isteği: "KKD ihlal tutanağı da word olsun, pdf kaldır" — PDF'teki
+// aynı içerik, modules/kkd/cikti.js'teki Numune Formu Word üretimiyle aynı
+// docx.js kalıbı (_kkdNumBaslik/_kkdNumHucre) kullanılarak üretilir.
+function _kkdIhlalHucre(metin, baslikMi) {
+  return new docx.TableCell({
+    shading: baslikMi ? { fill: 'E5E7EB' } : undefined,
+    width: baslikMi ? { size: 30, type: docx.WidthType.PERCENTAGE } : { size: 70, type: docx.WidthType.PERCENTAGE },
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(metin ?? '') || '-', bold: !!baslikMi, size: 18 })] })]
+  });
+}
 
-async function kkdIhlalTutanagiPdfOlustur(ihlalId) {
+async function kkdIhlalTutanagiWordOlustur(ihlalId) {
   const k = ihlalIdIleGetirRepo(ihlalId);
   if (!k) return;
 
   const firma = aktifFirmaGetir();
   const firmaAdi = firma ? firma.ad.toLocaleUpperCase('tr-TR') : '';
   const tekrarMetni = k.tekrar === 'Evet' && k.sonIhlalTarihi
-    ? `Çalışanın daha önce de işe ve bulunduğu lokasyona uygun KKD kullanmadığı tespit edilmiş olup son ihlal tarihi ${_kkdKacir(gunAyYil(k.sonIhlalTarihi))} olarak kayıt altındadır.`
+    ? `Çalışanın daha önce de işe ve bulunduğu lokasyona uygun KKD kullanmadığı tespit edilmiş olup son ihlal tarihi ${gunAyYil(k.sonIhlalTarihi)} olarak kayıt altındadır.`
     : 'Çalışanın bu kayıt kapsamında tekrar ihlal durumu bulunmamaktadır.';
 
-  const govde = `
-    <div class="kkd-ustbilgi">
-      <div class="kkd-logo">${_kkdLogoHtml()}</div>
-      <div class="kkd-baslik">KKD İHLAL TUTANAĞI
-        <small>6331 Sayılı İş Sağlığı ve Güvenliği Kanunu ve Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik kapsamında düzenlenmiştir.</small>
-      </div>
-      <div class="kkd-fa">${formAyarlariKutusuHtml('kkd', null, false, null, true)}</div>
-    </div>
+  const fa = formAyarlariGetir('kkd');
+  const dokumanSatiri = [
+    fa.dokumanNo ? `Doküman No: ${fa.dokumanNo}` : '',
+    fa.surumNo ? `Sürüm No: ${fa.surumNo}` : '',
+    fa.surumTarihi ? `Sürüm Tarihi: ${fa.surumTarihi}` : ''
+  ].filter(Boolean).join('   |   ');
 
-    <p style="text-align:right; font-size:9pt; margin:0 0 2mm;">Tarih: ${_kkdKacir(gunAyYil(k.tarih))}</p>
-    <p style="text-align:center; font-weight:700; font-size:11pt; margin:0 0 1mm; color:#0b2c52;">${firmaAdi}</p>
-    <p style="text-align:center; font-size:9pt; margin:0 0 4mm; color:#374151;">İŞ SAĞLIĞI VE GÜVENLİĞİ BİRİMİ</p>
+  const cocuklar = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 40 }, children: [new docx.TextRun({ text: 'KKD İHLAL TUTANAĞI', bold: true, size: 30, color: '000000' })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: dokumanSatiri ? 60 : 200 }, children: [new docx.TextRun({ text: '6331 Sayılı İş Sağlığı ve Güvenliği Kanunu ve Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik kapsamında düzenlenmiştir.', size: 16, color: '6B7280' })] })
+  ];
+  if (dokumanSatiri) {
+    cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 200 }, children: [new docx.TextRun({ text: dokumanSatiri, size: 16, color: '6B7280' })] }));
+  }
 
-    <div class="kkd-bolum">
-      <h2>Tutanak</h2>
-      <table>
-        <tr><td style="font-size:9pt;">
-          <p style="margin:0 0 3mm;">${_kkdKacir(k.calismaBolumu)} bölümünde çalışan, <b>${_kkdKacir(k.sicil)}</b> sicil numaralı <b>${_kkdKacir(k.adSoyad)}</b> adlı çalışanın, ${_kkdKacir(gunAyYil(k.tarih))} tarihinde saat ${_kkdKacir(k.saat)} civarında <b>${_kkdKacir(k.bolum)}</b> lokasyonunda yapılan saha kontrolünde, kullanması gereken kişisel koruyucu donanımı uygun şekilde kullanmadığı tespit edilmiştir.</p>
-          <p style="margin:0 0 3mm;">Kullanmadığı / uygunsuz kullandığı KKD: <b>${_kkdKacir(k.kkd)}</b><br>İhlal türü: <b>${_kkdKacir(k.ihlalTuru)}</b><br>Uygulanan işlem: <b>${_kkdKacir(k.islem)}</b></p>
-          <p style="margin:0 0 3mm;">${tekrarMetni}</p>
-          <p style="margin:0;"><b>Açıklama:</b><br>${_kkdKacir(k.aciklama) || '-'}</p>
-        </td></tr>
-      </table>
-    </div>
+  cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, spacing: { after: 100 }, children: [new docx.TextRun({ text: `Tarih: ${gunAyYil(k.tarih)}`, size: 18 })] }));
+  cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 20 }, children: [new docx.TextRun({ text: firmaAdi, bold: true, size: 22, color: '0B2C52' })] }));
+  cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 240 }, children: [new docx.TextRun({ text: 'İŞ SAĞLIĞI VE GÜVENLİĞİ BİRİMİ', size: 18, color: '374151' })] }));
 
-    <div class="kkd-kanun">
-      Bu durum;<br>
-      • 6331 sayılı İş Sağlığı ve Güvenliği Kanunu'nun 19. maddesi,<br>
-      • Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik hükümlerine aykırılık teşkil etmektedir.
-    </div>
+  cocuklar.push(_kkdNumBaslik('Tutanak'));
+  cocuklar.push(new docx.Paragraph({ spacing: { after: 160 }, children: [new docx.TextRun({ text: `${k.calismaBolumu} bölümünde çalışan, ${k.sicil} sicil numaralı ${k.adSoyad} adlı çalışanın, ${gunAyYil(k.tarih)} tarihinde saat ${k.saat} civarında ${k.bolum} lokasyonunda yapılan saha kontrolünde, kullanması gereken kişisel koruyucu donanımı uygun şekilde kullanmadığı tespit edilmiştir.`, size: 19 })] }));
+  cocuklar.push(new docx.Paragraph({ spacing: { after: 160 }, children: [
+    new docx.TextRun({ text: `Kullanmadığı / uygunsuz kullandığı KKD: ${k.kkd}`, size: 19 }), new docx.TextRun({ break: 1 }),
+    new docx.TextRun({ text: `İhlal türü: ${k.ihlalTuru}`, size: 19 }), new docx.TextRun({ break: 1 }),
+    new docx.TextRun({ text: `Uygulanan işlem: ${k.islem}`, size: 19 })
+  ] }));
+  cocuklar.push(new docx.Paragraph({ spacing: { after: 160 }, children: [new docx.TextRun({ text: tekrarMetni, size: 19 })] }));
+  cocuklar.push(new docx.Paragraph({ spacing: { after: 260 }, children: [
+    new docx.TextRun({ text: 'Açıklama:', bold: true, size: 19 }), new docx.TextRun({ break: 1 }),
+    new docx.TextRun({ text: k.aciklama || '-', size: 19 })
+  ] }));
 
-    <div class="kkd-bolum">
-      <h2>Bilgiler</h2>
-      <table>
-        <tr><td class="kkd-etiket">Ad Soyad</td><td>${_kkdKacir(k.adSoyad)}</td></tr>
-        <tr><td class="kkd-etiket">Sicil No</td><td>${_kkdKacir(k.sicil) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Firma</td><td>${_kkdKacir(k.firma) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Çalıştığı Bölüm / Görev</td><td>${_kkdKacir(k.calismaBolumu) || '-'}</td></tr>
-        <tr><td class="kkd-etiket">Tespiti Yapan</td><td>${_kkdKacir(k.tespitEden)}</td></tr>
-      </table>
-    </div>
+  cocuklar.push(new docx.Paragraph({
+    spacing: { after: 260 },
+    border: { top: { style: docx.BorderStyle.SINGLE, size: 4, color: '9CA3AF' }, bottom: { style: docx.BorderStyle.SINGLE, size: 4, color: '9CA3AF' } },
+    children: [new docx.TextRun({ text: "Bu durum; 6331 sayılı İş Sağlığı ve Güvenliği Kanunu'nun 19. maddesi ve Kişisel Koruyucu Donanımların İşyerlerinde Kullanılması Hakkında Yönetmelik hükümlerine aykırılık teşkil etmektedir.", size: 17, italics: true, color: '374151' })]
+  }));
 
-    <table class="kkd-imza">
-      <tr>
-        <td>
-          <div class="imza-baslik">Tespit Eden</div>
-          <div class="imza-satir">Ad Soyad: ${_kkdKacir(k.tespitEden)}</div>
-          <div class="imza-satir">Görev: İş Güvenliği Uzmanı</div>
-          <div class="imza-satir">İmza:</div>
-        </td>
-        <td>
-          <div class="imza-baslik">Çalışan</div>
-          <div class="imza-satir">Ad Soyad: ${_kkdKacir(k.adSoyad)}</div>
-          <div class="imza-satir">Sicil No: ${_kkdKacir(k.sicil) || '-'}</div>
-          <div class="imza-satir">İmza:</div>
-        </td>
-      </tr>
-    </table>
-  `;
+  cocuklar.push(_kkdNumBaslik('Bilgiler'));
+  cocuklar.push(new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      new docx.TableRow({ children: [_kkdIhlalHucre('Ad Soyad', true), _kkdIhlalHucre(k.adSoyad)] }),
+      new docx.TableRow({ children: [_kkdIhlalHucre('Sicil No', true), _kkdIhlalHucre(k.sicil)] }),
+      new docx.TableRow({ children: [_kkdIhlalHucre('Firma', true), _kkdIhlalHucre(k.firma)] }),
+      new docx.TableRow({ children: [_kkdIhlalHucre('Çalıştığı Bölüm / Görev', true), _kkdIhlalHucre(k.calismaBolumu)] }),
+      new docx.TableRow({ children: [_kkdIhlalHucre('Tespiti Yapan', true), _kkdIhlalHucre(k.tespitEden)] })
+    ]
+  }));
 
-  await _kkdPdfUret(`KKD_Tutanak_${(k.ihlalNo || ihlalId).replace(/[\\/]/g, '-')}.pdf`, govde);
+  cocuklar.push(new docx.Paragraph({ text: '', spacing: { after: 260 } }));
+  const kenarlik = { style: docx.BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
+  const imzaHucre = (baslik, ad, ekAlan) => new docx.TableCell({
+    borders: { top: kenarlik, bottom: kenarlik, left: kenarlik, right: kenarlik },
+    margins: { top: 100, bottom: 100, left: 120, right: 120 },
+    children: [
+      new docx.Paragraph({ spacing: { after: 80 }, children: [new docx.TextRun({ text: baslik, bold: true, size: 18 })] }),
+      new docx.Paragraph({ spacing: { after: 40 }, children: [new docx.TextRun({ text: `Ad Soyad: ${ad || '-'}`, size: 18 })] }),
+      new docx.Paragraph({ spacing: { after: 220 }, children: [new docx.TextRun({ text: ekAlan, size: 18 })] }),
+      new docx.Paragraph({ children: [new docx.TextRun({ text: 'İmza:', size: 18 })] })
+    ]
+  });
+  cocuklar.push(new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [new docx.TableRow({ children: [
+      imzaHucre('Tespit Eden', k.tespitEden, 'Görev: İş Güvenliği Uzmanı'),
+      imzaHucre('Çalışan', k.adSoyad, `Sicil No: ${k.sicil || '-'}`)
+    ] })]
+  }));
+
+  const dokuman = new docx.Document({ sections: [{ properties: {}, children: cocuklar }] });
+  const blob = await docx.Packer.toBlob(dokuman);
+  saveAs(blob, `KKD_Tutanak_${(k.ihlalNo || ihlalId).replace(/[\\/]/g, '-')}.docx`);
 }
 
 // ==================== NUMUNE DEĞERLENDİRME FORMU (WORD) ====================
