@@ -214,7 +214,6 @@ async function kkdIhlalTutanagiWordOlustur(ihlalId) {
   cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 20 }, children: [new docx.TextRun({ text: firmaAdi, bold: true, size: 22, color: '0B2C52' })] }));
   cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 240 }, children: [new docx.TextRun({ text: 'İŞ SAĞLIĞI VE GÜVENLİĞİ BİRİMİ', size: 18, color: '374151' })] }));
 
-  cocuklar.push(_kkdNumBaslik('Tutanak'));
   cocuklar.push(new docx.Paragraph({ spacing: { after: 160 }, children: [new docx.TextRun({ text: `${k.calismaBolumu} bölümünde çalışan, ${k.sicil} sicil numaralı ${k.adSoyad} adlı çalışanın, ${gunAyYil(k.tarih)} tarihinde saat ${k.saat} civarında ${k.bolum} lokasyonunda yapılan saha kontrolünde, kullanması gereken kişisel koruyucu donanımı uygun şekilde kullanmadığı tespit edilmiştir.`, size: 19 })] }));
   cocuklar.push(new docx.Paragraph({ spacing: { after: 160 }, children: [
     new docx.TextRun({ text: `Kullanmadığı / uygunsuz kullandığı KKD: ${k.kkd}`, size: 19 }), new docx.TextRun({ break: 1 }),
