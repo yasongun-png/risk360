@@ -470,11 +470,15 @@ async function sinavImzaListesiFormGonderildi(e) {
   if (!kisiSayisi || kisiSayisi < 1) { document.getElementById('sinavImzaKisiSayisiHata').textContent = 'Geçerli bir kişi sayısı girin.'; gecerli = false; }
   if (!gecerli) return;
 
-  const katilimcilar = Array.from({ length: kisiSayisi }, () => ({ sicilNo: '', adSoyad: '', isveren: '' }));
+  // Kullanıcı isteği: "işyeri siciline gerek yok, ad soyad bölüm imza bu
+  // kadar" -- Sicil No ve İşyeri Sicili sütunları basılmaz, Bölüm modalda
+  // sorulan değerle her satıra önceden doldurulmuş (kalem ile
+  // değiştirilebilir) tek sütun olarak görünür (bkz. cikti.js 'basit' kolon şeması).
+  const katilimcilar = Array.from({ length: kisiSayisi }, () => ({ adSoyad: '', bolum }));
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {
-    await imzaListesiPdfOlustur(konu, katilimcilar, { tarih: new Date().toISOString().slice(0, 10), bolum });
+    await imzaListesiPdfOlustur(konu, katilimcilar, { tarih: new Date().toISOString().slice(0, 10) }, 'basit');
     sinavImzaListesiModalKapat();
   } catch (hata) {
     console.error(hata);

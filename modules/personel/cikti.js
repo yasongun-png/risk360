@@ -107,9 +107,22 @@ function _prsEgitimTarihiGoruntu(egitimBilgi) {
 // gereksiz ikinci sayfaya geçiyor" — az sayıda katılımcıda (bkz.
 // _PRS_IMZA_SON_SAYFA_ESIK) ayrı bir sayfa açmak yerine boşluk zaten
 // varken aynı sayfaya sığdırılır.
-function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilgi, baslangicNo, sayfaNo, toplamSayfa, imzaBlokEklensin) {
+// kolonSemasi: 'standart' (varsayılan, Personel modülündeki genel İmza
+// Listesi) -> Sıra No/Sicil No/Ad Soyad/İşyeri Sicili/İmza. 'basit' (Eğitim
+// modülü Sınav İmza Listesi — kullanıcı isteği: "işyeri siciline gerek yok,
+// ad soyad bölüm imza bu kadar") -> Sıra No/Ad Soyad/Bölüm/İmza, sicil no ve
+// işyeri sicili sütunları hiç basılmaz.
+function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilgi, baslangicNo, sayfaNo, toplamSayfa, imzaBlokEklensin, kolonSemasi) {
   const logo = firma && firmaLogoGetir(firma.id);
-  const satirlar = katilimcilar.map((p, i) => `
+  const basit = kolonSemasi === 'basit';
+  const satirlar = katilimcilar.map((p, i) => basit ? `
+    <tr>
+      <td style="text-align:center; width:8%;">${baslangicNo + i}</td>
+      <td style="width:42%;">${_prsSertKacir(p.adSoyad)}</td>
+      <td style="width:25%;">${_prsSertKacir(p.bolum)}</td>
+      <td></td>
+    </tr>
+  ` : `
     <tr>
       <td style="text-align:center; width:7%;">${baslangicNo + i}</td>
       <td style="width:16%;">${_prsSertKacir(p.sicilNo)}</td>
@@ -130,10 +143,10 @@ function _prsImzaListesiSayfaHtml(egitimTuruAdi, katilimcilar, firma, egitimBilg
         <span><b>Eğitim/Sertifika Türü:</b> ${_prsSertKacir(egitimTuruAdi)}</span>
         <span><b>Tarih:</b> ${_prsSertKacir(_prsEgitimTarihiGoruntu(egitimBilgi))}</span>
         ${egitimBilgi.saat ? `<span><b>Süre:</b> ${_prsSertKacir(egitimBilgi.saat)} Saat</span>` : ''}
-        ${egitimBilgi.bolum ? `<span><b>Bölüm:</b> ${_prsSertKacir(egitimBilgi.bolum)}</span>` : ''}
+        ${!basit && egitimBilgi.bolum ? `<span><b>Bölüm:</b> ${_prsSertKacir(egitimBilgi.bolum)}</span>` : ''}
       </div>
       <table class="eil-tablo">
-        <thead><tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İşyeri Sicili</th><th>İmza</th></tr></thead>
+        <thead>${basit ? '<tr><th>Sıra No</th><th>Ad Soyad</th><th>Bölüm</th><th>İmza</th></tr>' : '<tr><th>Sıra No</th><th>Sicil No</th><th>Ad Soyad</th><th>İşyeri Sicili</th><th>İmza</th></tr>'}</thead>
         <tbody>${satirlar}</tbody>
       </table>
       ${imzaBlokEklensin ? `
@@ -156,7 +169,8 @@ async function _prsSayfaCanvasaCevir(el) {
 // egitimBilgi: { tarih, tarih2 (opsiyonel, iki günlü eğitimler için), saat
 // (opsiyonel) } -- bkz. ui.js imzaListesiOlusturTiklandi, seçilen eğitim
 // türünün ikiGunluMu/saatliMi alanlarına göre doldurulur.
-async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar, egitimBilgi) {
+// kolonSemasi: bkz. _prsImzaListesiSayfaHtml başındaki not ('standart' | 'basit').
+async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar, egitimBilgi, kolonSemasi) {
   if (!Array.isArray(katilimcilar) || !katilimcilar.length) return;
   const firma = aktifFirmaGetir();
   const bilgi = egitimBilgi || { tarih: _prsBugunIso() };
@@ -171,7 +185,7 @@ async function imzaListesiPdfOlustur(egitimTuruAdi, katilimcilar, egitimBilgi) {
   const toplamSayfa = sonSayfaBosMu ? sayfalar.length : sayfalar.length + 1;
 
   const html = `<div id="prsImzaListesiPdf">${_prsImzaListesiStilHtml('#prsImzaListesiPdf')}${
-    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, toplamSayfa, sonSayfaBosMu && i === sayfalar.length - 1)).join('')
+    sayfalar.map((s, i) => _prsImzaListesiSayfaHtml(egitimTuruAdi, s, firma, bilgi, i * _PRS_IMZA_SATIR_SAYFA_BASI + 1, i + 1, toplamSayfa, sonSayfaBosMu && i === sayfalar.length - 1, kolonSemasi)).join('')
   }${sonSayfaBosMu ? '' : _prsImzaSayfasiHtml(egitimTuruAdi, firma, bilgi, toplamSayfa, toplamSayfa)}</div>`;
 
   const mount = document.getElementById('yazdirmaAlani');
