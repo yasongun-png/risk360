@@ -470,6 +470,15 @@ async function sinavImzaListesiFormGonderildi(e) {
   if (!kisiSayisi || kisiSayisi < 1) { document.getElementById('sinavImzaKisiSayisiHata').textContent = 'Geçerli bir kişi sayısı girin.'; gecerli = false; }
   if (!gecerli) return;
 
+  // Kullanıcı isteği: "kişi sayısını fazla girince uyarmalı, ikinci sayfaya
+  // geçiyor diye" -- bir sayfaya sığan azami satır sayısını aşan girişlerde
+  // kaç sayfaya bölüneceği önceden bildirilir, kullanıcı isterse iptal edip
+  // sayıyı düzeltebilir.
+  if (kisiSayisi > _PRS_IMZA_SATIR_SAYFA_BASI_BASIT) {
+    const sayfaSayisi = Math.ceil(kisiSayisi / _PRS_IMZA_SATIR_SAYFA_BASI_BASIT);
+    if (!confirm(`Bir sayfaya en fazla ${_PRS_IMZA_SATIR_SAYFA_BASI_BASIT} kişi sığıyor; ${kisiSayisi} kişilik liste ${sayfaSayisi} sayfaya bölünecek (her sayfada eğitimi veren kişinin imza hanesi olacak). Devam edilsin mi?`)) return;
+  }
+
   // Kullanıcı isteği: "işyeri siciline gerek yok, ad soyad bölüm imza bu
   // kadar" -- Sicil No ve İşyeri Sicili sütunları basılmaz, Bölüm modalda
   // sorulan değerle her satıra önceden doldurulmuş (kalem ile
