@@ -25,6 +25,13 @@ function formatTarihGoster(isoTarih) {
 function yukleniciSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.addEventListener('click', () => gorunumDegistir(btn.getAttribute('data-sekme'))));
 
+  // Kullanıcı isteği: "personel ekle üst sağ boşlukta büyük buton olarak
+  // dursun" — hangi sekmede olunursa olunsun tek tıkla personel eklenebilsin.
+  document.getElementById('hizliPersonelEkleBtn').addEventListener('click', () => {
+    gorunumDegistir('kisiler');
+    kisiModalAc();
+  });
+
   document.getElementById('yeniFirmaBtn').addEventListener('click', () => firmaModalAc());
   document.getElementById('firmaModalKapatBtn').addEventListener('click', firmaModalKapat);
   document.getElementById('firmaModalIptalBtn').addEventListener('click', firmaModalKapat);
