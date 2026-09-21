@@ -6,6 +6,10 @@
 let _sinavSekme = 'sorular';
 let _duzenlenenSoruId = null;
 let _sonucModalSinavId = null;
+// Kullanıcı isteği: "soru bankasının tamamını silebilmek için hepsini seç
+// yapalım" — Personel/Eğitim kayıtları tablosundaki toplu seçim/silme
+// deseninin aynısı (bkz. modules/egitim/ui.js _seciliKayitIdleri).
+let _seciliSoruIdleri = new Set();
 
 const SINAV_DURUM_METIN = { gecti: 'Geçti', kaldi: 'Kaldı', bilinmiyor: 'Bilinmiyor' };
 const SINAV_DURUM_SINIF = { gecti: 'durum-gecerli', kaldi: 'durum-gecmis', bilinmiyor: 'durum-kayit_yok' };
@@ -78,6 +82,29 @@ function sinavSayfasiniBaslat() {
   document.getElementById('soruAltKonuFiltre').addEventListener('change', soruTablosunuCiz);
   document.getElementById('soruZorlukFiltre').addEventListener('change', soruTablosunuCiz);
   document.getElementById('soruAramaKutusu').addEventListener('input', soruTablosunuCiz);
+
+  // Kullanıcı isteği: "soru bankasının tamamını silebilmek için hepsini seç
+  // yapalım" — görünen (aktif filtreyle eşleşen) tüm sorular seçilir/kaldırılır.
+  document.getElementById('soruTumunuSecCheckbox').addEventListener('change', e => {
+    const konuId = document.getElementById('soruKonuFiltre').value;
+    const altKonu = document.getElementById('soruAltKonuFiltre').value;
+    const zorluk = document.getElementById('soruZorlukFiltre').value;
+    const aramaMetni = document.getElementById('soruAramaKutusu').value;
+    const gorunenler = sorulariGetir(konuId, aramaMetni, altKonu, zorluk);
+    if (e.target.checked) gorunenler.forEach(s => _seciliSoruIdleri.add(s.id));
+    else gorunenler.forEach(s => _seciliSoruIdleri.delete(s.id));
+    soruTablosunuCiz();
+  });
+  document.getElementById('soruTopluSilBtn').addEventListener('click', async () => {
+    const sayi = _seciliSoruIdleri.size;
+    if (!sayi) return;
+    if (!(await onayModali(`${sayi} soruyu silmek istediğinize emin misiniz? (Bu soruları kullanan geçmiş sınavlar etkilenmez.)`, 'Sil'))) return;
+    _seciliSoruIdleri.forEach(id => soruSil(id));
+    _seciliSoruIdleri.clear();
+    soruTablosunuCiz();
+    _konuSecimleriniDoldur('soruKonuFiltre', true);
+  });
+
   document.getElementById('hazirSoruBankasiBtn').addEventListener('click', hazirSoruBankasiModalAc);
   document.getElementById('hazirSoruBankasiKapatBtn').addEventListener('click', hazirSoruBankasiModalKapat);
   document.getElementById('hazirSoruBankasiIptalBtn').addEventListener('click', hazirSoruBankasiModalKapat);
@@ -278,6 +305,7 @@ function soruTablosunuCiz() {
     bosDurum.textContent = aramaMetni || konuId || altKonu || zorluk
       ? 'Aramanızla eşleşen soru bulunamadı.'
       : 'Henüz soru bankasına soru eklenmedi.';
+    _soruTopluSilDurumunuGuncelle([]);
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -285,6 +313,7 @@ function soruTablosunuCiz() {
   liste.forEach(s => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td><input type="checkbox" class="satir-secim" data-soru-secim="${s.id}" ${_seciliSoruIdleri.has(s.id) ? 'checked' : ''}></td>
       <td>${_sinavKacir(_sinavKisalt(s.soruMetni, 90))}</td>
       <td>${_sinavKacir(s.turAdi)}</td>
       <td>${_sinavKacir(s.konu) || '-'}</td>
@@ -304,12 +333,36 @@ function soruTablosunuCiz() {
   govde.querySelectorAll('[data-sil]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (await onayModali('Bu soruyu silmek istediğinize emin misiniz? (Bu soruyu kullanan geçmiş sınavlar etkilenmez.)', 'Sil')) {
-        soruSil(btn.getAttribute('data-sil'));
+        const id = btn.getAttribute('data-sil');
+        soruSil(id);
+        _seciliSoruIdleri.delete(id);
         soruTablosunuCiz();
         _konuSecimleriniDoldur('soruKonuFiltre', true);
       }
     });
   });
+  govde.querySelectorAll('[data-soru-secim]').forEach(kutu => {
+    kutu.addEventListener('change', () => {
+      const id = kutu.getAttribute('data-soru-secim');
+      if (kutu.checked) _seciliSoruIdleri.add(id);
+      else _seciliSoruIdleri.delete(id);
+      _soruTopluSilDurumunuGuncelle(liste);
+    });
+  });
+
+  _soruTopluSilDurumunuGuncelle(liste);
+}
+
+function _soruTopluSilDurumunuGuncelle(gorunenler) {
+  const buton = document.getElementById('soruTopluSilBtn');
+  const sayi = _seciliSoruIdleri.size;
+  buton.style.display = sayi ? '' : 'none';
+  buton.textContent = `Seçilenleri Sil (${sayi})`;
+
+  const tumunuSec = document.getElementById('soruTumunuSecCheckbox');
+  const gorunenSecili = gorunenler.length > 0 && gorunenler.every(s => _seciliSoruIdleri.has(s.id));
+  tumunuSec.checked = gorunenSecili;
+  tumunuSec.indeterminate = !gorunenSecili && gorunenler.some(s => _seciliSoruIdleri.has(s.id));
 }
 
 function soruModalAc(soruId) {

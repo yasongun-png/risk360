@@ -109,6 +109,7 @@
             <input type="text" id="soruAramaKutusu" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin:0;">
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="ikincil sil" id="soruTopluSilBtn" style="display:none;">Seçilenleri Sil</button>
             <button type="button" class="ikincil" id="soruSablonIndirBtn">Şablon İndir</button>
             <button type="button" class="ikincil" id="soruIceAktarBtn">İçe Aktar</button>
             <input type="file" id="soruIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
@@ -122,6 +123,7 @@
           <table class="veri-tablosu">
             <thead>
               <tr>
+                <th><input type="checkbox" id="soruTumunuSecCheckbox"></th>
                 <th>Soru</th>
                 <th>Eğitim / Konu</th>
                 <th>Alt Konu</th>
