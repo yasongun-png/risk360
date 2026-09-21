@@ -61,7 +61,8 @@ const SINAV_ALT_KONU_LISTESI = [
   'Kaynakla çalışma',
   'Özel risk taşıyan ekipman ile çalışma',
   'Kanserojen veya mutajen maddelerle çalışma',
-  'Kimyasal veya biyolojik etkenlerle çalışma'
+  'Kimyasal veya biyolojik etkenlerle çalışma',
+  'Patlamadan korunma dokümanı kapsamındaki hususlar'
 ];
 
 function soruOlustur(veriler) {
