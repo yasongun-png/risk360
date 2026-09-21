@@ -1005,29 +1005,28 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
     // "CEVAP ANAHTARI" etiketi kaldırıldı, sadece sınavın kendi başlığı gösteriliyor.
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: sinav.baslik, bold: true, size: 24, color: '0B2C52' })], spacing: { after: 140 } }),
     new docx.Paragraph({ children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 17 })], spacing: { after: 40 } }),
+    // Kullanıcı isteği: "bu kısım sağa doğru yayılabilir, en fazla iki satır
+    // olur" — Geçme Notu, tab durağıyla satırın sağına itiliyor.
     new docx.Paragraph({
-      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}     Geçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
+      tabStops: [{ type: docx.TabStopType.LEFT, position: 5500 }],
+      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}\tGeçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
       spacing: { after: cevapGoster ? 220 : 60 }
     })
   ];
   if (!cevapGoster) {
     // Kullanıcı isteği: "sınavda tarih yazılabilecek bir boşluk yer bırak,
-    // ad soyad, bölüm" sonra "bu alanda alt çizgi olmasın" — yazılabilecek
-    // boşluk artık "_____" metni değil, altı çizili (underline) boş bir
-    // TextRun ile veriliyor.
-    const _bosAlan = (genislik) => new docx.TextRun({ text: ' '.repeat(genislik), underline: {}, size: 16 });
+    // ad soyad, bölüm" sonra "bu alanda alt çizgi olmasın, sağa doğru
+    // yayılabilir en fazla iki satır olur" — dört alan (Ad Soyad/Bölüm/
+    // Sicil No/Tarih) tab duraklarıyla TEK satıra, sayfa genişliğine
+    // yayılıyor; boşluklar alt çizgisiz (Word'ün kendi tab boşluğu, yazı
+    // yazılacak alan sadece etiketle bir sonraki tab durağı arasındaki boşluk).
     ustBilgi.push(new docx.Paragraph({
-      children: [
-        new docx.TextRun({ text: 'Ad Soyad: ', size: 16 }), _bosAlan(30),
-        new docx.TextRun({ text: '     Bölüm: ', size: 16 }), _bosAlan(16)
+      tabStops: [
+        { type: docx.TabStopType.LEFT, position: 2600 },
+        { type: docx.TabStopType.LEFT, position: 5300 },
+        { type: docx.TabStopType.LEFT, position: 8000 }
       ],
-      spacing: { after: 80 }
-    }));
-    ustBilgi.push(new docx.Paragraph({
-      children: [
-        new docx.TextRun({ text: 'Sicil No: ', size: 16 }), _bosAlan(14),
-        new docx.TextRun({ text: '     Tarih: ', size: 16 }), _bosAlan(14)
-      ],
+      children: [new docx.TextRun({ text: 'Ad Soyad: \tBölüm: \tSicil No: \tTarih: ', size: 16 })],
       spacing: { after: 220 }
     }));
   }
