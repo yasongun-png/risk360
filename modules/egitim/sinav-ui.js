@@ -600,10 +600,23 @@ function _sinavManuelListesiCiz() {
   if (!liste.length) {
     govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Filtreyle eşleşen soru bulunamadı.</div>';
   } else {
+    // Kullanıcı isteği: "sınav sorularını serbest seçerken tam okuyamıyorum,
+    // tüm şıkları görmek istiyorum" — soru metni artık kısaltılmadan tam
+    // gösteriliyor, altında A/B/C/D şıklarının tamamı listeleniyor (doğru
+    // cevap yeşil/kalın işaretli).
     govde.innerHTML = liste.map(s => `
-      <label style="display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
+      <label style="display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
         <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
-        <span>${_sinavKacir(_sinavKisalt(s.soruMetni, 130))} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></span>
+        <span>
+          <div>${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></div>
+          <div style="margin-top:4px; display:grid; gap:2px;">
+            ${SINAV_SIK_HARFLERI.map(harf => `
+              <div style="${harf === s.dogruCevap ? 'font-weight:700; color:#15803d;' : 'color:var(--metin-soluk);'}">
+                ${harf === s.dogruCevap ? '✔' : ''} ${harf}) ${_sinavKacir(s.secenekler[harf])}
+              </div>
+            `).join('')}
+          </div>
+        </span>
       </label>
     `).join('');
   }
