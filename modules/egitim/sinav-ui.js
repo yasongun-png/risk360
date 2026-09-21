@@ -824,14 +824,22 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
   ];
   if (!cevapGoster) {
     // Kullanıcı isteği: "sınavda tarih yazılabilecek bir boşluk yer bırak,
-    // ad soyad, bölüm" — sınav tarihi otomatik basılmak yerine elle
-    // doldurulacak boş bir alan olarak bırakıldı, Bölüm alanı eklendi.
+    // ad soyad, bölüm" sonra "bu alanda alt çizgi olmasın" — yazılabilecek
+    // boşluk artık "_____" metni değil, altı çizili (underline) boş bir
+    // TextRun ile veriliyor.
+    const _bosAlan = (genislik) => new docx.TextRun({ text: ' '.repeat(genislik), underline: {}, size: 16 });
     ustBilgi.push(new docx.Paragraph({
-      children: [new docx.TextRun({ text: 'Ad Soyad: ______________________________     Bölüm: ________________', size: 16 })],
+      children: [
+        new docx.TextRun({ text: 'Ad Soyad: ', size: 16 }), _bosAlan(30),
+        new docx.TextRun({ text: '     Bölüm: ', size: 16 }), _bosAlan(16)
+      ],
       spacing: { after: 80 }
     }));
     ustBilgi.push(new docx.Paragraph({
-      children: [new docx.TextRun({ text: 'Sicil No: ______________     Tarih: ______________', size: 16 })],
+      children: [
+        new docx.TextRun({ text: 'Sicil No: ', size: 16 }), _bosAlan(14),
+        new docx.TextRun({ text: '     Tarih: ', size: 16 }), _bosAlan(14)
+      ],
       spacing: { after: 220 }
     }));
   }
