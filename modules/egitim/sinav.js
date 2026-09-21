@@ -147,32 +147,6 @@ function soruDogrula(veriler) {
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
 
-function sinavOlusturmaDogrula(veriler, soruSayisiMevcut) {
-  const hatalar = {};
-
-  if (!veriler.baslik || !veriler.baslik.trim()) {
-    hatalar.baslik = 'Sınav başlığı zorunludur.';
-  }
-
-  if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) {
-    hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
-  }
-
-  // Kullanıcı isteği: "sınav tarihi girmesem de sorular basılabilsin,
-  // sınava giren kendisi yazsın" -- tarih artık opsiyonel; boş bırakılırsa
-  // sınav kağıdında elle doldurulacak bir boşluk basılır (bkz. sinav-ui.js
-  // _sinavKagidiYazdirOrtak).
-
-  const soruSayisi = Number(veriler.soruSayisi);
-  if (!soruSayisi || soruSayisi < 1) {
-    hatalar.soruSayisi = 'En az 1 soru seçilmelidir.';
-  } else if (soruSayisi > soruSayisiMevcut) {
-    hatalar.soruSayisi = `Soru bankasında bu konu için sadece ${soruSayisiMevcut} soru var.`;
-  }
-
-  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
-}
-
 function sinavSonucGirisDogrula(veriler) {
   const hatalar = {};
 
@@ -376,48 +350,10 @@ function _sinavKaristir(liste) {
   return kopya;
 }
 
-// konular (opsiyonel, seçili alt konu dizisi -- kullanıcı isteği: "birden
-// çok alt konu seçebilmem lazım", boşsa/verilmezse tüm alt konular
-// dahildir) ve zorluklar (opsiyonel, seçili zorluk düzeyi dizisi --
-// boşsa/verilmezse tüm zorluklar dahildir) ile soru havuzu daraltılabilir.
-function sinavEkle(veriler) {
-  const zorluklar = Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(Boolean) : [];
-  const konular = Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [];
-  const havuz = soruTumunuGetirRepo().filter(s =>
-    s.egitimTuruId === veriler.egitimTuruId &&
-    (!konular.length || konular.includes(s.konu)) &&
-    (!zorluklar.length || zorluklar.includes(s.zorluk))
-  );
-  const dogrulama = sinavOlusturmaDogrula(veriler, havuz.length);
-  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
-
-  const soruSayisi = Number(veriler.soruSayisi);
-  const secilenler = _sinavKaristir(havuz).slice(0, soruSayisi);
-
-  const yeniSinav = sinavOlustur({
-    baslik: veriler.baslik.trim(),
-    egitimTuruId: veriler.egitimTuruId,
-    konular,
-    zorluklar,
-    tarih: veriler.tarih,
-    gecmeNotu: veriler.gecmeNotu ? Number(veriler.gecmeNotu) : SINAV_GECME_NOTU_VARSAYILAN,
-    sorular: secilenler.map(s => ({
-      soruId: s.id,
-      soruMetni: s.soruMetni,
-      secenekler: s.secenekler,
-      dogruCevap: s.dogruCevap,
-      aciklama: s.aciklama || ''
-    }))
-  });
-  sinavEkleRepo(yeniSinav);
-  return { basarili: true, sinav: yeniSinav };
-}
-
-// Otomatik/rastgele seçim yerine, kullanıcının soru bankasından tek tek
-// işaretlediği sorularla sınav oluşturur (kullanıcı isteği: "mevcut
-// kütüphaneden istediğim soruları da seçip sınav kağıdı hazırlamak
-// istiyorum"). Doğrulama sinavOlusturmaDogrula ile ORTAK değildir çünkü
-// "soru sayısı"na değil, doğrudan seçilen soru id listesine bakılır.
+// Kullanıcının soru bankasından tek tek işaretlediği (veya Otomatik yöntemde
+// önce önizlenip "Alternatif Soru" ile düzenlenip kesinleştirdiği, bkz.
+// sinav-ui.js _sinavOtomatikSecimler) sorularla sınav oluşturur — doğrulama
+// "soru sayısı"na değil, doğrudan seçilen soru id listesine bakar.
 function sinavManuelEkle(veriler, soruIdleri) {
   const hatalar = {};
   if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Sınav başlığı zorunludur.';

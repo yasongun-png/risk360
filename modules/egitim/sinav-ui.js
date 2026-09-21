@@ -138,10 +138,14 @@ function sinavSayfasiniBaslat() {
   document.getElementById('sinavForm').addEventListener('submit', sinavFormGonderildi);
   document.getElementById('sinavYontemOtomatik').addEventListener('change', _sinavYontemDegisti);
   document.getElementById('sinavYontemManuel').addEventListener('change', _sinavYontemDegisti);
-  document.getElementById('sinavKonuId').addEventListener('change', _sinavManuelListesiCizGerekirse);
-  document.getElementById('sinavAltKonuKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
-  document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavKonuId').addEventListener('change', _sinavFiltreDegistiGerekirse);
+  document.getElementById('sinavAltKonuKutulari').addEventListener('change', _sinavFiltreDegistiGerekirse);
+  document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavFiltreDegistiGerekirse);
   document.getElementById('sinavManuelArama').addEventListener('input', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavSoruSayisi').addEventListener('input', () => {
+    if (!_sinavManuelModuMu()) { _sinavOtomatikSecimler = []; _sinavOtomatikListesiCiz(); }
+  });
+  document.getElementById('sinavOtomatikGetirBtn').addEventListener('click', _sinavOtomatikSoruGetir);
   document.getElementById('sinavAramaKutusu').addEventListener('input', sinavTablosunuCiz);
 
   document.getElementById('sonucAramaKutusu').addEventListener('input', sonucTablosunuCiz);
@@ -586,6 +590,7 @@ function sinavModalAc(onDoluIdler) {
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
   document.getElementById('sinavManuelArama').value = '';
   _sinavManuelSeciliIdler = onDoluIdler && onDoluIdler.size ? new Set(onDoluIdler) : new Set();
+  _sinavOtomatikSecimler = [];
   document.getElementById('sinavYontemManuel').checked = !!(onDoluIdler && onDoluIdler.size);
   document.getElementById('sinavYontemOtomatik').checked = !(onDoluIdler && onDoluIdler.size);
   _sinavYontemDegisti();
@@ -603,12 +608,110 @@ function _sinavManuelModuMu() {
 function _sinavYontemDegisti() {
   const manuel = _sinavManuelModuMu();
   document.getElementById('sinavSoruSayisiAlani').style.display = manuel ? 'none' : '';
+  document.getElementById('sinavOtomatikOnizleAlani').style.display = manuel ? 'none' : '';
   document.getElementById('sinavManuelSoruAlani').style.display = manuel ? '' : 'none';
   if (manuel) _sinavManuelListesiCiz();
+  else _sinavOtomatikListesiCiz();
+}
+
+// ---- Otomatik yöntem: indirmeden/kaydetmeden önce soru önizleme + alternatif ----
+// Kullanıcı isteği: "soruları otomatik hazırladığımda indirmeden önce tek tek
+// soruları bana göstersin, bu soruyu değiştir diyebileyim, alternatif bir soru
+// göstersin seçeyim" — Otomatik yöntem artık sınavı DOĞRUDAN kaydetmiyor; önce
+// rastgele N soru seçilip burada (tam metin + şıklarla) önizlenir, her sorunun
+// yanındaki buton o soruyu havuzdan başka rastgele bir soruyla değiştirir;
+// "Oluştur"a basınca bu KESİNLEŞMİŞ liste sinavManuelEkle ile kaydedilir (bkz.
+// sinavFormGonderildi) — sinavEkle'nin kendi rastgele seçimi artık kullanılmıyor.
+let _sinavOtomatikSecimler = [];
+
+function _sinavOtomatikHavuzuGetir() {
+  const egitimTuruId = document.getElementById('sinavKonuId').value;
+  const konular = _seciliAltKonulariGetir();
+  const zorluklar = _seciliZorluklariGetir();
+  return soruTumunuGetirRepo().filter(s =>
+    s.egitimTuruId === egitimTuruId &&
+    (!konular.length || konular.includes(s.konu)) &&
+    (!zorluklar.length || zorluklar.includes(s.zorluk))
+  );
+}
+
+function _sinavOtomatikSoruGetir() {
+  document.getElementById('soruSayisiHata').textContent = '';
+  const havuz = _sinavOtomatikHavuzuGetir();
+  const soruSayisi = Number(document.getElementById('sinavSoruSayisi').value);
+
+  if (!soruSayisi || soruSayisi < 1) {
+    document.getElementById('soruSayisiHata').textContent = 'Önce geçerli bir soru sayısı girin.';
+    return;
+  }
+  if (soruSayisi > havuz.length) {
+    document.getElementById('soruSayisiHata').textContent = `Soru bankasında bu filtreyle sadece ${havuz.length} soru var.`;
+    return;
+  }
+
+  _sinavOtomatikSecimler = _sinavKaristir(havuz).slice(0, soruSayisi);
+  _sinavOtomatikListesiCiz();
+}
+
+function _sinavOtomatikSoruDegistir(index) {
+  const havuz = _sinavOtomatikHavuzuGetir();
+  const kullanilanIdler = new Set(_sinavOtomatikSecimler.map(s => s.id));
+  const adaylar = havuz.filter(s => !kullanilanIdler.has(s.id));
+  if (!adaylar.length) {
+    alert('Bu filtrede değiştirilecek başka soru kalmadı.');
+    return;
+  }
+  const yeni = adaylar[Math.floor(Math.random() * adaylar.length)];
+  _sinavOtomatikSecimler[index] = yeni;
+  _sinavOtomatikListesiCiz();
+}
+
+function _sinavOtomatikListesiCiz() {
+  const govde = document.getElementById('sinavOtomatikListesi');
+  const sayac = document.getElementById('sinavOtomatikSayac');
+
+  if (!_sinavOtomatikSecimler.length) {
+    govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Henüz soru getirilmedi — yukarıdaki "Soruları Getir" butonuna basın.</div>';
+    sayac.textContent = '';
+    return;
+  }
+
+  sayac.textContent = `(${_sinavOtomatikSecimler.length} soru)`;
+  govde.innerHTML = _sinavOtomatikSecimler.map((s, i) => `
+    <div style="display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid var(--kenarlik); font-size:13px;">
+      <span style="flex:1;">
+        <div>${i + 1}. ${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></div>
+        <div style="margin-top:4px; display:grid; gap:2px;">
+          ${SINAV_SIK_HARFLERI.map(harf => `
+            <div style="${harf === s.dogruCevap ? 'font-weight:700; color:#15803d;' : 'color:var(--metin-soluk);'}">
+              ${harf === s.dogruCevap ? '✔' : ''} ${harf}) ${_sinavKacir(s.secenekler[harf])}
+            </div>
+          `).join('')}
+        </div>
+      </span>
+      <button type="button" class="tablo-buton" data-otomatik-degistir="${i}" style="white-space:nowrap;">🔄 Alternatif Soru</button>
+    </div>
+  `).join('');
+
+  govde.querySelectorAll('[data-otomatik-degistir]').forEach(btn => {
+    btn.addEventListener('click', () => _sinavOtomatikSoruDegistir(Number(btn.getAttribute('data-otomatik-degistir'))));
+  });
 }
 
 function _sinavManuelListesiCizGerekirse() {
   if (_sinavManuelModuMu()) _sinavManuelListesiCiz();
+}
+
+// Eğitim Türü / Alt Konu / Zorluk filtreleri değiştiğinde: Manuel modda listeyi
+// yeniden çizer; Otomatik modda ise önizlenen sorular artık eski filtreye ait
+// olabileceğinden temizlenir, kullanıcı "Soruları Getir"e tekrar basmalıdır.
+function _sinavFiltreDegistiGerekirse() {
+  if (_sinavManuelModuMu()) {
+    _sinavManuelListesiCiz();
+  } else {
+    _sinavOtomatikSecimler = [];
+    _sinavOtomatikListesiCiz();
+  }
 }
 
 // Üstteki Eğitim Türü / Alt Konu / Zorluk filtreleriyle ve arama kutusuyla
@@ -707,9 +810,20 @@ function sinavFormGonderildi(e) {
     gecmeNotu: document.getElementById('sinavGecmeNotu').value
   };
 
-  const sonuc = _sinavManuelModuMu()
-    ? sinavManuelEkle(veriler, Array.from(_sinavManuelSeciliIdler))
-    : sinavEkle(veriler);
+  let sonuc;
+  if (_sinavManuelModuMu()) {
+    sonuc = sinavManuelEkle(veriler, Array.from(_sinavManuelSeciliIdler));
+  } else {
+    // Kullanıcı isteği: "otomatik hazırladığımda indirmeden önce tek tek
+    // soruları göstersin, değiştirebileyim" — Otomatik yöntem artık kendi
+    // rastgele seçimini sessizce kaydetmiyor; önizlemede KESİNLEŞEN sorular
+    // (bkz. _sinavOtomatikSecimler) sinavManuelEkle ile kaydediliyor.
+    if (!_sinavOtomatikSecimler.length) {
+      document.getElementById('soruSayisiHata').textContent = 'Önce "Soruları Getir" ile soruları görüntüleyip onaylayın.';
+      return;
+    }
+    sonuc = sinavManuelEkle(veriler, _sinavOtomatikSecimler.map(s => s.id));
+  }
 
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar).forEach(alan => {

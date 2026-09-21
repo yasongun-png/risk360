@@ -366,6 +366,23 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği: "soruları otomatik hazırladığımda indirmeden önce
+             tek tek soruları bana göstersin, bu soruyu değiştir diyebileyim,
+             alternatif bir soru göstersin seçeyim" — Otomatik yöntemde artık
+             sınav doğrudan oluşturulmuyor; önce rastgele seçilen sorular tam
+             metin+şıklarıyla önizlenir, her sorunun yanındaki "Alternatif"
+             butonu o soruyu havuzdan başka rastgele bir soruyla değiştirir. -->
+        <div id="sinavOtomatikOnizleAlani" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:4px;">
+            <label style="margin:0;">Sorular <span id="sinavOtomatikSayac" style="color:var(--metin-soluk); font-weight:400;"></span></label>
+            <button type="button" class="ikincil" id="sinavOtomatikGetirBtn" style="width:auto;">🔀 Soruları Getir / Yeniden Karıştır</button>
+          </div>
+          <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0;">
+            Yukarıdaki filtre veya soru sayısını değiştirirseniz "Soruları Getir"e tekrar basmanız gerekir.
+          </p>
+          <div id="sinavOtomatikListesi" style="max-height:320px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+        </div>
+
         <div id="sinavManuelSoruAlani" style="display:none;">
           <label>Sorular <span id="sinavManuelSayac" style="color:var(--metin-soluk); font-weight:400;">(0 soru seçildi)</span></label>
           <input type="text" id="sinavManuelArama" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin-bottom:6px;">
