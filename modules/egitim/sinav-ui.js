@@ -776,16 +776,28 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
     }));
   }
 
+  // Kullanıcı isteği: "pdf'deki gibi sağ taraf sol tarafla aynı hizada olsun,
+  // başlık için yer kalsın" — başlık/üst bilgi TEK sütun (tam genişlik) ayrı
+  // bir bölümde, sorular ise ondan sonra başlayan İKİNCİ (aynı sayfada devam
+  // eden, "continuous") bölümde çift sütun olarak akıyor; böylece iki sütun
+  // da başlığın hemen altında aynı yükseklikte başlıyor (tıpkı eski PDF
+  // çıktısında olduğu gibi).
+  const margin = { top: 850, bottom: 850, left: 850, right: 850 };
   const doc = new docx.Document({
-    sections: [{
-      properties: {
-        page: { margin: { top: 850, bottom: 850, left: 850, right: 850 } },
-        // Kullanıcı isteği: "çift sütunlu yapalım 10 soru sığacak şekilde" —
-        // docx'in kendi sayfa sütunu (column) desteği kullanılıyor.
-        column: { count: 2, space: 500 }
+    sections: [
+      {
+        properties: { page: { margin }, column: { count: 1 } },
+        children: ustBilgi
       },
-      children: [...ustBilgi, ..._sinavWordSoruParagraflari(sinav, cevapGoster)]
-    }]
+      {
+        properties: {
+          page: { margin },
+          type: docx.SectionType.CONTINUOUS,
+          column: { count: 2, space: 500 }
+        },
+        children: _sinavWordSoruParagraflari(sinav, cevapGoster)
+      }
+    ]
   });
 
   const blob = await docx.Packer.toBlob(doc);
