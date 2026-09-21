@@ -754,14 +754,15 @@ function _sinavWordSoruParagraflari(sinav, cevapGoster) {
   return paragraflar;
 }
 
-async function _sinavKagidiWordOlustur(sinavId, baslikOnEki, cevapGoster) {
+async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
   const sinav = sinavGetir(sinavId);
   if (!sinav) return;
   const firma = aktifFirmaGetir();
 
   const ustBilgi = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: baslikOnEki, bold: true, size: 26, color: '0B2C52' })], spacing: { after: 40 } }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: sinav.baslik, bold: true, size: 22 })], spacing: { after: 140 } }),
+    // Kullanıcı isteği: "başlıkta SINAV KAĞIDI yazmasın" — "SINAV KAĞIDI" /
+    // "CEVAP ANAHTARI" etiketi kaldırıldı, sadece sınavın kendi başlığı gösteriliyor.
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: sinav.baslik, bold: true, size: 24, color: '0B2C52' })], spacing: { after: 140 } }),
     new docx.Paragraph({ children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 17 })], spacing: { after: 40 } }),
     new docx.Paragraph({
       children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}     Tarih: ${sinav.tarih || '______________'}     Geçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
@@ -793,9 +794,9 @@ async function _sinavKagidiWordOlustur(sinavId, baslikOnEki, cevapGoster) {
 }
 
 async function sinavKagidiYazdir(sinavId) {
-  await _sinavKagidiWordOlustur(sinavId, 'SINAV KAĞIDI', false);
+  await _sinavKagidiWordOlustur(sinavId, false);
 }
 
 async function cevapAnahtariYazdir(sinavId) {
-  await _sinavKagidiWordOlustur(sinavId, 'CEVAP ANAHTARI', true);
+  await _sinavKagidiWordOlustur(sinavId, true);
 }
