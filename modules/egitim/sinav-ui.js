@@ -727,72 +727,75 @@ function sonucEkleFormGonderildi(e) {
   sinavTablosunuCiz();
 }
 
-// ---- Yazdırma: boş sınav kağıdı ve cevap anahtarı ----
+// ---- Word çıktısı: boş sınav kağıdı ve cevap anahtarı ----
+// Kullanıcı isteği: "sınav kağıdı word versin, pdf olmasın" — yazdırma
+// (window.print, tarayıcı üzerinden PDF'e kaydedilebiliyordu) tamamen
+// kaldırıldı, KKD/sertifika çıktılarıyla aynı docx.js + FileSaver deseniyle
+// gerçek bir .docx dosyası üretilip indiriliyor. Önceki "çift sütunlu, 10
+// soru sığsın" isteği burada docx'in kendi sayfa column desteğiyle korunuyor.
 
-// Kullanıcı isteği: "sınav soruları sayfasında çift sütunlu yapalım 10 soru
-// sığacak şekilde" -- CSS çift sütun (column-count:2) ile basılı kağıtta
-// soru yoğunluğu artırılıyor; her soru break-inside:avoid ile sütun/sayfa
-// arasında bölünmüyor, font ve boşluklar 10 sorunun tek A4 sayfasına
-// sığması için küçültüldü.
-function _sinavSorularHtmlUret(sinav, cevapGoster) {
-  const sorular = sinav.sorular.map((soru, i) => `
-    <div style="margin-bottom:10px; break-inside:avoid; font-size:12px;">
-      <div style="font-weight:700; margin-bottom:3px;">${i + 1}. ${_sinavKacir(soru.soruMetni)}</div>
-      ${SINAV_SIK_HARFLERI.map(harf => {
-        const vurgula = cevapGoster && harf === soru.dogruCevap;
-        return `<div style="margin-left:14px; line-height:1.3; ${vurgula ? 'font-weight:700; color:#15803d;' : ''}">
-          ${vurgula ? '✔' : '☐'} ${harf}) ${_sinavKacir(soru.secenekler[harf])}
-        </div>`;
-      }).join('')}
-    </div>
-  `).join('');
-  return `<div style="column-count:2; column-gap:24px;">${sorular}</div>`;
+function _sinavWordSoruParagraflari(sinav, cevapGoster) {
+  const paragraflar = [];
+  sinav.sorular.forEach((soru, i) => {
+    paragraflar.push(new docx.Paragraph({
+      children: [new docx.TextRun({ text: `${i + 1}. ${soru.soruMetni}`, bold: true, size: 17 })],
+      spacing: { before: 160, after: 40 },
+      keepLines: true
+    }));
+    SINAV_SIK_HARFLERI.forEach(harf => {
+      const vurgula = cevapGoster && harf === soru.dogruCevap;
+      paragraflar.push(new docx.Paragraph({
+        indent: { left: 220 },
+        children: [new docx.TextRun({ text: `${vurgula ? '✔' : '☐'} ${harf}) ${soru.secenekler[harf]}`, size: 16, bold: vurgula, color: vurgula ? '15803D' : '1F2937' })],
+        spacing: { after: 20 }
+      }));
+    });
+  });
+  return paragraflar;
 }
 
-function _sinavKagidiYazdirOrtak(sinavId, baslikOnEki, cevapGoster) {
+async function _sinavKagidiWordOlustur(sinavId, baslikOnEki, cevapGoster) {
   const sinav = sinavGetir(sinavId);
   if (!sinav) return;
-
   const firma = aktifFirmaGetir();
-  const mount = document.getElementById('yazdirmaAlani');
-  mount.innerHTML = `
-    <div class="doc-title">${_sinavKacir(baslikOnEki)}: ${_sinavKacir(sinav.baslik)}</div>
-    <div class="doc-meta">
-      <b>${_sinavKacir(firma ? firma.ad : '')}</b><br>
-      Konu: ${_sinavKacir(sinav.turAdi)} &nbsp; | &nbsp; Tarih: ${sinav.tarih ? _sinavKacir(sinav.tarih) : '______________'} &nbsp; | &nbsp; Geçme Notu: ${sinav.gecmeNotu}
-      ${cevapGoster ? '' : '<br><br>Ad Soyad: ______________________________ &nbsp;&nbsp; Sicil No: ______________'}
-    </div>
-    ${_sinavSorularHtmlUret(sinav, cevapGoster)}
-  `;
-  // Kullanıcı isteği: "verdiği sınav kağıdı yatay olmaması lazım" -- diğer
-  // modüllerin geniş tablo çıktıları için #yazdirmaAlani varsayılan olarak
-  // A4 landscape kullanıyor (bkz. assets/style.css @media print @page).
-  // Adlandırılmış @page + page: özelliği denenmiş ama tarayıcı desteği
-  // tutarsız çıktığından çalışmamıştı (kullanıcı bildirdi: "yine yatay").
-  // Bunun yerine yazdırma ANINDA <head>'in SONUNA (dolayısıyla CSS
-  // basamaklamasında en yüksek öncelikle) geçici bir <style> eklenip genel
-  // landscape kuralı ezilir; yazdırma bitince bu <style> kaldırılır, diğer
-  // modüllerin yazdırmaları etkilenmez.
-  const dikeySayfaStili = document.createElement('style');
-  dikeySayfaStili.id = 'sinavYazdirmaStili';
-  dikeySayfaStili.textContent = '@media print { @page { size: A4 portrait; margin: 15mm; } }';
-  document.head.appendChild(dikeySayfaStili);
 
-  mount.style.display = 'block';
-  setTimeout(() => {
-    window.print();
-    setTimeout(() => {
-      mount.innerHTML = '';
-      mount.style.display = 'none';
-      dikeySayfaStili.remove();
-    }, 400);
-  }, 80);
+  const ustBilgi = [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: baslikOnEki, bold: true, size: 26, color: '0B2C52' })], spacing: { after: 40 } }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: sinav.baslik, bold: true, size: 22 })], spacing: { after: 140 } }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 17 })], spacing: { after: 40 } }),
+    new docx.Paragraph({
+      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}     Tarih: ${sinav.tarih || '______________'}     Geçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
+      spacing: { after: cevapGoster ? 220 : 60 }
+    })
+  ];
+  if (!cevapGoster) {
+    ustBilgi.push(new docx.Paragraph({
+      children: [new docx.TextRun({ text: 'Ad Soyad: ______________________________     Sicil No: ______________', size: 16 })],
+      spacing: { after: 220 }
+    }));
+  }
+
+  const doc = new docx.Document({
+    sections: [{
+      properties: {
+        page: { margin: { top: 850, bottom: 850, left: 850, right: 850 } },
+        // Kullanıcı isteği: "çift sütunlu yapalım 10 soru sığacak şekilde" —
+        // docx'in kendi sayfa sütunu (column) desteği kullanılıyor.
+        column: { count: 2, space: 500 }
+      },
+      children: [...ustBilgi, ..._sinavWordSoruParagraflari(sinav, cevapGoster)]
+    }]
+  });
+
+  const blob = await docx.Packer.toBlob(doc);
+  const dosyaAdi = `${sinav.baslik}_${cevapGoster ? 'Cevap_Anahtari' : 'Sinav_Kagidi'}`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx';
+  saveAs(blob, dosyaAdi);
 }
 
-function sinavKagidiYazdir(sinavId) {
-  _sinavKagidiYazdirOrtak(sinavId, 'SINAV KAĞIDI', false);
+async function sinavKagidiYazdir(sinavId) {
+  await _sinavKagidiWordOlustur(sinavId, 'SINAV KAĞIDI', false);
 }
 
-function cevapAnahtariYazdir(sinavId) {
-  _sinavKagidiYazdirOrtak(sinavId, 'CEVAP ANAHTARI', true);
+async function cevapAnahtariYazdir(sinavId) {
+  await _sinavKagidiWordOlustur(sinavId, 'CEVAP ANAHTARI', true);
 }
