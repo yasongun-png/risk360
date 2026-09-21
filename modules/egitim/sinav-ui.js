@@ -818,13 +818,20 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: sinav.baslik, bold: true, size: 24, color: '0B2C52' })], spacing: { after: 140 } }),
     new docx.Paragraph({ children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 17 })], spacing: { after: 40 } }),
     new docx.Paragraph({
-      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}     Tarih: ${sinav.tarih || '______________'}     Geçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
+      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}     Geçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
       spacing: { after: cevapGoster ? 220 : 60 }
     })
   ];
   if (!cevapGoster) {
+    // Kullanıcı isteği: "sınavda tarih yazılabilecek bir boşluk yer bırak,
+    // ad soyad, bölüm" — sınav tarihi otomatik basılmak yerine elle
+    // doldurulacak boş bir alan olarak bırakıldı, Bölüm alanı eklendi.
     ustBilgi.push(new docx.Paragraph({
-      children: [new docx.TextRun({ text: 'Ad Soyad: ______________________________     Sicil No: ______________', size: 16 })],
+      children: [new docx.TextRun({ text: 'Ad Soyad: ______________________________     Bölüm: ________________', size: 16 })],
+      spacing: { after: 80 }
+    }));
+    ustBilgi.push(new docx.Paragraph({
+      children: [new docx.TextRun({ text: 'Sicil No: ______________     Tarih: ______________', size: 16 })],
       spacing: { after: 220 }
     }));
   }
