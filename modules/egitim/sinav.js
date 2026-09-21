@@ -17,7 +17,45 @@ const SINAV_SIK_HARFLERI = ['A', 'B', 'C', 'D'];
 // de filtreleme yapılabilir.
 const SINAV_ZORLUK_SEVIYELERI = ['Kolay', 'Orta', 'Zor', 'Çok Zor'];
 
+// Kullanıcı isteği: "sınav soru başlıklarında bu başlıklar olmalı" — Çalışanların
+// İSG Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik ekindeki resmi konu
+// başlıkları (Genel/Sağlık/Teknik/Diğer konular, bkz. cikti.js _EGITIM_KONULARI
+// — aynı yönetmelik eki, sertifika çıktısında da kullanılıyor) listenin başına
+// eklendi; eskiden beri var olan (200 hazır sorunun etiketlediği) geniş konu
+// listesi bozulmasın diye altına aynen korunarak eklendi.
 const SINAV_ALT_KONU_LISTESI = [
+  // ---- 1. Genel konular ----
+  'Çalışma mevzuatı ile ilgili bilgiler',
+  'Çalışanların yasal hak ve sorumlulukları',
+  'İşyeri temizliği ve düzeni',
+  'İş kazası ve meslek hastalığından doğan hukuki sonuçlar',
+  // ---- 2. Sağlık konuları ----
+  'Meslek hastalıklarının sebepleri',
+  'Hastalıktan korunma prensipleri ve korunma tekniklerinin uygulanması',
+  'Biyolojik ve psikososyal risk etmenleri',
+  'İlkyardım',
+  'Tütün ürünlerinin zararları ve pasif etkilenim',
+  // ---- 3. Teknik konular ----
+  'Kimyasal, fiziksel ve ergonomik risk etmenleri',
+  'Elle kaldırma ve taşıma',
+  'Parlama, patlama, yangın ve yangından korunma',
+  'İş ekipmanlarının güvenli kullanımı',
+  'Ekranlı araçlarla çalışma',
+  'Elektrik, tehlikeleri, riskleri ve önlemleri',
+  'İş kazalarının sebepleri ve korunma prensipleri ile tekniklerinin uygulanması',
+  'Güvenlik ve sağlık işaretleri',
+  'Kişisel koruyucu donanım kullanımı',
+  'İş sağlığı ve güvenliği genel kuralları ve güvenlik kültürü',
+  'Tahliye ve kurtarma',
+  // ---- 4. Diğer konular (işe özgü) ----
+  'Yüksekte çalışma',
+  'Kapalı ortamda çalışma',
+  'Radyasyon riskinin bulunduğu ortamlarda çalışma',
+  'Kaynakla çalışma',
+  'Özel risk taşıyan ekipman ile çalışma',
+  'Kanserojen maddelerin yol açtığı olası sağlık riskleri',
+
+  // ---- Önceden var olan geniş konu listesi (200 hazır soru bunları kullanır) ----
   '6331 Sayılı Kanun', 'İşveren ve Çalışan Yükümlülükleri', 'İSG Profesyonellerinin Görevleri',
   'Risk Değerlendirmesi', 'Acil Durumlar', 'İş Kazaları', 'Meslek Hastalıkları', 'Sağlık Gözetimi',
   'Eğitim', 'KKD', 'İş Ekipmanları', 'Kaldırma Ekipmanları', 'Elektrik', 'Yangın', 'Kimyasallar',
