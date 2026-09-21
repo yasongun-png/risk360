@@ -17,12 +17,17 @@ const SINAV_SIK_HARFLERI = ['A', 'B', 'C', 'D'];
 // de filtreleme yapılabilir.
 const SINAV_ZORLUK_SEVIYELERI = ['Kolay', 'Orta', 'Zor', 'Çok Zor'];
 
-// Kullanıcı isteği: "sınav soru başlıklarında bu başlıklar olmalı" — Çalışanların
-// İSG Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik ekindeki resmi konu
-// başlıkları (Genel/Sağlık/Teknik/Diğer konular, bkz. cikti.js _EGITIM_KONULARI
-// — aynı yönetmelik eki, sertifika çıktısında da kullanılıyor) listenin başına
-// eklendi; eskiden beri var olan (200 hazır sorunun etiketlediği) geniş konu
-// listesi bozulmasın diye altına aynen korunarak eklendi.
+// Kullanıcı isteği: "sınav soru başlıklarında bu başlıklar olmalı" sonra
+// "eğitim konuları SADECE bunlar olsun" — Çalışanların İSG Eğitimlerinin Usul
+// ve Esasları Hakkında Yönetmelik ekindeki resmi "EĞİTİM KONULARI" listesi
+// (kullanıcının verdiği birebir metin: 1. Genel konular, 2. Sağlık konuları,
+// 3. Teknik konular, 4. İşe ve işyerine özgü riskler ve risk değerlendirmesine
+// dayalı konular) — her lettered madde (a,b,c,ç...) ayrı bir seçilebilir Alt
+// Konu; 4. maddedeki paragraf içinde sayılan işe özgü risk örnekleri (yüksekte
+// çalışma, kapalı ortamda çalışma vb.) de ayrı seçilebilir başlıklar olarak
+// açıldı. Eskiden beri var olan geniş/ince taneli konu listesi TAMAMEN
+// kaldırıldı — hazır soru bankasındaki tüm sorular da bu başlıklara
+// eşlenmiştir (bkz. sinav-soru-bankasi.js).
 const SINAV_ALT_KONU_LISTESI = [
   // ---- 1. Genel konular ----
   'Çalışma mevzuatı ile ilgili bilgiler',
@@ -33,38 +38,30 @@ const SINAV_ALT_KONU_LISTESI = [
   'Meslek hastalıklarının sebepleri',
   'Hastalıktan korunma prensipleri ve korunma tekniklerinin uygulanması',
   'Biyolojik ve psikososyal risk etmenleri',
-  'İlkyardım',
-  'Tütün ürünlerinin zararları ve pasif etkilenim',
+  'İlk yardım',
+  'Bağımlılık yapıcı maddelerin zararları ve teknoloji bağımlılığı',
   // ---- 3. Teknik konular ----
   'Kimyasal, fiziksel ve ergonomik risk etmenleri',
   'Elle kaldırma ve taşıma',
-  'Parlama, patlama, yangın ve yangından korunma',
+  'Parlama ve patlama',
+  'Yangın ve yangından korunma',
   'İş ekipmanlarının güvenli kullanımı',
   'Ekranlı araçlarla çalışma',
   'Elektrik, tehlikeleri, riskleri ve önlemleri',
   'İş kazalarının sebepleri ve korunma prensipleri ile tekniklerinin uygulanması',
-  'Güvenlik ve sağlık işaretleri',
+  'Sağlık ve güvenlik işaretleri',
   'Kişisel koruyucu donanım kullanımı',
   'İş sağlığı ve güvenliği genel kuralları ve güvenlik kültürü',
-  'Tahliye ve kurtarma',
-  // ---- 4. Diğer konular (işe özgü) ----
+  'Acil durumlar, tahliye ve kurtarma',
+  // ---- 4. İşe ve işyerine özgü riskler ve risk değerlendirmesine dayalı konular ----
   'Yüksekte çalışma',
+  'Yüksekten düşme',
   'Kapalı ortamda çalışma',
   'Radyasyon riskinin bulunduğu ortamlarda çalışma',
   'Kaynakla çalışma',
   'Özel risk taşıyan ekipman ile çalışma',
-  'Kanserojen maddelerin yol açtığı olası sağlık riskleri',
-
-  // ---- Önceden var olan geniş konu listesi (200 hazır soru bunları kullanır) ----
-  '6331 Sayılı Kanun', 'İşveren ve Çalışan Yükümlülükleri', 'İSG Profesyonellerinin Görevleri',
-  'Risk Değerlendirmesi', 'Acil Durumlar', 'İş Kazaları', 'Meslek Hastalıkları', 'Sağlık Gözetimi',
-  'Eğitim', 'KKD', 'İş Ekipmanları', 'Kaldırma Ekipmanları', 'Elektrik', 'Yangın', 'Kimyasallar',
-  'Patlamadan Korunma', 'Basınçlı Kaplar', 'Yüksekte Çalışma', 'Kapalı Alan', 'İskeleler',
-  'Merdivenler', 'İnşaat', 'Maden', 'Gürültü', 'Titreşim', 'Toz', 'Ergonomi', 'Elle Taşıma',
-  'Biyolojik Riskler', 'Kanserojen/Mutajen Maddeler', 'İş Hijyeni', 'Ölçüm ve Analiz',
-  'Taşeron Yönetimi', 'İş İzin Sistemleri', 'Sıcak Çalışma', 'HAZOP', 'LOPA', 'Bow-Tie',
-  'Proses Güvenliği', 'ISO 45001', 'Yönetim Sistemleri', 'Çevre ve İSG Kesişimi', 'Saha Denetimi',
-  'Uygunsuzluk Yönetimi', 'Kök Neden Analizi'
+  'Kanserojen veya mutajen maddelerle çalışma',
+  'Kimyasal veya biyolojik etkenlerle çalışma'
 ];
 
 function soruOlustur(veriler) {
