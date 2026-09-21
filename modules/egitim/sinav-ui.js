@@ -975,11 +975,15 @@ function sonucEkleFormGonderildi(e) {
 // gerçek bir .docx dosyası üretilip indiriliyor. Önceki "çift sütunlu, 10
 // soru sığsın" isteği burada docx'in kendi sayfa column desteğiyle korunuyor.
 
+// Kullanıcı isteği: "biraz daha yazı karakterlerini büyüt, kare kutucukları
+// kaldır" — puntolar büyütüldü (soru 17→19, şıklar 16→18), şıkların
+// başındaki ☐ işareti kaldırıldı (sadece cevap anahtarında doğru şık ✔ ile
+// işaretleniyor, boş sınav kağıdında hiç işaret yok).
 function _sinavWordSoruParagraflari(sinav, cevapGoster) {
   const paragraflar = [];
   sinav.sorular.forEach((soru, i) => {
     paragraflar.push(new docx.Paragraph({
-      children: [new docx.TextRun({ text: `${i + 1}. ${soru.soruMetni}`, bold: true, size: 17 })],
+      children: [new docx.TextRun({ text: `${i + 1}. ${soru.soruMetni}`, bold: true, size: 19 })],
       spacing: { before: 160, after: 40 },
       keepLines: true
     }));
@@ -987,7 +991,7 @@ function _sinavWordSoruParagraflari(sinav, cevapGoster) {
       const vurgula = cevapGoster && harf === soru.dogruCevap;
       paragraflar.push(new docx.Paragraph({
         indent: { left: 220 },
-        children: [new docx.TextRun({ text: `${vurgula ? '✔' : '☐'} ${harf}) ${soru.secenekler[harf]}`, size: 16, bold: vurgula, color: vurgula ? '15803D' : '1F2937' })],
+        children: [new docx.TextRun({ text: `${vurgula ? '✔ ' : ''}${harf}) ${soru.secenekler[harf]}`, size: 18, bold: vurgula, color: vurgula ? '15803D' : '1F2937' })],
         spacing: { after: 20 }
       }));
     });
