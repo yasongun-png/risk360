@@ -1014,19 +1014,19 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
     })
   ];
   if (!cevapGoster) {
-    // Kullanıcı isteği: "sınavda tarih yazılabilecek bir boşluk yer bırak,
-    // ad soyad, bölüm" sonra "bu alanda alt çizgi olmasın, sağa doğru
-    // yayılabilir en fazla iki satır olur" — dört alan (Ad Soyad/Bölüm/
-    // Sicil No/Tarih) tab duraklarıyla TEK satıra, sayfa genişliğine
-    // yayılıyor; boşluklar alt çizgisiz (Word'ün kendi tab boşluğu, yazı
-    // yazılacak alan sadece etiketle bir sonraki tab durağı arasındaki boşluk).
+    // Kullanıcı isteği: "ad soyad kısmı iki satır olsun sağa doğru yay" —
+    // dört alan tek satıra sığdırılmak yerine İKİ satıra bölündü (Ad Soyad +
+    // Bölüm / Sicil No + Tarih), her satırda tab durağıyla ikinci alan
+    // sayfanın sağına doğru yayılıyor; alt çizgi yok (Word'ün kendi tab
+    // boşluğu, yazılacak alan etiketle bir sonraki tab durağı arasıdır).
     ustBilgi.push(new docx.Paragraph({
-      tabStops: [
-        { type: docx.TabStopType.LEFT, position: 2600 },
-        { type: docx.TabStopType.LEFT, position: 5300 },
-        { type: docx.TabStopType.LEFT, position: 8000 }
-      ],
-      children: [new docx.TextRun({ text: 'Ad Soyad: \tBölüm: \tSicil No: \tTarih: ', size: 16 })],
+      tabStops: [{ type: docx.TabStopType.LEFT, position: 6200 }],
+      children: [new docx.TextRun({ text: 'Ad Soyad: \tBölüm: ', size: 16 })],
+      spacing: { after: 80 }
+    }));
+    ustBilgi.push(new docx.Paragraph({
+      tabStops: [{ type: docx.TabStopType.LEFT, position: 6200 }],
+      children: [new docx.TextRun({ text: 'Sicil No: \tTarih: ', size: 16 })],
       spacing: { after: 220 }
     }));
   }
