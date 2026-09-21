@@ -982,9 +982,11 @@ function sonucEkleFormGonderildi(e) {
 function _sinavWordSoruParagraflari(sinav, cevapGoster) {
   const paragraflar = [];
   sinav.sorular.forEach((soru, i) => {
+    // Kullanıcı isteği: "soruların arasında ve şıklar arasında hafif boşluk
+    // bırak" — soru öncesi/şıklar arası boşluklar hafifçe artırıldı.
     paragraflar.push(new docx.Paragraph({
       children: [new docx.TextRun({ text: `${i + 1}. ${soru.soruMetni}`, bold: true, size: 19 })],
-      spacing: { before: 160, after: 40 },
+      spacing: { before: 260, after: 80 },
       keepLines: true
     }));
     SINAV_SIK_HARFLERI.forEach(harf => {
@@ -992,7 +994,7 @@ function _sinavWordSoruParagraflari(sinav, cevapGoster) {
       paragraflar.push(new docx.Paragraph({
         indent: { left: 220 },
         children: [new docx.TextRun({ text: `${vurgula ? '✔ ' : ''}${harf}) ${soru.secenekler[harf]}`, size: 18, bold: vurgula, color: vurgula ? '15803D' : '1F2937' })],
-        spacing: { after: 20 }
+        spacing: { after: 60 }
       }));
     });
   });
