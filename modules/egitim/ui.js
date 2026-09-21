@@ -442,7 +442,12 @@ function topluTurAlanlariniGuncelle() {
   document.getElementById('topluTarihEtiket').textContent = tur && tur.hesaplama === 'dogrudan'
     ? 'Son Geçerlilik Tarihi'
     : (tur && tur.ikiGunluMu ? '1. Gün Tarihi' : 'Eğitim Tarihi');
-  document.getElementById('topluSaatSatiri').style.display = tur && tur.saatliMi ? '' : 'none';
+  // Kullanıcı isteği: "eğitim türlerini yönette süre var, toplu girişte
+  // tekrar sormasın, direkt eğitim türüne göre süreyi kendi yazsın" — alan
+  // artık hiç gösterilmiyor, türün varsayılan süresi (Eğitim Türlerini
+  // Yönet'te tanımlanır) sessizce kullanılıyor.
+  document.getElementById('topluSaatSatiri').style.display = 'none';
+  document.getElementById('topluSaat').value = tur ? (tur.varsayilanSaat || '') : '';
   document.getElementById('topluTarih2Satiri').style.display = tur && tur.ikiGunluMu ? '' : 'none';
   document.getElementById('topluAciklamaSatiri').style.display = tur && tur.belgeAdiVarMi ? '' : 'none';
 }
@@ -567,13 +572,44 @@ function _ozelTurListesiCiz() {
       _aktifFirma = sonuc.firma;
       egitimTurleriniAyarla(_aktifFirma);
       _ozelTurListesiCiz();
+      _turSureListesiCiz();
       turSecimleriniDoldur();
     }
   }));
 }
 
+// Kullanıcı isteği: "eğitim türlerini yönette süre var, toplu/tekli girişte
+// tekrar sormasın" — her saatliMi=true türün (standart + özel) varsayılan
+// süresi burada tanımlanır (firma.egitimTurSureleri, bkz. core/tenant.js
+// firmaEgitimTurSuresiAyarla); değiştirildiği an kaydedilir.
+function _turSureListesiCiz() {
+  const kutu = document.getElementById('turSureListesi');
+  const turler = egitimTurleriTumu().filter(t => t.saatliMi);
+  if (!turler.length) {
+    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Süreli eğitim türü yok.</div>';
+    return;
+  }
+  kutu.innerHTML = turler.map(t => `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
+      <span>${_egKacir(t.ad)}</span>
+      <input type="number" min="0" step="0.5" data-tur-sure="${t.id}" value="${t.varsayilanSaat || ''}" placeholder="Saat" style="width:90px;">
+    </div>
+  `).join('');
+  kutu.querySelectorAll('[data-tur-sure]').forEach(input => {
+    input.addEventListener('change', () => {
+      const sonuc = firmaEgitimTurSuresiAyarla(_aktifFirma.id, input.getAttribute('data-tur-sure'), input.value);
+      if (sonuc.basarili) {
+        _aktifFirma = sonuc.firma;
+        egitimTurleriniAyarla(_aktifFirma);
+        turSecimleriniDoldur();
+      }
+    });
+  });
+}
+
 function turYonetModalAc() {
   _ozelTurListesiCiz();
+  _turSureListesiCiz();
   document.getElementById('yeniTurAdi').value = '';
   document.getElementById('yeniTurYil').value = '1';
   document.getElementById('turYonetModal').classList.add('acik');
@@ -815,6 +851,7 @@ function egitimSayfasiniBaslat(firma) {
     document.getElementById('yeniTurAdi').value = '';
     document.getElementById('yeniTurYil').value = '1';
     _ozelTurListesiCiz();
+    _turSureListesiCiz();
     turSecimleriniDoldur();
   });
 
@@ -875,7 +912,15 @@ function turAlanlariniGuncelle() {
   document.getElementById('tarihEtiket').textContent = tur && tur.hesaplama === 'dogrudan'
     ? (suresizMi ? 'Düzenlenme Tarihi (opsiyonel)' : 'Son Geçerlilik Tarihi')
     : (tur && tur.ikiGunluMu ? '1. Gün Tarihi' : 'Eğitim Tarihi');
-  document.getElementById('saatSatiri').style.display = tur && tur.saatliMi ? '' : 'none';
+  // Kullanıcı isteği: "eğitim türlerini yönette süre var, tek tek eğitim
+  // girerken de sormasın, direkt eğitim türüne göre süreyi kendi yazsın" —
+  // alan artık hiç gösterilmiyor; yeni kayıtta türün varsayılan süresi
+  // sessizce kullanılır (düzenlemede mevcut kaydın süresi korunur, bkz.
+  // modalAc).
+  document.getElementById('saatSatiri').style.display = 'none';
+  if (tur && tur.saatliMi && !_duzenlenenKayitId) {
+    document.getElementById('saat').value = tur.varsayilanSaat || '';
+  }
   document.getElementById('tarih2Satiri').style.display = tur && tur.ikiGunluMu ? '' : 'none';
   document.getElementById('aciklamaSatiri').style.display = tur && tur.belgeAdiVarMi ? '' : 'none';
 }
@@ -1155,7 +1200,9 @@ function modalAc(kayit) {
 
   document.getElementById('tarih').value = kayit ? kayit.tarih : '';
   document.getElementById('tarih2').value = kayit ? kayit.tarih2 : '';
-  document.getElementById('saat').value = kayit ? kayit.saat : '';
+  // Yeni kayıtta süre zaten turAlanlariniGuncelle() tarafından türün
+  // varsayılanıyla dolduruldu; düzenlemede kaydın kendi süresi kullanılır.
+  if (kayit) document.getElementById('saat').value = kayit.saat;
   document.getElementById('aciklama').value = kayit ? (kayit.aciklama || '') : '';
   _egtBelgeDosyasi = kayit ? (kayit.belgeDosyasi || '') : '';
   document.getElementById('belgePdfDosya').value = '';

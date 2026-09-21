@@ -93,7 +93,13 @@ function firmaEkle(ad, kullaniciId, tehlikeSinifi, sektor) {
     // firmaya özel eğitim/sertifika türleri (kullanıcı isteği: "yeni eğitim
     // türü de ekleyebilmem lazım") — her biri { id, ad, yil }, geçerlilik
     // "tarih + yil" olarak hesaplanır (bkz. egitimTurleriniAyarla).
-    ozelEgitimTurleri: []
+    ozelEgitimTurleri: [],
+    // Kullanıcı isteği: "toplu eğitim girişinde eğitim türlerini yönette
+    // süre var ama tekrar tekrar soruyor, direkt eğitim türüne göre süreyi
+    // kendi yazsın" — her eğitim türü (standart veya özel) için varsayılan
+    // süre (saat) burada { turId: saat } olarak tutulur; bkz.
+    // firmaEgitimTurSuresiAyarla, modules/egitim/model.js egitimTurleriTumu.
+    egitimTurSureleri: {}
   };
 
   tumFirmalar.push(yeniFirma);
@@ -288,6 +294,24 @@ function firmaOzelEgitimTuruSil(firmaId, turId) {
 // kullanıcının kendi ekleyip sildiği sabit bir listeden geliyor (bkz.
 // modules/acil-durum/ui.js). firma.isverenler (yukarıdaki
 // firmaIsverenleriAyarla) ile aynı basit "düz metin dizisi" deseni.
+// bkz. firma.egitimTurSureleri başındaki not — saat 0/boş verilirse o türün
+// varsayılan süresi kaldırılır (form yine gösterilmez, sadece boş kaydedilir).
+function firmaEgitimTurSuresiAyarla(firmaId, turId, saat) {
+  const tumFirmalar = oku('isg_firmalar', []);
+  const firma = tumFirmalar.find(f => f.id === firmaId);
+  if (!firma) return { basarili: false, hata: 'Firma bulunamadı.' };
+
+  if (!firma.egitimTurSureleri || typeof firma.egitimTurSureleri !== 'object') firma.egitimTurSureleri = {};
+  const temizSaat = Number(saat);
+  if (Number.isFinite(temizSaat) && temizSaat > 0) {
+    firma.egitimTurSureleri[turId] = temizSaat;
+  } else {
+    delete firma.egitimTurSureleri[turId];
+  }
+  yaz('isg_firmalar', tumFirmalar);
+  return { basarili: true, firma };
+}
+
 function firmaEkipmanBolumuEkle(firmaId, ad) {
   const temizAd = String(ad || '').trim();
   if (!temizAd) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };

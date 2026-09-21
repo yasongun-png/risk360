@@ -729,18 +729,24 @@ function sonucEkleFormGonderildi(e) {
 
 // ---- Yazdırma: boş sınav kağıdı ve cevap anahtarı ----
 
+// Kullanıcı isteği: "sınav soruları sayfasında çift sütunlu yapalım 10 soru
+// sığacak şekilde" -- CSS çift sütun (column-count:2) ile basılı kağıtta
+// soru yoğunluğu artırılıyor; her soru break-inside:avoid ile sütun/sayfa
+// arasında bölünmüyor, font ve boşluklar 10 sorunun tek A4 sayfasına
+// sığması için küçültüldü.
 function _sinavSorularHtmlUret(sinav, cevapGoster) {
-  return sinav.sorular.map((soru, i) => `
-    <div style="margin-bottom:14px; break-inside:avoid;">
-      <div style="font-weight:700; margin-bottom:4px;">${i + 1}. ${_sinavKacir(soru.soruMetni)}</div>
+  const sorular = sinav.sorular.map((soru, i) => `
+    <div style="margin-bottom:10px; break-inside:avoid; font-size:12px;">
+      <div style="font-weight:700; margin-bottom:3px;">${i + 1}. ${_sinavKacir(soru.soruMetni)}</div>
       ${SINAV_SIK_HARFLERI.map(harf => {
         const vurgula = cevapGoster && harf === soru.dogruCevap;
-        return `<div style="margin-left:16px; ${vurgula ? 'font-weight:700; color:#15803d;' : ''}">
+        return `<div style="margin-left:14px; line-height:1.3; ${vurgula ? 'font-weight:700; color:#15803d;' : ''}">
           ${vurgula ? '✔' : '☐'} ${harf}) ${_sinavKacir(soru.secenekler[harf])}
         </div>`;
       }).join('')}
     </div>
   `).join('');
+  return `<div style="column-count:2; column-gap:24px;">${sorular}</div>`;
 }
 
 function _sinavKagidiYazdirOrtak(sinavId, baslikOnEki, cevapGoster) {

@@ -45,6 +45,11 @@ const ILKYARDIM_VARSAYILAN_ORAN = 10; // Çok Tehlikeli / belirtilmemiş
 // zamanında buraya eklenir; böylece dropdown, durum tablosu ve içe aktarım
 // eşleştirmesi tek bir kaynaktan (egitimTurleriTumu) okur.
 let _ozelEgitimTurleri = [];
+// Kullanıcı isteği: "eğitim türlerini yönette süre var, toplu/tekli girişte
+// tekrar sormasın, direkt eğitim türüne göre süreyi kendi yazsın" —
+// firma.egitimTurSureleri { turId: saat } eşlemesi burada tutulur, her tür
+// nesnesine varsayilanSaat olarak eklenir (bkz. firmaEgitimTurSuresiAyarla).
+let _egitimTurSureleri = {};
 
 function egitimTurleriniAyarla(firma) {
   const ozel = firma && Array.isArray(firma.ozelEgitimTurleri) ? firma.ozelEgitimTurleri : [];
@@ -56,10 +61,14 @@ function egitimTurleriniAyarla(firma) {
     saatliMi: true,
     ozel: true
   }));
+  _egitimTurSureleri = firma && firma.egitimTurSureleri && typeof firma.egitimTurSureleri === 'object' ? firma.egitimTurSureleri : {};
 }
 
 function egitimTurleriTumu() {
-  return EGITIM_TURLERI.concat(_ozelEgitimTurleri);
+  return EGITIM_TURLERI.concat(_ozelEgitimTurleri).map(t => ({
+    ...t,
+    varsayilanSaat: Number(_egitimTurSureleri[t.id]) || 0
+  }));
 }
 
 function egitimTuruGetir(id) {
