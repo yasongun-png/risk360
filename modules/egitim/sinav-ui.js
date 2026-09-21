@@ -105,6 +105,23 @@ function sinavSayfasiniBaslat() {
     _konuSecimleriniDoldur('soruKonuFiltre', true);
   });
 
+  // Kullanıcı isteği: "şu sayfada seçip sınav oluştur da diyebilmem lazım" —
+  // Soru Bankası'nda işaretlenen sorularla doğrudan Yeni Sınav modalını
+  // (Manuel yöntem, sorular önceden işaretli) açar.
+  document.getElementById('soruSecilenlerdenSinavBtn').addEventListener('click', () => {
+    if (!_seciliSoruIdleri.size) return;
+    sinavModalAc(_seciliSoruIdleri);
+    // Modal varsayılan Eğitim Türü'nü listedeki ilk türe ayarlar; seçili
+    // sorular başka bir türdense filtre eşleşmeyip listede görünmeyebilir
+    // (gönderim yine de tüm seçili id'leri kullanır) -- görünürlüğü
+    // iyileştirmek için ilk seçili sorunun türüne çekiyoruz.
+    const ilkSoru = soruIdIleGetirRepo(Array.from(_seciliSoruIdleri)[0]);
+    if (ilkSoru) {
+      document.getElementById('sinavKonuId').value = ilkSoru.egitimTuruId;
+      _sinavManuelListesiCiz();
+    }
+  });
+
   document.getElementById('hazirSoruBankasiBtn').addEventListener('click', hazirSoruBankasiModalAc);
   document.getElementById('hazirSoruBankasiKapatBtn').addEventListener('click', hazirSoruBankasiModalKapat);
   document.getElementById('hazirSoruBankasiIptalBtn').addEventListener('click', hazirSoruBankasiModalKapat);
@@ -359,6 +376,12 @@ function _soruTopluSilDurumunuGuncelle(gorunenler) {
   buton.style.display = sayi ? '' : 'none';
   buton.textContent = `Seçilenleri Sil (${sayi})`;
 
+  // Kullanıcı isteği: "şu sayfada seçip sınav oluştur da diyebilmem lazım"
+  // — Soru Bankası'ndaki aynı seçim kutularıyla doğrudan sınav oluşturma.
+  const sinavBtn = document.getElementById('soruSecilenlerdenSinavBtn');
+  sinavBtn.style.display = sayi ? '' : 'none';
+  sinavBtn.textContent = `Seçilenlerden Sınav Oluştur (${sayi})`;
+
   const tumunuSec = document.getElementById('soruTumunuSecCheckbox');
   const gorunenSecili = gorunenler.length > 0 && gorunenler.every(s => _seciliSoruIdleri.has(s.id));
   tumunuSec.checked = gorunenSecili;
@@ -550,7 +573,11 @@ async function sinavImzaListesiFormGonderildi(e) {
   }
 }
 
-function sinavModalAc() {
+// Kullanıcı isteği: "şu sayfada seçip sınav oluştur da diyebilmem lazım" —
+// Soru Bankası tablosundaki onay kutularıyla seçilen sorular verilirse
+// (onDoluIdler), modal doğrudan Manuel yöntemle ve o sorular işaretli
+// şekilde açılır; parametre verilmezse eski davranış (boş/otomatik) sürer.
+function sinavModalAc(onDoluIdler) {
   _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
   _altKonuKutulariniCiz();
@@ -558,7 +585,9 @@ function sinavModalAc() {
   document.getElementById('sinavForm').reset();
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
   document.getElementById('sinavManuelArama').value = '';
-  _sinavManuelSeciliIdler = new Set();
+  _sinavManuelSeciliIdler = onDoluIdler && onDoluIdler.size ? new Set(onDoluIdler) : new Set();
+  document.getElementById('sinavYontemManuel').checked = !!(onDoluIdler && onDoluIdler.size);
+  document.getElementById('sinavYontemOtomatik').checked = !(onDoluIdler && onDoluIdler.size);
   _sinavYontemDegisti();
   document.getElementById('sinavModalKatman').classList.add('acik');
 }
@@ -600,33 +629,65 @@ function _sinavManuelListesiCiz() {
   if (!liste.length) {
     govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Filtreyle eşleşen soru bulunamadı.</div>';
   } else {
-    // Kullanıcı isteği: "sınav sorularını serbest seçerken tam okuyamıyorum,
-    // tüm şıkları görmek istiyorum" — soru metni artık kısaltılmadan tam
-    // gösteriliyor, altında A/B/C/D şıklarının tamamı listeleniyor (doğru
-    // cevap yeşil/kalın işaretli).
-    govde.innerHTML = liste.map(s => `
-      <label style="display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
-        <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
-        <span>
-          <div>${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></div>
-          <div style="margin-top:4px; display:grid; gap:2px;">
-            ${SINAV_SIK_HARFLERI.map(harf => `
-              <div style="${harf === s.dogruCevap ? 'font-weight:700; color:#15803d;' : 'color:var(--metin-soluk);'}">
-                ${harf === s.dogruCevap ? '✔' : ''} ${harf}) ${_sinavKacir(s.secenekler[harf])}
+    // Kullanıcı isteği: "konu başlığı seçebilmem lazım" — sorular artık Alt
+    // Konu'ya göre gruplanıp başlık gösteriliyor, her başlığın yanındaki
+    // kutu o başlıktaki TÜM soruları tek tıkla seçip kaldırabiliyor (soru
+    // metni ve tüm şıklar da tam gösteriliyor, bkz. önceki değişiklik).
+    const gruplar = new Map();
+    liste.forEach(s => {
+      const anahtar = s.konu || 'Diğer';
+      if (!gruplar.has(anahtar)) gruplar.set(anahtar, []);
+      gruplar.get(anahtar).push(s);
+    });
+
+    govde.innerHTML = Array.from(gruplar.entries()).map(([konu, sorular]) => {
+      const seciliSayisi = sorular.filter(s => _sinavManuelSeciliIdler.has(s.id)).length;
+      const hepsiSecili = seciliSayisi === sorular.length;
+      return `
+      <div style="margin-bottom:10px;">
+        <label style="display:flex; align-items:center; gap:8px; padding:6px 0; font-weight:700; font-size:13px; background:var(--yuzey-alt, #f8fafc); border-radius:6px; padding-left:6px;">
+          <input type="checkbox" data-konu-basligi-secim="${_sinavKacir(konu)}" ${hepsiSecili ? 'checked' : ''} style="width:auto;">
+          ${_sinavKacir(konu)} <span style="color:var(--metin-soluk); font-weight:400;">(${seciliSayisi}/${sorular.length} seçili)</span>
+        </label>
+        ${sorular.map(s => `
+          <label style="display:flex; align-items:flex-start; gap:8px; padding:8px 0 8px 20px; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
+            <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
+            <span>
+              <div>${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')})</span></div>
+              <div style="margin-top:4px; display:grid; gap:2px;">
+                ${SINAV_SIK_HARFLERI.map(harf => `
+                  <div style="${harf === s.dogruCevap ? 'font-weight:700; color:#15803d;' : 'color:var(--metin-soluk);'}">
+                    ${harf === s.dogruCevap ? '✔' : ''} ${harf}) ${_sinavKacir(s.secenekler[harf])}
+                  </div>
+                `).join('')}
               </div>
-            `).join('')}
-          </div>
-        </span>
-      </label>
-    `).join('');
+            </span>
+          </label>
+        `).join('')}
+      </div>
+      `;
+    }).join('');
   }
 
+  // Kişi tek tek soru işaretlediğinde de konu başlığındaki (kaç/toplam)
+  // sayacı ve "hepsi seçili" durumu güncel kalsın diye liste komple yeniden
+  // çiziliyor (sorular ~200 civarında, yeniden çizim maliyeti önemsiz).
   govde.querySelectorAll('[data-manuel-soru]').forEach(cb => {
     cb.addEventListener('change', () => {
       const id = cb.getAttribute('data-manuel-soru');
       if (cb.checked) _sinavManuelSeciliIdler.add(id);
       else _sinavManuelSeciliIdler.delete(id);
-      document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
+      _sinavManuelListesiCiz();
+    });
+  });
+  govde.querySelectorAll('[data-konu-basligi-secim]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const konu = cb.getAttribute('data-konu-basligi-secim');
+      liste.filter(s => (s.konu || 'Diğer') === konu).forEach(s => {
+        if (cb.checked) _sinavManuelSeciliIdler.add(s.id);
+        else _sinavManuelSeciliIdler.delete(s.id);
+      });
+      _sinavManuelListesiCiz();
     });
   });
   document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
