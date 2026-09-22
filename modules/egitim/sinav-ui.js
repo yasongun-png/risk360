@@ -143,9 +143,14 @@ function sinavSayfasiniBaslat() {
   document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavFiltreDegistiGerekirse);
   document.getElementById('sinavManuelArama').addEventListener('input', _sinavManuelListesiCizGerekirse);
   document.getElementById('sinavSoruSayisi').addEventListener('input', () => {
-    if (!_sinavManuelModuMu()) { _sinavOtomatikSecimler = []; _sinavOtomatikListesiCiz(); }
+    if (!_sinavManuelModuMu()) { _sinavOtomatikSecimler = []; _sinavOtomatikSonTestSecimler = []; _sinavOtomatikListesiCiz(); }
   });
   document.getElementById('sinavOtomatikGetirBtn').addEventListener('click', _sinavOtomatikSoruGetir);
+  document.getElementById('sinavOnSonTestCheckbox').addEventListener('change', () => {
+    _sinavOtomatikSecimler = [];
+    _sinavOtomatikSonTestSecimler = [];
+    _sinavOtomatikListesiCiz();
+  });
   document.getElementById('sinavAramaKutusu').addEventListener('input', sinavTablosunuCiz);
 
   document.getElementById('sonucAramaKutusu').addEventListener('input', sonucTablosunuCiz);
@@ -603,6 +608,7 @@ function sinavModalAc(onDoluIdler) {
   document.getElementById('sinavManuelArama').value = '';
   _sinavManuelSeciliIdler = onDoluIdler && onDoluIdler.size ? new Set(onDoluIdler) : new Set();
   _sinavOtomatikSecimler = [];
+  _sinavOtomatikSonTestSecimler = [];
   document.getElementById('sinavYontemManuel').checked = !!(onDoluIdler && onDoluIdler.size);
   document.getElementById('sinavYontemOtomatik').checked = !(onDoluIdler && onDoluIdler.size);
   _sinavYontemDegisti();
@@ -642,6 +648,7 @@ function sinavDuzenleModalAc(sinavId) {
   document.getElementById('sinavManuelArama').value = '';
   _sinavManuelSeciliIdler = new Set(sinav.sorular.map(s => s.soruId).filter(Boolean));
   _sinavOtomatikSecimler = [];
+  _sinavOtomatikSonTestSecimler = [];
   document.getElementById('sinavYontemManuel').checked = true;
   document.getElementById('sinavYontemOtomatik').checked = false;
   _sinavYontemDegisti();
@@ -659,6 +666,10 @@ function _sinavManuelModuMu() {
 function _sinavYontemDegisti() {
   const manuel = _sinavManuelModuMu();
   document.getElementById('sinavSoruSayisiAlani').style.display = manuel ? 'none' : '';
+  // Ön Test/Son Test birlikte oluşturma seçeneği sadece YENİ sınav + Otomatik
+  // yöntemde anlamlı (bir sınavı düzenlerken tek kayıt güncellenir, bkz.
+  // sinavDuzenleModalAc / _duzenlenenSinavId).
+  document.getElementById('sinavOnSonTestAlani').style.display = (manuel || _duzenlenenSinavId) ? 'none' : '';
   document.getElementById('sinavOtomatikOnizleAlani').style.display = manuel ? 'none' : '';
   document.getElementById('sinavManuelSoruAlani').style.display = manuel ? '' : 'none';
   if (manuel) _sinavManuelListesiCiz();
@@ -674,6 +685,17 @@ function _sinavYontemDegisti() {
 // "Oluştur"a basınca bu KESİNLEŞMİŞ liste sinavManuelEkle ile kaydedilir (bkz.
 // sinavFormGonderildi) — sinavEkle'nin kendi rastgele seçimi artık kullanılmıyor.
 let _sinavOtomatikSecimler = [];
+// Kullanıcı isteği: "İSG eğitimlerinde bir ön test bir de son test oluyor,
+// 10 soru seçtiğimde 10 soru ön test 10 soru son test gibi yapalım" —
+// "sinavOnSonTestCheckbox" işaretliyse havuzdan İKİ KATI soru çekilip
+// ortak sorusu olmayan iki ayrı liste (ön test/son test) önizlenir;
+// "Oluştur" iki AYRI sınav kaydeder (bkz. sinavFormGonderildi).
+let _sinavOtomatikSonTestSecimler = [];
+
+function _sinavOnSonTestAktifMi() {
+  const kutu = document.getElementById('sinavOnSonTestCheckbox');
+  return !!(kutu && kutu.checked && !_duzenlenenSinavId);
+}
 
 function _sinavOtomatikHavuzuGetir() {
   const egitimTuruId = document.getElementById('sinavKonuId').value;
@@ -690,45 +712,44 @@ function _sinavOtomatikSoruGetir() {
   document.getElementById('soruSayisiHata').textContent = '';
   const havuz = _sinavOtomatikHavuzuGetir();
   const soruSayisi = Number(document.getElementById('sinavSoruSayisi').value);
+  const onSonTest = _sinavOnSonTestAktifMi();
 
   if (!soruSayisi || soruSayisi < 1) {
     document.getElementById('soruSayisiHata').textContent = 'Önce geçerli bir soru sayısı girin.';
     return;
   }
-  if (soruSayisi > havuz.length) {
-    document.getElementById('soruSayisiHata').textContent = `Soru bankasında bu filtreyle sadece ${havuz.length} soru var.`;
+  const gerekliSoru = onSonTest ? soruSayisi * 2 : soruSayisi;
+  if (gerekliSoru > havuz.length) {
+    document.getElementById('soruSayisiHata').textContent = onSonTest
+      ? `Ön Test + Son Test için ${gerekliSoru} farklı soru gerekiyor, bu filtrede sadece ${havuz.length} soru var.`
+      : `Soru bankasında bu filtreyle sadece ${havuz.length} soru var.`;
     return;
   }
 
-  _sinavOtomatikSecimler = _sinavKaristir(havuz).slice(0, soruSayisi);
+  const karisik = _sinavKaristir(havuz);
+  _sinavOtomatikSecimler = karisik.slice(0, soruSayisi);
+  _sinavOtomatikSonTestSecimler = onSonTest ? karisik.slice(soruSayisi, soruSayisi * 2) : [];
   _sinavOtomatikListesiCiz();
 }
 
-function _sinavOtomatikSoruDegistir(index) {
+function _sinavOtomatikSoruDegistir(hangiListe, index) {
   const havuz = _sinavOtomatikHavuzuGetir();
-  const kullanilanIdler = new Set(_sinavOtomatikSecimler.map(s => s.id));
+  const liste = hangiListe === 'son' ? _sinavOtomatikSonTestSecimler : _sinavOtomatikSecimler;
+  // Ön Test ile Son Test'in ortak sorusu olmasın diye her iki listede
+  // kullanılan id'ler birlikte hariç tutuluyor.
+  const kullanilanIdler = new Set(_sinavOtomatikSecimler.concat(_sinavOtomatikSonTestSecimler).map(s => s.id));
   const adaylar = havuz.filter(s => !kullanilanIdler.has(s.id));
   if (!adaylar.length) {
     alert('Bu filtrede değiştirilecek başka soru kalmadı.');
     return;
   }
   const yeni = adaylar[Math.floor(Math.random() * adaylar.length)];
-  _sinavOtomatikSecimler[index] = yeni;
+  liste[index] = yeni;
   _sinavOtomatikListesiCiz();
 }
 
-function _sinavOtomatikListesiCiz() {
-  const govde = document.getElementById('sinavOtomatikListesi');
-  const sayac = document.getElementById('sinavOtomatikSayac');
-
-  if (!_sinavOtomatikSecimler.length) {
-    govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Henüz soru getirilmedi — yukarıdaki "Soruları Getir" butonuna basın.</div>';
-    sayac.textContent = '';
-    return;
-  }
-
-  sayac.textContent = `(${_sinavOtomatikSecimler.length} soru)`;
-  govde.innerHTML = _sinavOtomatikSecimler.map((s, i) => `
+function _sinavOtomatikTekListeHtml(liste, hangiListe) {
+  return liste.map((s, i) => `
     <div style="display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid var(--kenarlik); font-size:13px;">
       <span style="flex:1;">
         <div>${i + 1}. ${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></div>
@@ -740,12 +761,39 @@ function _sinavOtomatikListesiCiz() {
           `).join('')}
         </div>
       </span>
-      <button type="button" class="tablo-buton" data-otomatik-degistir="${i}" style="white-space:nowrap;">🔄 Alternatif Soru</button>
+      <button type="button" class="tablo-buton" data-otomatik-degistir="${i}" data-otomatik-liste="${hangiListe}" style="white-space:nowrap;">🔄 Alternatif Soru</button>
     </div>
   `).join('');
+}
 
-  govde.querySelectorAll('[data-otomatik-degistir]').forEach(btn => {
-    btn.addEventListener('click', () => _sinavOtomatikSoruDegistir(Number(btn.getAttribute('data-otomatik-degistir'))));
+function _sinavOtomatikListesiCiz() {
+  const govde = document.getElementById('sinavOtomatikListesi');
+  const govdeSon = document.getElementById('sinavOtomatikSonTestListesi');
+  const sayac = document.getElementById('sinavOtomatikSayac');
+  const onTestBaslik = document.getElementById('sinavOtomatikOnTestBaslik');
+  const sonTestBaslik = document.getElementById('sinavOtomatikSonTestBaslik');
+  const onSonTest = _sinavOnSonTestAktifMi();
+
+  onTestBaslik.style.display = onSonTest ? '' : 'none';
+  sonTestBaslik.style.display = onSonTest ? '' : 'none';
+  govdeSon.style.display = onSonTest ? '' : 'none';
+
+  if (!_sinavOtomatikSecimler.length) {
+    govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Henüz soru getirilmedi — yukarıdaki "Soruları Getir" butonuna basın.</div>';
+    govdeSon.innerHTML = '';
+    sayac.textContent = '';
+    return;
+  }
+
+  sayac.textContent = onSonTest
+    ? `(Ön Test: ${_sinavOtomatikSecimler.length}, Son Test: ${_sinavOtomatikSonTestSecimler.length})`
+    : `(${_sinavOtomatikSecimler.length} soru)`;
+
+  govde.innerHTML = _sinavOtomatikTekListeHtml(_sinavOtomatikSecimler, 'on');
+  govdeSon.innerHTML = onSonTest ? _sinavOtomatikTekListeHtml(_sinavOtomatikSonTestSecimler, 'son') : '';
+
+  document.querySelectorAll('#sinavOtomatikListesi [data-otomatik-degistir], #sinavOtomatikSonTestListesi [data-otomatik-degistir]').forEach(btn => {
+    btn.addEventListener('click', () => _sinavOtomatikSoruDegistir(btn.getAttribute('data-otomatik-liste'), Number(btn.getAttribute('data-otomatik-degistir'))));
   });
 }
 
@@ -761,6 +809,7 @@ function _sinavFiltreDegistiGerekirse() {
     _sinavManuelListesiCiz();
   } else {
     _sinavOtomatikSecimler = [];
+    _sinavOtomatikSonTestSecimler = [];
     _sinavOtomatikListesiCiz();
   }
 }
@@ -867,27 +916,59 @@ function sinavFormGonderildi(e) {
   // (bkz. _sinavOtomatikSecimler) kullanılıyor. "hazırladığım sorulara
   // tekrar düzenleyebileyim" — _duzenlenenSinavId doluysa (bkz.
   // sinavDuzenleModalAc) YENİ sınav değil, mevcut kayıt güncellenir.
-  let soruIdleri;
-  if (_sinavManuelModuMu()) {
-    soruIdleri = Array.from(_sinavManuelSeciliIdler);
+  const onSonTest = _sinavOnSonTestAktifMi();
+
+  if (_sinavManuelModuMu() || !onSonTest) {
+    let soruIdleri;
+    if (_sinavManuelModuMu()) {
+      soruIdleri = Array.from(_sinavManuelSeciliIdler);
+    } else {
+      if (!_sinavOtomatikSecimler.length) {
+        document.getElementById('soruSayisiHata').textContent = 'Önce "Soruları Getir" ile soruları görüntüleyip onaylayın.';
+        return;
+      }
+      soruIdleri = _sinavOtomatikSecimler.map(s => s.id);
+    }
+
+    const sonuc = _duzenlenenSinavId
+      ? sinavManuelGuncelle(_duzenlenenSinavId, veriler, soruIdleri)
+      : sinavManuelEkle(veriler, soruIdleri);
+
+    if (!sonuc.basarili) {
+      Object.keys(sonuc.hatalar).forEach(alan => {
+        const hataEl = document.getElementById(alan + 'Hata');
+        if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
+      });
+      return;
+    }
   } else {
-    if (!_sinavOtomatikSecimler.length) {
+    // Kullanıcı isteği: "10 soru seçtiğimde 10 soru ön test 10 soru son
+    // test gibi yapalım" — iki AYRI sınav kaydı oluşturulur, aynı başlığa
+    // "- Ön Test" / "- Son Test" eklenir.
+    if (!_sinavOtomatikSecimler.length || !_sinavOtomatikSonTestSecimler.length) {
       document.getElementById('soruSayisiHata').textContent = 'Önce "Soruları Getir" ile soruları görüntüleyip onaylayın.';
       return;
     }
-    soruIdleri = _sinavOtomatikSecimler.map(s => s.id);
-  }
-
-  const sonuc = _duzenlenenSinavId
-    ? sinavManuelGuncelle(_duzenlenenSinavId, veriler, soruIdleri)
-    : sinavManuelEkle(veriler, soruIdleri);
-
-  if (!sonuc.basarili) {
-    Object.keys(sonuc.hatalar).forEach(alan => {
-      const hataEl = document.getElementById(alan + 'Hata');
-      if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
-    });
-    return;
+    const onSonuc = sinavManuelEkle(Object.assign({}, veriler, { baslik: veriler.baslik.trim() + ' - Ön Test' }), _sinavOtomatikSecimler.map(s => s.id));
+    if (!onSonuc.basarili) {
+      Object.keys(onSonuc.hatalar).forEach(alan => {
+        const hataEl = document.getElementById(alan + 'Hata');
+        if (hataEl) hataEl.textContent = onSonuc.hatalar[alan];
+      });
+      return;
+    }
+    const sonSonuc = sinavManuelEkle(Object.assign({}, veriler, { baslik: veriler.baslik.trim() + ' - Son Test' }), _sinavOtomatikSonTestSecimler.map(s => s.id));
+    if (!sonSonuc.basarili) {
+      // Ön Test zaten kaydedildi -- kullanıcı en azından o sınava sahip olsun,
+      // Son Test'i tekrar denemesi için hata gösterip modalı açık bırakıyoruz.
+      Object.keys(sonSonuc.hatalar).forEach(alan => {
+        const hataEl = document.getElementById(alan + 'Hata');
+        if (hataEl) hataEl.textContent = sonSonuc.hatalar[alan];
+      });
+      alert('Ön Test kaydedildi ama Son Test kaydedilemedi: ' + Object.values(sonSonuc.hatalar).join(' '));
+      sinavTablosunuCiz();
+      return;
+    }
   }
 
   sinavModalKapat();

@@ -366,6 +366,18 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği: "İSG eğitimlerinde bir ön test bir de son test
+             oluyor, 10 soru seçtiğimde 10 soru ön test 10 soru son test gibi
+             yapalım" — işaretlenirse Soru Sayısı kadar soru İKİ AYRI (ortak
+             sorusu olmayan) havuzdan çekilir, "Oluştur" tek tıkla hem "...-
+             Ön Test" hem "...- Son Test" adında iki ayrı sınav kaydeder. -->
+        <div id="sinavOnSonTestAlani" style="display:none; margin-top:-6px; margin-bottom:10px;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+            <input type="checkbox" id="sinavOnSonTestCheckbox" style="width:auto;">
+            Ön Test + Son Test olarak birlikte oluştur (her biri için Soru Sayısı kadar, birbirinden farklı sorular)
+          </label>
+        </div>
+
         <!-- Kullanıcı isteği: "soruları otomatik hazırladığımda indirmeden önce
              tek tek soruları bana göstersin, bu soruyu değiştir diyebileyim,
              alternatif bir soru göstersin seçeyim" — Otomatik yöntemde artık
@@ -380,7 +392,10 @@
           <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0;">
             Yukarıdaki filtre veya soru sayısını değiştirirseniz "Soruları Getir"e tekrar basmanız gerekir.
           </p>
+          <div id="sinavOtomatikOnTestBaslik" style="display:none; font-weight:700; font-size:13px; margin:6px 0 2px;">Ön Test Soruları</div>
           <div id="sinavOtomatikListesi" style="max-height:320px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+          <div id="sinavOtomatikSonTestBaslik" style="display:none; font-weight:700; font-size:13px; margin:6px 0 2px;">Son Test Soruları</div>
+          <div id="sinavOtomatikSonTestListesi" style="display:none; max-height:320px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
         </div>
 
         <div id="sinavManuelSoruAlani" style="display:none;">
