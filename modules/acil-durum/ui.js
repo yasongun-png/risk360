@@ -978,10 +978,26 @@ function ekipmanBarkodTaramaDurdur() {
 // firmanın kendi barkodu CODE128 dışında bir format olabilir (Code39,
 // EAN vb.), Html5Qrcode varsayılan olarak birçok formatı birden tarar.
 let _ytBarkodTarayici = null;
+// Kullanıcı raporu: "barkodu tüpe bağlıyorum, sonra tekrar tarattığımda
+// tanımıyor" — kök neden: canlı tarama, İLK başarılı kare çözümlenir
+// çözümlenmez hemen karar veriyordu (eşleştir ya da "bulunamadı" göster).
+// Firmanın etiketleri parlak/eğri metal yüzeyde olduğundan (bkz. yukarıdaki
+// qrbox notu) tek bir kare bazen gürültülü/eksik bir metne çözümlenebiliyor;
+// bu YANLIŞ metin ya eşleştirme sırasında kaydedilip sonraki (bu kez doğru
+// okunan) taramayla eşleşmemesine, ya da doğru okunan bir kodun tek seferlik
+// kötü bir sonraki kareyle "bulunamadı" gösterip kamerayı durdurmasına yol
+// açabiliyordu. Çözüm: aynı tarama oturumunda ART ARDA AYNI metni veren en
+// az 2 kare gelmeden hiçbir karar verilmez/kamera durdurulmaz — tek seferlik
+// gürültülü bir kare artık hiçbir işlem tetiklemiyor, tarama sessizce devam
+// ediyor.
+let _ytSonOkunanKod = null;
+let _ytOkunanKodTekrarSayaci = 0;
 
 function yanginTupuBarkodTaramaBaslat() {
   if (typeof Html5Qrcode === 'undefined') { alert('Barkod tarama bileşeni yüklenemedi.'); return; }
   _ytBarkodEslesmePaneliGizle();
+  _ytSonOkunanKod = null;
+  _ytOkunanKodTekrarSayaci = 0;
   const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
   durum.textContent = '';
   durum.classList.remove('gorunur');
@@ -1053,6 +1069,17 @@ function _yanginTupuBarkodEslesenTupuBul(kod) {
 let _ytBarkodBekleyenKod = null;
 
 function _ytBarkodOkundu(kod) {
+  // Tek kareye güvenilmez — bkz. _ytSonOkunanKod tanımındaki not. Aynı metin
+  // art arda en az 2 kez gelmeden ne eşleştirme ne de "bulunamadı" kararı
+  // verilir; farklı bir metin gelirse sayaç sıfırlanıp yeniden başlar.
+  if (kod === _ytSonOkunanKod) {
+    _ytOkunanKodTekrarSayaci++;
+  } else {
+    _ytSonOkunanKod = kod;
+    _ytOkunanKodTekrarSayaci = 1;
+  }
+  if (_ytOkunanKodTekrarSayaci < 2) return;
+
   const tup = _yanginTupuBarkodEslesenTupuBul(kod);
   if (!tup) {
     _ytBarkodKamerayiDurdur();
