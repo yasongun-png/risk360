@@ -230,6 +230,15 @@ function sinavEkleRepo(sinav) {
   return sinav;
 }
 
+function sinavGuncelleRepo(id, veriler) {
+  const liste = sinavTumunuGetirRepo();
+  const index = liste.findIndex(s => s.id === id);
+  if (index === -1) return null;
+  liste[index] = Object.assign({}, liste[index], veriler);
+  _sinavKaydet(liste);
+  return liste[index];
+}
+
 function sinavSilRepo(id) {
   _sinavKaydet(sinavTumunuGetirRepo().filter(s => s.id !== id));
   _sonucKaydet(sonucTumunuGetirRepo().filter(r => r.sinavId !== id));
@@ -353,20 +362,24 @@ function _sinavKaristir(liste) {
 
 // Kullanıcının soru bankasından tek tek işaretlediği (veya Otomatik yöntemde
 // önce önizlenip "Alternatif Soru" ile düzenlenip kesinleştirdiği, bkz.
-// sinav-ui.js _sinavOtomatikSecimler) sorularla sınav oluşturur — doğrulama
-// "soru sayısı"na değil, doğrudan seçilen soru id listesine bakar.
-function sinavManuelEkle(veriler, soruIdleri) {
+// sinav-ui.js _sinavOtomatikSecimler) sorularla sınav oluşturur/günceller —
+// doğrulama "soru sayısı"na değil, doğrudan seçilen soru id listesine bakar.
+function _sinavManuelDogrulaVeSecilenler(veriler, soruIdleri) {
   const hatalar = {};
   if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Sınav başlığı zorunludur.';
   if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
   if (!Array.isArray(soruIdleri) || !soruIdleri.length) hatalar.manuelSoru = 'En az bir soru seçmelisiniz.';
-  if (Object.keys(hatalar).length) return { basarili: false, hatalar };
+  if (Object.keys(hatalar).length) return { gecerli: false, hatalar };
 
   const havuz = soruTumunuGetirRepo();
   const secilenler = soruIdleri.map(id => havuz.find(s => s.id === id)).filter(Boolean);
-  if (!secilenler.length) return { basarili: false, hatalar: { manuelSoru: 'Seçilen sorular soru bankasında bulunamadı (silinmiş olabilir).' } };
+  if (!secilenler.length) return { gecerli: false, hatalar: { manuelSoru: 'Seçilen sorular soru bankasında bulunamadı (silinmiş olabilir).' } };
 
-  const yeniSinav = sinavOlustur({
+  return { gecerli: true, secilenler };
+}
+
+function _sinavIcerigiOlustur(veriler, secilenler, ekVeriler) {
+  return Object.assign({
     baslik: veriler.baslik.trim(),
     egitimTuruId: veriler.egitimTuruId,
     konular: Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [],
@@ -380,9 +393,36 @@ function sinavManuelEkle(veriler, soruIdleri) {
       dogruCevap: s.dogruCevap,
       aciklama: s.aciklama || ''
     }))
-  });
+  }, ekVeriler);
+}
+
+function sinavManuelEkle(veriler, soruIdleri) {
+  const dogrulama = _sinavManuelDogrulaVeSecilenler(veriler, soruIdleri);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const yeniSinav = sinavOlustur(_sinavIcerigiOlustur(veriler, dogrulama.secilenler));
   sinavEkleRepo(yeniSinav);
   return { basarili: true, sinav: yeniSinav };
+}
+
+// Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" — daha
+// önce oluşturulmuş bir sınavın başlık/tarih/geçme notu ve soru listesini
+// YENİ bir kayıt açmadan (aynı id, dolayısıyla aynı sınav kağıdı/sonuçlar
+// bağlantısıyla) günceller. Sonuçlar (sinav_sonuclari) soru bazlı değil
+// sınav bazlı (dogruSayisi/toplamSoru/puan) tutulduğundan etkilenmez.
+function sinavManuelGuncelle(id, veriler, soruIdleri) {
+  const mevcut = sinavIdIleGetirRepo(id);
+  if (!mevcut) return { basarili: false, hatalar: { genel: 'Sınav bulunamadı.' } };
+
+  const dogrulama = _sinavManuelDogrulaVeSecilenler(veriler, soruIdleri);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const guncellenmis = sinavOlustur(_sinavIcerigiOlustur(veriler, dogrulama.secilenler, {
+    id,
+    olusturmaTarihi: mevcut.olusturmaTarihi
+  }));
+  sinavGuncelleRepo(id, guncellenmis);
+  return { basarili: true, sinav: guncellenmis };
 }
 
 function sinavSil(id) {

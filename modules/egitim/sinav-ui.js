@@ -486,6 +486,7 @@ function sinavTablosunuCiz() {
       <td>${s.sorular.length}</td>
       <td>${s.katilimciSayisi} (${s.gecenSayisi} geçti)</td>
       <td>
+        <button class="tablo-buton" data-sinav-duzenle="${s.id}">Düzenle</button>
         <button class="tablo-buton" data-kagit="${s.id}">Sınav Kağıdı</button>
         <button class="tablo-buton" data-cevap="${s.id}">Cevap Anahtarı</button>
         <button class="tablo-buton" data-sonuc="${s.id}">Sonuçlar</button>
@@ -495,6 +496,12 @@ function sinavTablosunuCiz() {
     govde.appendChild(satir);
   });
 
+  // Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" —
+  // daha önce oluşturulmuş bir sınavın soru listesi (ve başlık/tarih/geçme
+  // notu) sonradan Manuel yöntemle yeniden açılıp değiştirilebilir.
+  govde.querySelectorAll('[data-sinav-duzenle]').forEach(btn => {
+    btn.addEventListener('click', () => sinavDuzenleModalAc(btn.getAttribute('data-sinav-duzenle')));
+  });
   govde.querySelectorAll('[data-kagit]').forEach(btn => {
     btn.addEventListener('click', () => sinavKagidiYazdir(btn.getAttribute('data-kagit')));
   });
@@ -581,7 +588,12 @@ async function sinavImzaListesiFormGonderildi(e) {
 // Soru Bankası tablosundaki onay kutularıyla seçilen sorular verilirse
 // (onDoluIdler), modal doğrudan Manuel yöntemle ve o sorular işaretli
 // şekilde açılır; parametre verilmezse eski davranış (boş/otomatik) sürer.
+let _duzenlenenSinavId = null;
+
 function sinavModalAc(onDoluIdler) {
+  _duzenlenenSinavId = null;
+  document.getElementById('sinavModalBaslik').textContent = 'Yeni Sınav Oluştur';
+  document.getElementById('sinavModalKaydetBtn').textContent = 'Oluştur';
   _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
   _altKonuKutulariniCiz();
@@ -593,6 +605,45 @@ function sinavModalAc(onDoluIdler) {
   _sinavOtomatikSecimler = [];
   document.getElementById('sinavYontemManuel').checked = !!(onDoluIdler && onDoluIdler.size);
   document.getElementById('sinavYontemOtomatik').checked = !(onDoluIdler && onDoluIdler.size);
+  _sinavYontemDegisti();
+  document.getElementById('sinavModalKatman').classList.add('acik');
+}
+
+// Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" — daha
+// önce oluşturulmuş bir sınavı, kaydedilmiş soruları Manuel listede işaretli
+// halde tekrar açar; "Kaydet"e basınca sinavManuelGuncelle ile AYNI kayıt
+// (id korunarak) güncellenir, yeni bir sınav oluşturulmaz.
+function sinavDuzenleModalAc(sinavId) {
+  const sinav = sinavGetir(sinavId);
+  if (!sinav) return;
+
+  _duzenlenenSinavId = sinavId;
+  document.getElementById('sinavModalBaslik').textContent = 'Sınavı Düzenle';
+  document.getElementById('sinavModalKaydetBtn').textContent = 'Kaydet';
+  _sinavFormHatalariniTemizle('sinavForm');
+  _konuSecimleriniDoldur('sinavKonuId', false);
+  _altKonuKutulariniCiz();
+  _zorlukKutulariniCiz();
+  document.getElementById('sinavForm').reset();
+
+  document.getElementById('sinavBaslik').value = sinav.baslik;
+  document.getElementById('sinavKonuId').value = sinav.egitimTuruId;
+  document.getElementById('sinavTarih').value = sinav.tarih || '';
+  document.getElementById('sinavGecmeNotu').value = sinav.gecmeNotu;
+  (sinav.konular || []).forEach(k => {
+    const kutu = document.querySelector(`#sinavAltKonuKutulari [data-altkonu-secim="${CSS.escape(k)}"]`);
+    if (kutu) kutu.checked = true;
+  });
+  (sinav.zorluklar || []).forEach(z => {
+    const kutu = document.querySelector(`#sinavZorlukKutulari [data-zorluk-secim="${CSS.escape(z)}"]`);
+    if (kutu) kutu.checked = true;
+  });
+
+  document.getElementById('sinavManuelArama').value = '';
+  _sinavManuelSeciliIdler = new Set(sinav.sorular.map(s => s.soruId).filter(Boolean));
+  _sinavOtomatikSecimler = [];
+  document.getElementById('sinavYontemManuel').checked = true;
+  document.getElementById('sinavYontemOtomatik').checked = false;
   _sinavYontemDegisti();
   document.getElementById('sinavModalKatman').classList.add('acik');
 }
@@ -810,20 +861,26 @@ function sinavFormGonderildi(e) {
     gecmeNotu: document.getElementById('sinavGecmeNotu').value
   };
 
-  let sonuc;
+  // Kullanıcı isteği: "otomatik hazırladığımda indirmeden önce tek tek
+  // soruları göstersin, değiştirebileyim" — Otomatik yöntem artık kendi
+  // rastgele seçimini sessizce kaydetmiyor; önizlemede KESİNLEŞEN sorular
+  // (bkz. _sinavOtomatikSecimler) kullanılıyor. "hazırladığım sorulara
+  // tekrar düzenleyebileyim" — _duzenlenenSinavId doluysa (bkz.
+  // sinavDuzenleModalAc) YENİ sınav değil, mevcut kayıt güncellenir.
+  let soruIdleri;
   if (_sinavManuelModuMu()) {
-    sonuc = sinavManuelEkle(veriler, Array.from(_sinavManuelSeciliIdler));
+    soruIdleri = Array.from(_sinavManuelSeciliIdler);
   } else {
-    // Kullanıcı isteği: "otomatik hazırladığımda indirmeden önce tek tek
-    // soruları göstersin, değiştirebileyim" — Otomatik yöntem artık kendi
-    // rastgele seçimini sessizce kaydetmiyor; önizlemede KESİNLEŞEN sorular
-    // (bkz. _sinavOtomatikSecimler) sinavManuelEkle ile kaydediliyor.
     if (!_sinavOtomatikSecimler.length) {
       document.getElementById('soruSayisiHata').textContent = 'Önce "Soruları Getir" ile soruları görüntüleyip onaylayın.';
       return;
     }
-    sonuc = sinavManuelEkle(veriler, _sinavOtomatikSecimler.map(s => s.id));
+    soruIdleri = _sinavOtomatikSecimler.map(s => s.id);
   }
+
+  const sonuc = _duzenlenenSinavId
+    ? sinavManuelGuncelle(_duzenlenenSinavId, veriler, soruIdleri)
+    : sinavManuelEkle(veriler, soruIdleri);
 
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar).forEach(alan => {
