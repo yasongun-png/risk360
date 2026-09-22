@@ -483,6 +483,10 @@ function sinavTablosunuCiz() {
   bosDurum.classList.remove('gorunur');
 
   liste.forEach(s => {
+    // Kullanıcı isteği: "sınav kağıdının bir tarafı ön test bir tarafı son
+    // test olacak" — başlığı "- Ön Test"/"- Son Test" ile bitip eşleşen bir
+    // çifti olan sınavlarda, ikisini TEK dosyada birleştiren buton gösterilir.
+    const esi = _sinavEsiniBul(s);
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${_sinavKacir(s.baslik)}</td>
@@ -493,12 +497,17 @@ function sinavTablosunuCiz() {
       <td>
         <button class="tablo-buton" data-sinav-duzenle="${s.id}">Düzenle</button>
         <button class="tablo-buton" data-kagit="${s.id}">Sınav Kağıdı</button>
+        ${esi ? `<button class="tablo-buton" data-birlesik-kagit="${s.id}">📄 Ön+Son Test Kağıdı</button>` : ''}
         <button class="tablo-buton" data-cevap="${s.id}">Cevap Anahtarı</button>
         <button class="tablo-buton" data-sonuc="${s.id}">Sonuçlar</button>
         <button class="tablo-buton sil" data-sil="${s.id}">Sil</button>
       </td>
     `;
     govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-birlesik-kagit]').forEach(btn => {
+    btn.addEventListener('click', () => sinavBirlesikKagitYazdir(btn.getAttribute('data-birlesik-kagit')));
   });
 
   // Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" —
@@ -1139,9 +1148,14 @@ function _sinavWordSoruParagraflari(sinav, cevapGoster) {
   return paragraflar;
 }
 
-async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
-  const sinav = sinavGetir(sinavId);
-  if (!sinav) return;
+// Bir sınav için Word bölümlerini (üst bilgi + sorular) üretir — hem tek
+// başına bir sınav kağıdı üretmek için (bkz. _sinavKagidiWordOlustur) hem de
+// Ön Test/Son Test'i TEK dosyada birleştirmek için (bkz.
+// sinavBirlesikKagitYazdir) ortak kullanılır. yeniSayfadaBaslasin=true ise
+// bu bölüm, önceki bölümün bittiği yerden değil YENİ bir sayfadan başlar
+// (kullanıcı isteği: "sınav kağıdının bir tarafı ön test bir tarafı son
+// test olacak").
+function _sinavKagidiBolumleriOlustur(sinav, cevapGoster, yeniSayfadaBaslasin) {
   const firma = aktifFirmaGetir();
 
   const ustBilgi = [
@@ -1182,22 +1196,27 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
   // da başlığın hemen altında aynı yükseklikte başlıyor (tıpkı eski PDF
   // çıktısında olduğu gibi).
   const margin = { top: 850, bottom: 850, left: 850, right: 850 };
-  const doc = new docx.Document({
-    sections: [
-      {
-        properties: { page: { margin }, column: { count: 1 } },
-        children: ustBilgi
+  const ustBilgiOzellikleri = { page: { margin }, column: { count: 1 } };
+  if (yeniSayfadaBaslasin) ustBilgiOzellikleri.type = docx.SectionType.NEXT_PAGE;
+
+  return [
+    { properties: ustBilgiOzellikleri, children: ustBilgi },
+    {
+      properties: {
+        page: { margin },
+        type: docx.SectionType.CONTINUOUS,
+        column: { count: 2, space: 500 }
       },
-      {
-        properties: {
-          page: { margin },
-          type: docx.SectionType.CONTINUOUS,
-          column: { count: 2, space: 500 }
-        },
-        children: _sinavWordSoruParagraflari(sinav, cevapGoster)
-      }
-    ]
-  });
+      children: _sinavWordSoruParagraflari(sinav, cevapGoster)
+    }
+  ];
+}
+
+async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
+  const sinav = sinavGetir(sinavId);
+  if (!sinav) return;
+
+  const doc = new docx.Document({ sections: _sinavKagidiBolumleriOlustur(sinav, cevapGoster, false) });
 
   const blob = await docx.Packer.toBlob(doc);
   const dosyaAdi = `${sinav.baslik}_${cevapGoster ? 'Cevap_Anahtari' : 'Sinav_Kagidi'}`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx';
@@ -1210,4 +1229,38 @@ async function sinavKagidiYazdir(sinavId) {
 
 async function cevapAnahtariYazdir(sinavId) {
   await _sinavKagidiWordOlustur(sinavId, true);
+}
+
+// Kullanıcı isteği: "sınav kağıdının bir tarafı ön test bir tarafı son test
+// olacak" — "... - Ön Test" / "... - Son Test" ekiyle eşleşen bir çift
+// bulunursa (bkz. sinavFormGonderildi'deki otomatik başlıklandırma), TEK
+// Word dosyasında önce Ön Test, sayfa atlayıp devamında Son Test basılır.
+function _sinavEsiniBul(sinav) {
+  const ON_EKI = ' - Ön Test';
+  const SON_EKI = ' - Son Test';
+  let aranan;
+  if (sinav.baslik.endsWith(ON_EKI)) aranan = sinav.baslik.slice(0, -ON_EKI.length) + SON_EKI;
+  else if (sinav.baslik.endsWith(SON_EKI)) aranan = sinav.baslik.slice(0, -SON_EKI.length) + ON_EKI;
+  else return null;
+
+  return sinavlariGetir('').find(s => s.id !== sinav.id && s.baslik === aranan && s.egitimTuruId === sinav.egitimTuruId) || null;
+}
+
+async function sinavBirlesikKagitYazdir(sinavId) {
+  const sinav = sinavGetir(sinavId);
+  if (!sinav) return;
+  const es = _sinavEsiniBul(sinav);
+  if (!es) { alert('Eşleşen Ön Test / Son Test sınavı bulunamadı (başlıklar "- Ön Test" / "- Son Test" ile bitmeli ve aynı eğitim türüne ait olmalı).'); return; }
+
+  const onSinav = sinav.baslik.endsWith(' - Ön Test') ? sinav : sinavGetir(es.id);
+  const sonSinav = sinav.baslik.endsWith(' - Son Test') ? sinav : sinavGetir(es.id);
+
+  const bolumler = _sinavKagidiBolumleriOlustur(onSinav, false, false)
+    .concat(_sinavKagidiBolumleriOlustur(sonSinav, false, true));
+  const doc = new docx.Document({ sections: bolumler });
+
+  const blob = await docx.Packer.toBlob(doc);
+  const temelBaslik = onSinav.baslik.replace(/ - Ön Test$/, '');
+  const dosyaAdi = `${temelBaslik}_On_Son_Test_Birlesik`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx';
+  saveAs(blob, dosyaAdi);
 }
