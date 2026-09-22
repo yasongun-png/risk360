@@ -341,7 +341,7 @@ function _kisiBelgeSatiriHtml(belgeTanimi, kayit, tehlikeSinifi) {
     const hesapExp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, k, tehlikeSinifi);
     alanlar = `
       <input type="date" data-belge-alan="base" data-belge-id="${belgeTanimi.id}" value="${k.base || ''}" title="Veriliş" style="width:auto;">
-      <span style="font-size:12px; color:var(--metin-soluk); white-space:nowrap;">Geçerlilik: ${hesapExp || '-'}</span>
+      <span data-belge-gecerlilik="${belgeTanimi.id}" style="font-size:12px; color:var(--metin-soluk); white-space:nowrap;">Geçerlilik: ${hesapExp || '-'}</span>
     `;
   } else if (belgeTanimi.tur === 'egitim') {
     alanlar = `
@@ -382,6 +382,15 @@ function _kisiBelgeListesiniCiz() {
     })
     .join('');
 
+  // Kullanıcı bildirdi: "gün ay yazdıktan sonra yıla 2 yazdığımda 0002 oluyor,
+  // 2026 yazamıyorum" — native <input type="date">, gün+ay+yıl'ın İLK
+  // rakamıyla bile (ör. 22.09.0002) "tamamlanmış" sayılıp 'change' olayını
+  // hemen fırlatabiliyor; bu olayı dinleyip TÜM belge listesini (bu input'un
+  // kendisi dahil) yeniden çizmek, kullanıcı yılın geri kalanını daha
+  // yazmadan input'u DOM'dan silip yeniden oluşturuyor, odağı/yazmayı
+  // kesiyordu. Artık ne 'input' ne 'change' listeyi yeniden çizmiyor —
+  // sadece yandaki "Geçerlilik: ..." metni (data-belge-gecerlilik) güncelleniyor,
+  // input elemanının kendisine hiç dokunulmuyor.
   kutu.querySelectorAll('[data-belge-alan]').forEach(el => {
     el.addEventListener('input', () => {
       const id = el.getAttribute('data-belge-id');
@@ -397,20 +406,19 @@ function _kisiBelgeListesiniCiz() {
       // geçerlilik eski/aktarılmış tarihte donuk kalıyordu ("hesap hatası").
       // Kullanıcı bu alana dokunduğu an eski exp artık geçersiz sayılır ki
       // yeniden base (+ay) üzerinden hesaplansın.
-      const tur = yukleniciBelgeTanimiGetir(id).tur;
+      const belgeTanimi = yukleniciBelgeTanimiGetir(id);
+      const tur = belgeTanimi.tur;
       if ((alan === 'base' || alan === 'ay') && (tur === 'tarih-tehlike' || tur === 'egitim')) delete _kisiBelgeTaslak[id].exp;
+
+      if (alan === 'base' && tur === 'tarih-tehlike') {
+        const span = kutu.querySelector(`[data-belge-gecerlilik="${id}"]`);
+        if (span) {
+          const tehlikeSinifi = document.getElementById('kisiTehlikeSinifi').value;
+          const hesapExp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, _kisiBelgeTaslak[id], tehlikeSinifi);
+          span.textContent = `Geçerlilik: ${hesapExp || '-'}`;
+        }
+      }
       _kisiCanliDurumuGuncelle();
-    });
-    // Sağlık/Temel İSG'de veriliş tarihi (native <input type="date">) her
-    // tuş vuruşunda 'input' olayı fırlatır — bunu dinleyip satırı hemen
-    // yeniden çizmek, kullanıcı tarihi yazarken kutuyu silip yeniden
-    // oluşturuyordu ve girilen yıl bozuluyordu (ör. 2025 -> 0002). Hesaplanan
-    // geçerlilik metni artık sadece tarih TAMAMLANIP onaylandığında ('change')
-    // güncellenir — diğer tarih alanlarıyla aynı, kesintisiz yazma davranışı.
-    el.addEventListener('change', () => {
-      const id = el.getAttribute('data-belge-id');
-      const alan = el.getAttribute('data-belge-alan');
-      if (alan === 'base' && yukleniciBelgeTanimiGetir(id).tur === 'tarih-tehlike') _kisiBelgeListesiniCiz();
     });
   });
 
