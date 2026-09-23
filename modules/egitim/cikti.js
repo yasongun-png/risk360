@@ -370,6 +370,15 @@ const _EGT_WORD_METIN_BOYUT = 19;
 function _egitimWordHucre(children, opts = {}) {
   return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 140, bottom: 140, left: 120, right: 120 }, ...opts });
 }
+// Kullanıcı isteği: "eğitim sertifikasında ikinci sayfa bir sayfaya
+// sığsın" — arka yüzdeki 38 satırlık Konular/Süreler tablosu ön yüzdeki
+// bilgi tablosuyla AYNI (140 twips) hücre iç boşluğunu kullanınca 38 satır
+// tek sayfaya sığmayıp taşıyordu. Yalnızca bu yoğun tablo için daha dar bir
+// iç boşluk (ön yüzdeki bilgi tablosu ETKİLENMEZ, bkz. yukarısı).
+function _egitimWordKonuHucre(children, opts = {}) {
+  return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 40, bottom: 40, left: 100, right: 100 }, ...opts });
+}
+const _EGT_WORD_KONU_METIN_BOYUT = 16;
 function _egitimWordEtiketHucre(etiket) {
   return _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: _EGT_WORD_METIN_BOYUT })] }), { width: { size: 22, type: docx.WidthType.PERCENTAGE }, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } });
 }
@@ -464,41 +473,45 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
   const konuSatirlari = (baslik, konular, sureler) => {
     const toplam = sureler.reduce((a, b) => a + (Number(b) || 0), 0);
     return [
-      new docx.TableRow({ children: [_egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: _EGT_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+      new docx.TableRow({ children: [_egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: _EGT_WORD_KONU_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
       ...konular.map((k, i) => new docx.TableRow({ children: [
-        _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _EGT_WORD_METIN_BOYUT })] })),
-        _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${sureler[i] || 0} dk`, size: _EGT_WORD_METIN_BOYUT })] }))
+        _egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _EGT_WORD_KONU_METIN_BOYUT })] })),
+        _egitimWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${sureler[i] || 0} dk`, size: _EGT_WORD_KONU_METIN_BOYUT })] }))
       ]})),
       new docx.TableRow({ children: [
-        _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: `${baslik} toplamı`, bold: true, size: _EGT_WORD_METIN_BOYUT })] })),
-        _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(toplam), bold: true, size: _EGT_WORD_METIN_BOYUT })] }))
+        _egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: `${baslik} toplamı`, bold: true, size: _EGT_WORD_KONU_METIN_BOYUT })] })),
+        _egitimWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(toplam), bold: true, size: _EGT_WORD_KONU_METIN_BOYUT })] }))
       ]})
     ];
   };
   const digerToplam = plan.diger.reduce((a, r) => a + (Number(r[1]) || 0), 0);
 
   const arkaCocuklari = [
-    new docx.Paragraph({ text: 'EĞİTİM KONULARI VE SÜRELERİ', heading: docx.HeadingLevel.HEADING_2 }),
-    new docx.Paragraph({ children: [new docx.TextRun({ text: `Katılımcı: ${personel.adSoyad}   •   Tehlike Sınıfı: ${tehlikeSinifi}   •   Toplam: ${_egitimSaatMetni(dakika)}`, size: 16, color: '374151' })], spacing: { after: 200 } }),
+    new docx.Paragraph({ text: 'EĞİTİM KONULARI VE SÜRELERİ', heading: docx.HeadingLevel.HEADING_2, spacing: { after: 80 } }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: `Katılımcı: ${personel.adSoyad}   •   Tehlike Sınıfı: ${tehlikeSinifi}   •   Toplam: ${_egitimSaatMetni(dakika)}`, size: 16, color: '374151' })], spacing: { after: 100 } }),
     new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
       rows: [
-        new docx.TableRow({ tableHeader: true, children: ['EĞİTİM KONULARI', 'SÜRE'].map(h => _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: _EGT_WORD_METIN_BOYUT, color: 'FFFFFF' })] }), { shading: { fill: '0B2C52', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
+        // Kullanıcı isteği: "lacivert kısımları açık renk yap" — koyu
+        // lacivert (0B2C52) dolgulu tek blok buydu; tablonun geri kalanıyla
+        // (F1F5F9 açık dolgu + lacivert metin) aynı, açık renkli görünüme
+        // çevrildi.
+        new docx.TableRow({ tableHeader: true, children: ['EĞİTİM KONULARI', 'SÜRE'].map(h => _egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: _EGT_WORD_KONU_METIN_BOYUT, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
         ...konuSatirlari('1. Genel Konular', _EGITIM_KONULARI.genel, plan.genel),
         ...konuSatirlari('2. Sağlık Konuları', _EGITIM_KONULARI.saglik, plan.saglik),
         ...konuSatirlari('3. Teknik Konular', _EGITIM_KONULARI.teknik, plan.teknik),
-        new docx.TableRow({ children: [_egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. İşe ve işyerine özgü riskler / risk değerlendirmesine dayalı konular', bold: true, size: _EGT_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+        new docx.TableRow({ children: [_egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. İşe ve işyerine özgü riskler / risk değerlendirmesine dayalı konular', bold: true, size: _EGT_WORD_KONU_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
         ...plan.diger.map(([k, s]) => new docx.TableRow({ children: [
-          _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _EGT_WORD_METIN_BOYUT })] })),
-          _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${s} dk`, size: _EGT_WORD_METIN_BOYUT })] }))
+          _egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _EGT_WORD_KONU_METIN_BOYUT })] })),
+          _egitimWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${s} dk`, size: _EGT_WORD_KONU_METIN_BOYUT })] }))
         ]})),
         new docx.TableRow({ children: [
-          _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. Diğer konular toplamı', bold: true, size: _EGT_WORD_METIN_BOYUT })] })),
-          _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(digerToplam), bold: true, size: _EGT_WORD_METIN_BOYUT })] }))
+          _egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. Diğer konular toplamı', bold: true, size: _EGT_WORD_KONU_METIN_BOYUT })] })),
+          _egitimWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(digerToplam), bold: true, size: _EGT_WORD_KONU_METIN_BOYUT })] }))
         ]}),
         new docx.TableRow({ children: [
-          _egitimWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: 'GENEL TOPLAM', bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } }),
-          _egitimWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(dakika), bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })
+          _egitimWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: 'GENEL TOPLAM', bold: true, size: 20, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } }),
+          _egitimWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _egitimSaatMetni(dakika), bold: true, size: 20, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })
         ]})
       ]
     })
@@ -509,7 +522,9 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
   // PDF'teki gibi ilk sayfa YATAY (297x210mm ön yüz), ikinci sayfa DİKEY
   // (210x297mm konu/süre tablosu); ayrıca PDF'teki .egt-sayfa çerçevesiyle
   // (border:3px solid #0b2c52) aynı görünüm için sayfa kenarlığı eklendi.
-  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '0B2C52', space: 24 };
+  // Kullanıcı isteği: "lacivert kısımları açık renk yap" — çerçeve rengi
+  // koyu laciverten açık maviye çevrildi.
+  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '8FAFD9', space: 24 };
   const cerceveKenari = { borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' } };
   const doc = new docx.Document({
     sections: [
