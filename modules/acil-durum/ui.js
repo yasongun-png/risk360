@@ -219,9 +219,51 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'dolapHortumInc', baslik: 'Hortum Çapı (inç)' },
   { anahtar: 'dolapEksikHortumSayisi', baslik: 'Eksik Hortum Sayısı' },
   { anahtar: 'dolapDegisimGerekliMi', baslik: 'Dolap Değişimi Gerekiyor mu?' },
+  { anahtar: 'dolapKapak', baslik: 'Kapak' },
+  { anahtar: 'dolapLans', baslik: 'Lans' },
+  { anahtar: 'dolapVana', baslik: 'Vana' },
+  { anahtar: 'dolapPaslanma', baslik: 'Paslanma' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' },
   { anahtar: 'bulgular', baslik: 'Bulgular' }
 ];
+
+// Kullanıcı isteği: "sipariş adetleri (örneğin kaç lans alınacağı) doğrudan
+// sayılabilsin" — Yangın Dolabı kayıtlarındaki seçimli alanlardan hesaplanan
+// ikinci Excel sayfası. Liste filtrelenmişse yalnız görünen dolaplar sayılır.
+function _dolapSiparisOzetiSatirlari(liste) {
+  const dolaplar = liste.filter(e => e.tur === 'Yangın Dolabı');
+  const say = kosul => dolaplar.filter(kosul).length;
+  const eksikHortum = dolaplar.reduce((t, e) => t + (parseInt(e.dolapEksikHortumSayisi, 10) || 0), 0);
+  const belirtilmedi = alan => say(e => !e[alan]);
+  return [
+    ['Kalem', 'Adet', 'Açıklama', 'Bilgi Girilmemiş Dolap'],
+    ['Lans', say(e => e.dolapLans === 'Yok'), 'Lans = Yok olan dolaplar', belirtilmedi('dolapLans')],
+    ['Kapak', say(e => e.dolapKapak === 'Yok' || e.dolapKapak === 'Hasarlı'), 'Kapak = Yok veya Hasarlı', belirtilmedi('dolapKapak')],
+    ['  — Kapak yok', say(e => e.dolapKapak === 'Yok'), '', ''],
+    ['  — Kapak hasarlı', say(e => e.dolapKapak === 'Hasarlı'), '', ''],
+    ['Vana (onarım/değişim)', say(e => e.dolapVana === 'Arızalı'), 'Vana = Arızalı', belirtilmedi('dolapVana')],
+    ['Hortum', eksikHortum, 'Eksik Hortum Sayısı toplamı', belirtilmedi('dolapEksikHortumSayisi')],
+    ['Paslanma (boya/bakım)', say(e => e.dolapPaslanma === 'Var'), 'Paslanma = Var', belirtilmedi('dolapPaslanma')],
+    ['Dolap değişimi', say(e => e.dolapDegisimGerekliMi === 'Evet'), 'Dolap Değişimi Gerekiyor mu? = Evet', belirtilmedi('dolapDegisimGerekliMi')],
+    [],
+    ['Toplam Yangın Dolabı', dolaplar.length, '', '']
+  ];
+}
+
+function _ekipmanExcelDisaAktar(liste) {
+  xlsxHazirOlduğunda(() => {
+    const basliklar = EKIPMAN_EXPORT_KOLONLARI.map(k => k.baslik);
+    const satirlar = liste.map(satir => EKIPMAN_EXPORT_KOLONLARI.map(k => _tarihGoruntuyeCevir(satir[k.anahtar] ?? '')));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([basliklar, ...satirlar]), 'Veri');
+    if (liste.some(e => e.tur === 'Yangın Dolabı')) {
+      const ozet = XLSX.utils.aoa_to_sheet(_dolapSiparisOzetiSatirlari(liste));
+      ozet['!cols'] = [{ wch: 24 }, { wch: 8 }, { wch: 36 }, { wch: 22 }];
+      XLSX.utils.book_append_sheet(wb, ozet, 'Sipariş Özeti');
+    }
+    XLSX.writeFile(wb, 'acil_durum_ekipmanlari.xlsx');
+  });
+}
 
 const YANGIN_TUPU_IMPORT_KOLONLARI = [
   { anahtar: 'tupNo', baslik: 'Tüp No' },
@@ -305,7 +347,7 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // artık ekranda GÖRÜNENLE (bkz. _ekipmanFiltrelenmisListeGetir, ekipman
   // tablosunun kendisinin kullandığı fonksiyon) birebir aynı listeyi kullanır.
   document.getElementById('ekipmanDisaAktarBtn').addEventListener('click', () => {
-    excelDisaAktar(_ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value), EKIPMAN_EXPORT_KOLONLARI, 'acil_durum_ekipmanlari.xlsx');
+    _ekipmanExcelDisaAktar(_ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value));
   });
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value));
@@ -1193,6 +1235,10 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanDolapHortumInc').value = ekipman ? (ekipman.dolapHortumInc || '') : '';
   document.getElementById('ekipmanDolapEksikHortumSayisi').value = ekipman ? (ekipman.dolapEksikHortumSayisi || '') : '';
   document.getElementById('ekipmanDolapDegisimGerekliMi').value = ekipman ? (ekipman.dolapDegisimGerekliMi || '') : '';
+  document.getElementById('ekipmanDolapKapak').value = ekipman ? (ekipman.dolapKapak || '') : '';
+  document.getElementById('ekipmanDolapLans').value = ekipman ? (ekipman.dolapLans || '') : '';
+  document.getElementById('ekipmanDolapVana').value = ekipman ? (ekipman.dolapVana || '') : '';
+  document.getElementById('ekipmanDolapPaslanma').value = ekipman ? (ekipman.dolapPaslanma || '') : '';
   _ekipmanDolapOzellikleriBolumuCiz();
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanBakimYapan').value = ekipman ? ekipman.bakimYapan || '' : '';
@@ -1481,6 +1527,10 @@ function ekipmanFormGonderildi(e) {
     dolapHortumInc: document.getElementById('ekipmanDolapHortumInc').value,
     dolapEksikHortumSayisi: document.getElementById('ekipmanDolapEksikHortumSayisi').value,
     dolapDegisimGerekliMi: document.getElementById('ekipmanDolapDegisimGerekliMi').value,
+    dolapKapak: document.getElementById('ekipmanDolapKapak').value,
+    dolapLans: document.getElementById('ekipmanDolapLans').value,
+    dolapVana: document.getElementById('ekipmanDolapVana').value,
+    dolapPaslanma: document.getElementById('ekipmanDolapPaslanma').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     bakimYapan: document.getElementById('ekipmanBakimYapan').value,
     yapilanIslem: document.getElementById('ekipmanYapilanIslem').value,

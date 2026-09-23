@@ -166,6 +166,45 @@
                 <option value="Hayır">Hayır</option>
               </select>
             </div>
+            <!-- Kullanıcı isteği: kapak/lans/vana/paslanma ayrı seçimli
+                 alanlar (sipariş adetleri doğrudan sayılabilsin). -->
+            <div style="display:flex; gap:10px;">
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapKapak">Kapak</label>
+                <select id="ekDolapKapak">
+                  <option value="">— Belirtilmedi —</option>
+                  <option value="Var">Var</option>
+                  <option value="Yok">Yok</option>
+                  <option value="Hasarlı">Hasarlı</option>
+                </select>
+              </div>
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapLans">Lans</label>
+                <select id="ekDolapLans">
+                  <option value="">— Belirtilmedi —</option>
+                  <option value="Var">Var</option>
+                  <option value="Yok">Yok</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapVana">Vana</label>
+                <select id="ekDolapVana">
+                  <option value="">— Belirtilmedi —</option>
+                  <option value="Çalışıyor">Çalışıyor</option>
+                  <option value="Arızalı">Arızalı</option>
+                </select>
+              </div>
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapPaslanma">Paslanma</label>
+                <select id="ekDolapPaslanma">
+                  <option value="">— Belirtilmedi —</option>
+                  <option value="Var">Var</option>
+                  <option value="Yok">Yok</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div class="ek-alan">
@@ -257,7 +296,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="core/data.js"></script>
-  <script src="modules/acil-durum/model.js?v=13"></script>
+  <script src="modules/acil-durum/model.js?v=14"></script>
   <script>
     function _ekKacir(v) {
       return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -319,6 +358,10 @@
       document.getElementById('ekDolapHortumInc').value = ekipman.dolapHortumInc || '';
       document.getElementById('ekDolapEksikHortumSayisi').value = ekipman.dolapEksikHortumSayisi || '';
       document.getElementById('ekDolapDegisimGerekliMi').value = ekipman.dolapDegisimGerekliMi || '';
+      document.getElementById('ekDolapKapak').value = ekipman.dolapKapak || '';
+      document.getElementById('ekDolapLans').value = ekipman.dolapLans || '';
+      document.getElementById('ekDolapVana').value = ekipman.dolapVana || '';
+      document.getElementById('ekDolapPaslanma').value = ekipman.dolapPaslanma || '';
     }
 
     // Kullanıcı isteği: "bakımcı Enes Akkuş seçili gelsin tekrar girmeye
@@ -598,7 +641,11 @@
             dolapHortumSayisi: document.getElementById('ekDolapHortumSayisi').value.trim(),
             dolapHortumInc: document.getElementById('ekDolapHortumInc').value.trim(),
             dolapEksikHortumSayisi: document.getElementById('ekDolapEksikHortumSayisi').value.trim(),
-            dolapDegisimGerekliMi: document.getElementById('ekDolapDegisimGerekliMi').value
+            dolapDegisimGerekliMi: document.getElementById('ekDolapDegisimGerekliMi').value,
+            dolapKapak: document.getElementById('ekDolapKapak').value,
+            dolapLans: document.getElementById('ekDolapLans').value,
+            dolapVana: document.getElementById('ekDolapVana').value,
+            dolapPaslanma: document.getElementById('ekDolapPaslanma').value
           } : {};
 
           const periyotGun = Number(liste[index].periyotGun || 90);

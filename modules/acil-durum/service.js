@@ -217,7 +217,11 @@ function ekipmanGuncelle(id, veriler) {
     dolapHortumSayisi: (veriler.dolapHortumSayisi || '').trim(),
     dolapHortumInc: (veriler.dolapHortumInc || '').trim(),
     dolapEksikHortumSayisi: (veriler.dolapEksikHortumSayisi || '').trim(),
-    dolapDegisimGerekliMi: ['Evet', 'Hayır'].includes(veriler.dolapDegisimGerekliMi) ? veriler.dolapDegisimGerekliMi : ''
+    dolapDegisimGerekliMi: ['Evet', 'Hayır'].includes(veriler.dolapDegisimGerekliMi) ? veriler.dolapDegisimGerekliMi : '',
+    dolapKapak: ['Var', 'Yok', 'Hasarlı'].includes(veriler.dolapKapak) ? veriler.dolapKapak : '',
+    dolapLans: ['Var', 'Yok'].includes(veriler.dolapLans) ? veriler.dolapLans : '',
+    dolapVana: ['Çalışıyor', 'Arızalı'].includes(veriler.dolapVana) ? veriler.dolapVana : '',
+    dolapPaslanma: ['Var', 'Yok'].includes(veriler.dolapPaslanma) ? veriler.dolapPaslanma : ''
   });
   return { basarili: true, ekipman: guncellenen };
 }

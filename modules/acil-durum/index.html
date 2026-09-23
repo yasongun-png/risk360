@@ -537,6 +537,46 @@
               <option value="Hayır">Hayır</option>
             </select>
           </div>
+          <!-- Kullanıcı isteği: kapak/lans/vana/paslanma serbest metin
+               yerine ayrı seçimli alanlar — sipariş adetleri Excel'de
+               doğrudan sayılabilsin (bkz. model.js dolapKapak notu). -->
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ekipmanDolapKapak">Kapak</label>
+              <select id="ekipmanDolapKapak">
+                <option value="">— Belirtilmedi —</option>
+                <option value="Var">Var</option>
+                <option value="Yok">Yok</option>
+                <option value="Hasarlı">Hasarlı</option>
+              </select>
+            </div>
+            <div>
+              <label for="ekipmanDolapLans">Lans</label>
+              <select id="ekipmanDolapLans">
+                <option value="">— Belirtilmedi —</option>
+                <option value="Var">Var</option>
+                <option value="Yok">Yok</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ekipmanDolapVana">Vana</label>
+              <select id="ekipmanDolapVana">
+                <option value="">— Belirtilmedi —</option>
+                <option value="Çalışıyor">Çalışıyor</option>
+                <option value="Arızalı">Arızalı</option>
+              </select>
+            </div>
+            <div>
+              <label for="ekipmanDolapPaslanma">Paslanma</label>
+              <select id="ekipmanDolapPaslanma">
+                <option value="">— Belirtilmedi —</option>
+                <option value="Var">Var</option>
+                <option value="Yok">Yok</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <label>Kontrol Kriterleri <span style="color:var(--metin-soluk); font-weight:400;">(seçilen türe göre)</span></label>
@@ -1126,16 +1166,16 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=13"></script>
+  <script src="model.js?v=14"></script>
   <script src="validation.js?v=3"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=15"></script>
+  <script src="service.js?v=16"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
   <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
   <script src="gaz-olcum-ui.js?v=2"></script>
-  <script src="ui.js?v=26"></script>
+  <script src="ui.js?v=27"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

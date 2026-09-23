@@ -664,6 +664,15 @@ function ekipmanOlustur(veriler) {
     // güncellenebilir; sabit bir fiziksel ölçü değil, kontrol eden kişinin
     // güncel değerlendirmesi olduğundan her ziyarette değiştirilebilir).
     dolapDegisimGerekliMi: ['Evet', 'Hayır'].includes(veriler.dolapDegisimGerekliMi) ? veriler.dolapDegisimGerekliMi : '',
+    // Kullanıcı isteği: kapak/lans/vana/paslanma durumu serbest metin
+    // (Bulgular) yerine ayrı seçimli alanlar olsun ki sipariş adetleri
+    // (kaç lans, kaç kapak alınacak) Excel'de doğrudan sayılabilsin — bkz.
+    // ui.js _dolapSiparisOzetiSatirlari. Diğer dolap alanlarıyla AYNI kalıcı
+    // alan yaklaşımı, kontrolden kontrole güncellenir.
+    dolapKapak: ['Var', 'Yok', 'Hasarlı'].includes(veriler.dolapKapak) ? veriler.dolapKapak : '',
+    dolapLans: ['Var', 'Yok'].includes(veriler.dolapLans) ? veriler.dolapLans : '',
+    dolapVana: ['Çalışıyor', 'Arızalı'].includes(veriler.dolapVana) ? veriler.dolapVana : '',
+    dolapPaslanma: ['Var', 'Yok'].includes(veriler.dolapPaslanma) ? veriler.dolapPaslanma : '',
     notlar: (veriler.notlar || '').trim(),
     // Kontrol sırasında çekilen kanıt/bulgu fotoğrafları (opsiyonel, en
     // fazla 3 adet — kullanıcı isteği: "her bir kontrol için 3 adet
