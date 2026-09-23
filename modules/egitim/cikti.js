@@ -437,7 +437,14 @@ function _egitimWordUstbilgi(logoBytes, baslik, belgeNo) {
   });
 }
 
-async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim) {
+// Kullanıcı isteği: "bu sayfada seçtiklerimi toplu sertifika basmak
+// istiyorum" — tek kişilik sertifika üreten _egitimTemelSertifikasiWordOlustur
+// ile TOPLU üretimin (bkz. egitimSertifikalariTopluOlustur) AYNI bölüm
+// (ön yüz + arka yüz) tanımını kullanması için, bölüm oluşturma buraya
+// ayrıldı; tekli üretim tek elemanlı bir docx.Document, toplu üretim ise
+// N kişinin bölümlerini ART ARDA TEK docx.Document'a ekleyerek (her kişi
+// kendi yatay+dikey sayfa çiftiyle) TEK bir Word dosyası üretir.
+async function _egitimTemelSertifikasiBolumleriOlustur(kayit, personel, firma, secim) {
   const varsayilan = egitimTemelSertifikaVarsayilaniHesapla(kayit, firma, personel);
   const ilkTekrar = (secim && secim.ilkTekrar) || varsayilan.ilkTekrar;
   const tehlikeSinifi = (secim && TEHLIKE_SINIFLARI.includes(secim.tehlikeSinifi)) ? secim.tehlikeSinifi : varsayilan.tehlikeSinifi;
@@ -526,17 +533,20 @@ async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim)
   // koyu laciverten açık maviye çevrildi.
   const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '8FAFD9', space: 24 };
   const cerceveKenari = { borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' } };
-  const doc = new docx.Document({
-    sections: [
-      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: kenar, ...cerceveKenari } }, children: onCocuklari },
-      { properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: kenar, ...cerceveKenari } }, children: arkaCocuklari }
-    ]
-  });
+  return [
+    { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: kenar, ...cerceveKenari } }, children: onCocuklari },
+    { properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: kenar, ...cerceveKenari } }, children: arkaCocuklari }
+  ];
+}
+
+async function _egitimTemelSertifikasiWordOlustur(kayit, personel, firma, secim) {
+  const bolumler = await _egitimTemelSertifikasiBolumleriOlustur(kayit, personel, firma, secim);
+  const doc = new docx.Document({ sections: bolumler });
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `${personel.adSoyad}_Temel_ISG_Sertifikasi`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx');
 }
 
-async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
+async function _egitimGenelSertifikasiBolumleriOlustur(kayit, personel, tur, firma) {
   const bitisTarihi = egitimBitisTarihiHesapla(kayit, tur, firma, personel);
   const belgeNo = _egitimBelgeNoUret(kayit, personel, firma);
   const logoBytes = await _egitimGorselBaytlari(firmaLogoGetir(firma.id));
@@ -563,16 +573,54 @@ async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
   ];
 
   const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '0B2C52', space: 24 };
-  const doc = new docx.Document({ sections: [{ properties: { page: {
+  return [{ properties: { page: {
     size: { orientation: docx.PageOrientation.LANDSCAPE },
     margin: { top: 720, right: 720, bottom: 720, left: 720 },
     borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' }
-  } }, children: cocuklar }] });
+  } }, children: cocuklar }];
+}
+
+async function _egitimGenelSertifikasiWordOlustur(kayit, personel, tur, firma) {
+  const bolumler = await _egitimGenelSertifikasiBolumleriOlustur(kayit, personel, tur, firma);
+  const doc = new docx.Document({ sections: bolumler });
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `${personel.adSoyad}_${tur.ad}_Sertifikasi`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx');
 }
 
 // ---- Genel API ----
+
+// Kullanıcı isteği: "bu sayfada seçtiklerimi toplu sertifika basmak
+// istiyorum" — seçili kayıtların her biri için (Temel İSG ise ön+arka,
+// diğer türlerde tek sayfa) bölümler üretilip TEK bir Word dosyasında art
+// arda birleştirilir; böylece tek bir yazdırma işiyle hepsi basılabilir.
+// Eksik personel/tür/firma bilgisi olan kayıtlar sessizce atlanır, sonunda
+// kaç kişinin dahil edildiği/atlandığı özetlenir.
+async function egitimSertifikalariTopluOlustur(idler) {
+  const bolumler = [];
+  let uretilen = 0;
+  const atlanan = [];
+  for (const id of idler) {
+    const kayit = egitimKaydiIdIleGetirRepo(id);
+    const personel = kayit ? personelIdIleGetirRepo(kayit.personelId) : null;
+    const tur = kayit ? egitimTuruGetir(kayit.egitimTuruId) : null;
+    const firma = aktifFirmaGetir();
+    if (!kayit || !personel || !tur || !firma) {
+      atlanan.push(personel ? personel.adSoyad : id);
+      continue;
+    }
+    if (tur.id === 'temel_isg') {
+      bolumler.push(...await _egitimTemelSertifikasiBolumleriOlustur(kayit, personel, firma, null));
+    } else {
+      bolumler.push(...await _egitimGenelSertifikasiBolumleriOlustur(kayit, personel, tur, firma));
+    }
+    uretilen++;
+  }
+  if (!bolumler.length) { alert('Seçili kayıtlar için sertifika oluşturulamadı.'); return; }
+  const doc = new docx.Document({ sections: bolumler });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `Toplu_Sertifikalar_${uretilen}_Kisi.docx`);
+  if (atlanan.length) alert(`${atlanan.length} kayıt için sertifika oluşturulamadı (personel/tür/firma bilgisi eksik): ${atlanan.join(', ')}`);
+}
 
 async function egitimSertifikasiOlustur(id, secim, format) {
   const kayit = egitimKaydiIdIleGetirRepo(id);

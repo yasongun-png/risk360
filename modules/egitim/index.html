@@ -54,6 +54,11 @@
           <input type="file" id="eskiMatrisIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="mykRaporuBtn">İSG Eğitim ve MYK Raporu</button>
           <button type="button" class="ikincil sil" id="topluSilBtn" style="display:none;">Seçilenleri Sil</button>
+          <!-- Kullanıcı isteği: "bu sayfada seçtiklerimi toplu sertifika
+               basmak istiyorum" — Seçilenleri Sil ile AYNI görünürlük
+               kuralı (bkz. ui.js _topluSilDurumunuGuncelle), seçili
+               kayıtların tamamı TEK bir Word dosyasında art arda üretilir. -->
+          <button type="button" class="ikincil" id="topluSertifikaBtn" style="display:none;">Seçilenlere Sertifika Bas</button>
           <button type="button" class="ikincil" id="mykBelgeEkleBtn">+ MYK Belgesi Ekle</button>
           <button type="button" class="ikincil" id="turYonetBtn">Eğitim Türlerini Yönet</button>
           <button type="button" class="ikincil" id="topluGirisBtn">+ Toplu Eğitim Girişi</button>

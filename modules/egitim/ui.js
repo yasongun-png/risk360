@@ -779,6 +779,26 @@ function egitimSayfasiniBaslat(firma) {
     kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
   });
 
+  // Kullanıcı isteği: "bu sayfada seçtiklerimi toplu sertifika basmak
+  // istiyorum" — bkz. cikti.js egitimSertifikalariTopluOlustur.
+  document.getElementById('topluSertifikaBtn').addEventListener('click', async e => {
+    const sayi = _seciliKayitIdleri.size;
+    if (!sayi) return;
+    const btn = e.target;
+    btn.disabled = true;
+    const eskiMetin = btn.textContent;
+    btn.textContent = 'Oluşturuluyor…';
+    try {
+      await egitimSertifikalariTopluOlustur(Array.from(_seciliKayitIdleri));
+    } catch (hata) {
+      console.error(hata);
+      alert('Toplu sertifika oluşturulamadı: ' + (hata.message || hata));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = eskiMetin;
+    }
+  });
+
   document.getElementById('sablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(EGITIM_IMPORT_KOLONLARI, 'egitim_sablonu.xlsx');
   });
@@ -1043,6 +1063,10 @@ function _topluSilDurumunuGuncelle(gorunenler) {
   const sayi = _seciliKayitIdleri.size;
   buton.style.display = sayi ? '' : 'none';
   buton.textContent = `Seçilenleri Sil (${sayi})`;
+
+  const sertifikaBtn = document.getElementById('topluSertifikaBtn');
+  sertifikaBtn.style.display = sayi ? '' : 'none';
+  sertifikaBtn.textContent = `Seçilenlere Sertifika Bas (${sayi})`;
 
   const tumunuSec = document.getElementById('tumunuSecCheckbox');
   const gorunenSecili = gorunenler.length > 0 && gorunenler.every(k => _seciliKayitIdleri.has(k.id));
