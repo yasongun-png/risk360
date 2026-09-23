@@ -516,6 +516,18 @@
               <input type="text" id="ekipmanDolapHortumInc" placeholder="Örn: 1,5">
             </div>
           </div>
+          <!-- Kullanıcı isteği: "yangın dolabında dolap özelliklerinin
+               altına dolap değişimi gerekiyor mu evet/hayır'lı bir soru
+               olsun" — diğer dolap özellikleriyle AYNI kalıcı alan, ama
+               sabit bir ölçü değil; kontrolden kontrole güncellenebilir. -->
+          <div>
+            <label for="ekipmanDolapDegisimGerekliMi">Dolap Değişimi Gerekiyor mu?</label>
+            <select id="ekipmanDolapDegisimGerekliMi">
+              <option value="">— Belirtilmedi —</option>
+              <option value="Evet">Evet</option>
+              <option value="Hayır">Hayır</option>
+            </select>
+          </div>
         </div>
 
         <label>Kontrol Kriterleri <span style="color:var(--metin-soluk); font-weight:400;">(seçilen türe göre)</span></label>

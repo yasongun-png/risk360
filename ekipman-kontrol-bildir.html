@@ -150,6 +150,16 @@
                 <input type="text" id="ekDolapHortumInc" placeholder="Örn: 1,5">
               </div>
             </div>
+            <!-- Kullanıcı isteği: "dolap özelliklerinin altına dolap
+                 değişimi gerekiyor mu evet/hayır'lı bir soru olsun" -->
+            <div class="ek-alan">
+              <label for="ekDolapDegisimGerekliMi">Dolap Değişimi Gerekiyor mu?</label>
+              <select id="ekDolapDegisimGerekliMi">
+                <option value="">— Belirtilmedi —</option>
+                <option value="Evet">Evet</option>
+                <option value="Hayır">Hayır</option>
+              </select>
+            </div>
           </div>
 
           <div class="ek-alan">
@@ -301,6 +311,7 @@
       document.getElementById('ekDolapYanginTupuVarMi').value = ekipman.dolapYanginTupuVarMi || '';
       document.getElementById('ekDolapHortumSayisi').value = ekipman.dolapHortumSayisi || '';
       document.getElementById('ekDolapHortumInc').value = ekipman.dolapHortumInc || '';
+      document.getElementById('ekDolapDegisimGerekliMi').value = ekipman.dolapDegisimGerekliMi || '';
     }
 
     // Kullanıcı isteği: "bakımcı Enes Akkuş seçili gelsin tekrar girmeye
@@ -578,7 +589,8 @@
             dolapGozSayisi: document.getElementById('ekDolapGozSayisi').value.trim(),
             dolapYanginTupuVarMi: document.getElementById('ekDolapYanginTupuVarMi').value,
             dolapHortumSayisi: document.getElementById('ekDolapHortumSayisi').value.trim(),
-            dolapHortumInc: document.getElementById('ekDolapHortumInc').value.trim()
+            dolapHortumInc: document.getElementById('ekDolapHortumInc').value.trim(),
+            dolapDegisimGerekliMi: document.getElementById('ekDolapDegisimGerekliMi').value
           } : {};
 
           const periyotGun = Number(liste[index].periyotGun || 90);

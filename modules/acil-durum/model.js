@@ -654,6 +654,12 @@ function ekipmanOlustur(veriler) {
     dolapYanginTupuVarMi: ['Var', 'Yok'].includes(veriler.dolapYanginTupuVarMi) ? veriler.dolapYanginTupuVarMi : '',
     dolapHortumSayisi: (veriler.dolapHortumSayisi || '').trim(),
     dolapHortumInc: (veriler.dolapHortumInc || '').trim(),
+    // Kullanıcı isteği: "yangın dolabında dolap özelliklerinin altına dolap
+    // değişimi gerekiyor mu evet/hayır'lı bir soru olsun" — diğer dolap
+    // özellikleriyle AYNI yaklaşım (kalıcı alan, kontrolden kontrole
+    // güncellenebilir; sabit bir fiziksel ölçü değil, kontrol eden kişinin
+    // güncel değerlendirmesi olduğundan her ziyarette değiştirilebilir).
+    dolapDegisimGerekliMi: ['Evet', 'Hayır'].includes(veriler.dolapDegisimGerekliMi) ? veriler.dolapDegisimGerekliMi : '',
     notlar: (veriler.notlar || '').trim(),
     // Kontrol sırasında çekilen kanıt/bulgu fotoğrafları (opsiyonel, en
     // fazla 3 adet — kullanıcı isteği: "her bir kontrol için 3 adet
