@@ -103,21 +103,15 @@ function _egitimBelgeNoUret(kayit, personel, firma) {
   return `${onEk}-ISG-${tarih}-${(personel && personel.sicilNo) || '0000'}`;
 }
 
-// En güncel, feshedilmemiş Hizmet Sözleşmesi kaydından ad soyad getirir.
-function _egitimGorevliAdiGetir(gorevTuru) {
-  const liste = (typeof hizmetSozlesmeleriTumunuGetir === 'function' ? hizmetSozlesmeleriTumunuGetir() : [])
-    .filter(k => k.gorevTuru === gorevTuru && k.durum !== 'Feshedildi')
-    .sort((a, b) => (b.sozlesmeBaslangicTarihi || '').localeCompare(a.sozlesmeBaslangicTarihi || ''));
-  return liste[0] ? liste[0].adSoyad : '';
-}
-
+// Kullanıcı isteği: "sertifikada iş güvenliği uzmanı ve işyeri hekiminin
+// de adı yazmasın otomatik olarak" — Hizmet Sözleşmesi kaydından ad soyad
+// OTOMATİK doldurma kaldırıldı; İşveren Vekili ile AYNI şekilde üçü de
+// boş imza satırı olarak basılıyor, elle imzalanır.
 function _egitimImzaSatirlariHtml() {
-  const isg = _egitimGorevliAdiGetir('İG Uzmanı');
-  const hekim = _egitimGorevliAdiGetir('İşyeri Hekimi');
   return `
     <div class="egt-imzalar">
-      <div><span>${_sertKacir(isg) || '&nbsp;'}</span><b>İş Güvenliği Uzmanı</b><em>İmza</em></div>
-      <div><span>${_sertKacir(hekim) || '&nbsp;'}</span><b>İşyeri Hekimi</b><em>İmza</em></div>
+      <div><span>&nbsp;</span><b>İş Güvenliği Uzmanı</b><em>İmza</em></div>
+      <div><span>&nbsp;</span><b>İşyeri Hekimi</b><em>İmza</em></div>
       <div><span>&nbsp;</span><b>İşveren Vekili</b><em>İmza</em></div>
     </div>
   `;
@@ -388,16 +382,17 @@ function _egitimWordDegerHucre(deger, opts = {}) {
 function _egitimWordBilgiSatiri(e1, d1, e2, d2, d2Opts) {
   return new docx.TableRow({ children: [_egitimWordEtiketHucre(e1), _egitimWordDegerHucre(d1), _egitimWordEtiketHucre(e2), _egitimWordDegerHucre(d2, d2Opts)] });
 }
+// Kullanıcı isteği: "sertifikada iş güvenliği uzmanı ve işyeri hekiminin
+// de adı yazmasın otomatik olarak" — ad soyad OTOMATİK doldurma kaldırıldı;
+// İşveren Vekili ile AYNI şekilde üçü de boş imza satırı, elle imzalanır.
 function _egitimWordImzaTablosu() {
-  const isg = _egitimGorevliAdiGetir('İG Uzmanı');
-  const hekim = _egitimGorevliAdiGetir('İşyeri Hekimi');
   const kenar = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const ustCizgi = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
-  const hucre = (ad, unvan) => new docx.TableCell({
+  const hucre = unvan => new docx.TableCell({
     borders: { top: ustCizgi, bottom: kenar, left: kenar, right: kenar },
     margins: { top: 200, bottom: 150 },
     children: [
-      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || ' ', bold: true, size: _EGT_WORD_METIN_BOYUT })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ' ', bold: true, size: _EGT_WORD_METIN_BOYUT })] }),
       new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 15, color: '374151' })] }),
       new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İmza', size: 13, color: '94A3B8' })], spacing: { before: 40 } })
     ]
@@ -405,7 +400,7 @@ function _egitimWordImzaTablosu() {
   return new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     borders: { top: kenar, bottom: kenar, left: kenar, right: kenar, insideHorizontal: kenar, insideVertical: kenar },
-    rows: [new docx.TableRow({ children: [hucre(isg, 'İş Güvenliği Uzmanı'), hucre(hekim, 'İşyeri Hekimi'), hucre('', 'İşveren Vekili')] })]
+    rows: [new docx.TableRow({ children: [hucre('İş Güvenliği Uzmanı'), hucre('İşyeri Hekimi'), hucre('İşveren Vekili')] })]
   });
 }
 
