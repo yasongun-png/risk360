@@ -112,6 +112,23 @@ function sinavSayfasiniBaslat() {
     _konuSecimleriniDoldur('soruKonuFiltre', true);
   });
 
+  // Kullanıcı isteği: "şu sayfada seçip sınav oluştur da diyebilmem lazım" —
+  // Soru Bankası'nda işaretlenen sorularla doğrudan Yeni Sınav modalını
+  // (Manuel yöntem, sorular önceden işaretli) açar.
+  document.getElementById('soruSecilenlerdenSinavBtn').addEventListener('click', () => {
+    if (!_seciliSoruIdleri.size) return;
+    sinavModalAc(_seciliSoruIdleri);
+    // Modal varsayılan Eğitim Türü'nü listedeki ilk türe ayarlar; seçili
+    // sorular başka bir türdense filtre eşleşmeyip listede görünmeyebilir
+    // (gönderim yine de tüm seçili id'leri kullanır) -- görünürlüğü
+    // iyileştirmek için ilk seçili sorunun türüne çekiyoruz.
+    const ilkSoru = soruIdIleGetirRepo(Array.from(_seciliSoruIdleri)[0]);
+    if (ilkSoru) {
+      document.getElementById('sinavKonuId').value = ilkSoru.egitimTuruId;
+      _sinavManuelListesiCiz();
+    }
+  });
+
   document.getElementById('hazirSoruBankasiBtn').addEventListener('click', hazirSoruBankasiModalAc);
   document.getElementById('hazirSoruBankasiKapatBtn').addEventListener('click', hazirSoruBankasiModalKapat);
   document.getElementById('hazirSoruBankasiIptalBtn').addEventListener('click', hazirSoruBankasiModalKapat);
@@ -128,10 +145,19 @@ function sinavSayfasiniBaslat() {
   document.getElementById('sinavForm').addEventListener('submit', sinavFormGonderildi);
   document.getElementById('sinavYontemOtomatik').addEventListener('change', _sinavYontemDegisti);
   document.getElementById('sinavYontemManuel').addEventListener('change', _sinavYontemDegisti);
-  document.getElementById('sinavKonuId').addEventListener('change', _sinavManuelListesiCizGerekirse);
-  document.getElementById('sinavAltKonuKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
-  document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavKonuId').addEventListener('change', _sinavFiltreDegistiGerekirse);
+  document.getElementById('sinavAltKonuKutulari').addEventListener('change', _sinavFiltreDegistiGerekirse);
+  document.getElementById('sinavZorlukKutulari').addEventListener('change', _sinavFiltreDegistiGerekirse);
   document.getElementById('sinavManuelArama').addEventListener('input', _sinavManuelListesiCizGerekirse);
+  document.getElementById('sinavSoruSayisi').addEventListener('input', () => {
+    if (!_sinavManuelModuMu()) { _sinavOtomatikSecimler = []; _sinavOtomatikSonTestSecimler = []; _sinavOtomatikListesiCiz(); }
+  });
+  document.getElementById('sinavOtomatikGetirBtn').addEventListener('click', _sinavOtomatikSoruGetir);
+  document.getElementById('sinavOnSonTestCheckbox').addEventListener('change', () => {
+    _sinavOtomatikSecimler = [];
+    _sinavOtomatikSonTestSecimler = [];
+    _sinavOtomatikListesiCiz();
+  });
   document.getElementById('sinavAramaKutusu').addEventListener('input', sinavTablosunuCiz);
 
   document.getElementById('sonucAramaKutusu').addEventListener('input', sonucTablosunuCiz);
@@ -369,6 +395,12 @@ function _soruTopluSilDurumunuGuncelle(gorunenler) {
   buton.style.display = sayi ? '' : 'none';
   buton.textContent = `Seçilenleri Sil (${sayi})`;
 
+  // Kullanıcı isteği: "şu sayfada seçip sınav oluştur da diyebilmem lazım"
+  // — Soru Bankası'ndaki aynı seçim kutularıyla doğrudan sınav oluşturma.
+  const sinavBtn = document.getElementById('soruSecilenlerdenSinavBtn');
+  sinavBtn.style.display = sayi ? '' : 'none';
+  sinavBtn.textContent = `Seçilenlerden Sınav Oluştur (${sayi})`;
+
   const tumunuSec = document.getElementById('soruTumunuSecCheckbox');
   const gorunenSecili = gorunenler.length > 0 && gorunenler.every(s => _seciliSoruIdleri.has(s.id));
   tumunuSec.checked = gorunenSecili;
@@ -461,6 +493,10 @@ function sinavTablosunuCiz() {
   bosDurum.classList.remove('gorunur');
 
   liste.forEach(s => {
+    // Kullanıcı isteği: "sınav kağıdının bir tarafı ön test bir tarafı son
+    // test olacak" — başlığı "- Ön Test"/"- Son Test" ile bitip eşleşen bir
+    // çifti olan sınavlarda, ikisini TEK dosyada birleştiren buton gösterilir.
+    const esi = _sinavEsiniBul(s);
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${_sinavKacir(s.baslik)}</td>
@@ -469,7 +505,9 @@ function sinavTablosunuCiz() {
       <td>${s.sorular.length}</td>
       <td>${s.katilimciSayisi} (${s.gecenSayisi} geçti)</td>
       <td>
+        <button class="tablo-buton" data-sinav-duzenle="${s.id}">Düzenle</button>
         <button class="tablo-buton" data-kagit="${s.id}">Sınav Kağıdı</button>
+        ${esi ? `<button class="tablo-buton" data-birlesik-kagit="${s.id}">📄 Ön+Son Test Kağıdı</button>` : ''}
         <button class="tablo-buton" data-cevap="${s.id}">Cevap Anahtarı</button>
         <button class="tablo-buton" data-sonuc="${s.id}">Sonuçlar</button>
         <button class="tablo-buton sil" data-sil="${s.id}">Sil</button>
@@ -478,6 +516,16 @@ function sinavTablosunuCiz() {
     govde.appendChild(satir);
   });
 
+  govde.querySelectorAll('[data-birlesik-kagit]').forEach(btn => {
+    btn.addEventListener('click', () => sinavBirlesikKagitYazdir(btn.getAttribute('data-birlesik-kagit')));
+  });
+
+  // Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" —
+  // daha önce oluşturulmuş bir sınavın soru listesi (ve başlık/tarih/geçme
+  // notu) sonradan Manuel yöntemle yeniden açılıp değiştirilebilir.
+  govde.querySelectorAll('[data-sinav-duzenle]').forEach(btn => {
+    btn.addEventListener('click', () => sinavDuzenleModalAc(btn.getAttribute('data-sinav-duzenle')));
+  });
   govde.querySelectorAll('[data-kagit]').forEach(btn => {
     btn.addEventListener('click', () => sinavKagidiYazdir(btn.getAttribute('data-kagit')));
   });
@@ -560,7 +608,16 @@ async function sinavImzaListesiFormGonderildi(e) {
   }
 }
 
-function sinavModalAc() {
+// Kullanıcı isteği: "şu sayfada seçip sınav oluştur da diyebilmem lazım" —
+// Soru Bankası tablosundaki onay kutularıyla seçilen sorular verilirse
+// (onDoluIdler), modal doğrudan Manuel yöntemle ve o sorular işaretli
+// şekilde açılır; parametre verilmezse eski davranış (boş/otomatik) sürer.
+let _duzenlenenSinavId = null;
+
+function sinavModalAc(onDoluIdler) {
+  _duzenlenenSinavId = null;
+  document.getElementById('sinavModalBaslik').textContent = 'Yeni Sınav Oluştur';
+  document.getElementById('sinavModalKaydetBtn').textContent = 'Oluştur';
   _sinavFormHatalariniTemizle('sinavForm');
   _konuSecimleriniDoldur('sinavKonuId', false);
   _altKonuKutulariniCiz();
@@ -568,7 +625,51 @@ function sinavModalAc() {
   document.getElementById('sinavForm').reset();
   document.getElementById('sinavGecmeNotu').value = SINAV_GECME_NOTU_VARSAYILAN;
   document.getElementById('sinavManuelArama').value = '';
-  _sinavManuelSeciliIdler = new Set();
+  _sinavManuelSeciliIdler = onDoluIdler && onDoluIdler.size ? new Set(onDoluIdler) : new Set();
+  _sinavOtomatikSecimler = [];
+  _sinavOtomatikSonTestSecimler = [];
+  document.getElementById('sinavYontemManuel').checked = !!(onDoluIdler && onDoluIdler.size);
+  document.getElementById('sinavYontemOtomatik').checked = !(onDoluIdler && onDoluIdler.size);
+  _sinavYontemDegisti();
+  document.getElementById('sinavModalKatman').classList.add('acik');
+}
+
+// Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" — daha
+// önce oluşturulmuş bir sınavı, kaydedilmiş soruları Manuel listede işaretli
+// halde tekrar açar; "Kaydet"e basınca sinavManuelGuncelle ile AYNI kayıt
+// (id korunarak) güncellenir, yeni bir sınav oluşturulmaz.
+function sinavDuzenleModalAc(sinavId) {
+  const sinav = sinavGetir(sinavId);
+  if (!sinav) return;
+
+  _duzenlenenSinavId = sinavId;
+  document.getElementById('sinavModalBaslik').textContent = 'Sınavı Düzenle';
+  document.getElementById('sinavModalKaydetBtn').textContent = 'Kaydet';
+  _sinavFormHatalariniTemizle('sinavForm');
+  _konuSecimleriniDoldur('sinavKonuId', false);
+  _altKonuKutulariniCiz();
+  _zorlukKutulariniCiz();
+  document.getElementById('sinavForm').reset();
+
+  document.getElementById('sinavBaslik').value = sinav.baslik;
+  document.getElementById('sinavKonuId').value = sinav.egitimTuruId;
+  document.getElementById('sinavTarih').value = sinav.tarih || '';
+  document.getElementById('sinavGecmeNotu').value = sinav.gecmeNotu;
+  (sinav.konular || []).forEach(k => {
+    const kutu = document.querySelector(`#sinavAltKonuKutulari [data-altkonu-secim="${CSS.escape(k)}"]`);
+    if (kutu) kutu.checked = true;
+  });
+  (sinav.zorluklar || []).forEach(z => {
+    const kutu = document.querySelector(`#sinavZorlukKutulari [data-zorluk-secim="${CSS.escape(z)}"]`);
+    if (kutu) kutu.checked = true;
+  });
+
+  document.getElementById('sinavManuelArama').value = '';
+  _sinavManuelSeciliIdler = new Set(sinav.sorular.map(s => s.soruId).filter(Boolean));
+  _sinavOtomatikSecimler = [];
+  _sinavOtomatikSonTestSecimler = [];
+  document.getElementById('sinavYontemManuel').checked = true;
+  document.getElementById('sinavYontemOtomatik').checked = false;
   _sinavYontemDegisti();
   document.getElementById('sinavModalKatman').classList.add('acik');
 }
@@ -584,12 +685,152 @@ function _sinavManuelModuMu() {
 function _sinavYontemDegisti() {
   const manuel = _sinavManuelModuMu();
   document.getElementById('sinavSoruSayisiAlani').style.display = manuel ? 'none' : '';
+  // Ön Test/Son Test birlikte oluşturma seçeneği sadece YENİ sınav + Otomatik
+  // yöntemde anlamlı (bir sınavı düzenlerken tek kayıt güncellenir, bkz.
+  // sinavDuzenleModalAc / _duzenlenenSinavId).
+  document.getElementById('sinavOnSonTestAlani').style.display = (manuel || _duzenlenenSinavId) ? 'none' : '';
+  document.getElementById('sinavOtomatikOnizleAlani').style.display = manuel ? 'none' : '';
   document.getElementById('sinavManuelSoruAlani').style.display = manuel ? '' : 'none';
   if (manuel) _sinavManuelListesiCiz();
+  else _sinavOtomatikListesiCiz();
+}
+
+// ---- Otomatik yöntem: indirmeden/kaydetmeden önce soru önizleme + alternatif ----
+// Kullanıcı isteği: "soruları otomatik hazırladığımda indirmeden önce tek tek
+// soruları bana göstersin, bu soruyu değiştir diyebileyim, alternatif bir soru
+// göstersin seçeyim" — Otomatik yöntem artık sınavı DOĞRUDAN kaydetmiyor; önce
+// rastgele N soru seçilip burada (tam metin + şıklarla) önizlenir, her sorunun
+// yanındaki buton o soruyu havuzdan başka rastgele bir soruyla değiştirir;
+// "Oluştur"a basınca bu KESİNLEŞMİŞ liste sinavManuelEkle ile kaydedilir (bkz.
+// sinavFormGonderildi) — sinavEkle'nin kendi rastgele seçimi artık kullanılmıyor.
+let _sinavOtomatikSecimler = [];
+// Kullanıcı isteği: "İSG eğitimlerinde bir ön test bir de son test oluyor,
+// 10 soru seçtiğimde 10 soru ön test 10 soru son test gibi yapalım" —
+// "sinavOnSonTestCheckbox" işaretliyse havuzdan İKİ KATI soru çekilip
+// ortak sorusu olmayan iki ayrı liste (ön test/son test) önizlenir;
+// "Oluştur" iki AYRI sınav kaydeder (bkz. sinavFormGonderildi).
+let _sinavOtomatikSonTestSecimler = [];
+
+function _sinavOnSonTestAktifMi() {
+  const kutu = document.getElementById('sinavOnSonTestCheckbox');
+  return !!(kutu && kutu.checked && !_duzenlenenSinavId);
+}
+
+function _sinavOtomatikHavuzuGetir() {
+  const egitimTuruId = document.getElementById('sinavKonuId').value;
+  const konular = _seciliAltKonulariGetir();
+  const zorluklar = _seciliZorluklariGetir();
+  return soruTumunuGetirRepo().filter(s =>
+    s.egitimTuruId === egitimTuruId &&
+    (!konular.length || konular.includes(s.konu)) &&
+    (!zorluklar.length || zorluklar.includes(s.zorluk))
+  );
+}
+
+function _sinavOtomatikSoruGetir() {
+  document.getElementById('soruSayisiHata').textContent = '';
+  const havuz = _sinavOtomatikHavuzuGetir();
+  const soruSayisi = Number(document.getElementById('sinavSoruSayisi').value);
+  const onSonTest = _sinavOnSonTestAktifMi();
+
+  if (!soruSayisi || soruSayisi < 1) {
+    document.getElementById('soruSayisiHata').textContent = 'Önce geçerli bir soru sayısı girin.';
+    return;
+  }
+  const gerekliSoru = onSonTest ? soruSayisi * 2 : soruSayisi;
+  if (gerekliSoru > havuz.length) {
+    document.getElementById('soruSayisiHata').textContent = onSonTest
+      ? `Ön Test + Son Test için ${gerekliSoru} farklı soru gerekiyor, bu filtrede sadece ${havuz.length} soru var.`
+      : `Soru bankasında bu filtreyle sadece ${havuz.length} soru var.`;
+    return;
+  }
+
+  const karisik = _sinavKaristir(havuz);
+  _sinavOtomatikSecimler = karisik.slice(0, soruSayisi);
+  _sinavOtomatikSonTestSecimler = onSonTest ? karisik.slice(soruSayisi, soruSayisi * 2) : [];
+  _sinavOtomatikListesiCiz();
+}
+
+function _sinavOtomatikSoruDegistir(hangiListe, index) {
+  const havuz = _sinavOtomatikHavuzuGetir();
+  const liste = hangiListe === 'son' ? _sinavOtomatikSonTestSecimler : _sinavOtomatikSecimler;
+  // Ön Test ile Son Test'in ortak sorusu olmasın diye her iki listede
+  // kullanılan id'ler birlikte hariç tutuluyor.
+  const kullanilanIdler = new Set(_sinavOtomatikSecimler.concat(_sinavOtomatikSonTestSecimler).map(s => s.id));
+  const adaylar = havuz.filter(s => !kullanilanIdler.has(s.id));
+  if (!adaylar.length) {
+    alert('Bu filtrede değiştirilecek başka soru kalmadı.');
+    return;
+  }
+  const yeni = adaylar[Math.floor(Math.random() * adaylar.length)];
+  liste[index] = yeni;
+  _sinavOtomatikListesiCiz();
+}
+
+function _sinavOtomatikTekListeHtml(liste, hangiListe) {
+  return liste.map((s, i) => `
+    <div style="display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid var(--kenarlik); font-size:13px;">
+      <span style="flex:1;">
+        <div>${i + 1}. ${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></div>
+        <div style="margin-top:4px; display:grid; gap:2px;">
+          ${SINAV_SIK_HARFLERI.map(harf => `
+            <div style="${harf === s.dogruCevap ? 'font-weight:700; color:#15803d;' : 'color:var(--metin-soluk);'}">
+              ${harf === s.dogruCevap ? '✔' : ''} ${harf}) ${_sinavKacir(s.secenekler[harf])}
+            </div>
+          `).join('')}
+        </div>
+      </span>
+      <button type="button" class="tablo-buton" data-otomatik-degistir="${i}" data-otomatik-liste="${hangiListe}" style="white-space:nowrap;">🔄 Alternatif Soru</button>
+    </div>
+  `).join('');
+}
+
+function _sinavOtomatikListesiCiz() {
+  const govde = document.getElementById('sinavOtomatikListesi');
+  const govdeSon = document.getElementById('sinavOtomatikSonTestListesi');
+  const sayac = document.getElementById('sinavOtomatikSayac');
+  const onTestBaslik = document.getElementById('sinavOtomatikOnTestBaslik');
+  const sonTestBaslik = document.getElementById('sinavOtomatikSonTestBaslik');
+  const onSonTest = _sinavOnSonTestAktifMi();
+
+  onTestBaslik.style.display = onSonTest ? '' : 'none';
+  sonTestBaslik.style.display = onSonTest ? '' : 'none';
+  govdeSon.style.display = onSonTest ? '' : 'none';
+
+  if (!_sinavOtomatikSecimler.length) {
+    govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Henüz soru getirilmedi — yukarıdaki "Soruları Getir" butonuna basın.</div>';
+    govdeSon.innerHTML = '';
+    sayac.textContent = '';
+    return;
+  }
+
+  sayac.textContent = onSonTest
+    ? `(Ön Test: ${_sinavOtomatikSecimler.length}, Son Test: ${_sinavOtomatikSonTestSecimler.length})`
+    : `(${_sinavOtomatikSecimler.length} soru)`;
+
+  govde.innerHTML = _sinavOtomatikTekListeHtml(_sinavOtomatikSecimler, 'on');
+  govdeSon.innerHTML = onSonTest ? _sinavOtomatikTekListeHtml(_sinavOtomatikSonTestSecimler, 'son') : '';
+
+  document.querySelectorAll('#sinavOtomatikListesi [data-otomatik-degistir], #sinavOtomatikSonTestListesi [data-otomatik-degistir]').forEach(btn => {
+    btn.addEventListener('click', () => _sinavOtomatikSoruDegistir(btn.getAttribute('data-otomatik-liste'), Number(btn.getAttribute('data-otomatik-degistir'))));
+  });
 }
 
 function _sinavManuelListesiCizGerekirse() {
   if (_sinavManuelModuMu()) _sinavManuelListesiCiz();
+}
+
+// Eğitim Türü / Alt Konu / Zorluk filtreleri değiştiğinde: Manuel modda listeyi
+// yeniden çizer; Otomatik modda ise önizlenen sorular artık eski filtreye ait
+// olabileceğinden temizlenir, kullanıcı "Soruları Getir"e tekrar basmalıdır.
+function _sinavFiltreDegistiGerekirse() {
+  if (_sinavManuelModuMu()) {
+    _sinavManuelListesiCiz();
+  } else {
+    _sinavOtomatikSecimler = [];
+    _sinavOtomatikSonTestSecimler = [];
+    _sinavOtomatikListesiCiz();
+  }
 }
 
 // Üstteki Eğitim Türü / Alt Konu / Zorluk filtreleriyle ve arama kutusuyla
@@ -610,20 +851,65 @@ function _sinavManuelListesiCiz() {
   if (!liste.length) {
     govde.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk); padding:6px 0;">Filtreyle eşleşen soru bulunamadı.</div>';
   } else {
-    govde.innerHTML = liste.map(s => `
-      <label style="display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
-        <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
-        <span>${_sinavKacir(_sinavKisalt(s.soruMetni, 130))} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')}${s.konu ? ' — ' + _sinavKacir(s.konu) : ''})</span></span>
-      </label>
-    `).join('');
+    // Kullanıcı isteği: "konu başlığı seçebilmem lazım" — sorular artık Alt
+    // Konu'ya göre gruplanıp başlık gösteriliyor, her başlığın yanındaki
+    // kutu o başlıktaki TÜM soruları tek tıkla seçip kaldırabiliyor (soru
+    // metni ve tüm şıklar da tam gösteriliyor, bkz. önceki değişiklik).
+    const gruplar = new Map();
+    liste.forEach(s => {
+      const anahtar = s.konu || 'Diğer';
+      if (!gruplar.has(anahtar)) gruplar.set(anahtar, []);
+      gruplar.get(anahtar).push(s);
+    });
+
+    govde.innerHTML = Array.from(gruplar.entries()).map(([konu, sorular]) => {
+      const seciliSayisi = sorular.filter(s => _sinavManuelSeciliIdler.has(s.id)).length;
+      const hepsiSecili = seciliSayisi === sorular.length;
+      return `
+      <div style="margin-bottom:10px;">
+        <label style="display:flex; align-items:center; gap:8px; padding:6px 0; font-weight:700; font-size:13px; background:var(--yuzey-alt, #f8fafc); border-radius:6px; padding-left:6px;">
+          <input type="checkbox" data-konu-basligi-secim="${_sinavKacir(konu)}" ${hepsiSecili ? 'checked' : ''} style="width:auto;">
+          ${_sinavKacir(konu)} <span style="color:var(--metin-soluk); font-weight:400;">(${seciliSayisi}/${sorular.length} seçili)</span>
+        </label>
+        ${sorular.map(s => `
+          <label style="display:flex; align-items:flex-start; gap:8px; padding:8px 0 8px 20px; border-bottom:1px solid var(--kenarlik); font-weight:400; font-size:13px;">
+            <input type="checkbox" data-manuel-soru="${s.id}" ${_sinavManuelSeciliIdler.has(s.id) ? 'checked' : ''} style="width:auto; margin-top:3px;">
+            <span>
+              <div>${_sinavKacir(s.soruMetni)} <span style="color:var(--metin-soluk);">(${_sinavKacir(s.zorluk || '-')})</span></div>
+              <div style="margin-top:4px; display:grid; gap:2px;">
+                ${SINAV_SIK_HARFLERI.map(harf => `
+                  <div style="${harf === s.dogruCevap ? 'font-weight:700; color:#15803d;' : 'color:var(--metin-soluk);'}">
+                    ${harf === s.dogruCevap ? '✔' : ''} ${harf}) ${_sinavKacir(s.secenekler[harf])}
+                  </div>
+                `).join('')}
+              </div>
+            </span>
+          </label>
+        `).join('')}
+      </div>
+      `;
+    }).join('');
   }
 
+  // Kişi tek tek soru işaretlediğinde de konu başlığındaki (kaç/toplam)
+  // sayacı ve "hepsi seçili" durumu güncel kalsın diye liste komple yeniden
+  // çiziliyor (sorular ~200 civarında, yeniden çizim maliyeti önemsiz).
   govde.querySelectorAll('[data-manuel-soru]').forEach(cb => {
     cb.addEventListener('change', () => {
       const id = cb.getAttribute('data-manuel-soru');
       if (cb.checked) _sinavManuelSeciliIdler.add(id);
       else _sinavManuelSeciliIdler.delete(id);
-      document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
+      _sinavManuelListesiCiz();
+    });
+  });
+  govde.querySelectorAll('[data-konu-basligi-secim]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const konu = cb.getAttribute('data-konu-basligi-secim');
+      liste.filter(s => (s.konu || 'Diğer') === konu).forEach(s => {
+        if (cb.checked) _sinavManuelSeciliIdler.add(s.id);
+        else _sinavManuelSeciliIdler.delete(s.id);
+      });
+      _sinavManuelListesiCiz();
     });
   });
   document.getElementById('sinavManuelSayac').textContent = `(${_sinavManuelSeciliIdler.size} soru seçildi)`;
@@ -643,16 +929,65 @@ function sinavFormGonderildi(e) {
     gecmeNotu: document.getElementById('sinavGecmeNotu').value
   };
 
-  const sonuc = _sinavManuelModuMu()
-    ? sinavManuelEkle(veriler, Array.from(_sinavManuelSeciliIdler))
-    : sinavEkle(veriler);
+  // Kullanıcı isteği: "otomatik hazırladığımda indirmeden önce tek tek
+  // soruları göstersin, değiştirebileyim" — Otomatik yöntem artık kendi
+  // rastgele seçimini sessizce kaydetmiyor; önizlemede KESİNLEŞEN sorular
+  // (bkz. _sinavOtomatikSecimler) kullanılıyor. "hazırladığım sorulara
+  // tekrar düzenleyebileyim" — _duzenlenenSinavId doluysa (bkz.
+  // sinavDuzenleModalAc) YENİ sınav değil, mevcut kayıt güncellenir.
+  const onSonTest = _sinavOnSonTestAktifMi();
 
-  if (!sonuc.basarili) {
-    Object.keys(sonuc.hatalar).forEach(alan => {
-      const hataEl = document.getElementById(alan + 'Hata');
-      if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
-    });
-    return;
+  if (_sinavManuelModuMu() || !onSonTest) {
+    let soruIdleri;
+    if (_sinavManuelModuMu()) {
+      soruIdleri = Array.from(_sinavManuelSeciliIdler);
+    } else {
+      if (!_sinavOtomatikSecimler.length) {
+        document.getElementById('soruSayisiHata').textContent = 'Önce "Soruları Getir" ile soruları görüntüleyip onaylayın.';
+        return;
+      }
+      soruIdleri = _sinavOtomatikSecimler.map(s => s.id);
+    }
+
+    const sonuc = _duzenlenenSinavId
+      ? sinavManuelGuncelle(_duzenlenenSinavId, veriler, soruIdleri)
+      : sinavManuelEkle(veriler, soruIdleri);
+
+    if (!sonuc.basarili) {
+      Object.keys(sonuc.hatalar).forEach(alan => {
+        const hataEl = document.getElementById(alan + 'Hata');
+        if (hataEl) hataEl.textContent = sonuc.hatalar[alan];
+      });
+      return;
+    }
+  } else {
+    // Kullanıcı isteği: "10 soru seçtiğimde 10 soru ön test 10 soru son
+    // test gibi yapalım" — iki AYRI sınav kaydı oluşturulur, aynı başlığa
+    // "- Ön Test" / "- Son Test" eklenir.
+    if (!_sinavOtomatikSecimler.length || !_sinavOtomatikSonTestSecimler.length) {
+      document.getElementById('soruSayisiHata').textContent = 'Önce "Soruları Getir" ile soruları görüntüleyip onaylayın.';
+      return;
+    }
+    const onSonuc = sinavManuelEkle(Object.assign({}, veriler, { baslik: veriler.baslik.trim() + ' - Ön Test' }), _sinavOtomatikSecimler.map(s => s.id));
+    if (!onSonuc.basarili) {
+      Object.keys(onSonuc.hatalar).forEach(alan => {
+        const hataEl = document.getElementById(alan + 'Hata');
+        if (hataEl) hataEl.textContent = onSonuc.hatalar[alan];
+      });
+      return;
+    }
+    const sonSonuc = sinavManuelEkle(Object.assign({}, veriler, { baslik: veriler.baslik.trim() + ' - Son Test' }), _sinavOtomatikSonTestSecimler.map(s => s.id));
+    if (!sonSonuc.basarili) {
+      // Ön Test zaten kaydedildi -- kullanıcı en azından o sınava sahip olsun,
+      // Son Test'i tekrar denemesi için hata gösterip modalı açık bırakıyoruz.
+      Object.keys(sonSonuc.hatalar).forEach(alan => {
+        const hataEl = document.getElementById(alan + 'Hata');
+        if (hataEl) hataEl.textContent = sonSonuc.hatalar[alan];
+      });
+      alert('Ön Test kaydedildi ama Son Test kaydedilemedi: ' + Object.values(sonSonuc.hatalar).join(' '));
+      sinavTablosunuCiz();
+      return;
+    }
   }
 
   sinavModalKapat();
@@ -797,29 +1132,40 @@ function sonucEkleFormGonderildi(e) {
 // gerçek bir .docx dosyası üretilip indiriliyor. Önceki "çift sütunlu, 10
 // soru sığsın" isteği burada docx'in kendi sayfa column desteğiyle korunuyor.
 
+// Kullanıcı isteği: "biraz daha yazı karakterlerini büyüt, kare kutucukları
+// kaldır" — puntolar büyütüldü (soru 17→19, şıklar 16→18), şıkların
+// başındaki ☐ işareti kaldırıldı (sadece cevap anahtarında doğru şık ✔ ile
+// işaretleniyor, boş sınav kağıdında hiç işaret yok).
 function _sinavWordSoruParagraflari(sinav, cevapGoster) {
   const paragraflar = [];
   sinav.sorular.forEach((soru, i) => {
+    // Kullanıcı isteği: "soruların arasında ve şıklar arasında hafif boşluk
+    // bırak" — soru öncesi/şıklar arası boşluklar hafifçe artırıldı.
     paragraflar.push(new docx.Paragraph({
-      children: [new docx.TextRun({ text: `${i + 1}. ${soru.soruMetni}`, bold: true, size: 17 })],
-      spacing: { before: 160, after: 40 },
+      children: [new docx.TextRun({ text: `${i + 1}. ${soru.soruMetni}`, bold: true, size: 19 })],
+      spacing: { before: 260, after: 80 },
       keepLines: true
     }));
     SINAV_SIK_HARFLERI.forEach(harf => {
       const vurgula = cevapGoster && harf === soru.dogruCevap;
       paragraflar.push(new docx.Paragraph({
         indent: { left: 220 },
-        children: [new docx.TextRun({ text: `${vurgula ? '✔' : '☐'} ${harf}) ${soru.secenekler[harf]}`, size: 16, bold: vurgula, color: vurgula ? '15803D' : '1F2937' })],
-        spacing: { after: 20 }
+        children: [new docx.TextRun({ text: `${vurgula ? '✔ ' : ''}${harf}) ${soru.secenekler[harf]}`, size: 18, bold: vurgula, color: vurgula ? '15803D' : '1F2937' })],
+        spacing: { after: 60 }
       }));
     });
   });
   return paragraflar;
 }
 
-async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
-  const sinav = sinavGetir(sinavId);
-  if (!sinav) return;
+// Bir sınav için Word bölümlerini (üst bilgi + sorular) üretir — hem tek
+// başına bir sınav kağıdı üretmek için (bkz. _sinavKagidiWordOlustur) hem de
+// Ön Test/Son Test'i TEK dosyada birleştirmek için (bkz.
+// sinavBirlesikKagitYazdir) ortak kullanılır. yeniSayfadaBaslasin=true ise
+// bu bölüm, önceki bölümün bittiği yerden değil YENİ bir sayfadan başlar
+// (kullanıcı isteği: "sınav kağıdının bir tarafı ön test bir tarafı son
+// test olacak").
+function _sinavKagidiBolumleriOlustur(sinav, cevapGoster, yeniSayfadaBaslasin) {
   const firma = aktifFirmaGetir();
 
   const ustBilgi = [
@@ -827,14 +1173,28 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
     // "CEVAP ANAHTARI" etiketi kaldırıldı, sadece sınavın kendi başlığı gösteriliyor.
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: sinav.baslik, bold: true, size: 24, color: '0B2C52' })], spacing: { after: 140 } }),
     new docx.Paragraph({ children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 17 })], spacing: { after: 40 } }),
+    // Kullanıcı isteği: "bu kısım sağa doğru yayılabilir, en fazla iki satır
+    // olur" — Geçme Notu, tab durağıyla satırın sağına itiliyor.
     new docx.Paragraph({
-      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}     Tarih: ${sinav.tarih || '______________'}     Geçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
+      tabStops: [{ type: docx.TabStopType.LEFT, position: 5500 }],
+      children: [new docx.TextRun({ text: `Konu: ${sinav.turAdi}\tGeçme Notu: ${sinav.gecmeNotu}`, size: 16, color: '374151' })],
       spacing: { after: cevapGoster ? 220 : 60 }
     })
   ];
   if (!cevapGoster) {
+    // Kullanıcı isteği: "ad soyad kısmı iki satır olsun sağa doğru yay" —
+    // dört alan tek satıra sığdırılmak yerine İKİ satıra bölündü (Ad Soyad +
+    // Bölüm / Sicil No + Tarih), her satırda tab durağıyla ikinci alan
+    // sayfanın sağına doğru yayılıyor; alt çizgi yok (Word'ün kendi tab
+    // boşluğu, yazılacak alan etiketle bir sonraki tab durağı arasıdır).
     ustBilgi.push(new docx.Paragraph({
-      children: [new docx.TextRun({ text: 'Ad Soyad: ______________________________     Sicil No: ______________', size: 16 })],
+      tabStops: [{ type: docx.TabStopType.LEFT, position: 6200 }],
+      children: [new docx.TextRun({ text: 'Ad Soyad: \tBölüm: ', size: 16 })],
+      spacing: { after: 80 }
+    }));
+    ustBilgi.push(new docx.Paragraph({
+      tabStops: [{ type: docx.TabStopType.LEFT, position: 6200 }],
+      children: [new docx.TextRun({ text: 'Sicil No: \tTarih: ', size: 16 })],
       spacing: { after: 220 }
     }));
   }
@@ -846,22 +1206,27 @@ async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
   // da başlığın hemen altında aynı yükseklikte başlıyor (tıpkı eski PDF
   // çıktısında olduğu gibi).
   const margin = { top: 850, bottom: 850, left: 850, right: 850 };
-  const doc = new docx.Document({
-    sections: [
-      {
-        properties: { page: { margin }, column: { count: 1 } },
-        children: ustBilgi
+  const ustBilgiOzellikleri = { page: { margin }, column: { count: 1 } };
+  if (yeniSayfadaBaslasin) ustBilgiOzellikleri.type = docx.SectionType.NEXT_PAGE;
+
+  return [
+    { properties: ustBilgiOzellikleri, children: ustBilgi },
+    {
+      properties: {
+        page: { margin },
+        type: docx.SectionType.CONTINUOUS,
+        column: { count: 2, space: 500 }
       },
-      {
-        properties: {
-          page: { margin },
-          type: docx.SectionType.CONTINUOUS,
-          column: { count: 2, space: 500 }
-        },
-        children: _sinavWordSoruParagraflari(sinav, cevapGoster)
-      }
-    ]
-  });
+      children: _sinavWordSoruParagraflari(sinav, cevapGoster)
+    }
+  ];
+}
+
+async function _sinavKagidiWordOlustur(sinavId, cevapGoster) {
+  const sinav = sinavGetir(sinavId);
+  if (!sinav) return;
+
+  const doc = new docx.Document({ sections: _sinavKagidiBolumleriOlustur(sinav, cevapGoster, false) });
 
   const blob = await docx.Packer.toBlob(doc);
   const dosyaAdi = `${sinav.baslik}_${cevapGoster ? 'Cevap_Anahtari' : 'Sinav_Kagidi'}`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx';
@@ -874,4 +1239,38 @@ async function sinavKagidiYazdir(sinavId) {
 
 async function cevapAnahtariYazdir(sinavId) {
   await _sinavKagidiWordOlustur(sinavId, true);
+}
+
+// Kullanıcı isteği: "sınav kağıdının bir tarafı ön test bir tarafı son test
+// olacak" — "... - Ön Test" / "... - Son Test" ekiyle eşleşen bir çift
+// bulunursa (bkz. sinavFormGonderildi'deki otomatik başlıklandırma), TEK
+// Word dosyasında önce Ön Test, sayfa atlayıp devamında Son Test basılır.
+function _sinavEsiniBul(sinav) {
+  const ON_EKI = ' - Ön Test';
+  const SON_EKI = ' - Son Test';
+  let aranan;
+  if (sinav.baslik.endsWith(ON_EKI)) aranan = sinav.baslik.slice(0, -ON_EKI.length) + SON_EKI;
+  else if (sinav.baslik.endsWith(SON_EKI)) aranan = sinav.baslik.slice(0, -SON_EKI.length) + ON_EKI;
+  else return null;
+
+  return sinavlariGetir('').find(s => s.id !== sinav.id && s.baslik === aranan && s.egitimTuruId === sinav.egitimTuruId) || null;
+}
+
+async function sinavBirlesikKagitYazdir(sinavId) {
+  const sinav = sinavGetir(sinavId);
+  if (!sinav) return;
+  const es = _sinavEsiniBul(sinav);
+  if (!es) { alert('Eşleşen Ön Test / Son Test sınavı bulunamadı (başlıklar "- Ön Test" / "- Son Test" ile bitmeli ve aynı eğitim türüne ait olmalı).'); return; }
+
+  const onSinav = sinav.baslik.endsWith(' - Ön Test') ? sinav : sinavGetir(es.id);
+  const sonSinav = sinav.baslik.endsWith(' - Son Test') ? sinav : sinavGetir(es.id);
+
+  const bolumler = _sinavKagidiBolumleriOlustur(onSinav, false, false)
+    .concat(_sinavKagidiBolumleriOlustur(sonSinav, false, true));
+  const doc = new docx.Document({ sections: bolumler });
+
+  const blob = await docx.Packer.toBlob(doc);
+  const temelBaslik = onSinav.baslik.replace(/ - Ön Test$/, '');
+  const dosyaAdi = `${temelBaslik}_On_Son_Test_Birlesik`.replace(/[^\p{L}\p{N}]+/gu, '_') + '.docx';
+  saveAs(blob, dosyaAdi);
 }

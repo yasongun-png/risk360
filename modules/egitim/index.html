@@ -110,6 +110,7 @@
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="ikincil sil" id="soruTopluSilBtn" style="display:none;">Seçilenleri Sil</button>
+            <button type="button" class="birincil" id="soruSecilenlerdenSinavBtn" style="display:none;">Seçilenlerden Sınav Oluştur</button>
             <button type="button" class="ikincil" id="soruSablonIndirBtn">Şablon İndir</button>
             <button type="button" class="ikincil" id="soruIceAktarBtn">İçe Aktar</button>
             <input type="file" id="soruIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
@@ -322,7 +323,7 @@
   <!-- SINAV: Yeni Sınav -->
   <div class="modal-katman" id="sinavModalKatman">
     <div class="modal-kutu">
-      <h3>Yeni Sınav Oluştur</h3>
+      <h3 id="sinavModalBaslik">Yeni Sınav Oluştur</h3>
       <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
         Seçilen konudaki soru bankasından, belirttiğiniz sayıda soru rastgele seçilerek sınav
         oluşturulur — isterseniz "Manuel" yöntemle soruları kendiniz tek tek de seçebilirsiniz.
@@ -365,6 +366,38 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği: "İSG eğitimlerinde bir ön test bir de son test
+             oluyor, 10 soru seçtiğimde 10 soru ön test 10 soru son test gibi
+             yapalım" — işaretlenirse Soru Sayısı kadar soru İKİ AYRI (ortak
+             sorusu olmayan) havuzdan çekilir, "Oluştur" tek tıkla hem "...-
+             Ön Test" hem "...- Son Test" adında iki ayrı sınav kaydeder. -->
+        <div id="sinavOnSonTestAlani" style="display:none; margin-top:-6px; margin-bottom:10px;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:400;">
+            <input type="checkbox" id="sinavOnSonTestCheckbox" style="width:auto;">
+            Ön Test + Son Test olarak birlikte oluştur (her biri için Soru Sayısı kadar, birbirinden farklı sorular)
+          </label>
+        </div>
+
+        <!-- Kullanıcı isteği: "soruları otomatik hazırladığımda indirmeden önce
+             tek tek soruları bana göstersin, bu soruyu değiştir diyebileyim,
+             alternatif bir soru göstersin seçeyim" — Otomatik yöntemde artık
+             sınav doğrudan oluşturulmuyor; önce rastgele seçilen sorular tam
+             metin+şıklarıyla önizlenir, her sorunun yanındaki "Alternatif"
+             butonu o soruyu havuzdan başka rastgele bir soruyla değiştirir. -->
+        <div id="sinavOtomatikOnizleAlani" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:4px;">
+            <label style="margin:0;">Sorular <span id="sinavOtomatikSayac" style="color:var(--metin-soluk); font-weight:400;"></span></label>
+            <button type="button" class="ikincil" id="sinavOtomatikGetirBtn" style="width:auto;">🔀 Soruları Getir / Yeniden Karıştır</button>
+          </div>
+          <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0;">
+            Yukarıdaki filtre veya soru sayısını değiştirirseniz "Soruları Getir"e tekrar basmanız gerekir.
+          </p>
+          <div id="sinavOtomatikOnTestBaslik" style="display:none; font-weight:700; font-size:13px; margin:6px 0 2px;">Ön Test Soruları</div>
+          <div id="sinavOtomatikListesi" style="max-height:320px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+          <div id="sinavOtomatikSonTestBaslik" style="display:none; font-weight:700; font-size:13px; margin:6px 0 2px;">Son Test Soruları</div>
+          <div id="sinavOtomatikSonTestListesi" style="display:none; max-height:320px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px 10px; margin-bottom:10px;"></div>
+        </div>
+
         <div id="sinavManuelSoruAlani" style="display:none;">
           <label>Sorular <span id="sinavManuelSayac" style="color:var(--metin-soluk); font-weight:400;">(0 soru seçildi)</span></label>
           <input type="text" id="sinavManuelArama" class="arama-kutusu" placeholder="Soru metninde ara..." style="margin-bottom:6px;">
@@ -377,7 +410,7 @@
 
         <div class="modal-eylemler">
           <button type="button" class="ikincil" id="sinavModalIptalBtn">İptal</button>
-          <button type="submit" class="birincil">Oluştur</button>
+          <button type="submit" class="birincil" id="sinavModalKaydetBtn">Oluştur</button>
         </div>
       </form>
       <button type="button" class="tablo-buton" id="sinavModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>

@@ -17,16 +17,52 @@ const SINAV_SIK_HARFLERI = ['A', 'B', 'C', 'D'];
 // de filtreleme yapılabilir.
 const SINAV_ZORLUK_SEVIYELERI = ['Kolay', 'Orta', 'Zor', 'Çok Zor'];
 
+// Kullanıcı isteği: "sınav soru başlıklarında bu başlıklar olmalı" sonra
+// "eğitim konuları SADECE bunlar olsun" — Çalışanların İSG Eğitimlerinin Usul
+// ve Esasları Hakkında Yönetmelik ekindeki resmi "EĞİTİM KONULARI" listesi
+// (kullanıcının verdiği birebir metin: 1. Genel konular, 2. Sağlık konuları,
+// 3. Teknik konular, 4. İşe ve işyerine özgü riskler ve risk değerlendirmesine
+// dayalı konular) — her lettered madde (a,b,c,ç...) ayrı bir seçilebilir Alt
+// Konu; 4. maddedeki paragraf içinde sayılan işe özgü risk örnekleri (yüksekte
+// çalışma, kapalı ortamda çalışma vb.) de ayrı seçilebilir başlıklar olarak
+// açıldı. Eskiden beri var olan geniş/ince taneli konu listesi TAMAMEN
+// kaldırıldı — hazır soru bankasındaki tüm sorular da bu başlıklara
+// eşlenmiştir (bkz. sinav-soru-bankasi.js).
 const SINAV_ALT_KONU_LISTESI = [
-  '6331 Sayılı Kanun', 'İşveren ve Çalışan Yükümlülükleri', 'İSG Profesyonellerinin Görevleri',
-  'Risk Değerlendirmesi', 'Acil Durumlar', 'İş Kazaları', 'Meslek Hastalıkları', 'Sağlık Gözetimi',
-  'Eğitim', 'KKD', 'İş Ekipmanları', 'Kaldırma Ekipmanları', 'Elektrik', 'Yangın', 'Kimyasallar',
-  'Patlamadan Korunma', 'Basınçlı Kaplar', 'Yüksekte Çalışma', 'Kapalı Alan', 'İskeleler',
-  'Merdivenler', 'İnşaat', 'Maden', 'Gürültü', 'Titreşim', 'Toz', 'Ergonomi', 'Elle Taşıma',
-  'Biyolojik Riskler', 'Kanserojen/Mutajen Maddeler', 'İş Hijyeni', 'Ölçüm ve Analiz',
-  'Taşeron Yönetimi', 'İş İzin Sistemleri', 'Sıcak Çalışma', 'HAZOP', 'LOPA', 'Bow-Tie',
-  'Proses Güvenliği', 'ISO 45001', 'Yönetim Sistemleri', 'Çevre ve İSG Kesişimi', 'Saha Denetimi',
-  'Uygunsuzluk Yönetimi', 'Kök Neden Analizi'
+  // ---- 1. Genel konular ----
+  'Çalışma mevzuatı ile ilgili bilgiler',
+  'Çalışanların yasal hak ve sorumlulukları',
+  'İşyeri temizliği ve düzeni',
+  'İş kazası ve meslek hastalığından doğan hukuki sonuçlar',
+  // ---- 2. Sağlık konuları ----
+  'Meslek hastalıklarının sebepleri',
+  'Hastalıktan korunma prensipleri ve korunma tekniklerinin uygulanması',
+  'Biyolojik ve psikososyal risk etmenleri',
+  'İlk yardım',
+  'Bağımlılık yapıcı maddelerin zararları ve teknoloji bağımlılığı',
+  // ---- 3. Teknik konular ----
+  'Kimyasal, fiziksel ve ergonomik risk etmenleri',
+  'Elle kaldırma ve taşıma',
+  'Parlama ve patlama',
+  'Yangın ve yangından korunma',
+  'İş ekipmanlarının güvenli kullanımı',
+  'Ekranlı araçlarla çalışma',
+  'Elektrik, tehlikeleri, riskleri ve önlemleri',
+  'İş kazalarının sebepleri ve korunma prensipleri ile tekniklerinin uygulanması',
+  'Sağlık ve güvenlik işaretleri',
+  'Kişisel koruyucu donanım kullanımı',
+  'İş sağlığı ve güvenliği genel kuralları ve güvenlik kültürü',
+  'Acil durumlar, tahliye ve kurtarma',
+  // ---- 4. İşe ve işyerine özgü riskler ve risk değerlendirmesine dayalı konular ----
+  'Yüksekte çalışma',
+  'Yüksekten düşme',
+  'Kapalı ortamda çalışma',
+  'Radyasyon riskinin bulunduğu ortamlarda çalışma',
+  'Kaynakla çalışma',
+  'Özel risk taşıyan ekipman ile çalışma',
+  'Kanserojen veya mutajen maddelerle çalışma',
+  'Kimyasal veya biyolojik etkenlerle çalışma',
+  'Patlamadan korunma dokümanı kapsamındaki hususlar'
 ];
 
 function soruOlustur(veriler) {
@@ -112,32 +148,6 @@ function soruDogrula(veriler) {
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
 
-function sinavOlusturmaDogrula(veriler, soruSayisiMevcut) {
-  const hatalar = {};
-
-  if (!veriler.baslik || !veriler.baslik.trim()) {
-    hatalar.baslik = 'Sınav başlığı zorunludur.';
-  }
-
-  if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) {
-    hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
-  }
-
-  // Kullanıcı isteği: "sınav tarihi girmesem de sorular basılabilsin,
-  // sınava giren kendisi yazsın" -- tarih artık opsiyonel; boş bırakılırsa
-  // sınav kağıdında elle doldurulacak bir boşluk basılır (bkz. sinav-ui.js
-  // _sinavKagidiYazdirOrtak).
-
-  const soruSayisi = Number(veriler.soruSayisi);
-  if (!soruSayisi || soruSayisi < 1) {
-    hatalar.soruSayisi = 'En az 1 soru seçilmelidir.';
-  } else if (soruSayisi > soruSayisiMevcut) {
-    hatalar.soruSayisi = `Soru bankasında bu konu için sadece ${soruSayisiMevcut} soru var.`;
-  }
-
-  return { gecerli: Object.keys(hatalar).length === 0, hatalar };
-}
-
 function sinavSonucGirisDogrula(veriler) {
   const hatalar = {};
 
@@ -218,6 +228,15 @@ function sinavEkleRepo(sinav) {
   liste.push(sinav);
   _sinavKaydet(liste);
   return sinav;
+}
+
+function sinavGuncelleRepo(id, veriler) {
+  const liste = sinavTumunuGetirRepo();
+  const index = liste.findIndex(s => s.id === id);
+  if (index === -1) return null;
+  liste[index] = Object.assign({}, liste[index], veriler);
+  _sinavKaydet(liste);
+  return liste[index];
 }
 
 function sinavSilRepo(id) {
@@ -341,60 +360,26 @@ function _sinavKaristir(liste) {
   return kopya;
 }
 
-// konular (opsiyonel, seçili alt konu dizisi -- kullanıcı isteği: "birden
-// çok alt konu seçebilmem lazım", boşsa/verilmezse tüm alt konular
-// dahildir) ve zorluklar (opsiyonel, seçili zorluk düzeyi dizisi --
-// boşsa/verilmezse tüm zorluklar dahildir) ile soru havuzu daraltılabilir.
-function sinavEkle(veriler) {
-  const zorluklar = Array.isArray(veriler.zorluklar) ? veriler.zorluklar.filter(Boolean) : [];
-  const konular = Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [];
-  const havuz = soruTumunuGetirRepo().filter(s =>
-    s.egitimTuruId === veriler.egitimTuruId &&
-    (!konular.length || konular.includes(s.konu)) &&
-    (!zorluklar.length || zorluklar.includes(s.zorluk))
-  );
-  const dogrulama = sinavOlusturmaDogrula(veriler, havuz.length);
-  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
-
-  const soruSayisi = Number(veriler.soruSayisi);
-  const secilenler = _sinavKaristir(havuz).slice(0, soruSayisi);
-
-  const yeniSinav = sinavOlustur({
-    baslik: veriler.baslik.trim(),
-    egitimTuruId: veriler.egitimTuruId,
-    konular,
-    zorluklar,
-    tarih: veriler.tarih,
-    gecmeNotu: veriler.gecmeNotu ? Number(veriler.gecmeNotu) : SINAV_GECME_NOTU_VARSAYILAN,
-    sorular: secilenler.map(s => ({
-      soruId: s.id,
-      soruMetni: s.soruMetni,
-      secenekler: s.secenekler,
-      dogruCevap: s.dogruCevap,
-      aciklama: s.aciklama || ''
-    }))
-  });
-  sinavEkleRepo(yeniSinav);
-  return { basarili: true, sinav: yeniSinav };
-}
-
-// Otomatik/rastgele seçim yerine, kullanıcının soru bankasından tek tek
-// işaretlediği sorularla sınav oluşturur (kullanıcı isteği: "mevcut
-// kütüphaneden istediğim soruları da seçip sınav kağıdı hazırlamak
-// istiyorum"). Doğrulama sinavOlusturmaDogrula ile ORTAK değildir çünkü
-// "soru sayısı"na değil, doğrudan seçilen soru id listesine bakılır.
-function sinavManuelEkle(veriler, soruIdleri) {
+// Kullanıcının soru bankasından tek tek işaretlediği (veya Otomatik yöntemde
+// önce önizlenip "Alternatif Soru" ile düzenlenip kesinleştirdiği, bkz.
+// sinav-ui.js _sinavOtomatikSecimler) sorularla sınav oluşturur/günceller —
+// doğrulama "soru sayısı"na değil, doğrudan seçilen soru id listesine bakar.
+function _sinavManuelDogrulaVeSecilenler(veriler, soruIdleri) {
   const hatalar = {};
   if (!veriler.baslik || !veriler.baslik.trim()) hatalar.baslik = 'Sınav başlığı zorunludur.';
   if (!veriler.egitimTuruId || !egitimTuruGetir(veriler.egitimTuruId)) hatalar.sinavKonuId = 'Geçerli bir eğitim/konu seçiniz.';
   if (!Array.isArray(soruIdleri) || !soruIdleri.length) hatalar.manuelSoru = 'En az bir soru seçmelisiniz.';
-  if (Object.keys(hatalar).length) return { basarili: false, hatalar };
+  if (Object.keys(hatalar).length) return { gecerli: false, hatalar };
 
   const havuz = soruTumunuGetirRepo();
   const secilenler = soruIdleri.map(id => havuz.find(s => s.id === id)).filter(Boolean);
-  if (!secilenler.length) return { basarili: false, hatalar: { manuelSoru: 'Seçilen sorular soru bankasında bulunamadı (silinmiş olabilir).' } };
+  if (!secilenler.length) return { gecerli: false, hatalar: { manuelSoru: 'Seçilen sorular soru bankasında bulunamadı (silinmiş olabilir).' } };
 
-  const yeniSinav = sinavOlustur({
+  return { gecerli: true, secilenler };
+}
+
+function _sinavIcerigiOlustur(veriler, secilenler, ekVeriler) {
+  return Object.assign({
     baslik: veriler.baslik.trim(),
     egitimTuruId: veriler.egitimTuruId,
     konular: Array.isArray(veriler.konular) ? veriler.konular.filter(Boolean) : [],
@@ -408,9 +393,36 @@ function sinavManuelEkle(veriler, soruIdleri) {
       dogruCevap: s.dogruCevap,
       aciklama: s.aciklama || ''
     }))
-  });
+  }, ekVeriler);
+}
+
+function sinavManuelEkle(veriler, soruIdleri) {
+  const dogrulama = _sinavManuelDogrulaVeSecilenler(veriler, soruIdleri);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const yeniSinav = sinavOlustur(_sinavIcerigiOlustur(veriler, dogrulama.secilenler));
   sinavEkleRepo(yeniSinav);
   return { basarili: true, sinav: yeniSinav };
+}
+
+// Kullanıcı isteği: "hazırladığım sorulara tekrar düzenleyebileyim" — daha
+// önce oluşturulmuş bir sınavın başlık/tarih/geçme notu ve soru listesini
+// YENİ bir kayıt açmadan (aynı id, dolayısıyla aynı sınav kağıdı/sonuçlar
+// bağlantısıyla) günceller. Sonuçlar (sinav_sonuclari) soru bazlı değil
+// sınav bazlı (dogruSayisi/toplamSoru/puan) tutulduğundan etkilenmez.
+function sinavManuelGuncelle(id, veriler, soruIdleri) {
+  const mevcut = sinavIdIleGetirRepo(id);
+  if (!mevcut) return { basarili: false, hatalar: { genel: 'Sınav bulunamadı.' } };
+
+  const dogrulama = _sinavManuelDogrulaVeSecilenler(veriler, soruIdleri);
+  if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
+
+  const guncellenmis = sinavOlustur(_sinavIcerigiOlustur(veriler, dogrulama.secilenler, {
+    id,
+    olusturmaTarihi: mevcut.olusturmaTarihi
+  }));
+  sinavGuncelleRepo(id, guncellenmis);
+  return { basarili: true, sinav: guncellenmis };
 }
 
 function sinavSil(id) {
