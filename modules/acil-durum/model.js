@@ -637,6 +637,23 @@ function ekipmanOlustur(veriler) {
     // filtrelenmez — malzemeListesi ile aynı yaklaşım, bkz. yukarısı).
     basincTestTarihi: (veriler.basincTestTarihi || '').trim(),
     basincDegeri: (veriler.basincDegeri || '').trim(),
+    // Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil form
+    // açıldığında dolabın özellikleri de girilebilsin ... boyutları, kaç
+    // gözlü olduğu, yangın tüpü var mı yok mu, kaç hortum var, hortumun kaç
+    // inç olduğu ... bu özellikler bir kere gelecek bir daha orada kalacak"
+    // — basincTestTarihi/basincDegeri ile AYNI yaklaşım: yalnızca "Yangın
+    // Dolabı" türünde gösterilir/düzenlenir (bkz. ui.js
+    // _ekipmanDolapOzellikleriBolumuCiz VE ekipman-kontrol-bildir.html'deki
+    // eşleniği), ama BİR KERE girilip kalıcı olarak kayıtta kalması için
+    // (dolap fiziksel olarak değişmediği sürece) per-ziyaret kontrolCevaplari
+    // İÇİNE DEĞİL, ekipmanın kendi kalıcı alanlarına yazılır; diğer türlerde
+    // boş kalır, tür sonradan değiştirilirse veri kaybolmasın diye filtrelenmez.
+    dolapEni: (veriler.dolapEni || '').trim(),
+    dolapBoyu: (veriler.dolapBoyu || '').trim(),
+    dolapGozSayisi: (veriler.dolapGozSayisi || '').trim(),
+    dolapYanginTupuVarMi: ['Var', 'Yok'].includes(veriler.dolapYanginTupuVarMi) ? veriler.dolapYanginTupuVarMi : '',
+    dolapHortumSayisi: (veriler.dolapHortumSayisi || '').trim(),
+    dolapHortumInc: (veriler.dolapHortumInc || '').trim(),
     notlar: (veriler.notlar || '').trim(),
     // Kontrol sırasında çekilen kanıt/bulgu fotoğrafları (opsiyonel, en
     // fazla 3 adet — kullanıcı isteği: "her bir kontrol için 3 adet

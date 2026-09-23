@@ -207,6 +207,16 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'sonrakiKontrol', baslik: 'Sonraki Kontrol' },
   { anahtar: 'basincTestTarihi', baslik: 'Basınç/Hidrostatik Test Tarihi' },
   { anahtar: 'basincDegeri', baslik: 'Basınç Değeri (bar)' },
+  // Kullanıcı isteği: "bir Excel listesi yangın dolabı numarası konumu ve
+  // özellikleri şeklinde ... en son çıktı almak istiyorum" — basınç
+  // sütunlarıyla AYNI mantık: yalnızca "Yangın Dolabı" türünde dolu olur,
+  // diğer türlerde boş kalır (bkz. model.js ekipmanOlustur dolapEni notu).
+  { anahtar: 'dolapEni', baslik: 'Dolap Eni (cm)' },
+  { anahtar: 'dolapBoyu', baslik: 'Dolap Boyu (cm)' },
+  { anahtar: 'dolapGozSayisi', baslik: 'Göz Sayısı' },
+  { anahtar: 'dolapYanginTupuVarMi', baslik: 'İçinde Yangın Tüpü' },
+  { anahtar: 'dolapHortumSayisi', baslik: 'Hortum Sayısı' },
+  { anahtar: 'dolapHortumInc', baslik: 'Hortum Çapı (inç)' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' },
   { anahtar: 'bulgular', baslik: 'Bulgular' }
 ];
@@ -284,11 +294,19 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanSablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(EKIPMAN_IMPORT_KOLONLARI, 'acil_durum_ekipman_sablonu.xlsx');
   });
+  // Kullanıcı isteği: "bir Excel listesi yangın dolabı numarası konumu ve
+  // özellikleri şeklinde ... en son çıktı almak istiyorum" — bunun için
+  // ekrandaki Tür filtresini "Yangın Dolabı" yapıp Dışa Aktar'a basmak
+  // yetsin diye, DÜZELTME: bu düğme şimdiye kadar ekrandaki arama/tür
+  // filtresini/bölüm sekmesini YOK SAYIP HER ZAMAN ekipmanlariGetir('') ile
+  // TÜM ekipmanları dışa aktarıyordu (ekrandaki tabloyla tutarsızdı) —
+  // artık ekranda GÖRÜNENLE (bkz. _ekipmanFiltrelenmisListeGetir, ekipman
+  // tablosunun kendisinin kullandığı fonksiyon) birebir aynı listeyi kullanır.
   document.getElementById('ekipmanDisaAktarBtn').addEventListener('click', () => {
-    excelDisaAktar(ekipmanlariGetir(''), EKIPMAN_EXPORT_KOLONLARI, 'acil_durum_ekipmanlari.xlsx');
+    excelDisaAktar(_ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value), EKIPMAN_EXPORT_KOLONLARI, 'acil_durum_ekipmanlari.xlsx');
   });
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
-    raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, ekipmanlariGetir(document.getElementById('ekipmanAramaKutusu').value));
+    raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value));
   });
   // Kullanıcı isteği: "yangın ekipmanı türlerine göre ayrı ayrı kontrol
   // formu hazırlayıp word çıktısı alabileyim" — tür filtresi seçiliyse
@@ -978,10 +996,26 @@ function ekipmanBarkodTaramaDurdur() {
 // firmanın kendi barkodu CODE128 dışında bir format olabilir (Code39,
 // EAN vb.), Html5Qrcode varsayılan olarak birçok formatı birden tarar.
 let _ytBarkodTarayici = null;
+// Kullanıcı raporu: "barkodu tüpe bağlıyorum, sonra tekrar tarattığımda
+// tanımıyor" — kök neden: canlı tarama, İLK başarılı kare çözümlenir
+// çözümlenmez hemen karar veriyordu (eşleştir ya da "bulunamadı" göster).
+// Firmanın etiketleri parlak/eğri metal yüzeyde olduğundan (bkz. yukarıdaki
+// qrbox notu) tek bir kare bazen gürültülü/eksik bir metne çözümlenebiliyor;
+// bu YANLIŞ metin ya eşleştirme sırasında kaydedilip sonraki (bu kez doğru
+// okunan) taramayla eşleşmemesine, ya da doğru okunan bir kodun tek seferlik
+// kötü bir sonraki kareyle "bulunamadı" gösterip kamerayı durdurmasına yol
+// açabiliyordu. Çözüm: aynı tarama oturumunda ART ARDA AYNI metni veren en
+// az 2 kare gelmeden hiçbir karar verilmez/kamera durdurulmaz — tek seferlik
+// gürültülü bir kare artık hiçbir işlem tetiklemiyor, tarama sessizce devam
+// ediyor.
+let _ytSonOkunanKod = null;
+let _ytOkunanKodTekrarSayaci = 0;
 
 function yanginTupuBarkodTaramaBaslat() {
   if (typeof Html5Qrcode === 'undefined') { alert('Barkod tarama bileşeni yüklenemedi.'); return; }
   _ytBarkodEslesmePaneliGizle();
+  _ytSonOkunanKod = null;
+  _ytOkunanKodTekrarSayaci = 0;
   const durum = document.getElementById('yanginTupuBarkodTaramaDurum');
   durum.textContent = '';
   durum.classList.remove('gorunur');
@@ -1053,6 +1087,17 @@ function _yanginTupuBarkodEslesenTupuBul(kod) {
 let _ytBarkodBekleyenKod = null;
 
 function _ytBarkodOkundu(kod) {
+  // Tek kareye güvenilmez — bkz. _ytSonOkunanKod tanımındaki not. Aynı metin
+  // art arda en az 2 kez gelmeden ne eşleştirme ne de "bulunamadı" kararı
+  // verilir; farklı bir metin gelirse sayaç sıfırlanıp yeniden başlar.
+  if (kod === _ytSonOkunanKod) {
+    _ytOkunanKodTekrarSayaci++;
+  } else {
+    _ytSonOkunanKod = kod;
+    _ytOkunanKodTekrarSayaci = 1;
+  }
+  if (_ytOkunanKodTekrarSayaci < 2) return;
+
   const tup = _yanginTupuBarkodEslesenTupuBul(kod);
   if (!tup) {
     _ytBarkodKamerayiDurdur();
@@ -1138,6 +1183,13 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanBasincTestTarihi').value = ekipman ? (ekipman.basincTestTarihi || '') : '';
   document.getElementById('ekipmanBasincDegeri').value = ekipman ? (ekipman.basincDegeri || '') : '';
   _ekipmanBasincBolumuCiz();
+  document.getElementById('ekipmanDolapEni').value = ekipman ? (ekipman.dolapEni || '') : '';
+  document.getElementById('ekipmanDolapBoyu').value = ekipman ? (ekipman.dolapBoyu || '') : '';
+  document.getElementById('ekipmanDolapGozSayisi').value = ekipman ? (ekipman.dolapGozSayisi || '') : '';
+  document.getElementById('ekipmanDolapYanginTupuVarMi').value = ekipman ? (ekipman.dolapYanginTupuVarMi || '') : '';
+  document.getElementById('ekipmanDolapHortumSayisi').value = ekipman ? (ekipman.dolapHortumSayisi || '') : '';
+  document.getElementById('ekipmanDolapHortumInc').value = ekipman ? (ekipman.dolapHortumInc || '') : '';
+  _ekipmanDolapOzellikleriBolumuCiz();
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanBakimYapan').value = ekipman ? ekipman.bakimYapan || '' : '';
   document.getElementById('ekipmanYapilanIslem').value = ekipman ? ekipman.yapilanIslem || '' : '';
@@ -1155,6 +1207,7 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanTur').onchange = () => {
     _ekipmanKontrolListesiCiz(ekipman);
     _ekipmanBasincBolumuCiz();
+    _ekipmanDolapOzellikleriBolumuCiz();
     // Kullanıcı isteği: "olması gereken malzemeler için bir envanter çıkar"
     // — yeni bir İtfaiye Aracı kaydı açılırken (düzenleme değil, liste de
     // henüz boşsa) standart malzeme listesi otomatik doldurulur; kayıtlı
@@ -1296,6 +1349,16 @@ function _ekipmanBasincBolumuCiz() {
   bolum.style.display = document.getElementById('ekipmanTur').value === 'Temiz Hava Solunum Seti' ? '' : 'none';
 }
 
+// Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil form
+// açıldığında dolabın özellikleri de girilebilsin" — bölüm görünürlüğü
+// yalnızca "Yangın Dolabı" türünde (bkz. model.js ekipmanOlustur
+// dolapEni/dolapBoyu/... notu), basınç bölümüyle AYNI desen.
+function _ekipmanDolapOzellikleriBolumuCiz() {
+  const bolum = document.getElementById('ekipmanDolapOzellikleriBolumu');
+  if (!bolum) return;
+  bolum.style.display = document.getElementById('ekipmanTur').value === 'Yangın Dolabı' ? '' : 'none';
+}
+
 function _ekipmanMalzemeBolumuCiz() {
   const bolum = document.getElementById('ekipmanMalzemeBolumu');
   if (!bolum) return;
@@ -1406,6 +1469,12 @@ function ekipmanFormGonderildi(e) {
     durum: document.getElementById('ekipmanDurum').value,
     basincTestTarihi: document.getElementById('ekipmanBasincTestTarihi').value,
     basincDegeri: document.getElementById('ekipmanBasincDegeri').value,
+    dolapEni: document.getElementById('ekipmanDolapEni').value,
+    dolapBoyu: document.getElementById('ekipmanDolapBoyu').value,
+    dolapGozSayisi: document.getElementById('ekipmanDolapGozSayisi').value,
+    dolapYanginTupuVarMi: document.getElementById('ekipmanDolapYanginTupuVarMi').value,
+    dolapHortumSayisi: document.getElementById('ekipmanDolapHortumSayisi').value,
+    dolapHortumInc: document.getElementById('ekipmanDolapHortumInc').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     bakimYapan: document.getElementById('ekipmanBakimYapan').value,
     yapilanIslem: document.getElementById('ekipmanYapilanIslem').value,

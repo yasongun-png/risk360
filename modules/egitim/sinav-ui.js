@@ -46,7 +46,14 @@ const SONUC_EXCEL_KOLONLARI = [
 ];
 
 function _soruIceAktarSatiriEkle(satir) {
-  const tur = EGITIM_TURLERI.find(t => _basligiNormallestir(t.ad) === _basligiNormallestir(satir.konu));
+  // Kullanıcı raporu: "soruları uygulamaya yükleyemiyorum" — firmanın
+  // Ayarlar'dan eklediği ÖZEL eğitim türleri (bkz. model.js
+  // egitimTurleriTumu) burada aranmıyordu, sadece sabit kataloğa (standart
+  // EGITIM_TURLERI) bakılıyordu; bu yüzden özel bir eğitim türüyle
+  // (ör. "Çalışma Mevzuatı Eğitimi") hazırlanmış bir Excel'deki HİÇBİR satır
+  // eşleşmiyordu. modules/egitim/ui.js'teki aynı işlevle (kayıt içe aktarma)
+  // AYNI kaynağı (egitimTurleriTumu) kullanacak şekilde düzeltildi.
+  const tur = egitimTurleriTumu().find(t => _basligiNormallestir(t.ad) === _basligiNormallestir(satir.konu));
   if (!tur) return { basarili: false, hatalar: { genel: `Eğitim/konu "${satir.konu}" tanınmadı.` } };
 
   return soruEkle({
@@ -207,7 +214,10 @@ function sinavSayfasiniBaslat() {
 function _konuSecimleriniDoldur(selectId, hepsiSecenegiEkle) {
   const secim = document.getElementById(selectId);
   const konuSayilari = soruBankasiKonuSayilari();
-  const secenekler = EGITIM_TURLERI.map(t => {
+  // _soruIceAktarSatiriEkle'deki notla aynı sebep: firmanın özel eğitim
+  // türleri (egitimTurleriTumu) bu listede de görünmeliydi, sadece sabit
+  // katalog (EGITIM_TURLERI) gösteriliyordu.
+  const secenekler = egitimTurleriTumu().map(t => {
     const sayi = konuSayilari[t.id] || 0;
     return `<option value="${t.id}">${_sinavKacir(t.ad)} (${sayi} soru)</option>`;
   }).join('');
