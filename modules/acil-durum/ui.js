@@ -1165,6 +1165,13 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanBasincTestTarihi').value = ekipman ? (ekipman.basincTestTarihi || '') : '';
   document.getElementById('ekipmanBasincDegeri').value = ekipman ? (ekipman.basincDegeri || '') : '';
   _ekipmanBasincBolumuCiz();
+  document.getElementById('ekipmanDolapEni').value = ekipman ? (ekipman.dolapEni || '') : '';
+  document.getElementById('ekipmanDolapBoyu').value = ekipman ? (ekipman.dolapBoyu || '') : '';
+  document.getElementById('ekipmanDolapGozSayisi').value = ekipman ? (ekipman.dolapGozSayisi || '') : '';
+  document.getElementById('ekipmanDolapYanginTupuVarMi').value = ekipman ? (ekipman.dolapYanginTupuVarMi || '') : '';
+  document.getElementById('ekipmanDolapHortumSayisi').value = ekipman ? (ekipman.dolapHortumSayisi || '') : '';
+  document.getElementById('ekipmanDolapHortumInc').value = ekipman ? (ekipman.dolapHortumInc || '') : '';
+  _ekipmanDolapOzellikleriBolumuCiz();
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
   document.getElementById('ekipmanBakimYapan').value = ekipman ? ekipman.bakimYapan || '' : '';
   document.getElementById('ekipmanYapilanIslem').value = ekipman ? ekipman.yapilanIslem || '' : '';
@@ -1182,6 +1189,7 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanTur').onchange = () => {
     _ekipmanKontrolListesiCiz(ekipman);
     _ekipmanBasincBolumuCiz();
+    _ekipmanDolapOzellikleriBolumuCiz();
     // Kullanıcı isteği: "olması gereken malzemeler için bir envanter çıkar"
     // — yeni bir İtfaiye Aracı kaydı açılırken (düzenleme değil, liste de
     // henüz boşsa) standart malzeme listesi otomatik doldurulur; kayıtlı
@@ -1323,6 +1331,16 @@ function _ekipmanBasincBolumuCiz() {
   bolum.style.display = document.getElementById('ekipmanTur').value === 'Temiz Hava Solunum Seti' ? '' : 'none';
 }
 
+// Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil form
+// açıldığında dolabın özellikleri de girilebilsin" — bölüm görünürlüğü
+// yalnızca "Yangın Dolabı" türünde (bkz. model.js ekipmanOlustur
+// dolapEni/dolapBoyu/... notu), basınç bölümüyle AYNI desen.
+function _ekipmanDolapOzellikleriBolumuCiz() {
+  const bolum = document.getElementById('ekipmanDolapOzellikleriBolumu');
+  if (!bolum) return;
+  bolum.style.display = document.getElementById('ekipmanTur').value === 'Yangın Dolabı' ? '' : 'none';
+}
+
 function _ekipmanMalzemeBolumuCiz() {
   const bolum = document.getElementById('ekipmanMalzemeBolumu');
   if (!bolum) return;
@@ -1433,6 +1451,12 @@ function ekipmanFormGonderildi(e) {
     durum: document.getElementById('ekipmanDurum').value,
     basincTestTarihi: document.getElementById('ekipmanBasincTestTarihi').value,
     basincDegeri: document.getElementById('ekipmanBasincDegeri').value,
+    dolapEni: document.getElementById('ekipmanDolapEni').value,
+    dolapBoyu: document.getElementById('ekipmanDolapBoyu').value,
+    dolapGozSayisi: document.getElementById('ekipmanDolapGozSayisi').value,
+    dolapYanginTupuVarMi: document.getElementById('ekipmanDolapYanginTupuVarMi').value,
+    dolapHortumSayisi: document.getElementById('ekipmanDolapHortumSayisi').value,
+    dolapHortumInc: document.getElementById('ekipmanDolapHortumInc').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     bakimYapan: document.getElementById('ekipmanBakimYapan').value,
     yapilanIslem: document.getElementById('ekipmanYapilanIslem').value,

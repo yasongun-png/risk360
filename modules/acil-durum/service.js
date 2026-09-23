@@ -199,7 +199,23 @@ function ekipmanGuncelle(id, veriler) {
     fotoUrl: veriler.fotoUrl || '',
     fotoUrl2: veriler.fotoUrl2 || '',
     fotoUrl3: veriler.fotoUrl3 || '',
-    kontrolEden: (veriler.kontrolEden || '').trim()
+    kontrolEden: (veriler.kontrolEden || '').trim(),
+    // Kullanıcı raporu bağlamında fark edildi: basincTestTarihi/basincDegeri
+    // (Temiz Hava Solunum Seti) burada hiç geçmiyordu — bu yüzden mevcut bir
+    // ekipmanı düzenlerken bu alanlara yapılan değişiklik hiç kaydedilmiyordu
+    // (sadece yeni kayıt oluşturmada, bkz. model.js ekipmanOlustur, işliyordu).
+    basincTestTarihi: (veriler.basincTestTarihi || '').trim(),
+    basincDegeri: (veriler.basincDegeri || '').trim(),
+    // Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil form
+    // açıldığında dolabın özellikleri de girilebilsin" — bkz. model.js
+    // ekipmanOlustur aynı notu. AYNI nedenle burada da açıkça listelenmesi
+    // gerekir, yoksa yukarıdaki basınç alanlarıyla aynı hataya düşer.
+    dolapEni: (veriler.dolapEni || '').trim(),
+    dolapBoyu: (veriler.dolapBoyu || '').trim(),
+    dolapGozSayisi: (veriler.dolapGozSayisi || '').trim(),
+    dolapYanginTupuVarMi: ['Var', 'Yok'].includes(veriler.dolapYanginTupuVarMi) ? veriler.dolapYanginTupuVarMi : '',
+    dolapHortumSayisi: (veriler.dolapHortumSayisi || '').trim(),
+    dolapHortumInc: (veriler.dolapHortumInc || '').trim()
   });
   return { basarili: true, ekipman: guncellenen };
 }

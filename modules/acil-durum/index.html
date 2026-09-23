@@ -472,6 +472,52 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil
+             form açıldığında dolabın özellikleri de girilebilsin, boyutları
+             eni boyu kaç gözlü olduğu yangın tüpü var mı yok mu kaç hortum
+             var içinde hortumun kaç inç olduğu ... bu özellikler bir kere
+             gelecek bir daha orada kalacak" — yalnızca "Yangın Dolabı"
+             türünde görünür (bkz. ui.js _ekipmanDolapOzellikleriBolumuCiz);
+             AYNI alanlar barkodla açılan mobil formda da (bkz.
+             ekipman-kontrol-bildir.html) düzenlenebilir, ikisi de kalıcı
+             ekipman kaydına yazar (per-ziyaret kontrolCevaplari DEĞİL). -->
+        <div id="ekipmanDolapOzellikleriBolumu" style="display:none;">
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ekipmanDolapEni">Dolap Eni (cm)</label>
+              <input type="number" id="ekipmanDolapEni" min="0" placeholder="Örn: 60">
+            </div>
+            <div>
+              <label for="ekipmanDolapBoyu">Dolap Boyu (cm)</label>
+              <input type="number" id="ekipmanDolapBoyu" min="0" placeholder="Örn: 90">
+            </div>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ekipmanDolapGozSayisi">Göz Sayısı</label>
+              <input type="number" id="ekipmanDolapGozSayisi" min="0" placeholder="Örn: 2">
+            </div>
+            <div>
+              <label for="ekipmanDolapYanginTupuVarMi">İçinde Yangın Tüpü</label>
+              <select id="ekipmanDolapYanginTupuVarMi">
+                <option value="">— Belirtilmedi —</option>
+                <option value="Var">Var</option>
+                <option value="Yok">Yok</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-satir-ikili">
+            <div>
+              <label for="ekipmanDolapHortumSayisi">Hortum Sayısı</label>
+              <input type="number" id="ekipmanDolapHortumSayisi" min="0" placeholder="Örn: 1">
+            </div>
+            <div>
+              <label for="ekipmanDolapHortumInc">Hortum Çapı (inç)</label>
+              <input type="text" id="ekipmanDolapHortumInc" placeholder="Örn: 1,5">
+            </div>
+          </div>
+        </div>
+
         <label>Kontrol Kriterleri <span style="color:var(--metin-soluk); font-weight:400;">(seçilen türe göre)</span></label>
         <div id="ekipmanKontrolListesi" style="margin-bottom:14px;"></div>
 

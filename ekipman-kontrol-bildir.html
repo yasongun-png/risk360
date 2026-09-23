@@ -102,6 +102,56 @@
         </div>
 
         <form id="ekKontrolForm">
+          <!-- Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil
+               form açıldığında bir yerde dolabın özellikleri de girilebilsin
+               boyutları eni boyu kaç gözlü olduğu yangın tüpü var mı yok mu
+               kaç hortum var içinde hortumun kaç inç olduğu ... bu özellikler
+               bir kere gelecek bir daha orada kalacak istersen yine
+               değiştirebilirim" — yalnızca "Yangın Dolabı" türünde görünür
+               (bkz. _ekDolapOzellikleriBolumuCiz); modules/acil-durum/ui.js
+               ekipmanModalAc'taki (admin) AYNI alanlarla, kalıcı ekipman
+               kaydına yazılır — her ziyarette yeniden sorulan bir kontrol
+               maddesi DEĞİL. -->
+          <div id="ekDolapOzellikleriBolumu" class="gizli">
+            <div class="ek-alan" style="margin-bottom:8px;">
+              <label style="font-size:13px; font-weight:800; color:inherit;">Dolap Özellikleri</label>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapEni">Eni (cm)</label>
+                <input type="number" id="ekDolapEni" min="0" placeholder="Örn: 60">
+              </div>
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapBoyu">Boyu (cm)</label>
+                <input type="number" id="ekDolapBoyu" min="0" placeholder="Örn: 90">
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapGozSayisi">Göz Sayısı</label>
+                <input type="number" id="ekDolapGozSayisi" min="0" placeholder="Örn: 2">
+              </div>
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapYanginTupuVarMi">İçinde Yangın Tüpü</label>
+                <select id="ekDolapYanginTupuVarMi">
+                  <option value="">— Belirtilmedi —</option>
+                  <option value="Var">Var</option>
+                  <option value="Yok">Yok</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapHortumSayisi">Hortum Sayısı</label>
+                <input type="number" id="ekDolapHortumSayisi" min="0" placeholder="Örn: 1">
+              </div>
+              <div class="ek-alan" style="flex:1;">
+                <label for="ekDolapHortumInc">Hortum Çapı (inç)</label>
+                <input type="text" id="ekDolapHortumInc" placeholder="Örn: 1,5">
+              </div>
+            </div>
+          </div>
+
           <div class="ek-alan">
             <label for="ekKontrolTarihi">Kontrol Tarihi *</label>
             <input type="date" id="ekKontrolTarihi" required>
@@ -235,6 +285,24 @@
       `).join('');
     }
 
+    // Kullanıcı isteği: "yangın dolapları için barkod taratıp mobil form
+    // açıldığında dolabın özellikleri de girilebilsin ... bu özellikler bir
+    // kere gelecek bir daha orada kalacak istersen yine değiştirebilirim" —
+    // yalnızca "Yangın Dolabı" türünde görünür, kalıcı ekipman alanlarından
+    // (dolapEni/dolapBoyu/... — bkz. modules/acil-durum/model.js
+    // ekipmanOlustur) ÖNCEDEN DOLU açılır ve düzenlenebilir kalır.
+    function _ekDolapOzellikleriBolumuCiz(ekipman) {
+      const bolum = document.getElementById('ekDolapOzellikleriBolumu');
+      if (ekipman.tur !== 'Yangın Dolabı') { bolum.classList.add('gizli'); return; }
+      bolum.classList.remove('gizli');
+      document.getElementById('ekDolapEni').value = ekipman.dolapEni || '';
+      document.getElementById('ekDolapBoyu').value = ekipman.dolapBoyu || '';
+      document.getElementById('ekDolapGozSayisi').value = ekipman.dolapGozSayisi || '';
+      document.getElementById('ekDolapYanginTupuVarMi').value = ekipman.dolapYanginTupuVarMi || '';
+      document.getElementById('ekDolapHortumSayisi').value = ekipman.dolapHortumSayisi || '';
+      document.getElementById('ekDolapHortumInc').value = ekipman.dolapHortumInc || '';
+    }
+
     // Kullanıcı isteği: "bakımcı Enes Akkuş seçili gelsin tekrar girmeye
     // gerek kalmasın" — cihaza özel (localStorage), Firestore'a YAZILMAZ;
     // kota dolu/gizli gezinti gibi durumlarda sessizce yutulur (ad her
@@ -268,6 +336,7 @@
       document.getElementById('ekBakimYapan').value = _ekSonKontrolEdenGetir();
       document.getElementById('ekBulgular').value = ekipman.bulgular || '';
       document.getElementById('ekYapilanIslem').value = ekipman.yapilanIslem || '';
+      _ekDolapOzellikleriBolumuCiz(ekipman);
       _ekFotoUrlleri = [ekipman.fotoUrl || '', ekipman.fotoUrl2 || '', ekipman.fotoUrl3 || ''];
       [1, 2, 3].forEach(i => { document.getElementById('ekFoto' + i + 'CekDosya').value = ''; _ekFotoOnizlemeCiz(i); });
       const kontrolHataEl = document.getElementById('ekKontrolHata');
@@ -499,8 +568,21 @@
           const index = liste.findIndex(x => x.id === _ekBulunanEkipman.id);
           if (index === -1) throw new Error('Ekipman artık envanterde bulunamadı.');
 
+          // Kullanıcı isteği: "bu özellikler bir kere gelecek bir daha orada
+          // kalacak" — dolabın kalıcı özellikleri (per-ziyaret değil), yalnızca
+          // "Yangın Dolabı" türünde girilir/güncellenir; diğer türlerde alan
+          // görünmediğinden mevcut değer (varsa) korunur.
+          const dolapOzellikleri = _ekBulunanEkipman.tur === 'Yangın Dolabı' ? {
+            dolapEni: document.getElementById('ekDolapEni').value.trim(),
+            dolapBoyu: document.getElementById('ekDolapBoyu').value.trim(),
+            dolapGozSayisi: document.getElementById('ekDolapGozSayisi').value.trim(),
+            dolapYanginTupuVarMi: document.getElementById('ekDolapYanginTupuVarMi').value,
+            dolapHortumSayisi: document.getElementById('ekDolapHortumSayisi').value.trim(),
+            dolapHortumInc: document.getElementById('ekDolapHortumInc').value.trim()
+          } : {};
+
           const periyotGun = Number(liste[index].periyotGun || 90);
-          liste[index] = Object.assign({}, liste[index], {
+          liste[index] = Object.assign({}, liste[index], dolapOzellikleri, {
             sonKontrol: tarih,
             sonrakiKontrol: gunEkle(tarih, periyotGun),
             kontrolCevaplari: sorular.reduce((acc, s) => {
