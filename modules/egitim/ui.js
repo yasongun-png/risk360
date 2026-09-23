@@ -515,7 +515,9 @@ async function topluFormGonderildi(e) {
   const aciklama = document.getElementById('topluAciklama').value;
 
   if (!tarih) { alert('Tarih zorunludur.'); return; }
-  if (tur && tur.ikiGunluMu && !tarih2) { alert('2. gün tarihi zorunludur.'); return; }
+  // Kullanıcı isteği: "ikinci gün zorunlu olmasın" — bkz. validation.js
+  // egitimKaydiDogrula'daki aynı not; yalnızca GİRİLMİŞSE sıra kontrolü yapılır.
+  if (tur && tur.ikiGunluMu && tarih2 && tarih2 < tarih) { alert('2. gün tarihi, 1. gün tarihinden önce olamaz.'); return; }
   if (!_topluSeciliPersonelIdleri.size) { alert('En az bir personel seçin.'); return; }
 
   const veriler = Array.from(_topluSeciliPersonelIdleri).map(personelId => ({

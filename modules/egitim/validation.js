@@ -15,13 +15,13 @@ function egitimKaydiDogrula(veriler) {
     hatalar.tarih = 'Tarih zorunludur.';
   }
 
+  // Kullanıcı isteği: "ikinci gün zorunlu olmasın" — iki günlü eğitimlerde
+  // (ör. Temel İSG Eğitimi) 2. gün tarihi artık ZORUNLU değil (bazı
+  // eğitimler tek günde de yapılabiliyor); yalnızca GİRİLMİŞSE 1. günden
+  // önce olamaz kuralı hâlâ geçerli.
   const tur = egitimTuruGetir(veriler.egitimTuruId);
-  if (tur && tur.ikiGunluMu) {
-    if (!veriler.tarih2) {
-      hatalar.tarih2 = '2. gün tarihi zorunludur.';
-    } else if (veriler.tarih && veriler.tarih2 < veriler.tarih) {
-      hatalar.tarih2 = '2. gün tarihi, 1. gün tarihinden önce olamaz.';
-    }
+  if (tur && tur.ikiGunluMu && veriler.tarih2 && veriler.tarih && veriler.tarih2 < veriler.tarih) {
+    hatalar.tarih2 = '2. gün tarihi, 1. gün tarihinden önce olamaz.';
   }
 
   if (veriler.saat && (isNaN(veriler.saat) || Number(veriler.saat) < 0)) {
