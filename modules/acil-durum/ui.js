@@ -217,6 +217,7 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   { anahtar: 'dolapYanginTupuVarMi', baslik: 'İçinde Yangın Tüpü' },
   { anahtar: 'dolapHortumSayisi', baslik: 'Hortum Sayısı' },
   { anahtar: 'dolapHortumInc', baslik: 'Hortum Çapı (inç)' },
+  { anahtar: 'dolapEksikHortumSayisi', baslik: 'Eksik Hortum Sayısı' },
   { anahtar: 'dolapDegisimGerekliMi', baslik: 'Dolap Değişimi Gerekiyor mu?' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' },
   { anahtar: 'bulgular', baslik: 'Bulgular' }
@@ -1190,6 +1191,7 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanDolapYanginTupuVarMi').value = ekipman ? (ekipman.dolapYanginTupuVarMi || '') : '';
   document.getElementById('ekipmanDolapHortumSayisi').value = ekipman ? (ekipman.dolapHortumSayisi || '') : '';
   document.getElementById('ekipmanDolapHortumInc').value = ekipman ? (ekipman.dolapHortumInc || '') : '';
+  document.getElementById('ekipmanDolapEksikHortumSayisi').value = ekipman ? (ekipman.dolapEksikHortumSayisi || '') : '';
   document.getElementById('ekipmanDolapDegisimGerekliMi').value = ekipman ? (ekipman.dolapDegisimGerekliMi || '') : '';
   _ekipmanDolapOzellikleriBolumuCiz();
   document.getElementById('ekipmanBulgular').value = ekipman ? ekipman.bulgular : '';
@@ -1477,6 +1479,7 @@ function ekipmanFormGonderildi(e) {
     dolapYanginTupuVarMi: document.getElementById('ekipmanDolapYanginTupuVarMi').value,
     dolapHortumSayisi: document.getElementById('ekipmanDolapHortumSayisi').value,
     dolapHortumInc: document.getElementById('ekipmanDolapHortumInc').value,
+    dolapEksikHortumSayisi: document.getElementById('ekipmanDolapEksikHortumSayisi').value,
     dolapDegisimGerekliMi: document.getElementById('ekipmanDolapDegisimGerekliMi').value,
     bulgular: document.getElementById('ekipmanBulgular').value,
     bakimYapan: document.getElementById('ekipmanBakimYapan').value,

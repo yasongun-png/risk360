@@ -150,6 +150,12 @@
                 <input type="text" id="ekDolapHortumInc" placeholder="Örn: 1,5">
               </div>
             </div>
+            <!-- Kullanıcı isteği: "ayrıca dolap hortumlarından kaçı eksik
+                 bu da olsun" -->
+            <div class="ek-alan">
+              <label for="ekDolapEksikHortumSayisi">Eksik Hortum Sayısı</label>
+              <input type="number" id="ekDolapEksikHortumSayisi" min="0" placeholder="Örn: 0">
+            </div>
             <!-- Kullanıcı isteği: "dolap özelliklerinin altına dolap
                  değişimi gerekiyor mu evet/hayır'lı bir soru olsun" -->
             <div class="ek-alan">
@@ -311,6 +317,7 @@
       document.getElementById('ekDolapYanginTupuVarMi').value = ekipman.dolapYanginTupuVarMi || '';
       document.getElementById('ekDolapHortumSayisi').value = ekipman.dolapHortumSayisi || '';
       document.getElementById('ekDolapHortumInc').value = ekipman.dolapHortumInc || '';
+      document.getElementById('ekDolapEksikHortumSayisi').value = ekipman.dolapEksikHortumSayisi || '';
       document.getElementById('ekDolapDegisimGerekliMi').value = ekipman.dolapDegisimGerekliMi || '';
     }
 
@@ -590,6 +597,7 @@
             dolapYanginTupuVarMi: document.getElementById('ekDolapYanginTupuVarMi').value,
             dolapHortumSayisi: document.getElementById('ekDolapHortumSayisi').value.trim(),
             dolapHortumInc: document.getElementById('ekDolapHortumInc').value.trim(),
+            dolapEksikHortumSayisi: document.getElementById('ekDolapEksikHortumSayisi').value.trim(),
             dolapDegisimGerekliMi: document.getElementById('ekDolapDegisimGerekliMi').value
           } : {};
 

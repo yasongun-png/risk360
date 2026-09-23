@@ -654,6 +654,10 @@ function ekipmanOlustur(veriler) {
     dolapYanginTupuVarMi: ['Var', 'Yok'].includes(veriler.dolapYanginTupuVarMi) ? veriler.dolapYanginTupuVarMi : '',
     dolapHortumSayisi: (veriler.dolapHortumSayisi || '').trim(),
     dolapHortumInc: (veriler.dolapHortumInc || '').trim(),
+    // Kullanıcı isteği: "ayrıca dolap hortumlarından kaçı eksik bu da
+    // olsun" — dolapHortumSayisi (olması gereken toplam) ile AYNI kalıcı
+    // alan yaklaşımı; sabit bir ölçü değil, kontrolden kontrole güncellenir.
+    dolapEksikHortumSayisi: (veriler.dolapEksikHortumSayisi || '').trim(),
     // Kullanıcı isteği: "yangın dolabında dolap özelliklerinin altına dolap
     // değişimi gerekiyor mu evet/hayır'lı bir soru olsun" — diğer dolap
     // özellikleriyle AYNI yaklaşım (kalıcı alan, kontrolden kontrole
