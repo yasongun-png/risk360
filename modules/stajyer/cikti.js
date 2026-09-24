@@ -110,6 +110,14 @@ async function _sjGorselBaytlari(url) {
 }
 
 const _SJ_WORD_METIN_BOYUT = 19;
+// Kullanıcı isteği: "eğitim modülünde temel isg sertifikası ile stajdaki
+// aynı olsun ... ikinci sayfa 1 sayfaya sığsın" — bkz. modules/egitim/cikti.js
+// _egitimWordKonuHucre: arka yüzdeki yoğun Konular/Süreler tablosu için dar
+// hücre boşluğu + küçük font (ön yüzdeki bilgi tablosu etkilenmez).
+const _SJ_WORD_KONU_METIN_BOYUT = 16;
+function _sjWordKonuHucre(children, opts = {}) {
+  return new docx.TableCell({ children: Array.isArray(children) ? children : [children], margins: { top: 40, bottom: 40, left: 100, right: 100 }, ...opts });
+}
 
 // Kullanıcı isteği: "pdf de sayfaya daha fazla yayılıyor word de üstte
 // toplanıyor" — bkz. modules/egitim/cikti.js _egitimWordHucre aynı düzeltme.
@@ -206,41 +214,41 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
   const konuSatirlari = (baslik, konular, sureler) => {
     const toplam = sureler.reduce((a, b) => a + (Number(b) || 0), 0);
     return [
-      new docx.TableRow({ children: [_sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: _SJ_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+      new docx.TableRow({ children: [_sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: baslik, bold: true, size: _SJ_WORD_KONU_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
       ...konular.map((k, i) => new docx.TableRow({ children: [
-        _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _SJ_WORD_METIN_BOYUT })] })),
-        _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${sureler[i] || 0} dk`, size: _SJ_WORD_METIN_BOYUT })] }))
+        _sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _SJ_WORD_KONU_METIN_BOYUT })] })),
+        _sjWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${sureler[i] || 0} dk`, size: _SJ_WORD_KONU_METIN_BOYUT })] }))
       ]})),
       new docx.TableRow({ children: [
-        _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: `${baslik} toplamı`, bold: true, size: _SJ_WORD_METIN_BOYUT })] })),
-        _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: dakikayiSaateCevir(toplam), bold: true, size: _SJ_WORD_METIN_BOYUT })] }))
+        _sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: `${baslik} toplamı`, bold: true, size: _SJ_WORD_KONU_METIN_BOYUT })] })),
+        _sjWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: dakikayiSaateCevir(toplam), bold: true, size: _SJ_WORD_KONU_METIN_BOYUT })] }))
       ]})
     ];
   };
   const digerToplam = plan.diger.reduce((a, r) => a + (Number(r[1]) || 0), 0);
 
   const arkaCocuklari = [
-    new docx.Paragraph({ text: 'EĞİTİM KONULARI VE SÜRELERİ', heading: docx.HeadingLevel.HEADING_2 }),
-    new docx.Paragraph({ children: [new docx.TextRun({ text: `Katılımcı: ${stajyer.adSoyad}   •   Tehlike Sınıfı: ${tehlikeSinifi}   •   Toplam: ${veri.toplamSure}`, size: 16, color: '374151' })], spacing: { after: 200 } }),
+    new docx.Paragraph({ text: 'EĞİTİM KONULARI VE SÜRELERİ', heading: docx.HeadingLevel.HEADING_2, spacing: { after: 80 } }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: `Katılımcı: ${stajyer.adSoyad}   •   Tehlike Sınıfı: ${tehlikeSinifi}   •   Toplam: ${veri.toplamSure}`, size: 16, color: '374151' })], spacing: { after: 100 } }),
     new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
       rows: [
-        new docx.TableRow({ tableHeader: true, children: ['EĞİTİM KONULARI', 'SÜRE'].map(h => _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: _SJ_WORD_METIN_BOYUT, color: 'FFFFFF' })] }), { shading: { fill: '0B2C52', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
+        new docx.TableRow({ tableHeader: true, children: ['EĞİTİM KONULARI', 'SÜRE'].map(h => _sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: _SJ_WORD_KONU_METIN_BOYUT, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
         ...konuSatirlari('1. Genel Konular', SERTIFIKA_KONULARI.genel, plan.genel),
         ...konuSatirlari('2. Sağlık Konuları', SERTIFIKA_KONULARI.saglik, plan.saglik),
         ...konuSatirlari('3. Teknik Konular', SERTIFIKA_KONULARI.teknik, plan.teknik),
-        new docx.TableRow({ children: [_sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. İşe ve işyerine özgü riskler / risk değerlendirmesine dayalı konular', bold: true, size: _SJ_WORD_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
+        new docx.TableRow({ children: [_sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. İşe ve işyerine özgü riskler / risk değerlendirmesine dayalı konular', bold: true, size: _SJ_WORD_KONU_METIN_BOYUT, color: '0B2C52' })] }), { columnSpan: 2, shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })] }),
         ...plan.diger.map(([k, s]) => new docx.TableRow({ children: [
-          _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _SJ_WORD_METIN_BOYUT })] })),
-          _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${s} dk`, size: _SJ_WORD_METIN_BOYUT })] }))
+          _sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k, size: _SJ_WORD_KONU_METIN_BOYUT })] })),
+          _sjWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${s} dk`, size: _SJ_WORD_KONU_METIN_BOYUT })] }))
         ]})),
         new docx.TableRow({ children: [
-          _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. Diğer konular toplamı', bold: true, size: _SJ_WORD_METIN_BOYUT })] })),
-          _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: dakikayiSaateCevir(digerToplam), bold: true, size: _SJ_WORD_METIN_BOYUT })] }))
+          _sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: '4. Diğer konular toplamı', bold: true, size: _SJ_WORD_KONU_METIN_BOYUT })] })),
+          _sjWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: dakikayiSaateCevir(digerToplam), bold: true, size: _SJ_WORD_KONU_METIN_BOYUT })] }))
         ]}),
         new docx.TableRow({ children: [
-          _sjWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: 'GENEL TOPLAM', bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } }),
-          _sjWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: veri.toplamSure, bold: true, size: 22, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })
+          _sjWordKonuHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: 'GENEL TOPLAM', bold: true, size: 20, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } }),
+          _sjWordKonuHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: veri.toplamSure, bold: true, size: 20, color: '0B2C52' })] }), { shading: { fill: 'F1F5F9', color: 'auto', type: docx.ShadingType.CLEAR } })
         ]})
       ]
     })
@@ -250,7 +258,8 @@ async function _sjSertifikasiWordOlustur(stajyer, firma, tehlikeSinifi, veri, pl
   // Kullanıcı isteği: "yaptığın sertifikalar PDF raporu ile aynı olmalı,
   // ilk sayfa yatay ikincisi dikey olacak" — PDF'teki .egt-sayfa çerçevesiyle
   // (border:3px solid #0b2c52) aynı görünüm için sayfa kenarlığı da eklendi.
-  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '0B2C52', space: 24 };
+  // Eğitim modülündeki Temel İSG sertifikasıyla aynı: açık mavi çerçeve.
+  const cerceve = { style: docx.BorderStyle.SINGLE, size: 24, color: '8FAFD9', space: 24 };
   const cerceveKenari = { borders: { pageBorderTop: cerceve, pageBorderRight: cerceve, pageBorderBottom: cerceve, pageBorderLeft: cerceve, pageBorderDisplay: 'allPages', pageBorderOffsetFrom: 'page', pageBorderZOrder: 'front' } };
   const doc = new docx.Document({
     sections: [
