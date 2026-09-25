@@ -242,32 +242,47 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
 
   const bugun = gunAyYil(bugunIso());
   // Kullanıcı isteği: "durumunrapora koyma" -- Durum kolonu kaldırıldı.
-  const basliklar = ['Ekipman No', 'Bölüm', 'Lokasyon', 'Son Kontrol', 'Sonraki Kontrol', 'Bulgular'];
-  const SUTUN_SAYISI = basliklar.length;
+  // Kullanıcı isteği: "ekipman kontrol listesi word'e de dolap değişimi
+  // gerekli mi ekleyelim" — yalnız Yangın Dolabı grubunda, Bulgular'dan
+  // önce ek bir sütun. Sütun sayısı türe göre değiştiğinden her tür
+  // grubu artık KENDİ tablosunda basılır (tek tabloda farklı sütun
+  // sayılı satırlar Word'de kayıyordu).
+  const turKolonlari = tur => {
+    const kolonlar = [
+      ['Ekipman No', e => e.ekipmanNo], ['Bölüm', e => e.bolum], ['Lokasyon', e => e.lokasyon],
+      ['Son Kontrol', e => e.sonKontrol], ['Sonraki Kontrol', e => e.sonrakiKontrol]
+    ];
+    if (tur === 'Yangın Dolabı') kolonlar.push(['Dolap Değişimi Gerekli mi?', e => e.dolapDegisimGerekliMi]);
+    kolonlar.push(['Bulgular', e => e.bulgular]);
+    return kolonlar;
+  };
 
   // Kullanıcı isteği: "rapor başlığı olmamaış" -- düz bir liste tüm
   // türleri karışık gösterip başlıksız görünüyordu; artık tür başına ayrı
   // bir başlık (grup) satırıyla bölünüyor (Tür artık ayrı kolon değil, bu
   // grup başlığında geçiyor).
-  const satirlar = [];
-  let mevcutTur = null;
+  const gruplar = [];
+  let satirlar = null;
+  let kolonlar = null;
+  let mevcutTur;
   liste.forEach(e => {
-    if (e.tur !== mevcutTur) {
+    if (!satirlar || e.tur !== mevcutTur) {
       mevcutTur = e.tur;
+      kolonlar = turKolonlari(mevcutTur);
+      satirlar = [];
+      gruplar.push(satirlar);
       satirlar.push(new docx.TableRow({
         children: [new docx.TableCell({
-          columnSpan: SUTUN_SAYISI,
+          columnSpan: kolonlar.length,
           shading: { fill: 'D1D5DB' },
           children: [new docx.Paragraph({ children: [new docx.TextRun({ text: mevcutTur || 'Diğer', bold: true, size: 20 })] })]
         })]
       }));
-      satirlar.push(new docx.TableRow({ tableHeader: true, children: basliklar.map(b => _kfHucre(b, true)) }));
+      satirlar.push(new docx.TableRow({ tableHeader: true, children: kolonlar.map(([b]) => _kfHucre(b, true)) }));
     }
+    const SUTUN_SAYISI = kolonlar.length;
     satirlar.push(new docx.TableRow({
-      children: [
-        _kfHucre(e.ekipmanNo), _kfHucre(e.bolum), _kfHucre(e.lokasyon),
-        _kfHucre(e.sonKontrol), _kfHucre(e.sonrakiKontrol), _kfHucre(e.bulgular)
-      ]
+      children: kolonlar.map(([, deger]) => _kfHucre(deger(e)))
     }));
     // Kullanıcı isteği: "dolap malzeme listesi word de görünmeli" —
     // detaylı Kontrol Formu (Word) raporunda zaten gösteriliyordu (bkz.
@@ -287,7 +302,11 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
       }));
     }
   });
-  const tablo = new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows: satirlar });
+  const tablolar = [];
+  gruplar.forEach((rows, i) => {
+    if (i > 0) tablolar.push(new docx.Paragraph({ text: '', spacing: { after: 120 } }));
+    tablolar.push(new docx.Table({ width: { size: 100, type: docx.WidthType.PERCENTAGE }, rows }));
+  });
 
   const cocuklar = [
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: 'ACİL DURUM EKİPMAN KONTROL LİSTESİ', bold: true, size: 32, color: '000000' })] }),
@@ -299,7 +318,7 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
         size: 20
       })]
     }),
-    tablo
+    ...tablolar
   ];
 
   const dokuman = new docx.Document({
