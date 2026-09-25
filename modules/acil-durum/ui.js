@@ -211,6 +211,7 @@ const EKIPMAN_EXPORT_KOLONLARI = [
   // özellikleri şeklinde ... en son çıktı almak istiyorum" — basınç
   // sütunlarıyla AYNI mantık: yalnızca "Yangın Dolabı" türünde dolu olur,
   // diğer türlerde boş kalır (bkz. model.js ekipmanOlustur dolapEni notu).
+  { anahtar: 'dolapTipi', baslik: 'Dolap Tipi' },
   { anahtar: 'dolapEni', baslik: 'Dolap Eni (cm)' },
   { anahtar: 'dolapBoyu', baslik: 'Dolap Boyu (cm)' },
   { anahtar: 'dolapGozSayisi', baslik: 'Göz Sayısı' },
@@ -246,7 +247,11 @@ function _dolapSiparisOzetiSatirlari(liste) {
     ['Paslanma (boya/bakım)', say(e => e.dolapPaslanma === 'Var'), 'Paslanma = Var', belirtilmedi('dolapPaslanma')],
     ['Dolap değişimi', say(e => e.dolapDegisimGerekliMi === 'Evet'), 'Dolap Değişimi Gerekiyor mu? = Evet', belirtilmedi('dolapDegisimGerekliMi')],
     [],
-    ['Toplam Yangın Dolabı', dolaplar.length, '', '']
+    ['Toplam Yangın Dolabı', dolaplar.length, '', ''],
+    // Kullanıcı isteği: "yangın dolaplarına dolap tipi ekleyelim" — tip
+    // bazında dağılım (yedek parça/dolap siparişi tipe göre verilir).
+    ...YANGIN_DOLABI_TIPLERI.map(t => ['  ' + t, say(e => e.dolapTipi === t), '', '']),
+    ['  Tipi belirtilmemiş', belirtilmedi('dolapTipi'), '', '']
   ];
 }
 
@@ -1235,6 +1240,7 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanDolapHortumInc').value = ekipman ? (ekipman.dolapHortumInc || '') : '';
   document.getElementById('ekipmanDolapEksikHortumSayisi').value = ekipman ? (ekipman.dolapEksikHortumSayisi || '') : '';
   document.getElementById('ekipmanDolapDegisimGerekliMi').value = ekipman ? (ekipman.dolapDegisimGerekliMi || '') : '';
+  document.getElementById('ekipmanDolapTipi').value = ekipman ? (ekipman.dolapTipi || '') : '';
   document.getElementById('ekipmanDolapKapak').value = ekipman ? (ekipman.dolapKapak || '') : '';
   document.getElementById('ekipmanDolapLans').value = ekipman ? (ekipman.dolapLans || '') : '';
   document.getElementById('ekipmanDolapVana').value = ekipman ? (ekipman.dolapVana || '') : '';
@@ -1527,6 +1533,7 @@ function ekipmanFormGonderildi(e) {
     dolapHortumInc: document.getElementById('ekipmanDolapHortumInc').value,
     dolapEksikHortumSayisi: document.getElementById('ekipmanDolapEksikHortumSayisi').value,
     dolapDegisimGerekliMi: document.getElementById('ekipmanDolapDegisimGerekliMi').value,
+    dolapTipi: document.getElementById('ekipmanDolapTipi').value,
     dolapKapak: document.getElementById('ekipmanDolapKapak').value,
     dolapLans: document.getElementById('ekipmanDolapLans').value,
     dolapVana: document.getElementById('ekipmanDolapVana').value,

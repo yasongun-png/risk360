@@ -84,6 +84,14 @@ function acilDurumGorevTanimiGetir(ekipTuru) {
 }
 
 // "Yangın Tüpü" burada değil — kendi ayrı sekmesi/kayıt türü var (bkz. YANGIN_TUPU_TIPLERI, yanginTupuOlustur).
+// Kullanıcı isteği: "yangın dolaplarına dolap tipi ekleyelim" — değerler
+// modules/acil-durum/index.html ve ekipman-kontrol-bildir.html'deki
+// <option>'larla BİREBİR aynı olmalı (kayıtta bu metin saklanır).
+const YANGIN_DOLABI_TIPLERI = [
+  '1. Tip - Dış Alan Sahra Tipi, Çift Hortumlu, 2 inç',
+  '2. Tip - İç Alan, Tek Hortumlu, Yangın Tüplü, 1 inç',
+  '3. Tip - Dış Alan Sahra Tipi, Tek Hortumlu, 2 inç'
+];
 const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
@@ -669,6 +677,9 @@ function ekipmanOlustur(veriler) {
     // (kaç lans, kaç kapak alınacak) Excel'de doğrudan sayılabilsin — bkz.
     // ui.js _dolapSiparisOzetiSatirlari. Diğer dolap alanlarıyla AYNI kalıcı
     // alan yaklaşımı, kontrolden kontrole güncellenir.
+    // Kullanıcı isteği: "yangın dolaplarına dolap tipi ekleyelim" — sabit
+    // seçenek listesi, bkz. YANGIN_DOLABI_TIPLERI.
+    dolapTipi: YANGIN_DOLABI_TIPLERI.includes(veriler.dolapTipi) ? veriler.dolapTipi : '',
     dolapKapak: ['Var', 'Yok', 'Hasarlı'].includes(veriler.dolapKapak) ? veriler.dolapKapak : '',
     dolapLans: ['Var', 'Yok'].includes(veriler.dolapLans) ? veriler.dolapLans : '',
     dolapVana: ['Çalışıyor', 'Arızalı'].includes(veriler.dolapVana) ? veriler.dolapVana : '',

@@ -482,6 +482,17 @@
              ekipman-kontrol-bildir.html) düzenlenebilir, ikisi de kalıcı
              ekipman kaydına yazar (per-ziyaret kontrolCevaplari DEĞİL). -->
         <div id="ekipmanDolapOzellikleriBolumu" style="display:none;">
+          <!-- Kullanıcı isteği: "yangın dolaplarına dolap tipi ekleyelim" —
+               değerler model.js YANGIN_DOLABI_TIPLERI ile birebir aynı. -->
+          <div>
+            <label for="ekipmanDolapTipi">Dolap Tipi</label>
+            <select id="ekipmanDolapTipi">
+              <option value="">— Belirtilmedi —</option>
+              <option value="1. Tip - Dış Alan Sahra Tipi, Çift Hortumlu, 2 inç">1. Tip - Dış Alan Sahra Tipi, Çift Hortumlu, 2 inç</option>
+              <option value="2. Tip - İç Alan, Tek Hortumlu, Yangın Tüplü, 1 inç">2. Tip - İç Alan, Tek Hortumlu, Yangın Tüplü, 1 inç</option>
+              <option value="3. Tip - Dış Alan Sahra Tipi, Tek Hortumlu, 2 inç">3. Tip - Dış Alan Sahra Tipi, Tek Hortumlu, 2 inç</option>
+            </select>
+          </div>
           <div class="form-satir-ikili">
             <div>
               <label for="ekipmanDolapEni">Dolap Eni (cm)</label>
@@ -1166,16 +1177,16 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=14"></script>
+  <script src="model.js?v=15"></script>
   <script src="validation.js?v=3"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=16"></script>
+  <script src="service.js?v=17"></script>
   <script src="kontrol-formu-cikti.js?v=12"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
   <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
   <script src="gaz-olcum-ui.js?v=2"></script>
-  <script src="ui.js?v=27"></script>
+  <script src="ui.js?v=28"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

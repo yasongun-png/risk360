@@ -116,6 +116,17 @@
             <div class="ek-alan" style="margin-bottom:8px;">
               <label style="font-size:13px; font-weight:800; color:inherit;">Dolap Özellikleri</label>
             </div>
+            <!-- Kullanıcı isteği: "yangın dolaplarına dolap tipi ekleyelim" —
+                 değerler modules/acil-durum/model.js YANGIN_DOLABI_TIPLERI ile birebir aynı. -->
+            <div class="ek-alan">
+              <label for="ekDolapTipi">Dolap Tipi</label>
+              <select id="ekDolapTipi">
+                <option value="">— Belirtilmedi —</option>
+                <option value="1. Tip - Dış Alan Sahra Tipi, Çift Hortumlu, 2 inç">1. Tip - Dış Alan Sahra Tipi, Çift Hortumlu, 2 inç</option>
+                <option value="2. Tip - İç Alan, Tek Hortumlu, Yangın Tüplü, 1 inç">2. Tip - İç Alan, Tek Hortumlu, Yangın Tüplü, 1 inç</option>
+                <option value="3. Tip - Dış Alan Sahra Tipi, Tek Hortumlu, 2 inç">3. Tip - Dış Alan Sahra Tipi, Tek Hortumlu, 2 inç</option>
+              </select>
+            </div>
             <div style="display:flex; gap:10px;">
               <div class="ek-alan" style="flex:1;">
                 <label for="ekDolapEni">Eni (cm)</label>
@@ -296,7 +307,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="core/data.js"></script>
-  <script src="modules/acil-durum/model.js?v=14"></script>
+  <script src="modules/acil-durum/model.js?v=15"></script>
   <script>
     function _ekKacir(v) {
       return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -358,6 +369,7 @@
       document.getElementById('ekDolapHortumInc').value = ekipman.dolapHortumInc || '';
       document.getElementById('ekDolapEksikHortumSayisi').value = ekipman.dolapEksikHortumSayisi || '';
       document.getElementById('ekDolapDegisimGerekliMi').value = ekipman.dolapDegisimGerekliMi || '';
+      document.getElementById('ekDolapTipi').value = ekipman.dolapTipi || '';
       document.getElementById('ekDolapKapak').value = ekipman.dolapKapak || '';
       document.getElementById('ekDolapLans').value = ekipman.dolapLans || '';
       document.getElementById('ekDolapVana').value = ekipman.dolapVana || '';
@@ -642,6 +654,7 @@
             dolapHortumInc: document.getElementById('ekDolapHortumInc').value.trim(),
             dolapEksikHortumSayisi: document.getElementById('ekDolapEksikHortumSayisi').value.trim(),
             dolapDegisimGerekliMi: document.getElementById('ekDolapDegisimGerekliMi').value,
+            dolapTipi: document.getElementById('ekDolapTipi').value,
             dolapKapak: document.getElementById('ekDolapKapak').value,
             dolapLans: document.getElementById('ekDolapLans').value,
             dolapVana: document.getElementById('ekDolapVana').value,

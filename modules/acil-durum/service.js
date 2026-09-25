@@ -218,6 +218,7 @@ function ekipmanGuncelle(id, veriler) {
     dolapHortumInc: (veriler.dolapHortumInc || '').trim(),
     dolapEksikHortumSayisi: (veriler.dolapEksikHortumSayisi || '').trim(),
     dolapDegisimGerekliMi: ['Evet', 'Hayır'].includes(veriler.dolapDegisimGerekliMi) ? veriler.dolapDegisimGerekliMi : '',
+    dolapTipi: YANGIN_DOLABI_TIPLERI.includes(veriler.dolapTipi) ? veriler.dolapTipi : '',
     dolapKapak: ['Var', 'Yok', 'Hasarlı'].includes(veriler.dolapKapak) ? veriler.dolapKapak : '',
     dolapLans: ['Var', 'Yok'].includes(veriler.dolapLans) ? veriler.dolapLans : '',
     dolapVana: ['Çalışıyor', 'Arızalı'].includes(veriler.dolapVana) ? veriler.dolapVana : '',
