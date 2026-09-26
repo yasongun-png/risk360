@@ -22,8 +22,50 @@ function formatTarihGoster(isoTarih) {
   return `${g}.${a}.${y}`;
 }
 
+// Kullanıcı isteği: "yüklenici kayıtlarını tarihe göre de sıralayabilmek
+// istiyorum, benim kaydettiğim tarih ... sisteme kaydettiğim tarihe göre
+// seçili gelsin" — Firmalar/Personel/Araç/Kayıtlar listelerinde ortak
+// sıralama; varsayılan (ilk seçenek) kayıt tarihi, en yeni üstte.
+// Kayıt tarihi = olusturmaTarihi (saatli ISO; aynı gün eklenenler de
+// eklenme sırasına göre dizilir). Tarihi olmayan eski kayıtlar sonda kalır.
+const YK_SIRALAMA_SECENEKLERI = [
+  ['yeni', 'Kayıt Tarihi (Yeniden Eskiye)'],
+  ['eski', 'Kayıt Tarihi (Eskiden Yeniye)'],
+  ['ad', 'Ada Göre (A-Z)']
+];
+
+function _ykSirala(liste, sira, tarihAl, adAl) {
+  const kopya = liste.slice();
+  if (sira === 'ad') return kopya.sort((a, b) => String(adAl(a) || '').localeCompare(String(adAl(b) || ''), 'tr'));
+  const yon = sira === 'eski' ? 1 : -1;
+  return kopya.sort((a, b) => {
+    const ta = tarihAl(a) || '';
+    const tb = tarihAl(b) || '';
+    if (!ta || !tb) return ta ? -1 : (tb ? 1 : 0);
+    return yon * ta.localeCompare(tb);
+  });
+}
+
+function _ykSiralamaDegeri(selectId) {
+  const el = document.getElementById(selectId);
+  return el ? el.value : 'yeni';
+}
+
+function _ykKayitTarihiGoster(olusturmaTarihi) {
+  return formatTarihGoster((olusturmaTarihi || '').slice(0, 10));
+}
+
 function yukleniciSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.addEventListener('click', () => gorunumDegistir(btn.getAttribute('data-sekme'))));
+
+  document.querySelectorAll('select.yk-siralama').forEach(el => {
+    el.innerHTML = YK_SIRALAMA_SECENEKLERI.map(([deger, ad]) => `<option value="${deger}">${ad}</option>`).join('');
+    el.value = 'yeni';
+  });
+  document.getElementById('firmaSiralama').addEventListener('change', () => firmalariCiz(document.getElementById('firmaAramaKutusu').value));
+  document.getElementById('kisiSiralama').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
+  document.getElementById('aracSiralama').addEventListener('change', () => araclariCiz(document.getElementById('aracAramaKutusu').value));
+  document.getElementById('kayitSiralama').addEventListener('change', () => kayitlariCiz(document.getElementById('kayitAramaKutusu').value));
 
   // Kullanıcı isteği: "personel ekle üst sağ boşlukta büyük buton olarak
   // dursun" — hangi sekmede olunursa olunsun tek tıkla personel eklenebilsin.
@@ -483,7 +525,7 @@ function _kisiUygunlukOzetiHtml(k) {
 function firmalariCiz(aramaMetni) {
   const govde = document.getElementById('firmaTabloGovde');
   const bosDurum = document.getElementById('firmaBosDurum');
-  const firmalar = yukleniciFirmalariniGetir(aramaMetni);
+  const firmalar = _ykSirala(yukleniciFirmalariniGetir(aramaMetni), _ykSiralamaDegeri('firmaSiralama'), f => f.olusturmaTarihi, f => f.firmaAdi);
 
   govde.innerHTML = '';
   if (firmalar.length === 0) {
@@ -502,6 +544,7 @@ function firmalariCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.riskSeviyesi)}">${_ykKacir(f.riskSeviyesi)}</span></td>
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.durum)}">${_ykKacir(f.durum)}</span></td>
       <td>${_uygunlukOzetiHtml(f)}</td>
+      <td>${_ykKayitTarihiGoster(f.olusturmaTarihi)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${f.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${f.id}">Sil</button>
@@ -573,7 +616,7 @@ function kisileriCiz(aramaMetni) {
   const govde = document.getElementById('kisiTabloGovde');
   const bosDurum = document.getElementById('kisiBosDurum');
   const filtreler = { durum: document.getElementById('kisiDurumFiltre').value };
-  const kisiler = yukleniciKisileriniGetir(aramaMetni, filtreler);
+  const kisiler = _ykSirala(yukleniciKisileriniGetir(aramaMetni, filtreler), _ykSiralamaDegeri('kisiSiralama'), k => k.olusturmaTarihi, k => k.adSoyad);
 
   govde.innerHTML = '';
   if (kisiler.length === 0) {
@@ -594,6 +637,7 @@ function kisileriCiz(aramaMetni) {
       <td>${_ykKacir(k.firmaAdi)}</td>
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(k.durumGoruntu)}">${_ykKacir(k.durumGoruntu)}</span>${k.kritikSebep ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">${_ykKacir(k.kritikSebep.sebep)}${k.eksikBelgeSayisi > 1 ? ` (+${k.eksikBelgeSayisi - 1} diğer)` : ''}</div>` : ''}</td>
       <td>${sonTarihMetni}</td>
+      <td>${_ykKayitTarihiGoster(k.olusturmaTarihi)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
@@ -703,7 +747,7 @@ function _aracBelgeRozetHtml(varMi) {
 function araclariCiz(aramaMetni) {
   const govde = document.getElementById('aracTabloGovde');
   const bosDurum = document.getElementById('aracBosDurum');
-  const araclar = yukleniciAraclariniGetir(aramaMetni);
+  const araclar = _ykSirala(yukleniciAraclariniGetir(aramaMetni), _ykSiralamaDegeri('aracSiralama'), a => a.olusturmaTarihi, a => a.firmaAdi);
 
   govde.innerHTML = '';
   if (araclar.length === 0) {
@@ -727,6 +771,7 @@ function araclariCiz(aramaMetni) {
       <td>${_aracBelgeRozetHtml(a.zmsOk)}</td>
       <td>${_aracBelgeRozetHtml(a.tuvOk)}</td>
       <td>${a.uygunMu ? '<span class="genel-rozet rozet-uygun">Uygun</span>' : '<span class="genel-rozet rozet-uygun-degil">Uygun Değil</span>'}</td>
+      <td>${_ykKayitTarihiGoster(a.olusturmaTarihi)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${a.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${a.id}">Sil</button>
@@ -879,7 +924,7 @@ function ziyaretciFormGonderildi(e) {
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('kayitTabloGovde');
   const bosDurum = document.getElementById('kayitBosDurum');
-  const kayitlar = yukleniciKayitlariniGetir(aramaMetni);
+  const kayitlar = _ykSirala(yukleniciKayitlariniGetir(aramaMetni), _ykSiralamaDegeri('kayitSiralama'), r => r.kaynak && r.kaynak.olusturmaTarihi, r => r.kimlik);
   document.getElementById('kayitTumunuSecCheckbox').checked = false;
 
   govde.innerHTML = '';

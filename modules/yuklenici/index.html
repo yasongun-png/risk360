@@ -91,6 +91,7 @@
       <div class="arac-cubugu">
         <input type="text" id="firmaAramaKutusu" class="arama-kutusu" placeholder="Firma no veya adına göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="firmaSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
           <button type="button" class="ikincil" id="firmaSablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="firmaIceAktarBtn">İçe Aktar</button>
           <input type="file" id="firmaIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
@@ -100,7 +101,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Firma No</th><th>Firma Adı</th><th>Yetkili</th><th>Risk</th><th>Durum</th><th>Uygunluk</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Firma No</th><th>Firma Adı</th><th>Yetkili</th><th>Risk</th><th>Durum</th><th>Uygunluk</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
           <tbody id="firmaTabloGovde"></tbody>
         </table>
       </div>
@@ -111,6 +112,7 @@
       <div class="arac-cubugu">
         <input type="text" id="kisiAramaKutusu" class="arama-kutusu" placeholder="Personel no, ad veya firmaya göre ara...">
         <div style="display:flex; gap:8px;">
+          <select id="kisiSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
           <select id="kisiDurumFiltre" style="width:auto; margin:0;">
             <option value="">Tüm Durumlar</option>
           </select>
@@ -132,7 +134,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Personel No</th><th>Ad Soyad</th><th>Firma</th><th>Durum</th><th>Girebileceği Son Tarih</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Personel No</th><th>Ad Soyad</th><th>Firma</th><th>Durum</th><th>Girebileceği Son Tarih</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
           <tbody id="kisiTabloGovde"></tbody>
         </table>
       </div>
@@ -143,12 +145,13 @@
       <div class="arac-cubugu">
         <input type="text" id="aracAramaKutusu" class="arama-kutusu" placeholder="Plaka/seri no veya firmaya göre ara...">
         <div style="display:flex; gap:8px;">
+          <select id="aracSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
           <button type="button" class="birincil" id="yeniAracBtn" style="width:auto;">+ Araç / Ekipman Ekle</button>
         </div>
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Araç No</th><th>Firma</th><th>Tür</th><th>Plaka / Seri No</th><th>PTM</th><th>Ruhsat</th><th>ZMS</th><th>TÜVTÜRK</th><th>Genel Durum</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Araç No</th><th>Firma</th><th>Tür</th><th>Plaka / Seri No</th><th>PTM</th><th>Ruhsat</th><th>ZMS</th><th>TÜVTÜRK</th><th>Genel Durum</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
           <tbody id="aracTabloGovde"></tbody>
         </table>
       </div>
@@ -194,6 +197,7 @@
       <div class="arac-cubugu">
         <input type="text" id="kayitAramaKutusu" class="arama-kutusu" placeholder="Firma veya ad/kimliğe göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="kayitSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
           <button type="button" class="ikincil" id="kayitTumExcelBtn">Tüm Kayıtları Excel'e Aktar</button>
           <button type="button" class="ikincil" id="kayitUygunExcelBtn">Tam Uygun Olanlar (Excel)</button>
           <button type="button" class="ikincil" id="kayitUygunsuzExcelBtn">Uygun Olmayanlar (Excel)</button>
@@ -457,8 +461,8 @@
   <script src="model.js"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
-  <script src="service.js"></script>
-  <script src="ui.js"></script>
+  <script src="service.js?v=2"></script>
+  <script src="ui.js?v=2"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js"></script>
   <script>
