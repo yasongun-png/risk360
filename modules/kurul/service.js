@@ -999,9 +999,19 @@ function toplantiAylikEgitimleriGetir(toplanti) {
     return tarih1 === ay || tarih2 === ay;
   });
 
+  // Kullanıcı raporu: firmaya özel (Eğitim → Türleri Yönet ile eklenen)
+  // eğitim türlerinde ad yerine "ozel_xxxx" kimliği görünüyordu — egitim/
+  // model.js'teki özel tür listesi yalnızca egitimTurleriniAyarla(firma)
+  // çağrılınca dolar ve kurul sayfası bunu hiç çağırmıyordu (bkz.
+  // personel/ui.js'teki aynı çağrı). Tür silinmişse kimlik yerine genel ad.
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  if (typeof egitimTurleriniAyarla === 'function') egitimTurleriniAyarla(firma);
+  const ozelTurler = firma && Array.isArray(firma.ozelEgitimTurleri) ? firma.ozelEgitimTurleri : [];
   const gruplar = new Map();
   buAyKayitlari.forEach(k => {
-    const tur = (typeof egitimTuruGetir === 'function' && egitimTuruGetir(k.egitimTuruId)) || { ad: k.egitimTuruId || 'Eğitim' };
+    const tur = (typeof egitimTuruGetir === 'function' && egitimTuruGetir(k.egitimTuruId))
+      || ozelTurler.find(t => t.id === k.egitimTuruId)
+      || { ad: /^ozel_/.test(k.egitimTuruId || '') ? 'Diğer Eğitim' : (k.egitimTuruId || 'Eğitim') };
     const personel = personelListesi.find(p => p.id === k.personelId);
     const anahtar = k.egitimTuruId + '|' + (k.tarih || '') + '|' + (k.tarih2 || '');
     if (!gruplar.has(anahtar)) {
