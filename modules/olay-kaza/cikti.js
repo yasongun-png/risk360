@@ -118,6 +118,36 @@ function _okWordBolumleriBirlestir(bolumler) {
   return cocuklar;
 }
 
+// Kullanıcı isteği: "olay ramak kala bildirimine fotoğraf ekledim ancak
+// fotoğraf olay araştırma raporunda yok" — olayYeriFotograflari (fotoref:,
+// data: ya da eski Storage URL'i) docx ImageRun'ın istediği ham byte +
+// en/boy oranını koruyan ölçüye çevrilir. Bkz. modules/acil-durum/
+// kontrol-formu-cikti.js _kfFotoVerisiGetir ile aynı desen. Çözülemeyen
+// fotoğraf null döner, rapor onsuz üretilmeye devam eder.
+async function _okFotoVerisiGetir(url, maksGenislik) {
+  if (!url) return null;
+  try {
+    const cozulmus = await fotoBuyukCoz(url);
+    if (!cozulmus) return null;
+    const blob = await (await fetch(cozulmus)).blob();
+    const olcu = await new Promise((coz, red) => {
+      const img = new Image();
+      img.onload = () => coz({ genislik: img.naturalWidth, yukseklik: img.naturalHeight });
+      img.onerror = red;
+      img.src = URL.createObjectURL(blob);
+    });
+    const oran = olcu.genislik > maksGenislik ? maksGenislik / olcu.genislik : 1;
+    return {
+      veri: new Uint8Array(await blob.arrayBuffer()),
+      genislik: Math.round(olcu.genislik * oran),
+      yukseklik: Math.round(olcu.yukseklik * oran)
+    };
+  } catch (e) {
+    console.error('Olay fotoğrafı Word raporuna eklenemedi:', e);
+    return null;
+  }
+}
+
 async function kazaRaporuWordOlustur(id) {
   const k = olayKaydiIdIleGetirRepo(id);
   if (!k) return;
@@ -169,6 +199,19 @@ async function kazaRaporuWordOlustur(id) {
     ]
   })];
 
+  // Fotoğraf sayısına göre genişlik: 1'de büyük, 2/3'te yan yana sığacak
+  // şekilde küçülür (dikey A4, 0,5" kenar boşluğu).
+  const fotoUrlleri = (Array.isArray(k.olayYeriFotograflari) ? k.olayYeriFotograflari : []).map(f => f && f.url).filter(Boolean).slice(0, 3);
+  const fotoGenislik = { 1: 420, 2: 320, 3: 215 }[fotoUrlleri.length] || 215;
+  const fotolar = (await Promise.all(fotoUrlleri.map(u => _okFotoVerisiGetir(u, fotoGenislik)))).filter(Boolean);
+  const fotoDocx = fotolar.length ? [new docx.Paragraph({
+    alignment: docx.AlignmentType.CENTER,
+    children: fotolar.flatMap((f, i) => [
+      new docx.ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } }),
+      ...(i < fotolar.length - 1 ? [new docx.TextRun({ text: '   ' })] : [])
+    ])
+  })] : [];
+
   const bolumler = [
     { baslik: 'Genel Bilgiler', doluMu: true, docx: [new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
@@ -186,6 +229,7 @@ async function kazaRaporuWordOlustur(id) {
       _okWordMetinKutusu(k.aciklama),
       ...(k.potansiyelSonuc ? [_okWordBaslik('Potansiyel Sonuç'), _okWordMetinKutusu(k.potansiyelSonuc)] : [])
     ] },
+    { baslik: 'Olay Yeri Fotoğrafları', doluMu: fotolar.length > 0, docx: fotoDocx },
     { baslik: 'Olay Kronolojisi', doluMu: kronoloji.length > 0, docx: kronolojiDocx },
     { baslik: 'Tanık İfadeleri', doluMu: tanikIfadeleri.length > 0, docx: tanikDocx },
     { baslik: '5N1K Analizi', doluMu: analiz5n1kDoluMu, docx: analiz5n1kDocx },
