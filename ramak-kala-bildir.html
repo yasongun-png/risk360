@@ -230,7 +230,10 @@
 
         const adSoyad = document.getElementById('rkAdSoyad').value.trim();
         const simdi = new Date();
-        const aciklama = '(Barkod ile bildirildi' + (adSoyad ? ' — ' + adSoyad : ' — isim belirtilmedi') + ') ' + aciklamaHam;
+        // Kullanıcı isteği: "(Barkod ile bildirildi — isim belirtilmedi) bu
+        // bilgilere gerek yok" — açıklama olduğu gibi kaydedilir; ad soyad
+        // zaten ayrı adSoyad alanında.
+        const aciklama = aciklamaHam;
 
         const gonderBtn = document.getElementById('rkGonderBtn');
         gonderBtn.disabled = true;

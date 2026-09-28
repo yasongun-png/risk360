@@ -672,6 +672,15 @@ function fotoSikistir(dosya, maxKenar, kalite) {
 // fotoğraf kendi küçük Firestore belgesine yazılır, kayıt sadece "fotoref:<id>"
 // biçiminde bir referans tutar -- böylece modül belgesinin boyutu kayıt
 // sayısıyla değil fotoğraf sayısıyla değil, sadece metin veri boyutuyla artar.
+// Kullanıcı isteği: "(Barkod ile bildirildi — isim belirtilmedi) bu
+// bilgilere gerek yok" — ramak-kala-bildir.html eskiden olay açıklamasının
+// başına bu ön eki yazıyordu (ad soyad zaten ayrı adSoyad alanında). Yeni
+// kayıtlarda artık yazılmıyor; eski kayıtlarda okunurken temizlenir (bkz.
+// modules/olay-kaza/repository.js, modules/kurul/service.js).
+function olayAciklamaOnEkiTemizle(metin) {
+  return String(metin || '').replace(/^\s*\(Barkod ile bildirildi[^)]*\)\s*/, '');
+}
+
 const FOTO_REF_ONEKI = 'fotoref:';
 
 async function fotoBuyukKaydet(dataUrl, firmaSlug) {

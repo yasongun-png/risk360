@@ -3,8 +3,19 @@
 function _olayAnahtari() { return tenantAnahtar('olay_kaza_kayitlari'); }
 function _ayarAnahtari() { return tenantAnahtar('olay_kaza_ayarlari'); }
 
+// Eski barkod bildirimlerindeki "(Barkod ile bildirildi — ...)" açıklama ön
+// eki burada temizlenir (bkz. core/data.js olayAciklamaOnEkiTemizle); kayıt
+// bir sonraki güncellemede temizlenmiş haliyle geri yazılır.
 function olayKayitlariTumunuGetir() {
-  return oku(_olayAnahtari(), []);
+  const liste = oku(_olayAnahtari(), []);
+  // core/data.js önbellekte eski sürüm kalmışsa fonksiyon yoktur — o
+  // durumda liste olduğu gibi döner, modül çalışmaya devam eder.
+  if (typeof olayAciklamaOnEkiTemizle !== 'function') return liste;
+  return liste.map(k => {
+    if (!k || typeof k.aciklama !== 'string') return k;
+    const temiz = olayAciklamaOnEkiTemizle(k.aciklama);
+    return temiz === k.aciklama ? k : Object.assign({}, k, { aciklama: temiz });
+  });
 }
 
 function _olayKaydet(liste) {

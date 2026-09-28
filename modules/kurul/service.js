@@ -444,7 +444,7 @@ function _kurulOtomatikOlaylariGetir(toplanti) {
       yer: k.kazaYeri || '',
       birim: k.bolum || '',
       adSoyad: k.adSoyad || '',
-      olusSekli: k.aciklama || k.olayOzeti || '',
+      olusSekli: (typeof olayAciklamaOnEkiTemizle === 'function' ? olayAciklamaOnEkiTemizle(k.aciklama) : k.aciklama) || k.olayOzeti || '',
       kokNeden: k.temelNeden || k.dogrudanNeden || '',
       isGunuKaybi: k.kayipGun != null && k.kayipGun !== '' ? String(k.kayipGun) : '',
       // Olay/Kaza kaydının "Olay Yeri Fotoğrafları" (en fazla 3) buraya
