@@ -174,8 +174,8 @@ function uygunsuzlukSayfasiniBaslat() {
   });
   // Kullanıcı isteği: "uygunsuzluk word çok güzel pdf raporunu kaldır" —
   // ekrandaki "PDF Raporu" düğmesi kaldırıldı, yerini bu Word raporu aldı
-  // (bkz. cikti.js uygunsuzlukRaporuWordOlustur). uygunsuzlukRaporuPdfOlustur
-  // yalnızca Mail Gönder'in "Uygunsuzluk Listesi" linki için duruyor.
+  // (bkz. cikti.js uygunsuzlukRaporuWordOlustur); Mail Gönder'in
+  // "Uygunsuzluk Listesi" linki de aynı Word dosyasını kullanır.
   document.getElementById('wordRaporBtn').addEventListener('click', async () => {
     const btn = document.getElementById('wordRaporBtn');
     btn.disabled = true;
@@ -610,15 +610,17 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
 
     // Kullanıcı isteği: "altında bir de pdf raporunu ekleyelim, uygunsuzluk
     // listesi indir olarak görünsün" -- tablodaki O ANKİ arama/filtreyle
-    // (tam "PDF Raporu" düğmesiyle aynı) üretilen liste raporu, ikinci bir
-    // Storage linki olarak ayrı bir değişkende (liste_pdf_url) gönderilir.
+    // üretilen liste raporu, ikinci bir Storage linki olarak ayrı bir
+    // değişkende (liste_pdf_url) gönderilir. Kullanıcı isteği: "maili word
+    // yapalım" — artık "Word Raporu" düğmesiyle aynı .docx dosyası; EmailJS
+    // şablonu bozulmasın diye değişken adı liste_pdf_url olarak kaldı.
     // Bu link olmadan da mail gönderilebilir (opsiyonel, sessizce atlanır).
     btn.textContent = 'Liste raporu hazırlanıyor...';
     let listePdfUrl = '';
     try {
-      listePdfUrl = await uygunsuzlukListesiPdfUrlOlustur() || '';
+      listePdfUrl = await uygunsuzlukListesiWordUrlOlustur() || '';
     } catch (listeHata) {
-      console.error('Liste PDF linki oluşturulamadı:', listeHata);
+      console.error('Liste Word linki oluşturulamadı:', listeHata);
     }
 
     btn.textContent = 'Gönderiliyor...';
