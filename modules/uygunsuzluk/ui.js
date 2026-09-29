@@ -188,6 +188,10 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniKaydetBtn').addEventListener('click', raporMetniKaydet);
   document.getElementById('mailMetniBtn').addEventListener('click', mailMetniModalAc);
+  document.getElementById('listeMailBtn').addEventListener('click', listeMailModalAc);
+  document.getElementById('listeMailIptalBtn').addEventListener('click', listeMailModalKapat);
+  document.getElementById('listeMailKapatBtn').addEventListener('click', listeMailModalKapat);
+  document.getElementById('listeMailGonderBtn').addEventListener('click', listeMailGonder);
   document.getElementById('mailMetniKapatBtn').addEventListener('click', mailMetniModalKapat);
   document.getElementById('mailMetniIptalBtn').addEventListener('click', mailMetniModalKapat);
   document.getElementById('mailMetniKaydetBtn').addEventListener('click', mailMetniKaydet);
@@ -647,6 +651,135 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
   } finally {
     btn.disabled = false;
     btn.textContent = eskiMetin;
+  }
+}
+
+// ---- Yalnız listeyi (Word) mail gönder ----
+// Kullanıcı isteği: "sadece uygunsuzluk listesini word olarak mail
+// gönderebileyim, bunun mail yazısı da ayrı olacak" — satırdaki tek kayıt
+// mailinden (_uygunsuzlukMailGonderTiklandi) bağımsız: alıcılar pencerede
+// seçilir, metin/alıcılar ayrı bir anahtarda hatırlanır. Aynı EmailJS
+// şablonu kullanılır; form linki (pdf_url) boş, liste linki liste_pdf_url.
+const LISTE_MAIL_METNI_VARSAYILANI = [
+  'Sayın İlgili,',
+  '',
+  '{tarih} tarihli uygunsuzluk listesi bilgilerinize sunulmuştur.',
+  '',
+  'Toplam: {toplam}   Açık: {acik}   Kapalı: {kapali}',
+  '',
+  'Listeyi aşağıdaki bağlantıdan indirebilirsiniz.'
+].join('\n');
+
+function _listeMailAnahtari() { return tenantAnahtar('uygunsuzluk_liste_mail'); }
+
+function _listeMailAyarGetir() {
+  return Object.assign({ metin: LISTE_MAIL_METNI_VARSAYILANI, kime: '', bilgi: '' }, oku(_listeMailAnahtari(), {}));
+}
+
+function _listeMailKayitlari() {
+  return uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, _usAktifFiltreleriGetir());
+}
+
+// _ucBilgiSecimCiz ile aynı mantık (E-posta Listesi'nden onay kutuları +
+// listede olmayan adresler "ek" kutusuna), iki ayrı kutu için genel sürüm.
+function _listeMailSecimCiz(kutuId, ekId, mevcutStr) {
+  const kutu = document.getElementById(kutuId);
+  const harita = ilgiliEpostaListesiGetir();
+  const secili = new Set((mevcutStr || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+  const haritaAdresleri = new Set();
+  harita.forEach(h => h.eposta.split(',').map(e => e.trim().toLowerCase()).filter(Boolean).forEach(e => haritaAdresleri.add(e)));
+  kutu.innerHTML = harita.length
+    ? harita.map(h => {
+        const isaretli = h.eposta.split(',').map(e => e.trim().toLowerCase()).some(e => secili.has(e));
+        return `<label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:12px; padding:2px 0;">
+          <input type="checkbox" data-liste-mail-secim value="${_usKacir(h.eposta)}" ${isaretli ? 'checked' : ''} style="width:auto; margin:0;">
+          ${_usKacir(h.ad)} <span style="color:var(--metin-soluk);">(${_usKacir(h.eposta)})</span>
+        </label>`;
+      }).join('')
+    : '<div style="font-size:12px; color:var(--metin-soluk);">E-posta Listesi boş — adresleri aşağıya elle yazabilirsiniz.</div>';
+  document.getElementById(ekId).value = [...secili].filter(e => !haritaAdresleri.has(e)).join(', ');
+}
+
+function _listeMailDegerTopla(kutuId, ekId) {
+  const secilenler = Array.from(document.querySelectorAll(`#${kutuId} [data-liste-mail-secim]:checked`)).map(cb => cb.value);
+  const ek = (document.getElementById(ekId).value || '').split(',').map(s => s.trim()).filter(Boolean);
+  return [...new Set([...secilenler, ...ek])].join(', ');
+}
+
+function listeMailModalAc() {
+  if (!epostaAktifMi()) {
+    alert('E-posta bildirimleri henüz yapılandırılmamış. Ayarlar sayfasından EmailJS bilgilerini girip etkinleştirin.');
+    return;
+  }
+  const kayitlar = _listeMailKayitlari();
+  if (!kayitlar.length) { alert('Seçili konu/filtre için gönderilecek kayıt yok.'); return; }
+  const kapali = kayitlar.filter(k => k.durum === 'Kapalı').length;
+  const ayar = _listeMailAyarGetir();
+  _listeMailSecimCiz('listeMailKimeSecim', 'listeMailKimeEk', ayar.kime);
+  _listeMailSecimCiz('listeMailBilgiSecim', 'listeMailBilgiEk', ayar.bilgi);
+  document.getElementById('listeMailKonu').value = `Uygunsuzluk Listesi — ${gunAyYil(bugunIso())}`;
+  document.getElementById('listeMailMetni').value = ayar.metin;
+  document.getElementById('listeMailKayitSayisi').textContent = `Şu an listede ${kayitlar.length} kayıt var (${kayitlar.length - kapali} açık, ${kapali} kapalı).`;
+  const hata = document.getElementById('listeMailHata');
+  hata.textContent = '';
+  hata.classList.remove('gorunur');
+  document.getElementById('listeMailKatmani').classList.add('acik');
+}
+
+function listeMailModalKapat() {
+  document.getElementById('listeMailKatmani').classList.remove('acik');
+}
+
+async function listeMailGonder() {
+  const hata = document.getElementById('listeMailHata');
+  const hataGoster = m => { hata.textContent = m; hata.classList.add('gorunur'); };
+  const kime = _listeMailDegerTopla('listeMailKimeSecim', 'listeMailKimeEk');
+  const bilgi = _listeMailDegerTopla('listeMailBilgiSecim', 'listeMailBilgiEk');
+  const konu = document.getElementById('listeMailKonu').value.trim() || `Uygunsuzluk Listesi — ${gunAyYil(bugunIso())}`;
+  const metin = document.getElementById('listeMailMetni').value.trim() || LISTE_MAIL_METNI_VARSAYILANI;
+  if (!kime) { hataGoster('En az bir alıcı seçin veya yazın (Kime).'); return; }
+
+  // Kullanıcı isteği (tek kayıt maili için): "mail atma bana önce emin
+  // misin diye sormalı" — gönderilen mail geri alınamaz.
+  if (!(await onayModali(`Uygunsuzluk listesi ${kime} adresine${bilgi ? ' (bilgi: ' + bilgi + ')' : ''} gönderilsin mi?`, 'Gönder'))) return;
+
+  // Metin ve alıcılar bir sonraki gönderim için hatırlanır (ayrı anahtar —
+  // tek kayıt mail metnini etkilemez).
+  yaz(_listeMailAnahtari(), { metin, kime, bilgi });
+
+  const kayitlar = _listeMailKayitlari();
+  const kapali = kayitlar.filter(k => k.durum === 'Kapalı').length;
+  const yerTutucular = {
+    tarih: gunAyYil(bugunIso()),
+    konu: raporMetniGetir().konu || '',
+    toplam: String(kayitlar.length),
+    acik: String(kayitlar.length - kapali),
+    kapali: String(kapali)
+  };
+  const mesaj = metin.replace(/\{(\w+)\}/g, (tam, ad) => Object.prototype.hasOwnProperty.call(yerTutucular, ad) ? yerTutucular[ad] : tam);
+
+  const btn = document.getElementById('listeMailGonderBtn');
+  btn.disabled = true;
+  try {
+    btn.textContent = 'Word hazırlanıyor...';
+    let listeUrl = '';
+    try {
+      listeUrl = await uygunsuzlukListesiWordUrlOlustur() || '';
+    } catch (e) {
+      console.error('Liste Word linki oluşturulamadı:', e);
+    }
+    // Bu mailin tek amacı liste dosyası — link oluşmadıysa göndermek anlamsız.
+    if (!listeUrl) { hataGoster('Word raporu buluta yüklenemedi (Storage yapılandırılmamış veya bağlantı sorunu). Mail gönderilmedi.'); return; }
+    btn.textContent = 'Gönderiliyor...';
+    await epostaGonder({ to_email: kime, bilgi_email: bilgi, konu, mesaj, pdf_url: '', liste_pdf_url: listeUrl });
+    listeMailModalKapat();
+    alert(`Uygunsuzluk listesi gönderildi: ${kime}${bilgi ? ' (bilgi: ' + bilgi + ')' : ''}`);
+  } catch (e) {
+    console.error(e);
+    hataGoster('Mail gönderilemedi: ' + (e.message || e.text || e));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Gönder';
   }
 }
 

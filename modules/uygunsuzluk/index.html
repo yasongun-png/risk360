@@ -80,6 +80,7 @@
           <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
           <button type="button" class="ikincil" id="wordRaporBtn">Word Raporu</button>
+          <button type="button" class="ikincil" id="listeMailBtn">✉️ Listeyi Mail Gönder</button>
           <button type="button" class="ikincil" id="raporMetniBtn">Rapor Kapak Metni</button>
           <button type="button" class="ikincil" id="mailMetniBtn">✉️ Mail Metni</button>
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
@@ -128,6 +129,42 @@
         <button type="button" class="birincil" id="raporMetniKaydetBtn">Kaydet</button>
       </div>
       <button type="button" class="tablo-buton" id="raporMetniKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- Kullanıcı isteği: "sadece uygunsuzluk listesini word olarak mail
+       gönderebileyim, bunun mail yazısı da ayrı olacak" — tek kayıt maili
+       (satırdaki ✉️ Mail Gönder) ile karıştırılmasın diye ayrı pencere,
+       ayrı saklanan metin (bkz. ui.js listeMailModalAc). -->
+  <div class="modal-katman" id="listeMailKatmani">
+    <div class="modal-kutu" style="max-width:600px;">
+      <h3>Uygunsuzluk Listesini Mail Gönder</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:4px;">
+        Tablodaki O ANKİ konu/filtre/aramayla üretilen Word raporu (Word Raporu
+        düğmesiyle aynı dosya) mailde "Uygunsuzluk Listesi İndir" linki olarak gider.
+        <span id="listeMailKayitSayisi"></span>
+      </p>
+      <label>Kime</label>
+      <div id="listeMailKimeSecim" style="max-height:120px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:6px;"></div>
+      <input type="text" id="listeMailKimeEk" placeholder="Ek adres(ler), virgülle ayırın">
+      <label style="margin-top:10px;">Bilgi (CC)</label>
+      <div id="listeMailBilgiSecim" style="max-height:120px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:6px;"></div>
+      <input type="text" id="listeMailBilgiEk" placeholder="Ek adres(ler), virgülle ayırın">
+      <label for="listeMailKonu" style="margin-top:10px;">Konu</label>
+      <input type="text" id="listeMailKonu">
+      <label for="listeMailMetni" style="margin-top:10px;">Mail Metni</label>
+      <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 6px;">
+        Tek kayıt mailinden ayrı saklanır; gönderdiğinizde bir sonraki sefer için
+        hatırlanır. Yer tutucular: <code>{tarih}</code>, <code>{konu}</code>,
+        <code>{toplam}</code>, <code>{acik}</code>, <code>{kapali}</code>.
+      </p>
+      <textarea id="listeMailMetni" rows="9"></textarea>
+      <div class="hata-mesaji" id="listeMailHata"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="listeMailIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="listeMailGonderBtn">Gönder</button>
+      </div>
+      <button type="button" class="tablo-buton" id="listeMailKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -430,7 +467,7 @@
   <script src="validation.js"></script>
   <script src="repository.js"></script>
   <script src="service.js"></script>
-  <script src="ui.js?v=4"></script>
+  <script src="ui.js?v=5"></script>
   <script src="cikti.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
