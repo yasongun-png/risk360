@@ -317,6 +317,14 @@
       <form id="ekipForm">
         <label for="ekipPersonelId">Personel</label>
         <select id="ekipPersonelId"></select>
+        <!-- Kullanıcı isteği: "fabrika personeli dışında isim ve bölüm girerek
+             atama yapmak istiyorum" — listede "elle gir" seçilince görünür;
+             Sicil/Bölüm/Görev alanları da o zaman yazılabilir olur (bkz.
+             ui.js ekipPersonelSecildi). -->
+        <div id="ekipDisKisiAlani" style="display:none;">
+          <label for="ekipDisAdSoyad">Ad Soyad</label>
+          <input type="text" id="ekipDisAdSoyad" placeholder="Örn: Ahmet Yılmaz (yüklenici / misafir personel)">
+        </div>
         <div class="alan-hatasi" id="ekipPersonelAdiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
         <label for="ekipSicilNo">Sicil No</label>
@@ -1178,7 +1186,7 @@
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
   <script src="model.js?v=15"></script>
-  <script src="validation.js?v=3"></script>
+  <script src="validation.js?v=4"></script>
   <script src="repository.js?v=5"></script>
   <script src="service.js?v=17"></script>
   <script src="kontrol-formu-cikti.js?v=13"></script>
@@ -1186,7 +1194,7 @@
   <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
   <script src="gaz-olcum-ui.js?v=2"></script>
-  <script src="ui.js?v=28"></script>
+  <script src="ui.js?v=29"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

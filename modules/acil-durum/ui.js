@@ -546,8 +546,28 @@ function ekipleriCiz(aramaMetni) {
   }));
 }
 
+// Kullanıcı isteği: "acil durum ekiplerine yeni ekip üyesi eklerken fabrika
+// personeli dışında isim ve bölüm girerek atama yapmak istiyorum" — Personel
+// listesindeki bu özel seçenek seçilince ad soyad elle yazılır, Sicil/Bölüm/
+// Görev kilidi açılır; kayıt personelId'siz saklanır (Excel içe aktarımıyla
+// gelen üyeler gibi — başka hiçbir yer personelId'ye dayanmıyor).
+const EKIP_DIS_KISI_DEGERI = '__dis_kisi__';
+
+function _ekipDisKisiModunuAyarla(disMi) {
+  document.getElementById('ekipDisKisiAlani').style.display = disMi ? '' : 'none';
+  ['ekipSicilNo', 'ekipBolum', 'ekipGorev'].forEach(id => { document.getElementById(id).readOnly = !disMi; });
+}
+
 function ekipPersonelSecildi() {
   const secim = document.getElementById('ekipPersonelId');
+  const disMi = secim.value === EKIP_DIS_KISI_DEGERI;
+  _ekipDisKisiModunuAyarla(disMi);
+  if (disMi) {
+    // Personelden gelmiş değerler dış kişiye taşınmasın diye temizlenir.
+    ['ekipSicilNo', 'ekipBolum', 'ekipGorev'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('ekipDisAdSoyad').focus();
+    return;
+  }
   const personel = personelIdIleGetirRepo(secim.value);
   document.getElementById('ekipSicilNo').value = personel ? personel.sicilNo : '';
   document.getElementById('ekipBolum').value = personel ? personel.bolum : '';
@@ -559,8 +579,18 @@ function ekipModalAc(uye) {
   document.getElementById('ekipModalBaslik').textContent = uye ? 'Ekip Üyesini Düzenle' : 'Yeni Ekip Üyesi';
 
   const personeller = personelleriGetir('', false);
+  // Personele bağlı olmayan (elle girilmiş, Excel'den gelmiş ya da bağlı
+  // olduğu personel kaydı silinmiş) mevcut bir üye "elle gir" modunda açılır.
+  // Bağlı personel var ama listede yoksa (ör. pasife alınmış) bağlantı
+  // kopmasın diye o kişi listeye eklenir.
+  const bagliPersonel = uye && uye.personelId ? personelIdIleGetirRepo(uye.personelId) : null;
+  if (bagliPersonel && !personeller.some(p => p.id === bagliPersonel.id)) personeller.unshift(bagliPersonel);
+  const disKisiMi = !!(uye && !bagliPersonel);
   document.getElementById('ekipPersonelId').innerHTML = '<option value="">— Personel seçiniz —</option>' +
+    `<option value="${EKIP_DIS_KISI_DEGERI}" ${disKisiMi ? 'selected' : ''}>✏️ Fabrika personeli dışında (ad ve bölümü elle gir)</option>` +
     personeller.map(p => `<option value="${p.id}" ${uye && uye.personelId === p.id ? 'selected' : ''}>${_adKacir(p.adSoyad)} (${_adKacir(p.sicilNo)})</option>`).join('');
+  document.getElementById('ekipDisAdSoyad').value = disKisiMi ? (uye.personelAdi || '') : '';
+  _ekipDisKisiModunuAyarla(disKisiMi);
 
   document.getElementById('ekipSicilNo').value = uye ? uye.sicilNo : '';
   document.getElementById('ekipBolum').value = uye ? uye.bolum : '';
@@ -587,10 +617,12 @@ function ekipFormGonderildi(e) {
   e.preventDefault();
   temizleFormHatalari('ekipForm');
 
-  const secilenPersonel = personelIdIleGetirRepo(document.getElementById('ekipPersonelId').value);
+  const secimDegeri = document.getElementById('ekipPersonelId').value;
+  const disKisiMi = secimDegeri === EKIP_DIS_KISI_DEGERI;
+  const secilenPersonel = disKisiMi ? null : personelIdIleGetirRepo(secimDegeri);
   const veriler = {
-    personelId: document.getElementById('ekipPersonelId').value,
-    personelAdi: secilenPersonel ? secilenPersonel.adSoyad : '',
+    personelId: disKisiMi ? '' : secimDegeri,
+    personelAdi: disKisiMi ? document.getElementById('ekipDisAdSoyad').value.trim() : (secilenPersonel ? secilenPersonel.adSoyad : ''),
     sicilNo: document.getElementById('ekipSicilNo').value,
     bolum: document.getElementById('ekipBolum').value,
     gorev: document.getElementById('ekipGorev').value,

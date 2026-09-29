@@ -2,7 +2,7 @@
 
 function ekipUyesiDogrula(veriler) {
   const hatalar = {};
-  if (!veriler.personelAdi || !veriler.personelAdi.trim()) hatalar.personelAdi = 'Personel seçimi zorunludur.';
+  if (!veriler.personelAdi || !veriler.personelAdi.trim()) hatalar.personelAdi = 'Personel seçin ya da "Fabrika personeli dışında" seçip ad soyad yazın.';
   if (!veriler.ekipTuru) hatalar.ekipTuru = 'Ekip türü zorunludur.';
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };
 }
