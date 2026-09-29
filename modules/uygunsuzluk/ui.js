@@ -172,11 +172,10 @@ function uygunsuzlukSayfasiniBaslat() {
     const kayitlar = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler);
     raporListesiYazdir('Uygunsuzluk Listesi', '', UYGUNSUZLUK_EXPORT_KOLONLARI, _uygunsuzlukExcelSatirlariniHazirla(kayitlar));
   });
-  document.getElementById('pdfRaporBtn').addEventListener('click', async () => {
-    try { await uygunsuzlukRaporuPdfOlustur(); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
-  });
-  // Kullanıcı isteği: PDF Raporu'nun birebir Word karşılığı (bkz. cikti.js
-  // uygunsuzlukRaporuWordOlustur); beğenilirse PDF kaldırılacak.
+  // Kullanıcı isteği: "uygunsuzluk word çok güzel pdf raporunu kaldır" —
+  // ekrandaki "PDF Raporu" düğmesi kaldırıldı, yerini bu Word raporu aldı
+  // (bkz. cikti.js uygunsuzlukRaporuWordOlustur). uygunsuzlukRaporuPdfOlustur
+  // yalnızca Mail Gönder'in "Uygunsuzluk Listesi" linki için duruyor.
   document.getElementById('wordRaporBtn').addEventListener('click', async () => {
     const btn = document.getElementById('wordRaporBtn');
     btn.disabled = true;
