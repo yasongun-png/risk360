@@ -247,6 +247,247 @@ async function uygunsuzlukRaporuPdfOlustur(indir = true) {
   return { pdf, dosyaAdi };
 }
 
+// ==================== TOPLU RAPOR (WORD) ====================
+// Kullanıcı isteği: "uygunsuzluk pdf raporunun yanına aynısının word
+// butonunu yapalım, rapor birebir aynı olsun; beğenirsem pdf'i kaldıracağız"
+// — uygunsuzlukRaporuPdfOlustur ile AYNI veri/filtre/bölüm sırası ve aynı
+// ölçüler: yatay A4, 7mm kenar, kapak (dikey ortalı çerçeveli kutu), AÇIK
+// kayıtlar (sayfa başına UC_SAYFA_BASINA_SATIR satır, ilk sayfada başlık +
+// istatistik), "KAPALI UYGUNSUZLUKLAR" ayırıcı sayfası, KAPALI kayıtlar,
+// altta ortalı "Sayfa X / Y". Sütun genişlikleri _ucTabloColgroupHtml ile,
+// renk/punto değerleri _UC_RAPOR_STIL ile birebir.
+
+// PDF'teki .uc-foto-thumb (object-fit:cover, 34mm yükseklik) ile aynı:
+// fotoğraf kutuyu dolduracak şekilde ortadan kırpılıp JPEG'e çevrilir
+// (Word'de kırpma olmadığı için kırpma burada yapılır; ayrıca dosya boyutu
+// küçük kalır). Çözülemeyen fotoğraf null döner → boş gri kutu basılır.
+async function _ucWordFotoVerisi(url, genPx, yukPx) {
+  if (!url) return null;
+  try {
+    const blob = await (await fetch(url)).blob();
+    const img = await new Promise((coz, red) => {
+      const i = new Image();
+      i.onload = () => coz(i);
+      i.onerror = red;
+      i.src = URL.createObjectURL(blob);
+    });
+    const hedefOran = genPx / yukPx;
+    let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+    if (sw / sh > hedefOran) { sw = sh * hedefOran; sx = (img.naturalWidth - sw) / 2; }
+    else { sh = sw / hedefOran; sy = (img.naturalHeight - sh) / 2; }
+    const canvas = document.createElement('canvas');
+    canvas.width = genPx * 2;
+    canvas.height = yukPx * 2;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    const jpeg = await new Promise(coz => canvas.toBlob(coz, 'image/jpeg', 0.8));
+    return new Uint8Array(await jpeg.arrayBuffer());
+  } catch (e) {
+    console.error('Uygunsuzluk fotoğrafı Word raporuna eklenemedi:', e);
+    return null;
+  }
+}
+
+async function uygunsuzlukRaporuWordOlustur() {
+  const filtreler = _usAktifFiltreleriGetir();
+  const kayitlarHam = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, filtreler);
+  if (!kayitlarHam.length) {
+    alert('Seçili filtreler için Word raporu oluşturulacak kayıt yok.');
+    return;
+  }
+
+  const mm = v => Math.round(v * 56.7);          // mm → twip
+  const px = v => Math.round(v * 96 / 25.4);     // mm → docx görsel pikseli
+  const FOTO_GEN = px(35), FOTO_YUK = px(34);
+  const SAYFA_GEN = mm(297 - 14);                // 7mm sol/sağ kenar
+  const SUTUNLAR = [7, 8, 6, 19, 6, 6, 9, 6, 7, 13, 13].map(y => Math.round(SAYFA_GEN * y / 100));
+  const hucreKenar = { style: docx.BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
+  const baslikKenar = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
+  const yok = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const kenarsiz = { top: yok, bottom: yok, left: yok, right: yok, insideHorizontal: yok, insideVertical: yok };
+  const koyuCizgi = { style: docx.BorderStyle.SINGLE, size: 12, color: '111827' };
+  const kalinCerceve = { style: docx.BorderStyle.SINGLE, size: 18, color: '111827' };
+  const hucreBosluk = { top: 45, bottom: 45, left: 60, right: 60 };
+
+  const kayitlar = await Promise.all(kayitlarHam.map(async k => {
+    const [oncesi, sonrasi] = await Promise.all([k.fotoOncesi, k.fotoSonrasi].map(async ref => {
+      const url = await fotoBuyukCoz(ref);
+      return url ? _ucWordFotoVerisi(url, FOTO_GEN, FOTO_YUK) : null;
+    }));
+    return Object.assign({}, k, { _fotoOncesi: oncesi, _fotoSonrasi: sonrasi });
+  }));
+  const acikKayitlar = kayitlar.filter(k => k.durum !== 'Kapalı');
+  const kapaliKayitlar = kayitlar.filter(k => k.durum === 'Kapalı');
+  const ozet = uygunsuzlukOzetiHesapla({ konuId: _secilenKonuId });
+  const firma = aktifFirmaGetir();
+  const bugun = gunAyYil(bugunIso());
+  const rapor = raporMetniGetir();
+
+  const metin = (text, o = {}) => new docx.TextRun(Object.assign({ text: String(text ?? ''), font: 'Arial', color: '111827' }, o));
+
+  const tdHucre = (cocuk, genislik, opts = {}) => new docx.TableCell(Object.assign({
+    width: { size: genislik, type: docx.WidthType.DXA },
+    margins: hucreBosluk,
+    verticalAlign: docx.VerticalAlign.CENTER,
+    borders: { top: hucreKenar, bottom: hucreKenar, left: hucreKenar, right: hucreKenar },
+    children: Array.isArray(cocuk) ? cocuk : [cocuk]
+  }, opts));
+  const tdMetin = (deger, genislik) => tdHucre(new docx.Paragraph({ children: [metin(deger, { size: 16 })] }), genislik);
+
+  const fotoHucre = (veri, genislik) => veri
+    ? tdHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: veri, transformation: { width: FOTO_GEN, height: FOTO_YUK } })] }), genislik)
+    // PDF'teki .uc-foto-bos: aynı yükseklikte gri kutu.
+    : tdHucre(new docx.Table({
+        width: { size: SUTUNLAR[9] - 120, type: docx.WidthType.DXA },
+        rows: [new docx.TableRow({ height: { value: mm(34), rule: docx.HeightRule.EXACT }, children: [new docx.TableCell({
+          shading: { fill: 'F3F4F6', color: 'auto', type: docx.ShadingType.CLEAR },
+          borders: { top: hucreKenar, bottom: hucreKenar, left: hucreKenar, right: hucreKenar },
+          children: [new docx.Paragraph('')]
+        })] })]
+      }), genislik);
+
+  const rozet = acikMi => new docx.Paragraph({ children: [metin(acikMi ? ' AÇIK ' : ' KAPALI ', {
+    bold: true, size: 15, color: 'FFFFFF',
+    shading: { fill: acikMi ? '16A34A' : 'DC2626', color: 'auto', type: docx.ShadingType.CLEAR }
+  })] });
+
+  const satir = k => new docx.TableRow({ cantSplit: true, children: [
+    tdMetin(k.aksiyonNo, SUTUNLAR[0]),
+    tdMetin(k.bolum, SUTUNLAR[1]),
+    tdMetin(gunAyYil(k.bildirimTarihi), SUTUNLAR[2]),
+    tdMetin(`${k.baslik || ''}${k.aciklama ? ' — ' + k.aciklama : ''}`, SUTUNLAR[3]),
+    tdMetin(k.riskSeviyesi, SUTUNLAR[4]),
+    tdMetin(gunAyYil(k.termin) || '-', SUTUNLAR[5]),
+    tdMetin(k.sorumlu, SUTUNLAR[6]),
+    tdHucre(rozet(k.durum !== 'Kapalı'), SUTUNLAR[7]),
+    tdMetin(k.kanitAciklamasi || '-', SUTUNLAR[8]),
+    fotoHucre(k._fotoOncesi, SUTUNLAR[9]),
+    fotoHucre(k._fotoSonrasi, SUTUNLAR[10])
+  ] });
+
+  const BASLIKLAR = ['No', 'Tesis / Birim', 'Bildirim Tarihi', 'Uygunsuzluk Tanımı', 'Risk', 'Termin', 'Sorumlu', 'Durum', 'Kapanış Açıklaması', 'Öncesi', 'Sonrası'];
+  const tablo = parca => new docx.Table({
+    width: { size: SAYFA_GEN, type: docx.WidthType.DXA },
+    columnWidths: SUTUNLAR,
+    layout: docx.TableLayoutType.FIXED,
+    rows: [
+      new docx.TableRow({ tableHeader: true, children: BASLIKLAR.map((b, i) => new docx.TableCell({
+        width: { size: SUTUNLAR[i], type: docx.WidthType.DXA },
+        margins: hucreBosluk,
+        verticalAlign: docx.VerticalAlign.CENTER,
+        shading: { fill: 'E5E7EB', color: 'auto', type: docx.ShadingType.CLEAR },
+        borders: { top: baslikKenar, bottom: baslikKenar, left: baslikKenar, right: baslikKenar },
+        children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin(b.toLocaleUpperCase('tr'), { bold: true, size: 15 })] })]
+      })) }),
+      ...(parca.length ? parca.map(satir) : [new docx.TableRow({ children: [tdHucre(
+        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin('Kayıt bulunmamaktadır.', { size: 16, color: '64748B' })] }),
+        SAYFA_GEN, { columnSpan: 11 }
+      )] })])
+    ]
+  });
+
+  const bolumBasligi = t => new docx.Paragraph({
+    spacing: { after: mm(3) },
+    border: { bottom: { style: docx.BorderStyle.SINGLE, size: 12, color: '111827', space: 4 } },
+    children: [metin(t, { bold: true, size: 26 })]
+  });
+
+  // Kayıtları UC_SAYFA_BASINA_SATIR'lık sayfalara böler; her sayfa kendi
+  // başlık satırlı tablosu (PDF'te her sayfa ayrı tablo olduğu gibi).
+  const listeSayfalari = (liste, ilkSayfaOnEki) => _ucKayitlariParcala(liste, UC_SAYFA_BASINA_SATIR).flatMap((parca, i) => [
+    ...(i > 0 ? [new docx.Paragraph({ children: [new docx.PageBreak()] })] : []),
+    ...(i === 0 ? ilkSayfaOnEki : []),
+    tablo(parca)
+  ]);
+
+  // Kapak ve ayırıcı: PDF'teki gibi sayfanın ortasında kalın çerçeveli kutu.
+  const cerceveliKutu = (yuzde, cocuklar) => new docx.Table({
+    width: { size: Math.round(SAYFA_GEN * yuzde / 100), type: docx.WidthType.DXA },
+    alignment: docx.AlignmentType.CENTER,
+    rows: [new docx.TableRow({ children: [new docx.TableCell({
+      margins: { top: mm(14), bottom: mm(14), left: mm(14), right: mm(14) },
+      borders: { top: kalinCerceve, bottom: kalinCerceve, left: kalinCerceve, right: kalinCerceve },
+      children: cocuklar
+    })] })]
+  });
+
+  const girisParagraflari = (rapor.girisMetni || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
+  const kapak = cerceveliKutu(78, [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(6) }, children: [metin(firma ? firma.ad : '', { bold: true, size: 24, color: '374151' })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(8) }, children: [metin(rapor.konu, { bold: true, size: 38 })] }),
+    ...(girisParagraflari.length
+      ? girisParagraflari.map(p => new docx.Paragraph({ spacing: { after: mm(4), line: 384 }, children: [metin(p, { size: 20 })] }))
+      : [new docx.Paragraph({ spacing: { after: mm(4), line: 384 }, children: [metin('Rapor kapak metni henüz girilmedi. "Rapor Kapak Metni" düğmesinden ekleyebilirsiniz.', { size: 20, color: '64748B' })] })]),
+    new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, spacing: { before: mm(8) }, children: [metin(`Rapor Tarihi: ${bugun}`, { size: 18, color: '374151' })] })
+  ]);
+
+  const ayirici = cerceveliKutu(70, [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(4) }, children: [metin('KAPALI UYGUNSUZLUKLAR', { bold: true, size: 32 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(8) }, children: [metin('Bu bölümde kapalı uygunsuzluklar yer alır.', { size: 20, color: '374151' })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin(`Rapor Tarihi: ${bugun}`, { size: 18, color: '374151' })] })
+  ]);
+
+  // PDF'teki .uc-liste-ustbilgi: solda iki satırlık başlık, sağda Toplam/
+  // Açık/Kapalı sayıları, altında koyu çizgi.
+  const istatistikHucre = (sayi, etiket) => new docx.TableCell({
+    width: { size: mm(15), type: docx.WidthType.DXA },
+    verticalAlign: docx.VerticalAlign.BOTTOM,
+    margins: { bottom: mm(3) },
+    borders: { top: yok, left: yok, right: yok, bottom: koyuCizgi },
+    children: [
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin(sayi, { bold: true, size: 28 })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin(etiket, { size: 18 })] })
+    ]
+  });
+  const listeUstBilgi = new docx.Table({
+    width: { size: SAYFA_GEN, type: docx.WidthType.DXA },
+    columnWidths: [SAYFA_GEN - mm(15) * 3 - mm(10), mm(15), mm(15), mm(15), mm(10)],
+    borders: kenarsiz,
+    rows: [new docx.TableRow({ children: [
+      new docx.TableCell({
+        width: { size: SAYFA_GEN - mm(15) * 3 - mm(10), type: docx.WidthType.DXA },
+        verticalAlign: docx.VerticalAlign.BOTTOM,
+        margins: { bottom: mm(3) },
+        borders: { top: yok, left: yok, right: yok, bottom: koyuCizgi },
+        children: [
+          new docx.Paragraph({ children: [metin('İŞ SAĞLIĞI VE GÜVENLİĞİ', { bold: true, size: 28 })] }),
+          new docx.Paragraph({ children: [metin('UYGUNSUZLUK LİSTESİ', { bold: true, size: 28 })] })
+        ]
+      }),
+      istatistikHucre(ozet.toplam, 'Toplam'),
+      istatistikHucre(ozet.acik, 'Açık'),
+      istatistikHucre(ozet.kapali, 'Kapalı'),
+      new docx.TableCell({ width: { size: mm(10), type: docx.WidthType.DXA }, borders: { top: yok, left: yok, right: yok, bottom: koyuCizgi }, children: [new docx.Paragraph('')] })
+    ] })]
+  });
+
+  const altBilgi = new docx.Footer({ children: [new docx.Paragraph({
+    alignment: docx.AlignmentType.CENTER,
+    children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '646464', font: 'Arial' })]
+  })] });
+  const sayfa = { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: { top: mm(7), right: mm(7), bottom: mm(9), left: mm(7), footer: mm(3) } };
+  const bolum = (children, ortali) => ({
+    properties: Object.assign({ page: sayfa }, ortali ? { verticalAlign: docx.VerticalAlign.CENTER } : {}),
+    footers: { default: altBilgi },
+    children
+  });
+
+  const doc = new docx.Document({
+    styles: { default: { document: { run: { font: 'Arial', size: 16 } } } },
+    sections: [
+      bolum([kapak], true),
+      bolum(listeSayfalari(acikKayitlar, [
+        listeUstBilgi,
+        new docx.Paragraph({ spacing: { after: mm(5) }, children: [] }),
+        bolumBasligi(`AÇIK KAYITLAR (${acikKayitlar.length})`)
+      ])),
+      bolum([ayirici], true),
+      bolum(listeSayfalari(kapaliKayitlar, [bolumBasligi(`KAPALI KAYITLAR (${kapaliKayitlar.length})`)]))
+    ]
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.docx`);
+}
+
 // Mail Gönder'in EmailJS'e ikinci bir link olarak eklediği "Uygunsuzluk
 // Listesi" raporu -- uygunsuzlukKayitPdfUrlOlustur ile AYNI Storage yükleme
 // deseni (bkz. orada ki uzun yorum: ek boyutu sınırı, CORS vb.). Mail

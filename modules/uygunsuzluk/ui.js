@@ -175,6 +175,15 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('pdfRaporBtn').addEventListener('click', async () => {
     try { await uygunsuzlukRaporuPdfOlustur(); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
   });
+  // Kullanıcı isteği: PDF Raporu'nun birebir Word karşılığı (bkz. cikti.js
+  // uygunsuzlukRaporuWordOlustur); beğenilirse PDF kaldırılacak.
+  document.getElementById('wordRaporBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('wordRaporBtn');
+    btn.disabled = true;
+    btn.textContent = 'Word hazırlanıyor...';
+    try { await uygunsuzlukRaporuWordOlustur(); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
+    finally { btn.disabled = false; btn.textContent = 'Word Raporu'; }
+  });
   document.getElementById('raporMetniBtn').addEventListener('click', raporMetniModalAc);
   document.getElementById('raporMetniKapatBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
@@ -232,14 +241,6 @@ function uygunsuzlukSayfasiniBaslat() {
     });
   });
 
-  document.getElementById('eskiJsonIceAktarBtn').addEventListener('click', () => document.getElementById('eskiJsonIceAktarDosya').click());
-  document.getElementById('eskiJsonIceAktarDosya').addEventListener('change', e => {
-    const dosya = e.target.files[0];
-    e.target.value = '';
-    if (!dosya) return;
-    _eskiJsonIceAktar(dosya);
-  });
-
   _konuSecimDoldur();
   // Kullanıcı isteği: "uygunsuzlukta da saha kontrolü uygunsuzlukları seçili
   // gelsin ilk açtığımda" -- sayfa ilk açıldığında (henüz hiçbir konu
@@ -257,143 +258,12 @@ function uygunsuzlukSayfasiniBaslat() {
   gorunumDegistir('kayitlar');
 }
 
-// ---- Eski isg platformundan (uygunsuzluk-platform-standalone.html) JSON
-// içe aktarım — "JSON Dışa Aktar" ile alınan, fotoğrafları da (base64 data
-// URL olarak) içeren dosya. "Konu" alanı varsa aynı adla risk360'ta konu
-// bulunur/oluşturulur ve kayıt ona atanır.
-function _eskiUsDurumEsle(durum) {
-  const d = String(durum || '').trim();
-  if (UYGUNSUZLUK_DURUMLARI.includes(d)) return d;
-  const kucuk = d.toLocaleLowerCase('tr-TR');
-  if (kucuk.includes('kapa')) return 'Kapalı';
-  if (kucuk.includes('iptal')) return 'İptal';
-  if (kucuk.includes('devam')) return 'Devam Ediyor';
-  return 'Açık';
-}
-
-// Base64 data URL'i (File nesnesi değil) küçültüp yeniden sıkıştırır — bulut
-// belgesinin Firestore'un ~1MB sınırını aşmaması için. Eski sistemden gelen
-// fotoğraflar genelde ham/orijinal çözünürlüktedir; core/data.js'teki
-// fotoSikistir() aynı mantığı bir File girdisiyle yapar, burada dataURL girdisi
-// gerektiği için ayrı bir küçük sürüm kullanılır.
-function _usBase64Kuculte(dataUrl, maxKenar, kalite) {
-  return new Promise(resolve => {
-    if (!dataUrl) { resolve(''); return; }
-    const img = new Image();
-    img.onerror = () => resolve(dataUrl);
-    img.onload = () => {
-      const olcek = Math.min(1, (maxKenar || 700) / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(img.width * olcek));
-      canvas.height = Math.max(1, Math.round(img.height * olcek));
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', kalite || 0.5));
-    };
-    img.src = dataUrl;
-  });
-}
-
-// Küçültülmüş fotoğrafı kendi ayrı Firestore belgesine yazıp "fotoref:<id>"
-// referansı döner — kayıt dizisinin kendisi ham fotoğraf verisini hiç taşımaz,
-// böylece 175 kayıt + fotoğrafları tek modül belgesinin ~1MB sınırını aşmaz.
-async function _eskiUsFotoHazirla(base64) {
-  if (!base64) return '';
-  const kucuk = await _usBase64Kuculte(base64, 700, 0.5);
-  return fotoBuyukKaydet(kucuk, (aktifFirmaGetir() || {}).slug || '');
-}
-
-async function _eskiUsKaydiEsle(r) {
-  const sorumlu = Array.isArray(r.sorumlu) ? r.sorumlu.join(', ') : (r.sorumlu || '');
-  const konu = uygunsuzlukKonuBulYaDaOlustur(r.topicName || r.konuAdi || '');
-  const [fotoOncesi, fotoSonrasi] = await Promise.all([
-    _eskiUsFotoHazirla(r.fotoOncesiBase64),
-    _eskiUsFotoHazirla(r.fotoSonrasiBase64)
-  ]);
-  return {
-    konuId: konu ? konu.id : '',
-    konuAdi: konu ? konu.ad : '',
-    baslik: r.tanim || r.baslik || r.description || '',
-    aciklama: '',
-    bolum: r.birim || r.tesisBirim || r.bolum || '',
-    lokasyon: '',
-    kaynakTuru: 'Manuel Bildirim',
-    riskSeviyesi: RISK_SEVIYELERI.includes(r.risk) ? r.risk : (RISK_SEVIYELERI.includes(r.riskSeviyesi) ? r.riskSeviyesi : 'Orta'),
-    sorumlu,
-    bildirimTarihi: excelTarihiNormallestir(r.tarih || r.bildirimTarihi || ''),
-    termin: excelTarihiNormallestir(r.termin || r.deadline || ''),
-    kapanisTarihi: excelTarihiNormallestir(r.kapanisTarihi || r.closedAt || r.closeDate || ''),
-    kanitAciklamasi: r.kapanisAciklama || r.closeNote || '',
-    yasalSartlar: Array.isArray(r.yasalSartlar) ? r.yasalSartlar.filter(v => YASAL_SART_LISTESI.includes(v)) : [],
-    yasalDayanak: r.yasalSartAciklama || r.yasalDayanak || '',
-    fotoOncesi,
-    fotoSonrasi,
-    durum: _eskiUsDurumEsle(r.durum || r.status),
-    onayGerekliMi: false
-  };
-}
-
-// Kayıtları küçük gruplar hâlinde SIRAYLA buluta yazar; bir grup sığmazsa
-// (Firestore ~1MB belge sınırı) hemen durur — daha fazla denemez, çünkü bir
-// yazım başarısız olsa bile yerel bellek önbelleği (_bulutOnbellek) o grubu
-// iyimser şekilde zaten eklemiş sayıyor; üstüne denemeye devam etmek yanlış/
-// tekrarlı veriye yol açabilir. Kaç kaydın gerçekten kaydedildiği net söylenir.
-async function _eskiJsonToplugaBolerekYukle(kayitlar, parcaBoyutu) {
-  let basarili = 0;
-  for (let i = 0; i < kayitlar.length; i += parcaBoyutu) {
-    const parca = kayitlar.slice(i, i + parcaBoyutu);
-    const sonuc = await uygunsuzlukTopluEkle(parca);
-    if (!sonuc.bulutBasarili) return { basarili, doluDurdu: true };
-    basarili += parca.length;
-  }
-  return { basarili, doluDurdu: false };
-}
-
-async function _eskiJsonIceAktar(dosya) {
-  const okuyucu = new FileReader();
-  okuyucu.onload = async e => {
-    let veri;
-    try { veri = JSON.parse(e.target.result); }
-    catch (hata) { alert('Dosya okunamadı. Geçerli bir JSON dosyası seçtiğinizden emin olun.'); return; }
-
-    const kayitlar = Array.isArray(veri) ? veri : veri.records;
-    if (!Array.isArray(kayitlar) || !kayitlar.length) { alert('Dosyada içe aktarılabilir kayıt bulunamadı.'); return; }
-    if (!(await onayModali(`${kayitlar.length} kayıt küçük gruplar hâlinde, fotoğraflarıyla birlikte sırayla içe aktarılacak. Bu biraz sürebilir. Devam edilsin mi?`, 'İçe Aktar'))) return;
-
-    const eslenmisKayitlar = [];
-    for (const r of kayitlar) {
-      eslenmisKayitlar.push(await _eskiUsKaydiEsle(r));
-    }
-
-    const PARCA_BOYUTU = 12;
-    const sonuc = await _eskiJsonToplugaBolerekYukle(eslenmisKayitlar, PARCA_BOYUTU);
-
-    if (sonuc.doluDurdu) {
-      const kalan = eslenmisKayitlar.length - sonuc.basarili;
-      alert(
-        `${sonuc.basarili} / ${eslenmisKayitlar.length} kayıt buluta başarıyla kaydedildi.\n` +
-        `Bulut belgesi (Firestore'un belge başına ~1MB sınırı) dolduğu için kalan ${kalan} kayıt kaydedilemedi — bu kadar çok fotoğraf tek belgeye sığmıyor.\n\n` +
-        'Devam etmek için: sayfayı yenileyin (F5) — sadece başarıyla kaydedilen ' + sonuc.basarili + ' kayıt kalıcı olarak görünecek. ' +
-        'Kalan kayıtları eklemek için JSON dosyasından ilk ' + sonuc.basarili + ' kaydı çıkarıp geri kalanını (tercihen fotoğrafsız ya da daha küçük gruplar hâlinde) ayrı bir dosya olarak tekrar içe aktarmanız gerekir.'
-      );
-    } else {
-      alert(`${sonuc.basarili} kayıt buluta başarıyla kaydedildi.`);
-    }
-
-    _konuSecimDoldur();
-    _usBolumFiltreDoldur();
-    kayitlariCiz(document.getElementById('aramaKutusu').value);
-  };
-  okuyucu.onerror = () => alert('Dosya okunamadı.');
-  okuyucu.readAsText(dosya);
-}
-
 // esanlamlar, eski isg platformundaki Uygunsuzluk Takip Sistemi'nin ("Excel'e
 // Aktar" -> uygunsuzluk-platform-standalone.html) başlıklarını da kapsar:
 // Konu, No, Tesis / Birim, Bildirim Tarihi, Uygunsuzluk Tanımı, Risk Seviyesi,
 // Termin, Sorumlu, Durum, Kapanış Açıklaması. "Konu" (defter/başlık grubu)
-// risk360'ta karşılığı olmadığı için sessizce yok sayılır — fotoğraflar bu
-// Excel çıktısına zaten dahil değil, onlar için "Eski Sistemden İçe Aktar
-// (JSON, Fotoğraflı)" kullanılmalı (bkz. yukarıda _eskiJsonIceAktar).
+// risk360'ta karşılığı olmadığı için sessizce yok sayılır (fotoğraflar bu
+// Excel çıktısına dahil değildir).
 const UYGUNSUZLUK_IMPORT_KOLONLARI = [
   { anahtar: 'baslik', baslik: 'Uygunsuzluk Tanımı', esanlamlar: ['Başlık'] },
   { anahtar: 'aciklama', baslik: 'Ek Açıklama' },
