@@ -135,6 +135,7 @@ const HIZMET_SOZLESMESI_EXPORT_KOLONLARI = [
   { anahtar: 'sozlesmeNo', baslik: 'Sözleşme No' },
   { anahtar: 'gorevTuru', baslik: 'Görev Türü' },
   { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
+  { anahtar: 'hizmetFirmaAdi', baslik: 'Hizmet Verilen Firma / Sicil' },
   { anahtar: 'belgeSinifi', baslik: 'Belge Sınıfı' },
   { anahtar: 'baslangicGoruntu', baslik: 'Başlangıç' },
   { anahtar: 'bitisGoruntu', baslik: 'Bitiş' },
@@ -144,6 +145,7 @@ const HIZMET_SOZLESMESI_EXPORT_KOLONLARI = [
 
 function _hizmetSozlesmesiExcelSatirlariniHazirla(kayitlar) {
   return kayitlar.map(k => Object.assign({}, k, {
+    hizmetFirmaAdi: _hsFirmaAdi(k.firmaId) || 'Bağlantısız',
     baslangicGoruntu: gunAyYil(k.sozlesmeBaslangicTarihi),
     bitisGoruntu: gunAyYil(k.sozlesmeBitisTarihi)
   }));
@@ -165,6 +167,23 @@ async function hizmetSozlesmesiniYazdir(id) {
   ], [
     { etiket: 'Sözleşme Belgesi', url: sozlesmeBelgesiUrl }
   ]);
+}
+
+// Kullanıcı raporu: "Hizmet Verilen Firma / Sicil (Sicil Özeti raporuna
+// dahil olması için) görünmüyor" — alan yalnızca kayıt formundaydı, listede
+// hangi sözleşmenin hangi firmaya bağlı olduğu (dolayısıyla Sicil Özeti'ne
+// girip girmediği) görünmüyordu.
+function _hsFirmaAdi(firmaId) {
+  if (!firmaId) return '';
+  const firma = getFirmalar().find(f => f.id === firmaId);
+  return firma ? firma.ad : '';
+}
+
+function _hsFirmaHucresi(firmaId) {
+  const ad = _hsFirmaAdi(firmaId);
+  return ad
+    ? _hsKacir(ad)
+    : '<span style="color:var(--uyari, #b45309); font-size:12px;" title="Düzenle ile firma seçilmezse bu sözleşme Sicil Özeti raporuna dahil edilmez">Bağlantısız</span>';
 }
 
 function _hsBelgeHucresiUret(url) {
@@ -193,6 +212,7 @@ function hsKayitlariCiz(aramaMetni) {
     satir.innerHTML = `
       <td>${_hsKacir(k.sozlesmeNo)}<br><small style="color:var(--metin-soluk);">${_hsKacir(k.gorevTuru)}</small></td>
       <td>${_hsKacir(k.adSoyad)}</td>
+      <td>${_hsFirmaHucresi(k.firmaId)}</td>
       <td>${_hsKacir(k.belgeSinifi) || '-'}</td>
       <td>${gunAyYil(k.sozlesmeBaslangicTarihi) || '-'}</td>
       <td>${gunAyYil(k.sozlesmeBitisTarihi) || '-'}</td>
