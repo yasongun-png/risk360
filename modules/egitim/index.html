@@ -100,13 +100,17 @@
     <!-- TEMEL İSG EĞİTİMLERİ (kullanıcı isteği: "eğitim modülünde temel isg
          eğitimlerini ayrı bir sekmede görmek istiyorum, yıl olarak
          seçilebilsin, kişi olarak arama yapılabilsin veya bölüm olarak,
-         çıktı alınabilsin" + "ilk defa verilen eğitim mi tekrar eğitimi mi,
-         o kişiye kaç saat eğitim verilmiş, tüm temel isg eğitimleri tabloda
-         olsun, kişinin bölümü görevi olsun" — Eğitim Kayıtları'ndaki gibi tek
-         güncel kayıt değil, HER temel İSG kaydı (tüm geçmiş) ayrı bir satır. -->
+         çıktı alınabilsin" sonra "istediğim şey personellerin tamamı olsun,
+         sicil no'suna göre istersem isimlerine göre de sıralayayım, aldığı
+         eğitim tarihleri yazsın tabloda, tüm personel olsun yani temel
+         eğitim aldıkça tabloya eklensin" — satır = PERSONEL (eğitimi hiç
+         almamış olanlar dahil TÜM aktif personel), her satırda o kişinin
+         bugüne kadarki TÜM Temel İSG eğitim tarihleri listelenir; yeni bir
+         eğitim girildikçe o kişinin satırına otomatik eklenir. Sicil No ve
+         Ad Soyad başlıklarına tıklayarak sıralanabilir. -->
     <div id="temelIsgBolumu" style="display:none;">
       <div class="arac-cubugu">
-        <input type="text" id="temelIsgAramaKutusu" class="arama-kutusu" placeholder="Personel adına göre ara...">
+        <input type="text" id="temelIsgAramaKutusu" class="arama-kutusu" placeholder="Sicil no, ad soyad, bölüm veya görevde ara...">
         <select id="temelIsgYilFiltre" style="width:auto;"><option value="">Tüm Yıllar</option></select>
         <select id="temelIsgBolumFiltre" style="width:auto;"><option value="">Tüm Bölümler</option></select>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -117,15 +121,14 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr>
-              <th>Personel</th>
-              <th>Bölüm</th>
-              <th>Görev</th>
+            <tr id="temelIsgTabloBasligi">
+              <th data-sirala="sicilNo">Sicil No</th>
+              <th data-sirala="adSoyad">Ad Soyad</th>
+              <th data-sirala="bolum">Bölüm</th>
+              <th data-sirala="gorev">Görev</th>
               <th>İşyeri Sicili</th>
-              <th>İlk mi Tekrar mı</th>
-              <th>Eğitim Tarihi</th>
-              <th>Süre</th>
-              <th>Geçerlilik Bitiş</th>
+              <th>Eğitim Tarihleri</th>
+              <th data-sirala="bitisTarihi">Geçerlilik Bitiş</th>
               <th>Durum</th>
             </tr>
           </thead>

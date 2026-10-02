@@ -737,6 +737,7 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('temelIsgDisaAktarBtn').addEventListener('click', () => {
     excelDisaAktar(_temelIsgFiltrelenmisListe(), TEMEL_ISG_EXPORT_KOLONLARI, 'temel_isg_egitimleri.xlsx');
   });
+  _temelIsgBaslikSiralamayiKur();
   materyalSayfasiniBaslat();
   // Kullanıcı isteği: "sınav oluşturucu modülünü de eğitimin içine koyalım"
   // — eskiden ayrı modules/sinav/ sayfasıydı (bkz. sinav.js/-ui.js dosya
@@ -1089,59 +1090,119 @@ function _topluSilDurumunuGuncelle(gorunenler) {
 // ==================== TEMEL İSG EĞİTİMLERİ (ayrı sekme) ====================
 // Kullanıcı isteği: "eğitim modülünde temel isg eğitimlerini ayrı bir
 // sekmede görmek istiyorum, yıl olarak seçilebilsin, kişi olarak arama
-// yapılabilsin veya bölüm olarak, çıktı alınabilsin" + "ilk defa verilen
-// eğitim mi tekrar eğitimi mi, o kişiye kaç saat eğitim verilmiş, tüm temel
-// isg eğitimleri tabloda olsun, kişinin bölümü görevi olsun" — Eğitim
-// Kayıtları sekmesi her personelin durumunu/son kaydını gösterirken, burada
-// TEMEL İSG'nin TÜM geçmiş kayıtları (her biri ayrı satır) listelenir.
+// yapılabilsin veya bölüm olarak, çıktı alınabilsin" sonra "istediğim şey
+// personellerin tamamı olsun, sicil no'suna göre istersem isimlerine göre
+// de sıralayayım, aldığı eğitim tarihleri yazsın tabloda, tüm personel
+// olsun yani temel eğitim aldıkça tabloya eklensin" — satır = PERSONEL
+// (eğitim almamışlar dahil TÜM aktif personel), o kişinin bugüne kadarki
+// TÜM Temel İSG eğitim tarihleri tek satırda listelenir.
+
+const TEMEL_ISG_SIRALANABILIR_ALANLAR = ['sicilNo', 'adSoyad', 'bolum', 'gorev', 'bitisTarihi'];
+let _temelIsgSiralamaAlani = 'sicilNo';
+let _temelIsgSiralamaYon = 'asc';
 
 const TEMEL_ISG_EXPORT_KOLONLARI = [
-  { anahtar: 'personelAdi', baslik: 'Ad Soyad' },
+  { anahtar: 'sicilNo', baslik: 'Sicil No' },
+  { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
   { anahtar: 'bolum', baslik: 'Bölüm' },
   { anahtar: 'gorev', baslik: 'Görev' },
-  { anahtar: 'personelIsveren', baslik: 'İşyeri Sicili' },
-  { anahtar: 'ilkTekrarMetni', baslik: 'İlk mi Tekrar mı' },
-  { anahtar: 'egitimTarihiMetni', baslik: 'Eğitim Tarihi' },
-  { anahtar: 'saatMetni', baslik: 'Süre' },
+  { anahtar: 'isveren', baslik: 'İşyeri Sicili' },
+  { anahtar: 'tarihlerMetni', baslik: 'Eğitim Tarihleri' },
   { anahtar: 'bitisTarihiMetni', baslik: 'Geçerlilik Bitiş' },
   { anahtar: 'durumMetni', baslik: 'Durum' }
 ];
 
-// Her kaydı (bölüm/görev, ilk-tekrar, görüntü metinleri dahil) zenginleştirip
-// döndürür -- hem tablo çizimi hem dışa aktarım AYNI zenginleştirilmiş
-// listeyi kullanır ki ikisi arasında tutarsızlık olmasın.
-function _temelIsgZenginlestirilmisListe() {
+// TÜM aktif personeli, her birinin TÜM Temel İSG eğitim kayıtlarıyla
+// birleştirip tek satıra indirger -- hiç eğitimi olmayan personel de dahil
+// (durum: 'kayit_yok'), en güncel kayda göre Geçerlilik Bitiş/Durum hesaplanır.
+function _temelIsgPersonelListesi() {
   const tumKayitlar = egitimKayitlariniGetir('', _aktifFirma, 'temel_isg');
-  return tumKayitlar.map(k => {
-    const personel = personelIdIleGetirRepo(k.personelId);
-    const ilkTekrar = _egitimIlkMiTekrarMi(k, tumKayitlar);
-    return Object.assign({}, k, {
-      bolum: personel ? (personel.bolum || '') : '',
-      gorev: personel ? (personel.gorev || '') : '',
-      ilkTekrar,
-      ilkTekrarMetni: ilkTekrar === 'tekrar' ? 'Tekrar' : 'İlk',
-      egitimTarihiMetni: k.tarih2 ? `${_egitimTarihGoruntu(k.tarih)} - ${_egitimTarihGoruntu(k.tarih2)}` : _egitimTarihGoruntu(k.tarih),
-      saatMetni: k.saat ? `${k.saat} saat` : '-',
-      bitisTarihiMetni: k.bitisTarihi ? _egitimTarihGoruntu(k.bitisTarihi) : '-',
-      durumMetni: DURUM_METIN[k.durum] || k.durum
-    });
+  const personelBasinaKayitlar = new Map();
+  tumKayitlar.forEach(k => {
+    if (!personelBasinaKayitlar.has(k.personelId)) personelBasinaKayitlar.set(k.personelId, []);
+    personelBasinaKayitlar.get(k.personelId).push(k);
+  });
+
+  return personelleriGetir('', false).map(p => {
+    const kayitlar = (personelBasinaKayitlar.get(p.id) || [])
+      .slice()
+      .sort((a, b) => (a.tarih || '').localeCompare(b.tarih || ''));
+
+    const tarihlerMetni = kayitlar.length
+      ? kayitlar.map(k => {
+          const ilkTekrar = _egitimIlkMiTekrarMi(k, tumKayitlar);
+          const tarihMetni = k.tarih2 ? `${_egitimTarihGoruntu(k.tarih)} - ${_egitimTarihGoruntu(k.tarih2)}` : _egitimTarihGoruntu(k.tarih);
+          return `${tarihMetni} (${ilkTekrar === 'tekrar' ? 'Tekrar' : 'İlk'})`;
+        }).join(', ')
+      : '-';
+
+    const sonKayit = kayitlar[kayitlar.length - 1] || null;
+
+    return {
+      personelId: p.id,
+      sicilNo: p.sicilNo || '',
+      adSoyad: p.adSoyad || '',
+      bolum: p.bolum || '',
+      gorev: p.gorev || '',
+      isveren: p.isveren || '',
+      kayitSayisi: kayitlar.length,
+      tarihlerMetni,
+      bitisTarihi: sonKayit ? (sonKayit.bitisTarihi || '') : '',
+      bitisTarihiMetni: sonKayit && sonKayit.bitisTarihi ? _egitimTarihGoruntu(sonKayit.bitisTarihi) : '-',
+      durum: sonKayit ? sonKayit.durum : 'kayit_yok',
+      durumMetni: sonKayit ? (DURUM_METIN[sonKayit.durum] || sonKayit.durum) : DURUM_METIN.kayit_yok
+    };
   });
 }
 
 function _temelIsgFiltreSecimleriniDoldur() {
-  const liste = _temelIsgZenginlestirilmisListe();
-
   const yilSecim = document.getElementById('temelIsgYilFiltre');
   const seciliYil = yilSecim.value;
-  const yillar = Array.from(new Set(liste.map(k => (k.tarih || '').slice(0, 4)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+  const tumKayitlar = egitimKayitlariniGetir('', _aktifFirma, 'temel_isg');
+  const yillar = Array.from(new Set(tumKayitlar.map(k => (k.tarih || '').slice(0, 4)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
   yilSecim.innerHTML = '<option value="">Tüm Yıllar</option>' + yillar.map(y => `<option value="${y}">${y}</option>`).join('');
   if (yillar.includes(seciliYil)) yilSecim.value = seciliYil;
 
   const bolumSecim = document.getElementById('temelIsgBolumFiltre');
   const seciliBolum = bolumSecim.value;
-  const bolumler = Array.from(new Set(liste.map(k => k.bolum).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr-TR'));
+  const bolumler = personelBolumleriGetir(false);
   bolumSecim.innerHTML = '<option value="">Tüm Bölümler</option>' + bolumler.map(b => `<option value="${_egKacir(b)}">${_egKacir(b)}</option>`).join('');
   if (bolumler.includes(seciliBolum)) bolumSecim.value = seciliBolum;
+}
+
+function _temelIsgSutunSiraliListe(liste) {
+  const alan = _temelIsgSiralamaAlani;
+  if (!TEMEL_ISG_SIRALANABILIR_ALANLAR.includes(alan)) return liste;
+  const yon = _temelIsgSiralamaYon === 'desc' ? -1 : 1;
+  return liste.slice().sort((a, b) => String(a[alan] || '').localeCompare(String(b[alan] || ''), 'tr') * yon);
+}
+
+// Kullanıcı isteği: "sicil no'suna göre istersem isimlerine göre de
+// sıralayayım" — Personel modülündeki tablo başlığına tıklayarak sıralama
+// deseninin aynısı (bkz. personel/ui.js _prsBaslikSiralamayiKur).
+function _temelIsgBaslikSiralamayiKur() {
+  document.querySelectorAll('#temelIsgTabloBasligi [data-sirala]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const alan = th.getAttribute('data-sirala');
+      if (_temelIsgSiralamaAlani === alan) {
+        _temelIsgSiralamaYon = _temelIsgSiralamaYon === 'asc' ? 'desc' : 'asc';
+      } else {
+        _temelIsgSiralamaAlani = alan;
+        _temelIsgSiralamaYon = 'asc';
+      }
+      temelIsgTablosunuCiz();
+    });
+  });
+}
+
+function _temelIsgBaslikOklariniGuncelle() {
+  document.querySelectorAll('#temelIsgTabloBasligi [data-sirala]').forEach(th => {
+    const alan = th.getAttribute('data-sirala');
+    const temizMetin = th.getAttribute('data-baslik-metni') || th.textContent.replace(/[▲▼]\s*$/, '').trim();
+    th.setAttribute('data-baslik-metni', temizMetin);
+    th.textContent = temizMetin + (alan === _temelIsgSiralamaAlani ? (_temelIsgSiralamaYon === 'asc' ? ' ▲' : ' ▼') : '');
+  });
 }
 
 function _temelIsgFiltrelenmisListe() {
@@ -1149,11 +1210,16 @@ function _temelIsgFiltrelenmisListe() {
   const yil = document.getElementById('temelIsgYilFiltre').value;
   const bolum = document.getElementById('temelIsgBolumFiltre').value;
 
-  return _temelIsgZenginlestirilmisListe()
-    .filter(k => !aramaMetni || k.personelAdi.toLowerCase().includes(aramaMetni))
-    .filter(k => !yil || (k.tarih || '').startsWith(yil))
-    .filter(k => !bolum || k.bolum === bolum)
-    .sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+  const liste = _temelIsgPersonelListesi()
+    .filter(p => !aramaMetni ||
+      p.sicilNo.toLowerCase().includes(aramaMetni) ||
+      p.adSoyad.toLowerCase().includes(aramaMetni) ||
+      p.bolum.toLowerCase().includes(aramaMetni) ||
+      p.gorev.toLowerCase().includes(aramaMetni))
+    .filter(p => !yil || p.tarihlerMetni.includes(yil))
+    .filter(p => !bolum || p.bolum === bolum);
+
+  return _temelIsgSutunSiraliListe(liste);
 }
 
 function temelIsgTablosunuCiz() {
@@ -1162,26 +1228,26 @@ function temelIsgTablosunuCiz() {
   const liste = _temelIsgFiltrelenmisListe();
 
   govde.innerHTML = '';
+  _temelIsgBaslikOklariniGuncelle();
 
   if (!liste.length) {
     bosDurum.classList.add('gorunur');
-    bosDurum.textContent = 'Filtreyle eşleşen Temel İSG eğitim kaydı bulunamadı.';
+    bosDurum.textContent = 'Filtreyle eşleşen personel bulunamadı.';
     return;
   }
   bosDurum.classList.remove('gorunur');
 
-  liste.forEach(k => {
+  liste.forEach(p => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
-      <td>${_egKacir(k.personelAdi)}</td>
-      <td>${_egKacir(k.bolum) || '-'}</td>
-      <td>${_egKacir(k.gorev) || '-'}</td>
-      <td>${_egKacir(k.personelIsveren) || '-'}</td>
-      <td>${_egKacir(k.ilkTekrarMetni)}</td>
-      <td>${_egKacir(k.egitimTarihiMetni)}</td>
-      <td>${_egKacir(k.saatMetni)}</td>
-      <td>${_egKacir(k.bitisTarihiMetni)}</td>
-      <td><span class="durum-rozet durum-${k.durum}">${_egKacir(k.durumMetni)}</span></td>
+      <td>${_egKacir(p.sicilNo) || '-'}</td>
+      <td>${_egKacir(p.adSoyad)}</td>
+      <td>${_egKacir(p.bolum) || '-'}</td>
+      <td>${_egKacir(p.gorev) || '-'}</td>
+      <td>${_egKacir(p.isveren) || '-'}</td>
+      <td>${_egKacir(p.tarihlerMetni)}</td>
+      <td>${_egKacir(p.bitisTarihiMetni)}</td>
+      <td><span class="durum-rozet durum-${p.durum}">${_egKacir(p.durumMetni)}</span></td>
     `;
     govde.appendChild(satir);
   });
