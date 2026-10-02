@@ -381,6 +381,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
       <td>${_ktKacir(k.kararMetni)}</td>
+      <td>${_ktKacir(k.aksiyonNotu) || '-'}</td>
       <td>${_ktKacir(k.sorumlu)}</td>
       <td>${gunAyYil(k.termin) || '-'}</td>
       <td>${_ktKacir(k.oncelik)}</td>
