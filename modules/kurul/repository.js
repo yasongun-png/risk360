@@ -231,6 +231,19 @@ function imzaGuncelleRepo(id, veriler) {
   return liste[index];
 }
 
+// Silinen satırdan sonra aynı toplantının kalan katılımcıları 1'den başlayarak
+// yeniden numaralanır (kullanıcı isteği: biri çıkarılınca diğerlerinin
+// numaraları değişsin); tek yazımda yapılır ki satır satır güncellemedeki
+// bulut yazım yarışı (bkz. service.js _imzaListesiniOncekiToplantidanKopyala) olmasın.
 function imzaSilRepo(id) {
-  _imzaKaydet(imzaTumunuGetir().filter(i => i.id !== id));
+  const liste = imzaTumunuGetir();
+  const silinen = liste.find(i => i.id === id);
+  const kalan = liste.filter(i => i.id !== id);
+  if (silinen) {
+    kalan
+      .filter(i => i.toplantiId === silinen.toplantiId)
+      .sort((a, b) => Number(a.siraNo || 0) - Number(b.siraNo || 0))
+      .forEach((i, index) => { i.siraNo = String(index + 1); });
+  }
+  _imzaKaydet(kalan);
 }

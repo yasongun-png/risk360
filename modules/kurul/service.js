@@ -688,7 +688,12 @@ function kurulOlayiAsagiTasi(olayId) {
 // ---- İmza Listesi ----
 
 function toplantiImzalariniGetir(toplantiId) {
-  return imzaTumunuGetir().filter(i => i.toplantiId === toplantiId).sort((a, b) => Number(a.siraNo || 0) - Number(b.siraNo || 0));
+  // Sıra numarası her zaman 1..N ardışık gösterilir (önceden silinmiş satırların
+  // bıraktığı boşluklar dahil, bkz. repository.js imzaSilRepo).
+  return imzaTumunuGetir()
+    .filter(i => i.toplantiId === toplantiId)
+    .sort((a, b) => Number(a.siraNo || 0) - Number(b.siraNo || 0))
+    .map((i, index) => Object.assign({}, i, { siraNo: String(index + 1) }));
 }
 
 function imzaSatiriEkle(toplantiId, veriler) {
