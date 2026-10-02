@@ -729,7 +729,14 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('belgeFotoSecDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeDurum').addEventListener('click', () => gorunumDegistir('durum'));
+  document.getElementById('sekmeTemelIsg').addEventListener('click', () => gorunumDegistir('temelIsg'));
   document.getElementById('sekmeMateryal').addEventListener('click', () => gorunumDegistir('materyal'));
+  document.getElementById('temelIsgAramaKutusu').addEventListener('input', temelIsgTablosunuCiz);
+  document.getElementById('temelIsgYilFiltre').addEventListener('change', temelIsgTablosunuCiz);
+  document.getElementById('temelIsgBolumFiltre').addEventListener('change', temelIsgTablosunuCiz);
+  document.getElementById('temelIsgDisaAktarBtn').addEventListener('click', () => {
+    excelDisaAktar(_temelIsgFiltrelenmisListe(), TEMEL_ISG_EXPORT_KOLONLARI, 'temel_isg_egitimleri.xlsx');
+  });
   materyalSayfasiniBaslat();
   // Kullanıcı isteği: "sınav oluşturucu modülünü de eğitimin içine koyalım"
   // — eskiden ayrı modules/sinav/ sayfasıydı (bkz. sinav.js/-ui.js dosya
@@ -886,10 +893,12 @@ function gorunumDegistir(gorunum) {
   _egitimGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
   document.getElementById('sekmeDurum').classList.toggle('sekme-seciliDegil', gorunum !== 'durum');
+  document.getElementById('sekmeTemelIsg').classList.toggle('sekme-seciliDegil', gorunum !== 'temelIsg');
   document.getElementById('sekmeSinav').classList.toggle('sekme-seciliDegil', gorunum !== 'sinav');
   document.getElementById('sekmeMateryal').classList.toggle('sekme-seciliDegil', gorunum !== 'materyal');
   document.getElementById('kayitlarBolumu').style.display = gorunum === 'kayitlar' ? '' : 'none';
   document.getElementById('durumBolumu').style.display = gorunum === 'durum' ? '' : 'none';
+  document.getElementById('temelIsgBolumu').style.display = gorunum === 'temelIsg' ? '' : 'none';
   document.getElementById('sinavBolumu').style.display = gorunum === 'sinav' ? '' : 'none';
   document.getElementById('materyalBolumu').style.display = gorunum === 'materyal' ? '' : 'none';
 
@@ -897,6 +906,9 @@ function gorunumDegistir(gorunum) {
     kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
   } else if (gorunum === 'durum') {
     durumTablosunuCiz();
+  } else if (gorunum === 'temelIsg') {
+    _temelIsgFiltreSecimleriniDoldur();
+    temelIsgTablosunuCiz();
   } else if (gorunum === 'materyal') {
     materyalTablosunuCiz(document.getElementById('materyalAramaKutusu').value);
   } else {
@@ -1072,6 +1084,107 @@ function _topluSilDurumunuGuncelle(gorunenler) {
   const gorunenSecili = gorunenler.length > 0 && gorunenler.every(k => _seciliKayitIdleri.has(k.id));
   tumunuSec.checked = gorunenSecili;
   tumunuSec.indeterminate = !gorunenSecili && gorunenler.some(k => _seciliKayitIdleri.has(k.id));
+}
+
+// ==================== TEMEL İSG EĞİTİMLERİ (ayrı sekme) ====================
+// Kullanıcı isteği: "eğitim modülünde temel isg eğitimlerini ayrı bir
+// sekmede görmek istiyorum, yıl olarak seçilebilsin, kişi olarak arama
+// yapılabilsin veya bölüm olarak, çıktı alınabilsin" + "ilk defa verilen
+// eğitim mi tekrar eğitimi mi, o kişiye kaç saat eğitim verilmiş, tüm temel
+// isg eğitimleri tabloda olsun, kişinin bölümü görevi olsun" — Eğitim
+// Kayıtları sekmesi her personelin durumunu/son kaydını gösterirken, burada
+// TEMEL İSG'nin TÜM geçmiş kayıtları (her biri ayrı satır) listelenir.
+
+const TEMEL_ISG_EXPORT_KOLONLARI = [
+  { anahtar: 'personelAdi', baslik: 'Ad Soyad' },
+  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'gorev', baslik: 'Görev' },
+  { anahtar: 'personelIsveren', baslik: 'İşyeri Sicili' },
+  { anahtar: 'ilkTekrarMetni', baslik: 'İlk mi Tekrar mı' },
+  { anahtar: 'egitimTarihiMetni', baslik: 'Eğitim Tarihi' },
+  { anahtar: 'saatMetni', baslik: 'Süre' },
+  { anahtar: 'bitisTarihiMetni', baslik: 'Geçerlilik Bitiş' },
+  { anahtar: 'durumMetni', baslik: 'Durum' }
+];
+
+// Her kaydı (bölüm/görev, ilk-tekrar, görüntü metinleri dahil) zenginleştirip
+// döndürür -- hem tablo çizimi hem dışa aktarım AYNI zenginleştirilmiş
+// listeyi kullanır ki ikisi arasında tutarsızlık olmasın.
+function _temelIsgZenginlestirilmisListe() {
+  const tumKayitlar = egitimKayitlariniGetir('', _aktifFirma, 'temel_isg');
+  return tumKayitlar.map(k => {
+    const personel = personelIdIleGetirRepo(k.personelId);
+    const ilkTekrar = _egitimIlkMiTekrarMi(k, tumKayitlar);
+    return Object.assign({}, k, {
+      bolum: personel ? (personel.bolum || '') : '',
+      gorev: personel ? (personel.gorev || '') : '',
+      ilkTekrar,
+      ilkTekrarMetni: ilkTekrar === 'tekrar' ? 'Tekrar' : 'İlk',
+      egitimTarihiMetni: k.tarih2 ? `${_egitimTarihGoruntu(k.tarih)} - ${_egitimTarihGoruntu(k.tarih2)}` : _egitimTarihGoruntu(k.tarih),
+      saatMetni: k.saat ? `${k.saat} saat` : '-',
+      bitisTarihiMetni: k.bitisTarihi ? _egitimTarihGoruntu(k.bitisTarihi) : '-',
+      durumMetni: DURUM_METIN[k.durum] || k.durum
+    });
+  });
+}
+
+function _temelIsgFiltreSecimleriniDoldur() {
+  const liste = _temelIsgZenginlestirilmisListe();
+
+  const yilSecim = document.getElementById('temelIsgYilFiltre');
+  const seciliYil = yilSecim.value;
+  const yillar = Array.from(new Set(liste.map(k => (k.tarih || '').slice(0, 4)).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+  yilSecim.innerHTML = '<option value="">Tüm Yıllar</option>' + yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (yillar.includes(seciliYil)) yilSecim.value = seciliYil;
+
+  const bolumSecim = document.getElementById('temelIsgBolumFiltre');
+  const seciliBolum = bolumSecim.value;
+  const bolumler = Array.from(new Set(liste.map(k => k.bolum).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr-TR'));
+  bolumSecim.innerHTML = '<option value="">Tüm Bölümler</option>' + bolumler.map(b => `<option value="${_egKacir(b)}">${_egKacir(b)}</option>`).join('');
+  if (bolumler.includes(seciliBolum)) bolumSecim.value = seciliBolum;
+}
+
+function _temelIsgFiltrelenmisListe() {
+  const aramaMetni = document.getElementById('temelIsgAramaKutusu').value.trim().toLowerCase();
+  const yil = document.getElementById('temelIsgYilFiltre').value;
+  const bolum = document.getElementById('temelIsgBolumFiltre').value;
+
+  return _temelIsgZenginlestirilmisListe()
+    .filter(k => !aramaMetni || k.personelAdi.toLowerCase().includes(aramaMetni))
+    .filter(k => !yil || (k.tarih || '').startsWith(yil))
+    .filter(k => !bolum || k.bolum === bolum)
+    .sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+}
+
+function temelIsgTablosunuCiz() {
+  const govde = document.getElementById('temelIsgTabloGovde');
+  const bosDurum = document.getElementById('temelIsgBosDurum');
+  const liste = _temelIsgFiltrelenmisListe();
+
+  govde.innerHTML = '';
+
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Filtreyle eşleşen Temel İSG eğitim kaydı bulunamadı.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  liste.forEach(k => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td>${_egKacir(k.personelAdi)}</td>
+      <td>${_egKacir(k.bolum) || '-'}</td>
+      <td>${_egKacir(k.gorev) || '-'}</td>
+      <td>${_egKacir(k.personelIsveren) || '-'}</td>
+      <td>${_egKacir(k.ilkTekrarMetni)}</td>
+      <td>${_egKacir(k.egitimTarihiMetni)}</td>
+      <td>${_egKacir(k.saatMetni)}</td>
+      <td>${_egKacir(k.bitisTarihiMetni)}</td>
+      <td><span class="durum-rozet durum-${k.durum}">${_egKacir(k.durumMetni)}</span></td>
+    `;
+    govde.appendChild(satir);
+  });
 }
 
 function durumTablosunuCiz() {

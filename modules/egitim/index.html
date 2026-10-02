@@ -35,6 +35,7 @@
     <div class="sekme-cubugu">
       <button type="button" id="sekmeKayitlar">Eğitim Kayıtları</button>
       <button type="button" id="sekmeDurum" class="sekme-seciliDegil">Durum Tablosu</button>
+      <button type="button" id="sekmeTemelIsg" class="sekme-seciliDegil">Temel İSG Eğitimleri</button>
       <button type="button" id="sekmeSinav" class="sekme-seciliDegil">Sınav Oluşturucu</button>
       <button type="button" id="sekmeMateryal" class="sekme-seciliDegil">Eğitim Materyalleri</button>
       <a href="../personel/index.html" class="ikincil" style="margin-left:auto; padding:9px 18px; text-decoration:none; display:inline-flex; align-items:center; border-radius:8px; font-size:13px; font-weight:600;">👤 Personel</a>
@@ -94,6 +95,44 @@
         firmanın Tehlike Sınıfı'na göre otomatik hesaplanır.
       </p>
       <div id="durumTablosuKutusu"></div>
+    </div>
+
+    <!-- TEMEL İSG EĞİTİMLERİ (kullanıcı isteği: "eğitim modülünde temel isg
+         eğitimlerini ayrı bir sekmede görmek istiyorum, yıl olarak
+         seçilebilsin, kişi olarak arama yapılabilsin veya bölüm olarak,
+         çıktı alınabilsin" + "ilk defa verilen eğitim mi tekrar eğitimi mi,
+         o kişiye kaç saat eğitim verilmiş, tüm temel isg eğitimleri tabloda
+         olsun, kişinin bölümü görevi olsun" — Eğitim Kayıtları'ndaki gibi tek
+         güncel kayıt değil, HER temel İSG kaydı (tüm geçmiş) ayrı bir satır. -->
+    <div id="temelIsgBolumu" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="temelIsgAramaKutusu" class="arama-kutusu" placeholder="Personel adına göre ara...">
+        <select id="temelIsgYilFiltre" style="width:auto;"><option value="">Tüm Yıllar</option></select>
+        <select id="temelIsgBolumFiltre" style="width:auto;"><option value="">Tüm Bölümler</option></select>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="temelIsgDisaAktarBtn">Dışa Aktar</button>
+        </div>
+      </div>
+
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead>
+            <tr>
+              <th>Personel</th>
+              <th>Bölüm</th>
+              <th>Görev</th>
+              <th>İşyeri Sicili</th>
+              <th>İlk mi Tekrar mı</th>
+              <th>Eğitim Tarihi</th>
+              <th>Süre</th>
+              <th>Geçerlilik Bitiş</th>
+              <th>Durum</th>
+            </tr>
+          </thead>
+          <tbody id="temelIsgTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="temelIsgBosDurum"></div>
     </div>
 
     <!-- SINAV OLUŞTURUCU (kullanıcı isteği: "sınav oluşturucu modülünü de
