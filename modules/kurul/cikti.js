@@ -40,9 +40,12 @@ function _varsayilanliMetin(deger, anahtar) {
 
 // ==================== 1) TOPLANTI DAVETİ (WORD) ====================
 
-async function toplantiDavetiWordOlustur() {
+// indir=false: dosyayı indirmez, { blob, dosyaAdi } döner — "Toplantı Daveti
+// Mail Gönder" Word'ü buluta yükleyip mailde link olarak paylaşır
+// (bkz. toplanti-ui.js davetMailGonder).
+async function toplantiDavetiWordOlustur(indir = true) {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
-  if (!toplanti) return;
+  if (!toplanti) return null;
 
   const katilimcilar = toplantiImzalariniGetir(_toplantiId);
   const gundem = toplanti.gundem || [];
@@ -125,7 +128,28 @@ async function toplantiDavetiWordOlustur() {
   });
 
   const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `Toplanti_Daveti_${toplanti.toplantiNo}.docx`);
+  const dosyaAdi = `Toplanti_Daveti_${toplanti.toplantiNo}.docx`;
+  if (indir) saveAs(blob, dosyaAdi);
+  return { blob, dosyaAdi };
+}
+
+// Davet Word'ünü Firebase Storage'a yükleyip indirme linkini döner (uygunsuzluk
+// maillerindeki aynı yöntem: ek yerine link, boyut sınırı yok). Storage yoksa
+// ya da yükleme başarısızsa null döner.
+async function toplantiDavetiWordUrlOlustur() {
+  const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
+  if (!storage) return null;
+  const uretim = await toplantiDavetiWordOlustur(false);
+  if (!uretim) return null;
+
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const yol = 'kurul_davet_word/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Davet Word yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 30000));
+  const yukleme = (async () => {
+    const anlik = await storage.ref().child(yol).put(uretim.blob, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    return anlik.ref.getDownloadURL();
+  })();
+  return Promise.race([yukleme, zamanAsimi]);
 }
 
 // Bu toplantının kararlarında VEYA devreden kararlarda oy dökümü (Kabul/Ret/

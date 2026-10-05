@@ -428,11 +428,25 @@ async function davetMailGonder() {
 
   const btn = document.getElementById('davetMailGonderBtn');
   btn.disabled = true;
-  btn.textContent = 'Gönderiliyor...';
   try {
-    await epostaGonder({ to_email: kime, bilgi_email: bilgi, konu, mesaj, pdf_url: '', liste_pdf_url: '' });
+    // Kullanıcı isteği: "ben davet oluşturmasını istiyorum" — mail gönderilirken
+    // Toplantı Daveti Word'ü de üretilip buluta yüklenir ve indirme linki
+    // mesajın sonuna eklenir (şablon değişkenlerinden bağımsız çalışsın diye
+    // düz metin olarak). Storage yoksa onayla, linksiz gönderilebilir.
+    btn.textContent = 'Davet hazırlanıyor...';
+    let davetUrl = '';
+    try {
+      davetUrl = await toplantiDavetiWordUrlOlustur() || '';
+    } catch (e) {
+      console.error('Davet Word linki oluşturulamadı:', e);
+    }
+    if (!davetUrl && !confirm('Davet dosyası buluta yüklenemedi (Storage yapılandırılmamış veya bağlantı sorunu). Mail davet linki olmadan gönderilsin mi?')) return;
+
+    btn.textContent = 'Gönderiliyor...';
+    const gonderilecekMesaj = davetUrl ? `${mesaj}\n\nToplantı davetini (Word) buradan indirebilirsiniz:\n${davetUrl}` : mesaj;
+    await epostaGonder({ to_email: kime, bilgi_email: bilgi, konu, mesaj: gonderilecekMesaj, pdf_url: '', liste_pdf_url: '' });
     davetMailModalKapat();
-    alert(`Toplantı daveti gönderildi: ${kime}${bilgi ? ' (bilgi: ' + bilgi + ')' : ''}`);
+    alert(`Toplantı daveti gönderildi${davetUrl ? ' (davet linki eklendi)' : ' (linksiz)'}: ${kime}${bilgi ? ' (bilgi: ' + bilgi + ')' : ''}`);
   } catch (e) {
     console.error(e);
     hata.textContent = 'Mail gönderilemedi: ' + (e.message || e.text || e);
