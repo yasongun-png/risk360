@@ -133,6 +133,58 @@ async function toplantiDavetiWordOlustur(indir = true) {
   return { blob, dosyaAdi };
 }
 
+// Kullanıcı isteği: Outlook'taki "Toplantı" (toplantı talebi) penceresinin
+// gerekli katılımcılar/başlık/tarih-saat/konum/açıklama alanlarıyla hazır
+// açılması — statik uygulama Outlook'a doğrudan bağlanamadığından, aynı
+// bilgileri taşıyan bir takvim dosyası (.ics, METHOD:REQUEST) üretilir; Outlook'ta
+// açılınca katılımcılar "Gerekli" satırında dolu bir toplantı olarak gelir ve
+// "Gönder" ile gerçek toplantı talebi olarak iletilir.
+function _icsMetinKacir(m) {
+  return String(m || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+
+function _icsSatirKatla(satir) {
+  const parcalar = [];
+  let kalan = satir;
+  while (kalan.length > 70) { parcalar.push(kalan.slice(0, 70)); kalan = ' ' + kalan.slice(70); }
+  parcalar.push(kalan);
+  return parcalar.join('\r\n');
+}
+
+function toplantiTakvimDavetiOlustur(organizatorEposta) {
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  if (!toplanti || !toplanti.tarih) { alert('Toplantı tarihi girilmemiş.'); return; }
+
+  const [ss, dd] = (toplanti.saat || '14:00').split(':').map(Number);
+  const baslangic = new Date(`${toplanti.tarih}T${String(ss || 0).padStart(2, '0')}:${String(dd || 0).padStart(2, '0')}:00`);
+  const bitis = new Date(baslangic.getTime() + 60 * 60000);
+  const bicim = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
+
+  const gundem = (toplanti.gundem || []).map((g, i) => `${i + 1}) ${g.baslik}`).join('\n');
+  const aciklama = `İş Sağlığı ve Güvenliği Kurulu toplantısı (${_ciktiDonemMetni(toplanti)}).\n\nGÜNDEM\n${gundem || '-'}`;
+  const katilimcilar = toplantiImzalariniGetir(_toplantiId).filter(i => i.eposta);
+
+  const satirlar = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Risk360//Kurul Toplanti Daveti//TR', 'CALSCALE:GREGORIAN', 'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:kurul-${toplanti.id}@risk360`,
+    `DTSTAMP:${bicim(new Date())}`,
+    `DTSTART:${bicim(baslangic)}`,
+    `DTEND:${bicim(bitis)}`,
+    `SUMMARY:${_icsMetinKacir(toplanti.baslik || ('İSG Kurulu Toplantısı - ' + toplanti.toplantiNo))}`,
+    `LOCATION:${_icsMetinKacir(toplanti.yer || '')}`,
+    `DESCRIPTION:${_icsMetinKacir(aciklama)}`,
+    organizatorEposta ? `ORGANIZER:mailto:${organizatorEposta}` : null,
+    ...katilimcilar.map(k => `ATTENDEE;CN="${String(k.adSoyad).replace(/"/g, '')}";ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${k.eposta}`),
+    'STATUS:CONFIRMED', 'SEQUENCE:0', 'TRANSP:OPAQUE',
+    'END:VEVENT', 'END:VCALENDAR'
+  ].filter(Boolean).map(_icsSatirKatla);
+
+  const blob = new Blob([satirlar.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+  saveAs(blob, `Toplanti_Daveti_${toplanti.toplantiNo}.ics`);
+  return katilimcilar.length;
+}
+
 // Davet Word'ünü Firebase Storage'a yükleyip indirme linkini döner (uygunsuzluk
 // maillerindeki aynı yöntem: ek yerine link, boyut sınırı yok). Storage yoksa
 // ya da yükleme başarısızsa null döner.
