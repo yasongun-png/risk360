@@ -231,6 +231,17 @@ function imzaGuncelleRepo(id, veriler) {
   return liste[index];
 }
 
+// Verilen toplantının katılımcılarını, istenen id sırasına göre yeniden
+// numaralar (1..N) — tek yazımla (yukarı/aşağı taşıma için).
+function imzaSiralaRepo(toplantiId, siraliIdler) {
+  const liste = imzaTumunuGetir();
+  siraliIdler.forEach((id, index) => {
+    const kayit = liste.find(i => i.id === id && i.toplantiId === toplantiId);
+    if (kayit) kayit.siraNo = String(index + 1);
+  });
+  _imzaKaydet(liste);
+}
+
 // Silinen satırdan sonra aynı toplantının kalan katılımcıları 1'den başlayarak
 // yeniden numaralanır (kullanıcı isteği: biri çıkarılınca diğerlerinin
 // numaraları değişsin); tek yazımda yapılır ki satır satır güncellemedeki

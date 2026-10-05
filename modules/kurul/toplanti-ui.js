@@ -657,12 +657,14 @@ function imzalariCiz() {
   }
   bosDurum.classList.remove('gorunur');
 
-  imzalar.forEach(i => {
+  imzalar.forEach((i, index) => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${i.siraNo}</td><td>${_ktKacir(i.adSoyad)}</td><td>${_ktKacir(i.unvan) || '-'}</td><td>${_ktKacir(i.birim) || '-'}</td><td>${_ktKacir(i.kuruldakiGorev) || '-'}</td>
       <td><button type="button" class="tablo-buton" data-katildi-toggle="${i.id}" title="Tıklayarak katılım durumunu değiştir" style="font-size:16px; font-weight:700; color:${i.katildiMi ? '#16a34a' : '#dc2626'};">${i.katildiMi ? '✓' : '✗'}</button></td>
       <td>
+        ${index > 0 ? `<button class="tablo-buton" data-imza-yukari="${i.id}" title="Yukarı taşı">▲</button>` : ''}
+        ${index < imzalar.length - 1 ? `<button class="tablo-buton" data-imza-asagi="${i.id}" title="Aşağı taşı">▼</button>` : ''}
         <button class="tablo-buton" data-duzenle="${i.id}">Düzenle</button>
         <button class="tablo-buton" data-atama="${i.id}" title="Bu kişi için atama yazısı oluştur">Atama</button>
         <button class="tablo-buton sil" data-sil="${i.id}">Sil</button>
@@ -671,6 +673,14 @@ function imzalariCiz() {
     govde.appendChild(satir);
   });
 
+  govde.querySelectorAll('[data-imza-yukari]').forEach(btn => btn.addEventListener('click', () => {
+    imzaSatiriTasi(btn.getAttribute('data-imza-yukari'), -1);
+    imzalariCiz();
+  }));
+  govde.querySelectorAll('[data-imza-asagi]').forEach(btn => btn.addEventListener('click', () => {
+    imzaSatiriTasi(btn.getAttribute('data-imza-asagi'), 1);
+    imzalariCiz();
+  }));
   govde.querySelectorAll('[data-katildi-toggle]').forEach(btn => btn.addEventListener('click', () => {
     _imzaKatildiToggle(btn.getAttribute('data-katildi-toggle'));
   }));

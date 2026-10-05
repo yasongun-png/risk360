@@ -746,6 +746,21 @@ function imzaSatiriGuncelle(id, veriler) {
   return { basarili: true, imza: guncellenen };
 }
 
+// Kullanıcı isteği: "İSG kurulu üyelerini aşağı yukarı taşıyabilmek
+// istiyorum" — yon: -1 (yukarı) / +1 (aşağı); komşuyla yer değiştirip tüm
+// liste tek yazımla yeniden numaralanır.
+function imzaSatiriTasi(id, yon) {
+  const mevcut = imzaTumunuGetir().find(i => i.id === id);
+  if (!mevcut) return { basarili: false };
+  const idler = toplantiImzalariniGetir(mevcut.toplantiId).map(i => i.id);
+  const index = idler.indexOf(id);
+  const hedef = index + yon;
+  if (index === -1 || hedef < 0 || hedef >= idler.length) return { basarili: false };
+  [idler[index], idler[hedef]] = [idler[hedef], idler[index]];
+  imzaSiralaRepo(mevcut.toplantiId, idler);
+  return { basarili: true };
+}
+
 function imzaSatiriSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const mevcut = imzaTumunuGetir().find(i => i.id === id) || null;
