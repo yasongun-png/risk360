@@ -739,6 +739,15 @@ function _kuruldakiGorevSecenekleriUret() {
     if (g === 'İşveren Vekili' && isverenler.length) {
       return isverenler.map(i => `İşveren Vekili — ${i}`);
     }
+    // Kullanıcı isteği: Kurul Başkanı aynı zamanda ilgili işverenin (ör. Bağfaş
+    // Bandırma Gübre Fabrikaları) İşveren Vekili oluyor — her işveren için
+    // birleşik seçenek de sunulur (başkan tespiti bununla da çalışır, bkz.
+    // service.js toplantiBaskanSekreterGetir).
+    if (g === 'Kurul Başkanı') {
+      return [g].concat(isverenler.length
+        ? isverenler.map(i => `Kurul Başkanı / İşveren Vekili — ${i}`)
+        : ['Kurul Başkanı / İşveren Vekili']);
+    }
     return [g];
   });
 }

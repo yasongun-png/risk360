@@ -810,7 +810,7 @@ function _imzaListesiniOncekiToplantidanKopyala(yeniToplantiId, oncekiHaric) {
 function toplantiBaskanSekreterGetir(toplantiId) {
   const toplanti = toplantiIdIleGetirRepo(toplantiId);
   const imzalar = toplantiImzalariniGetir(toplantiId);
-  const baskanSatiri = imzalar.find(i => i.kuruldakiGorev === 'Kurul Başkanı');
+  const baskanSatiri = imzalar.find(i => i.kuruldakiGorev === 'Kurul Başkanı' || i.kuruldakiGorev.startsWith('Kurul Başkanı / '));
   const sekreterSatiri = imzalar.find(i => i.kuruldakiGorev === 'Kurul Sekreteri');
   return {
     baskan: baskanSatiri ? baskanSatiri.adSoyad : ((toplanti && toplanti.baskan) || ''),
