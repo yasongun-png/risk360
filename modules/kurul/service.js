@@ -739,6 +739,7 @@ function imzaSatiriGuncelle(id, veriler) {
     unvan: (veriler.unvan || '').trim(),
     birim: (veriler.birim || '').trim(),
     kuruldakiGorev: (veriler.kuruldakiGorev || '').trim(),
+    eposta: (veriler.eposta || '').trim(),
     katildiMi: veriler.katildiMi !== undefined ? !!veriler.katildiMi : true
   });
   if (!guncellenen) return { basarili: false, hata: 'Katılımcı bulunamadı.' };
@@ -759,6 +760,32 @@ function imzaSatiriTasi(id, yon) {
   [idler[index], idler[hedef]] = [idler[hedef], idler[index]];
   imzaSiralaRepo(mevcut.toplantiId, idler);
   return { basarili: true };
+}
+
+// Kullanıcı isteği: "bunları direk uygulamaya yapıştırabileyim" — Outlook'tan
+// kopyalanan "Ad Soyad <adres>; Ad2 <adres2>" listesindeki adresleri, ad
+// eşleşmesiyle (büyük/küçük harf ve Türkçe karakter farkı gözetmeden) bu
+// toplantının katılımcılarına yazar; tek yazımla kaydedilir.
+function _epostaAdNormallestir(ad) {
+  return String(ad || '').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
+}
+
+function imzaEpostalariniYapistirdanEsle(toplantiId, metin) {
+  const girdiler = [];
+  String(metin || '').split(/;|\n/).forEach(parca => {
+    const m = parca.match(/^\s*(.*?)\s*<?\s*([^\s<>;,"']+@[^\s<>;,"']+)\s*>?\s*$/);
+    if (m) girdiler.push({ ad: _epostaAdNormallestir(m[1].replace(/["']/g, '')), eposta: m[2] });
+  });
+
+  const liste = imzaTumunuGetir();
+  let eslesen = 0;
+  const eslesmeyen = [];
+  girdiler.forEach(g => {
+    const kayit = liste.find(i => i.toplantiId === toplantiId && _epostaAdNormallestir(i.adSoyad) === g.ad);
+    if (kayit) { kayit.eposta = g.eposta; eslesen++; } else eslesmeyen.push(g.ad || g.eposta);
+  });
+  if (eslesen) _imzaKaydet(liste);
+  return { eslesen, eslesmeyen, toplam: girdiler.length };
 }
 
 function imzaSatiriSil(id) {
@@ -795,6 +822,7 @@ function _imzaListesiniOncekiToplantidanKopyala(yeniToplantiId, oncekiHaric) {
       unvan: i.unvan,
       birim: i.birim,
       kuruldakiGorev: i.kuruldakiGorev,
+      eposta: i.eposta || '',
       katildiMi: true
     })));
     return roster.length;

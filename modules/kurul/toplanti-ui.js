@@ -237,6 +237,24 @@ function toplantiDetaySayfasiniBaslat() {
     });
   });
 
+  document.getElementById('imzaEpostaYapistirBtn').addEventListener('click', () => {
+    document.getElementById('epostaYapistirMetni').value = '';
+    document.getElementById('epostaYapistirSonuc').textContent = '';
+    document.getElementById('epostaYapistirKatmani').classList.add('acik');
+  });
+  document.getElementById('epostaYapistirKapatBtn').addEventListener('click', () => {
+    document.getElementById('epostaYapistirKatmani').classList.remove('acik');
+  });
+  document.getElementById('epostaYapistirUygulaBtn').addEventListener('click', () => {
+    const sonuc = imzaEpostalariniYapistirdanEsle(_toplantiId, document.getElementById('epostaYapistirMetni').value);
+    const kutu = document.getElementById('epostaYapistirSonuc');
+    kutu.style.color = sonuc.eslesen ? '#15803d' : 'var(--hata)';
+    kutu.textContent = !sonuc.toplam
+      ? 'Yapıştırılan metinde e-posta adresi bulunamadı.'
+      : `${sonuc.eslesen}/${sonuc.toplam} kişi eşleşti ve e-postası kaydedildi.` +
+        (sonuc.eslesmeyen.length ? ` Eşleşmeyen (İmza Listesi'nde bu adla kimse yok): ${sonuc.eslesmeyen.join(', ')}` : '');
+    imzalariCiz();
+  });
   document.getElementById('imzaSablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(IMZA_IMPORT_KOLONLARI, 'kurul_imza_sablonu.xlsx');
   });
@@ -265,6 +283,7 @@ const IMZA_IMPORT_KOLONLARI = [
   { anahtar: 'unvan', baslik: 'Ünvan' },
   { anahtar: 'birim', baslik: 'Birim' },
   { anahtar: 'kuruldakiGorev', baslik: 'Kuruldaki Görevi' },
+  { anahtar: 'eposta', baslik: 'E-posta' },
   { anahtar: 'katildiMi', baslik: 'Katıldı' }
 ];
 
@@ -274,6 +293,7 @@ const IMZA_EXPORT_KOLONLARI = [
   { anahtar: 'unvan', baslik: 'Ünvan' },
   { anahtar: 'birim', baslik: 'Birim' },
   { anahtar: 'kuruldakiGorev', baslik: 'Kuruldaki Görevi' },
+  { anahtar: 'eposta', baslik: 'E-posta' },
   { anahtar: 'katildiMi', baslik: 'Katıldı' }
 ];
 
@@ -323,9 +343,16 @@ function _davetMailAyarGetir() {
   return Object.assign({ metin: DAVET_MAIL_METNI_VARSAYILANI, kime: '', bilgi: '' }, oku(_davetMailAnahtari(), {}));
 }
 
-// Uygunsuzluk modülündeki ortak "İlgili E-posta Listesi" ([{ad, eposta}]).
+// Kullanıcı isteği: "imza listesine herkesin mailini eklerim / oradan alır" —
+// alıcılar önce bu toplantının İmza Listesi'ndeki e-postalardır; Uygunsuzluk
+// modülündeki ortak "İlgili E-posta Listesi" ([{ad, eposta}]) de ek olarak sunulur.
 function _davetEpostaListesiGetir() {
-  return oku(tenantAnahtar('uygunsuzluk_ilgili_epostalari'), []);
+  const imzadan = toplantiImzalariniGetir(_toplantiId)
+    .filter(i => i.eposta)
+    .map(i => ({ ad: i.adSoyad, eposta: i.eposta }));
+  const ortak = oku(tenantAnahtar('uygunsuzluk_ilgili_epostalari'), []);
+  const var_ = new Set(imzadan.map(h => h.eposta.toLowerCase()));
+  return imzadan.concat(ortak.filter(h => !var_.has(h.eposta.toLowerCase())));
 }
 
 function _davetMailSecimCiz(kutuId, ekId, mevcutStr) {
@@ -359,7 +386,9 @@ function davetMailModalAc() {
   }
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   const ayar = _davetMailAyarGetir();
-  _davetMailSecimCiz('davetMailKimeSecim', 'davetMailKimeEk', ayar.kime);
+  // Daha önce alıcı seçilmediyse, İmza Listesi'nde e-postası olan herkes varsayılan seçili gelir.
+  const varsayilanKime = toplantiImzalariniGetir(_toplantiId).filter(i => i.eposta).map(i => i.eposta).join(', ');
+  _davetMailSecimCiz('davetMailKimeSecim', 'davetMailKimeEk', ayar.kime || varsayilanKime);
   _davetMailSecimCiz('davetMailBilgiSecim', 'davetMailBilgiEk', ayar.bilgi);
   document.getElementById('davetMailKonu').value = `İSG Kurulu Toplantı Daveti — ${toplanti.toplantiNo}`;
   document.getElementById('davetMailMetni').value = ayar.metin;
@@ -878,6 +907,7 @@ function imzaModalAc(imza) {
   document.getElementById('imzaAdSoyad').value = imza ? imza.adSoyad : '';
   document.getElementById('imzaUnvan').value = imza ? imza.unvan : '';
   document.getElementById('imzaBirim').value = imza ? imza.birim : '';
+  document.getElementById('imzaEposta').value = imza ? (imza.eposta || '') : '';
   document.getElementById('imzaKuruldakiGorev').innerHTML = '<option value="">— Seçiniz —</option>' +
     _kuruldakiGorevSecenekleriUret().map(g => `<option ${imza && imza.kuruldakiGorev === g ? 'selected' : ''}>${_ktKacir(g)}</option>`).join('');
   document.getElementById('imzaKatildiMi').checked = imza ? !!imza.katildiMi : true;
@@ -896,6 +926,7 @@ function imzaFormGonderildi(e) {
     unvan: document.getElementById('imzaUnvan').value,
     birim: document.getElementById('imzaBirim').value,
     kuruldakiGorev: document.getElementById('imzaKuruldakiGorev').value,
+    eposta: document.getElementById('imzaEposta').value,
     katildiMi: document.getElementById('imzaKatildiMi').checked
   };
   const sonuc = _duzenlenenImzaId
