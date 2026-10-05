@@ -38,6 +38,7 @@
     <div class="form-bolum-baslik">Çıktılar</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
       <button type="button" class="ikincil" id="btnInviteWord">Toplantı Daveti Word</button>
+      <button type="button" class="ikincil" id="btnDavetMail">✉️ Toplantı Daveti Mail Gönder</button>
       <button type="button" class="ikincil" id="btnReportWord">Kurul Raporu Word</button>
       <button type="button" class="ikincil" id="btnKonuBasliklariWord">Konu Başlıkları</button>
       <button type="button" class="ikincil" id="btnReportPDF">Kurul Raporu PDF</button>
@@ -179,6 +180,31 @@
       </table>
     </div>
     <div class="bos-durum" id="imzaBosDurum"></div>
+  </div>
+
+  <!-- Toplantı daveti maili (kullanıcı isteği: "uygunsuzluktaki gibi ama bu
+       sefer toplantı daveti şeklinde mail hazırlayabilir miyiz") — alıcılar
+       Uygunsuzluk modülündeki ortak E-posta Listesi'nden seçilir, gönderimden
+       önce onay istenir. -->
+  <div class="modal-katman" id="davetMailKatmani">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3>Toplantı Daveti Mail Gönder</h3>
+      <label>Kime</label>
+      <div id="davetMailKimeSecim" style="max-height:140px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:6px;"></div>
+      <input type="text" id="davetMailKimeEk" placeholder="Listede olmayan adresler (virgülle ayırın)">
+      <label>Bilgi (CC)</label>
+      <div id="davetMailBilgiSecim" style="max-height:110px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:6px;"></div>
+      <input type="text" id="davetMailBilgiEk" placeholder="Listede olmayan adresler (virgülle ayırın)">
+      <label for="davetMailKonu">Konu</label>
+      <input type="text" id="davetMailKonu">
+      <label for="davetMailMetni">Mesaj <span style="color:var(--metin-soluk); font-weight:400;">({toplantiNo} {baslik} {donem} {tarih} {saat} {yer} {gundem} yer tutucuları kullanılabilir)</span></label>
+      <textarea id="davetMailMetni" rows="12"></textarea>
+      <div class="alan-hatasi" id="davetMailHata" style="color:var(--hata); font-size:12px; margin-bottom:10px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="davetMailIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="davetMailGonderBtn">Gönder</button>
+      </div>
+    </div>
   </div>
 
   <div class="modal-katman" id="kararModalKatman">
@@ -476,13 +502,14 @@
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="../../core/belge-yukle.js"></script>
+  <script src="../../core/eposta.js"></script>
   <script src="../egitim/model.js"></script>
   <script src="model.js"></script>
   <script src="cikti.js"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=3"></script>
-  <script src="toplanti-ui.js?v=5"></script>
+  <script src="toplanti-ui.js?v=6"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

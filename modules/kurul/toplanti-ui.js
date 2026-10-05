@@ -123,6 +123,10 @@ function toplantiDetaySayfasiniBaslat() {
     setTimeout(() => { durum.textContent = ''; }, 2500);
   });
 
+  document.getElementById('btnDavetMail').addEventListener('click', davetMailModalAc);
+  document.getElementById('davetMailIptalBtn').addEventListener('click', davetMailModalKapat);
+  document.getElementById('davetMailGonderBtn').addEventListener('click', davetMailGonder);
+
   document.getElementById('yeniKararBtn').addEventListener('click', () => kararModalAc());
   document.getElementById('kararModalKapatBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararModalIptalBtn').addEventListener('click', kararModalKapat);
@@ -294,6 +298,118 @@ const KARAR_EXPORT_KOLONLARI = [
   { anahtar: 'oy', baslik: 'Oy' },
   { anahtar: 'oySonucu', baslik: 'Oy Sonucu' }
 ];
+
+// ==================== TOPLANTI DAVETİ MAİLİ ====================
+// Kullanıcı isteği: "direk uygulamadan uygunsuzluktaki gibi ama bu sefer
+// toplantı talebi/daveti şeklinde mail hazırlayabilir miyiz" — Uygunsuzluk
+// modülündeki listeyle AYNI mantık: ortak E-posta Listesi'nden alıcı seçimi,
+// gönderimden önce onay, core/eposta.js (EmailJS) ile gönderim. Davet bilgileri
+// (tarih/saat/yer/gündem) mesaj metnine yer tutucularla yazılır; metin ve
+// alıcılar bir sonraki davet için hatırlanır.
+const DAVET_MAIL_METNI_VARSAYILANI = [
+  'Sayın Kurul Üyeleri,',
+  '',
+  'İş Sağlığı ve Güvenliği Kurulumuzun {donem} toplantısı {tarih} {saat} tarihinde {yer} yapılacaktır.',
+  '',
+  'GÜNDEM',
+  '{gundem}',
+  '',
+  'Bilgilerinize sunar, toplantıya tüm kurul üyelerinin katılımını rica ederiz.'
+].join('\n');
+
+function _davetMailAnahtari() { return tenantAnahtar('kurul_davet_mail'); }
+
+function _davetMailAyarGetir() {
+  return Object.assign({ metin: DAVET_MAIL_METNI_VARSAYILANI, kime: '', bilgi: '' }, oku(_davetMailAnahtari(), {}));
+}
+
+// Uygunsuzluk modülündeki ortak "İlgili E-posta Listesi" ([{ad, eposta}]).
+function _davetEpostaListesiGetir() {
+  return oku(tenantAnahtar('uygunsuzluk_ilgili_epostalari'), []);
+}
+
+function _davetMailSecimCiz(kutuId, ekId, mevcutStr) {
+  const kutu = document.getElementById(kutuId);
+  const harita = _davetEpostaListesiGetir();
+  const adresleri = h => h.eposta.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const secili = new Set((mevcutStr || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+  const haritaAdresleri = new Set();
+  harita.forEach(h => adresleri(h).forEach(e => haritaAdresleri.add(e)));
+  kutu.innerHTML = harita.length
+    ? harita.map(h => `<label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:12px; padding:2px 0;">
+        <input type="checkbox" data-davet-mail-secim value="${_ktKacir(h.eposta)}" ${adresleri(h).some(e => secili.has(e)) ? 'checked' : ''} style="width:auto; margin:0;">
+        ${_ktKacir(h.ad)} <span style="color:var(--metin-soluk);">(${_ktKacir(h.eposta)})</span>
+      </label>`).join('')
+    : '<div style="font-size:12px; color:var(--metin-soluk);">E-posta Listesi boş (Uygunsuzluk modülünden tanımlanır) — adresleri aşağıya elle yazabilirsiniz.</div>';
+  document.getElementById(ekId).value = [...secili].filter(e => !haritaAdresleri.has(e)).join(', ');
+}
+
+function _davetMailDegerTopla(kutuId, ekId) {
+  const secilenler = Array.from(document.querySelectorAll(`#${kutuId} [data-davet-mail-secim]:checked`)).map(cb => cb.value);
+  const ek = (document.getElementById(ekId).value || '').split(',').map(s => s.trim()).filter(Boolean);
+  return [...new Set([...secilenler, ...ek])].join(', ');
+}
+
+function davetMailModalAc() {
+  if (!epostaAktifMi()) {
+    alert('E-posta bildirimleri henüz yapılandırılmamış. Ayarlar sayfasından EmailJS bilgilerini girip etkinleştirin.');
+    return;
+  }
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  const ayar = _davetMailAyarGetir();
+  _davetMailSecimCiz('davetMailKimeSecim', 'davetMailKimeEk', ayar.kime);
+  _davetMailSecimCiz('davetMailBilgiSecim', 'davetMailBilgiEk', ayar.bilgi);
+  document.getElementById('davetMailKonu').value = `İSG Kurulu Toplantı Daveti — ${toplanti.toplantiNo}`;
+  document.getElementById('davetMailMetni').value = ayar.metin;
+  document.getElementById('davetMailHata').textContent = '';
+  document.getElementById('davetMailKatmani').classList.add('acik');
+}
+
+function davetMailModalKapat() {
+  document.getElementById('davetMailKatmani').classList.remove('acik');
+}
+
+async function davetMailGonder() {
+  const hata = document.getElementById('davetMailHata');
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  const kime = _davetMailDegerTopla('davetMailKimeSecim', 'davetMailKimeEk');
+  const bilgi = _davetMailDegerTopla('davetMailBilgiSecim', 'davetMailBilgiEk');
+  const konu = document.getElementById('davetMailKonu').value.trim() || `İSG Kurulu Toplantı Daveti — ${toplanti.toplantiNo}`;
+  const metin = document.getElementById('davetMailMetni').value.trim() || DAVET_MAIL_METNI_VARSAYILANI;
+  if (!kime) { hata.textContent = 'En az bir alıcı seçin veya yazın (Kime).'; return; }
+
+  // Gönderilen mail geri alınamaz -- uygunsuzluk maillerindeki gibi önce onay.
+  if (!(await onayModali(`Toplantı daveti ${kime} adresine${bilgi ? ' (bilgi: ' + bilgi + ')' : ''} gönderilsin mi?`, 'Gönder'))) return;
+
+  yaz(_davetMailAnahtari(), { metin, kime, bilgi });
+
+  const gundemMetni = (toplanti.gundem || []).map((g, i) => `${i + 1}) ${g.baslik}`).join('\n') || '-';
+  const yerTutucular = {
+    toplantiNo: toplanti.toplantiNo,
+    baslik: toplanti.baslik,
+    donem: _ciktiDonemMetni(toplanti),
+    tarih: toplanti.tarih ? new Date(toplanti.tarih + 'T00:00:00').toLocaleDateString('tr-TR') : '—',
+    saat: toplanti.saat || '',
+    yer: toplanti.yer || '',
+    gundem: gundemMetni
+  };
+  const mesaj = metin.replace(/\{(\w+)\}/g, (tam, ad) => Object.prototype.hasOwnProperty.call(yerTutucular, ad) ? yerTutucular[ad] : tam);
+
+  const btn = document.getElementById('davetMailGonderBtn');
+  btn.disabled = true;
+  btn.textContent = 'Gönderiliyor...';
+  try {
+    await epostaGonder({ to_email: kime, bilgi_email: bilgi, konu, mesaj, pdf_url: '', liste_pdf_url: '' });
+    davetMailModalKapat();
+    alert(`Toplantı daveti gönderildi: ${kime}${bilgi ? ' (bilgi: ' + bilgi + ')' : ''}`);
+  } catch (e) {
+    console.error(e);
+    hata.textContent = 'Mail gönderilemedi: ' + (e.message || e.text || e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Gönder';
+  }
+}
 
 function bilgiKartiniCiz(toplanti) {
   const bs = toplantiBaskanSekreterGetir(toplanti.id);
