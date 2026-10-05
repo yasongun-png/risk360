@@ -106,6 +106,23 @@ function toplantiDetaySayfasiniBaslat() {
   kararlariCiz();
   document.getElementById('yonetmelikMaddeleriKutusu').innerHTML = _yonetmelikMaddeleriGoruntuUret();
 
+  // Kullanıcı isteği: Word/PPTX çıktılarında "Çalışan Temsilcilerinin Görüş ve
+  // Önerileri" başlığı var ama uygulamada giriş yöntemi yoktu (alan sadece
+  // "Toplantıyı Düzenle" penceresinin en altındaydı) — toplantı sayfasında
+  // kendi bölümüyle girilir.
+  const gorusKutusu = document.getElementById('calisanGorusMetni');
+  gorusKutusu.value = toplanti.calisanTemsilcisiGorusleri || '';
+  document.getElementById('calisanGorusKaydetBtn').addEventListener('click', () => {
+    const mevcut = toplantiIdIleGetirRepo(_toplantiId);
+    const sonuc = toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, {
+      katilimcilar: (mevcut.katilimcilar || []).join(', '),
+      calisanTemsilcisiGorusleri: gorusKutusu.value
+    }));
+    const durum = document.getElementById('calisanGorusDurum');
+    durum.textContent = sonuc.basarili ? 'Kaydedildi ✓' : 'Kaydedilemedi.';
+    setTimeout(() => { durum.textContent = ''; }, 2500);
+  });
+
   document.getElementById('yeniKararBtn').addEventListener('click', () => kararModalAc());
   document.getElementById('kararModalKapatBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararModalIptalBtn').addEventListener('click', kararModalKapat);
