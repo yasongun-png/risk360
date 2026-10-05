@@ -191,10 +191,10 @@
       <h3>Toplantı Daveti Mail Gönder</h3>
       <label>Kime</label>
       <div id="davetMailKimeSecim" style="max-height:140px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:6px;"></div>
-      <input type="text" id="davetMailKimeEk" placeholder="Listede olmayan adresler (virgülle ayırın)">
+      <input type="text" id="davetMailKimeEk" placeholder="Adresleri yazın veya Outlook listesini olduğu gibi yapıştırın (Ad <mail>; Ad2 <mail2>...)">
       <label>Bilgi (CC)</label>
       <div id="davetMailBilgiSecim" style="max-height:110px; overflow-y:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:6px;"></div>
-      <input type="text" id="davetMailBilgiEk" placeholder="Listede olmayan adresler (virgülle ayırın)">
+      <input type="text" id="davetMailBilgiEk" placeholder="Adresleri yazın veya Outlook listesini olduğu gibi yapıştırın (Ad <mail>; Ad2 <mail2>...)">
       <label for="davetMailKonu">Konu</label>
       <input type="text" id="davetMailKonu">
       <label for="davetMailMetni">Mesaj <span style="color:var(--metin-soluk); font-weight:400;">({toplantiNo} {baslik} {donem} {tarih} {saat} {yer} {gundem} yer tutucuları kullanılabilir)</span></label>
@@ -509,7 +509,7 @@
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=3"></script>
-  <script src="toplanti-ui.js?v=6"></script>
+  <script src="toplanti-ui.js?v=7"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

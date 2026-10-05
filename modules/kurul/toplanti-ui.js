@@ -346,8 +346,10 @@ function _davetMailSecimCiz(kutuId, ekId, mevcutStr) {
 
 function _davetMailDegerTopla(kutuId, ekId) {
   const secilenler = Array.from(document.querySelectorAll(`#${kutuId} [data-davet-mail-secim]:checked`)).map(cb => cb.value);
-  const ek = (document.getElementById(ekId).value || '').split(',').map(s => s.trim()).filter(Boolean);
-  return [...new Set([...secilenler, ...ek])].join(', ');
+  // Outlook'tan kopyalanan "Ad Soyad <adres@x.com>; Ad2 <adres2@x.com>" biçimi
+  // de kabul edilir: ; , boşluk ve <> ne olursa olsun sadece e-posta adresleri alınır.
+  const ek = (document.getElementById(ekId).value || '').match(/[^\s<>;,"']+@[^\s<>;,"']+/g) || [];
+  return [...new Set([...secilenler, ...ek.map(e => e.trim())])].join(', ');
 }
 
 function davetMailModalAc() {
