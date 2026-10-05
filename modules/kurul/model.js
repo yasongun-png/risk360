@@ -297,7 +297,7 @@ function imzaSatiriOlustur(veriler) {
     // Kişinin genel unvanından ayrı olarak İSG Kurulu içindeki rolü
     // (ör. Kurul Başkanı, İş Güvenliği Uzmanı, Çalışan Temsilcisi).
     kuruldakiGorev: (veriler.kuruldakiGorev || '').trim(),
-    // Toplantı daveti maili için (bkz. toplanti-ui.js davetMailModalAc).
+    // Outlook toplantı talebi (.ics) katılımcı adresi (bkz. cikti.js toplantiTakvimDavetiOlustur).
     eposta: (veriler.eposta || '').trim(),
     katildiMi: veriler.katildiMi !== undefined ? !!veriler.katildiMi : true,
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()

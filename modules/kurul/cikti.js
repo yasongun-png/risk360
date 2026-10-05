@@ -38,100 +38,7 @@ function _varsayilanliMetin(deger, anahtar) {
   return temiz || KURUL_RAPOR_VARSAYILANLARI[anahtar] || '';
 }
 
-// ==================== 1) TOPLANTI DAVETİ (WORD) ====================
-
-// indir=false: dosyayı indirmez, { blob, dosyaAdi } döner — "Toplantı Daveti
-// Mail Gönder" Word'ü buluta yükleyip mailde link olarak paylaşır
-// (bkz. toplanti-ui.js davetMailGonder).
-async function toplantiDavetiWordOlustur(indir = true) {
-  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
-  if (!toplanti) return null;
-
-  const katilimcilar = toplantiImzalariniGetir(_toplantiId);
-  const gundem = toplanti.gundem || [];
-
-  const doc = new docx.Document({
-    sections: [{
-      // Kullanıcı isteği: davet tek sayfaya sığmalı (imza satırları
-      // genişletildikçe taştı) — kenar boşlukları daraltıldı (0.5in) ve
-      // boş paragraf ayraçları küçük "spacing.after" değerleriyle
-      // değiştirildi ki yer kazanılsın, imza satırı yüksekliği yine de
-      // genişletilmiş kalsın.
-      properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
-      children: [
-        new docx.Paragraph({
-          alignment: docx.AlignmentType.CENTER,
-          spacing: { after: 200 },
-          children: [new docx.TextRun({ text: 'TOPLANTI DAVETİ', bold: true, size: 32 })]
-        }),
-        new docx.Paragraph({
-          spacing: { after: 200 },
-          children: [new docx.TextRun({
-            text: `İş Sağlığı ve Güvenliği Kurulumuzun ${_ciktiDonemMetni(toplanti)} toplantısı, ${_ciktiTarihSaat(toplanti)} tarihinde ${toplanti.yer || ''} yapılacaktır. Bilgilerinize sunar, toplantıya tüm kurul üyelerinin katılımını rica ederiz.`
-          })]
-        }),
-        new docx.Paragraph({ spacing: { after: 100 }, children: [new docx.TextRun({ text: 'GÜNDEM', bold: true })] }),
-        // Not (2026-08-04): burada eskiden 2 sabit (hardcoded) gündem maddesi
-        // ("Bir önceki toplantıda alınan kararların gözden geçirilmesi" ve
-        // "...ramak kala, iş kazalarının... görüşülmesi") toplantı.gundem'in
-        // ÖNÜNE ekleniyordu — ama VARSAYILAN_GUNDEM_MADDELERI (bkz. ui.js)
-        // zaten neredeyse birebir aynı iki maddeyle başlıyor, bu da davette
-        // her zaman madde tekrarına yol açıyordu (kullanıcı tespiti). Artık
-        // toplantının gerçek gündem listesi tek kaynak, 1'den başlar.
-        // "Olaylar" maddesinin altına, toplantı tarihine kadar olan olayların
-        // kısa dökümü eklenir (kullanıcı isteği: "toplantı tarihine kadar
-        // olan olayları da gündeme ekleyelim") — bkz. service.js
-        // toplantiOlaylarGundemMetni.
-        ...gundem.flatMap((g, i) => {
-          const satirlar = [new docx.Paragraph({ text: `${i + 1}) ${g.baslik}`, spacing: { after: 60 } })];
-          if (/^olaylar/i.test(g.baslik.trim())) {
-            const olaylarMetni = toplantiOlaylarGundemMetni(toplanti.id);
-            if (olaylarMetni) {
-              satirlar.push(new docx.Paragraph({
-                indent: { left: 300 },
-                spacing: { after: 60 },
-                children: [new docx.TextRun({ text: olaylarMetni, italics: true, size: 18 })]
-              }));
-            }
-          }
-          return satirlar;
-        }),
-        new docx.Paragraph({ text: '', spacing: { after: 140 } }),
-        new docx.Table({
-          width: { size: 100, type: docx.WidthType.PERCENTAGE },
-          rows: [
-            // Kullanıcı isteği (3. düzeltme): GÖREVİ biraz genişletildi, İMZA
-            // daraltıldı. 19 katılımcılık listede 600 twip taban satır
-            // yüksekliği (önceki tur) sayfa sınırına tam denk gelip taşmaya
-            // devam ediyordu — güvenli pay bırakmak için 400 twip'e indirildi
-            // (yine de eski varsayılan 350'den biraz daha ferah, ve GÖREVİ
-            // genişlediği için 2 satıra taşma da daha az olacak).
-            new docx.TableRow({
-              children: [
-                ['ADI VE SOYADI', 30], ['GÖREVİ', 38], ['İMZA', 32]
-              ].map(([baslik, genislik]) =>
-                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: baslik, spacing: { before: 120, after: 120 } })] })
-              )
-            }),
-            ...katilimcilar.map((k, i) => new docx.TableRow({
-              height: { value: 400, rule: docx.HeightRule.ATLEAST },
-              children: [
-                new docx.TableCell({ children: [new docx.Paragraph({ text: `${i + 1}) ${k.adSoyad}`, spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: k.unvan || '', spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: '', spacing: { before: 60, after: 60 } })] })
-              ]
-            }))
-          ]
-        })
-      ]
-    }]
-  });
-
-  const blob = await docx.Packer.toBlob(doc);
-  const dosyaAdi = `Toplanti_Daveti_${toplanti.toplantiNo}.docx`;
-  if (indir) saveAs(blob, dosyaAdi);
-  return { blob, dosyaAdi };
-}
+// ==================== 1) TOPLANTI TAKVİM DAVETİ (.ics) ====================
 
 // Kullanıcı isteği: Outlook'taki "Toplantı" (toplantı talebi) penceresinin
 // gerekli katılımcılar/başlık/tarih-saat/konum/açıklama alanlarıyla hazır
@@ -183,25 +90,6 @@ function toplantiTakvimDavetiOlustur(organizatorEposta) {
   const blob = new Blob([satirlar.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
   saveAs(blob, `Toplanti_Daveti_${toplanti.toplantiNo}.ics`);
   return katilimcilar.length;
-}
-
-// Davet Word'ünü Firebase Storage'a yükleyip indirme linkini döner (uygunsuzluk
-// maillerindeki aynı yöntem: ek yerine link, boyut sınırı yok). Storage yoksa
-// ya da yükleme başarısızsa null döner.
-async function toplantiDavetiWordUrlOlustur() {
-  const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
-  if (!storage) return null;
-  const uretim = await toplantiDavetiWordOlustur(false);
-  if (!uretim) return null;
-
-  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-  const yol = 'kurul_davet_word/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
-  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Davet Word yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 30000));
-  const yukleme = (async () => {
-    const anlik = await storage.ref().child(yol).put(uretim.blob, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    return anlik.ref.getDownloadURL();
-  })();
-  return Promise.race([yukleme, zamanAsimi]);
 }
 
 // Bu toplantının kararlarında VEYA devreden kararlarda oy dökümü (Kabul/Ret/
@@ -1727,9 +1615,6 @@ async function imzaListesiPdfOlustur() {
 // ==================== Buton bağlantıları ====================
 
 function ciktiButonlariniBagla() {
-  document.getElementById('btnInviteWord').addEventListener('click', async () => {
-    await toplantiDavetiWordOlustur();
-  });
   document.getElementById('btnReportWord').addEventListener('click', async () => {
     await kurulRaporuWordOlustur();
   });
