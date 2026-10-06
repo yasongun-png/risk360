@@ -41,7 +41,66 @@ async function _docxOnizlemeModuluGetir() {
   return _docxOnizlemeModulu;
 }
 
+// ---- PPTX sunum modu + tam ekran ----
+// Kullanıcı isteği: "istersem ekranı kaplasın, pptx'i sunum şeklinde
+// kullanabileyim" — PPTX tek slayt (pptx-preview mode:'slide') gösterilir,
+// ←/→/Boşluk/PageUp/PageDown ile ilerlenir; "Tam Ekran" penceredeki kutuyu
+// tarayıcı tam ekranına alır ve slayt yeni boyuta göre yeniden çizilir.
+let _onizlemeTampon = null;
+let _onizlemeUzanti = '';
+let _pptxOnizleyici = null;
+let _pptxSlaytIndeksi = 0;
+
+async function _pptxSlaytiCiz() {
+  const icerik = document.getElementById('materyalOnizlemeIcerik');
+  icerik.innerHTML = '';
+  const kap = document.createElement('div');
+  kap.style.cssText = 'background:#111827; width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;';
+  icerik.appendChild(kap);
+  const kullanilabilirG = icerik.clientWidth - 24;
+  const kullanilabilirY = icerik.clientHeight - 24;
+  const genislik = Math.max(320, Math.floor(Math.min(kullanilabilirG, kullanilabilirY * 16 / 9)));
+  _pptxOnizleyici = window.pptxPreview.init(kap, { width: genislik, height: Math.round(genislik * 9 / 16), mode: 'slide' });
+  await _pptxOnizleyici.preview(_onizlemeTampon);
+  // Önceki konumdan devam (yeniden çizimde, örn. tam ekrana geçişte).
+  for (let i = 0; i < _pptxSlaytIndeksi; i++) _pptxOnizleyici.renderNextSlide();
+}
+
+function _pptxSlaytIlerlet(yon) {
+  if (!_pptxOnizleyici || _onizlemeUzanti !== 'pptx') return;
+  const sayi = _pptxOnizleyici.slideCount;
+  if (yon > 0) { _pptxOnizleyici.renderNextSlide(); _pptxSlaytIndeksi = (_pptxSlaytIndeksi + 1) % sayi; }
+  else { _pptxOnizleyici.renderPreSlide(); _pptxSlaytIndeksi = (_pptxSlaytIndeksi - 1 + sayi) % sayi; }
+}
+
+function materyalTamEkranDegistir() {
+  const kutu = document.getElementById('materyalOnizlemeKutu');
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (kutu.requestFullscreen) kutu.requestFullscreen();
+}
+
+document.addEventListener('fullscreenchange', async () => {
+  const katman = document.getElementById('materyalOnizlemeKatmani');
+  if (!katman || !katman.classList.contains('acik')) return;
+  // Boyut değişti: PPTX'i yeni alana göre yeniden çiz (konum korunur).
+  if (_onizlemeUzanti === 'pptx' && _onizlemeTampon) {
+    await new Promise(r => setTimeout(r, 150));
+    try { await _pptxSlaytiCiz(); } catch (e) { console.error(e); }
+  }
+});
+
+document.addEventListener('keydown', e => {
+  const katman = document.getElementById('materyalOnizlemeKatmani');
+  if (!katman || !katman.classList.contains('acik') || _onizlemeUzanti !== 'pptx') return;
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); _pptxSlaytIlerlet(1); }
+  else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); _pptxSlaytIlerlet(-1); }
+});
+
 function materyalOnizlemeKapat() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  _onizlemeTampon = null;
+  _pptxOnizleyici = null;
+  _onizlemeUzanti = '';
   const katman = document.getElementById('materyalOnizlemeKatmani');
   katman.classList.remove('acik');
   const icerik = document.getElementById('materyalOnizlemeIcerik');
@@ -59,6 +118,9 @@ async function materyalOnizle(id) {
   const indirLink = document.getElementById('materyalOnizlemeIndir');
   baslik.textContent = m.ad;
   indirLink.href = m.url;
+  _onizlemeUzanti = '';
+  _onizlemeTampon = null;
+  _pptxOnizleyici = null;
   icerik.innerHTML = '<div style="padding:30px; text-align:center; color:var(--metin-soluk);">Dosya yükleniyor...</div>';
   document.getElementById('materyalOnizlemeKatmani').classList.add('acik');
 
@@ -87,13 +149,11 @@ async function materyalOnizle(id) {
       await modul.renderAsync(tampon, kap, null, { className: 'docx', inWrapper: true, ignoreWidth: false, breakPages: true });
     } else {
       await _materyalScriptYukle('https://cdn.jsdelivr.net/npm/pptx-preview@1.0.7/dist/pptx-preview.umd.js');
-      const kap = document.createElement('div');
-      kap.style.cssText = 'background:#e5e7eb; padding:12px; overflow:auto; height:100%;';
-      icerik.appendChild(kap);
-      const genislik = Math.min(960, Math.max(480, icerik.clientWidth - 40));
-      const onizleyici = window.pptxPreview.init(kap, { width: genislik, height: Math.round(genislik * 9 / 16) });
-      await onizleyici.preview(tampon);
+      _onizlemeTampon = tampon;
+      _pptxSlaytIndeksi = 0;
+      await _pptxSlaytiCiz();
     }
+    _onizlemeUzanti = uzanti;
   } catch (hata) {
     console.error(hata);
     icerik.innerHTML = `<div style="padding:30px; text-align:center;">
@@ -205,6 +265,7 @@ function _materyalSurukleBirakKur() {
 
 function materyalSayfasiniBaslat() {
   document.getElementById('materyalOnizlemeKapatBtn').addEventListener('click', materyalOnizlemeKapat);
+  document.getElementById('materyalTamEkranBtn').addEventListener('click', materyalTamEkranDegistir);
   document.getElementById('materyalAramaKutusu').addEventListener('input', e => materyalTablosunuCiz(e.target.value));
   document.getElementById('materyalYukleBtn').addEventListener('click', () => document.getElementById('materyalDosya').click());
   document.getElementById('materyalDosya').addEventListener('change', _materyalDosyaSecildi);
