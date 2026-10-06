@@ -69,7 +69,13 @@ async function _pptxSlaytiCiz() {
   // ilerlemeli" — sol tık = sonraki slayt, sağ tık = önceki slayt. Kütüphanenin
   // kendi ileri/geri düğmeleri de bu dinleyiciye düşsün diye (çift ilerleme
   // olmasın) tıklama YAKALAMA aşamasında durdurulup tek yerden yönetilir.
-  kap.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); _pptxSlaytIlerlet(1); }, true);
+  // Güncelleme: ekranın SAĞ yarısına tıklayınca ileri, SOL yarısına tıklayınca geri.
+  kap.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const kutu = kap.getBoundingClientRect();
+    _pptxSlaytIlerlet(e.clientX >= kutu.left + kutu.width / 2 ? 1 : -1);
+  }, true);
   kap.addEventListener('contextmenu', e => { e.preventDefault(); _pptxSlaytIlerlet(-1); });
 }
 
