@@ -64,13 +64,20 @@ async function _pptxSlaytiCiz() {
   await _pptxOnizleyici.preview(_onizlemeTampon);
   // Önceki konumdan devam (yeniden çizimde, örn. tam ekrana geçişte).
   for (let i = 0; i < _pptxSlaytIndeksi; i++) _pptxOnizleyici.renderNextSlide();
+
+  // Kullanıcı isteği: "pptx'de herhangi bir yere tıkladığımda da sayfa
+  // ilerlemeli" — sol tık = sonraki slayt, sağ tık = önceki slayt. Kütüphanenin
+  // kendi ileri/geri düğmeleri de bu dinleyiciye düşsün diye (çift ilerleme
+  // olmasın) tıklama YAKALAMA aşamasında durdurulup tek yerden yönetilir.
+  kap.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); _pptxSlaytIlerlet(1); }, true);
+  kap.addEventListener('contextmenu', e => { e.preventDefault(); _pptxSlaytIlerlet(-1); });
 }
 
 function _pptxSlaytIlerlet(yon) {
-  if (!_pptxOnizleyici || _onizlemeUzanti !== 'pptx') return;
-  const sayi = _pptxOnizleyici.slideCount;
-  if (yon > 0) { _pptxOnizleyici.renderNextSlide(); _pptxSlaytIndeksi = (_pptxSlaytIndeksi + 1) % sayi; }
-  else { _pptxOnizleyici.renderPreSlide(); _pptxSlaytIndeksi = (_pptxSlaytIndeksi - 1 + sayi) % sayi; }
+  if (!_pptxOnizleyici || !_onizlemeTampon) return;
+  if (yon > 0) _pptxOnizleyici.renderNextSlide();
+  else _pptxOnizleyici.renderPreSlide();
+  _pptxSlaytIndeksi = _pptxOnizleyici.currentIndex;
 }
 
 function materyalTamEkranDegistir() {
