@@ -6,17 +6,102 @@ function _egitimMateryalBoyutMetni(bayt) {
   return (bayt / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// ---- Uygulama içi önizleme (indirmeden aç) ----
 // Kullanıcı isteği: "pptx, word veya pdf'i direkt açabilmek istiyorum, istersem
-// indirmeden" — PDF tarayıcının kendi görüntüleyicisinde doğrudan açılır;
-// PowerPoint/Word tarayıcıda gösterilemediğinden Microsoft Office çevrimiçi
-// görüntüleyicisi kullanılır (dosyanın Storage indirme adresi görüntüleyiciye
-// verilir; indirme gerekmez). Tanınmayan türlerde dosya doğrudan açılır.
-function _egitimMateryalGoruntuleUrl(m) {
-  const ad = String(m.dosyaAdi || '').toLowerCase();
-  if (/\.(pptx?|docx?)$/.test(ad)) {
-    return 'https://view.officeapps.live.com/op/view.aspx?src=' + encodeURIComponent(m.url);
+// indirmeden". Microsoft'un çevrimiçi görüntüleyicisi Storage adresini okuyamayıp
+// "Dosya bulunamadı" verdiğinden, dosya tarayıcıda indirilip (fetch) uygulamanın
+// kendi penceresinde çizilir: PDF -> tarayıcının PDF görüntüleyicisi (iframe),
+// DOCX -> docx-preview, PPTX -> pptx-preview (kütüphaneler ilk kullanımda CDN'den
+// yüklenir). Eski ikili .doc/.ppt biçimleri çizilemez, indirme önerilir.
+const _materyalScriptOnbellek = {};
+
+function _materyalScriptYukle(src) {
+  if (!_materyalScriptOnbellek[src]) {
+    _materyalScriptOnbellek[src] = new Promise((coz, reddet) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = coz;
+      s.onerror = () => { delete _materyalScriptOnbellek[src]; reddet(new Error('Görüntüleyici kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).')); };
+      document.head.appendChild(s);
+    });
   }
-  return m.url;
+  return _materyalScriptOnbellek[src];
+}
+
+let _docxOnizlemeModulu = null;
+async function _docxOnizlemeModuluGetir() {
+  if (_docxOnizlemeModulu) return _docxOnizlemeModulu;
+  await _materyalScriptYukle('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+  // docx-preview global adı "docx" -- Word üreten docx.js ile AYNI ad; yüklerken
+  // mevcut docx.js nesnesi korunup geri konur.
+  const eskiDocx = window.docx;
+  await _materyalScriptYukle('https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js');
+  _docxOnizlemeModulu = window.docx;
+  window.docx = eskiDocx;
+  return _docxOnizlemeModulu;
+}
+
+function materyalOnizlemeKapat() {
+  const katman = document.getElementById('materyalOnizlemeKatmani');
+  katman.classList.remove('acik');
+  const icerik = document.getElementById('materyalOnizlemeIcerik');
+  const iframe = icerik.querySelector('iframe');
+  if (iframe && iframe.dataset.blobUrl) URL.revokeObjectURL(iframe.dataset.blobUrl);
+  icerik.innerHTML = '';
+}
+
+async function materyalOnizle(id) {
+  const m = egitimMateryalleriniGetir('').find(x => x.id === id);
+  if (!m) return;
+
+  const baslik = document.getElementById('materyalOnizlemeBaslik');
+  const icerik = document.getElementById('materyalOnizlemeIcerik');
+  const indirLink = document.getElementById('materyalOnizlemeIndir');
+  baslik.textContent = m.ad;
+  indirLink.href = m.url;
+  icerik.innerHTML = '<div style="padding:30px; text-align:center; color:var(--metin-soluk);">Dosya yükleniyor...</div>';
+  document.getElementById('materyalOnizlemeKatmani').classList.add('acik');
+
+  const uzanti = (String(m.dosyaAdi || '').toLowerCase().match(/\.([a-z0-9]+)$/) || [])[1] || '';
+  try {
+    if (uzanti === 'doc' || uzanti === 'ppt') throw new Error('Eski .doc/.ppt biçimi uygulama içinde gösterilemiyor.');
+    if (!['pdf', 'docx', 'pptx'].includes(uzanti)) throw new Error('Bu dosya türü uygulama içinde gösterilemiyor.');
+
+    const yanit = await fetch(m.url);
+    if (!yanit.ok) throw new Error('Dosya depolamadan alınamadı (HTTP ' + yanit.status + ').');
+    const tampon = await yanit.arrayBuffer();
+    icerik.innerHTML = '';
+
+    if (uzanti === 'pdf') {
+      const blobUrl = URL.createObjectURL(new Blob([tampon], { type: 'application/pdf' }));
+      const iframe = document.createElement('iframe');
+      iframe.src = blobUrl;
+      iframe.dataset.blobUrl = blobUrl;
+      iframe.style.cssText = 'width:100%; height:100%; border:0;';
+      icerik.appendChild(iframe);
+    } else if (uzanti === 'docx') {
+      const modul = await _docxOnizlemeModuluGetir();
+      const kap = document.createElement('div');
+      kap.style.cssText = 'background:#e5e7eb; padding:12px; overflow:auto; height:100%;';
+      icerik.appendChild(kap);
+      await modul.renderAsync(tampon, kap, null, { className: 'docx', inWrapper: true, ignoreWidth: false, breakPages: true });
+    } else {
+      await _materyalScriptYukle('https://cdn.jsdelivr.net/npm/pptx-preview@1.0.7/dist/pptx-preview.umd.js');
+      const kap = document.createElement('div');
+      kap.style.cssText = 'background:#e5e7eb; padding:12px; overflow:auto; height:100%;';
+      icerik.appendChild(kap);
+      const genislik = Math.min(960, Math.max(480, icerik.clientWidth - 40));
+      const onizleyici = window.pptxPreview.init(kap, { width: genislik, height: Math.round(genislik * 9 / 16) });
+      await onizleyici.preview(tampon);
+    }
+  } catch (hata) {
+    console.error(hata);
+    icerik.innerHTML = `<div style="padding:30px; text-align:center;">
+      <p style="font-weight:600;">Dosya uygulama içinde açılamadı.</p>
+      <p style="font-size:13px; color:var(--metin-soluk);">${_egKacir(hata.message || String(hata))}</p>
+      <p style="font-size:13px;">Sağ üstteki <b>İndir</b> ile dosyayı indirip açabilirsiniz.</p>
+    </div>`;
+  }
 }
 
 function materyalTablosunuCiz(aramaMetni) {
@@ -39,13 +124,16 @@ function materyalTablosunuCiz(aramaMetni) {
       <td>${_egitimMateryalBoyutMetni(m.boyut)}</td>
       <td>${m.yuklemeTarihi ? gunAyYil(m.yuklemeTarihi.slice(0, 10)) : '-'}</td>
       <td>
-        <a class="tablo-buton" href="${_egitimMateryalGoruntuleUrl(m)}" target="_blank" rel="noopener" title="İndirmeden tarayıcıda açar">Aç</a>
+        <button class="tablo-buton" data-materyal-ac="${m.id}" title="İndirmeden uygulama içinde açar">Aç</button>
         <a class="tablo-buton" href="${m.url}" target="_blank" rel="noopener">İndir</a>
         <button class="tablo-buton sil" data-materyal-sil="${m.id}">Sil</button>
       </td>
     </tr>
   `).join('');
 
+  govde.querySelectorAll('[data-materyal-ac]').forEach(btn => {
+    btn.addEventListener('click', () => materyalOnizle(btn.getAttribute('data-materyal-ac')));
+  });
   govde.querySelectorAll('[data-materyal-sil]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (await onayModali('Bu materyali silmek istediğinize emin misiniz?', 'Sil')) {
@@ -116,6 +204,7 @@ function _materyalSurukleBirakKur() {
 }
 
 function materyalSayfasiniBaslat() {
+  document.getElementById('materyalOnizlemeKapatBtn').addEventListener('click', materyalOnizlemeKapat);
   document.getElementById('materyalAramaKutusu').addEventListener('input', e => materyalTablosunuCiz(e.target.value));
   document.getElementById('materyalYukleBtn').addEventListener('click', () => document.getElementById('materyalDosya').click());
   document.getElementById('materyalDosya').addEventListener('change', _materyalDosyaSecildi);
