@@ -6,6 +6,19 @@ function _egitimMateryalBoyutMetni(bayt) {
   return (bayt / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// Kullanıcı isteği: "pptx, word veya pdf'i direkt açabilmek istiyorum, istersem
+// indirmeden" — PDF tarayıcının kendi görüntüleyicisinde doğrudan açılır;
+// PowerPoint/Word tarayıcıda gösterilemediğinden Microsoft Office çevrimiçi
+// görüntüleyicisi kullanılır (dosyanın Storage indirme adresi görüntüleyiciye
+// verilir; indirme gerekmez). Tanınmayan türlerde dosya doğrudan açılır.
+function _egitimMateryalGoruntuleUrl(m) {
+  const ad = String(m.dosyaAdi || '').toLowerCase();
+  if (/\.(pptx?|docx?)$/.test(ad)) {
+    return 'https://view.officeapps.live.com/op/view.aspx?src=' + encodeURIComponent(m.url);
+  }
+  return m.url;
+}
+
 function materyalTablosunuCiz(aramaMetni) {
   const govde = document.getElementById('materyalTabloGovde');
   const bosDurum = document.getElementById('materyalBosDurum');
@@ -26,7 +39,8 @@ function materyalTablosunuCiz(aramaMetni) {
       <td>${_egitimMateryalBoyutMetni(m.boyut)}</td>
       <td>${m.yuklemeTarihi ? gunAyYil(m.yuklemeTarihi.slice(0, 10)) : '-'}</td>
       <td>
-        <a class="tablo-buton" href="${m.url}" target="_blank" rel="noopener">İndir / Aç</a>
+        <a class="tablo-buton" href="${_egitimMateryalGoruntuleUrl(m)}" target="_blank" rel="noopener" title="İndirmeden tarayıcıda açar">Aç</a>
+        <a class="tablo-buton" href="${m.url}" target="_blank" rel="noopener">İndir</a>
         <button class="tablo-buton sil" data-materyal-sil="${m.id}">Sil</button>
       </td>
     </tr>
