@@ -651,7 +651,14 @@ function _egtSutunSiraliListe(liste) {
   const bilgi = EGT_SIRALANABILIR_ALANLAR[alan];
   if (!bilgi) return liste;
   const yon = _egtSiralamaYon === 'desc' ? -1 : 1;
-  return liste.slice().sort((a, b) => String(a[alan] || '').localeCompare(String(b[alan] || ''), 'tr') * yon);
+  return liste.slice().sort((a, b) => {
+    const av = String(a[alan] || '');
+    const bv = String(b[alan] || '');
+    // Boş değerler (ör. süresiz kayıtların bitiş tarihi) her iki yönde de en sona.
+    if (!av && bv) return 1;
+    if (av && !bv) return -1;
+    return av.localeCompare(bv, 'tr') * yon;
+  });
 }
 
 function _egtBaslikSiralamayiKur() {
@@ -673,9 +680,23 @@ function _egtBaslikSiralamayiKur() {
 function _egtBaslikOklariniGuncelle() {
   document.querySelectorAll('#tabloBasligi [data-sirala]').forEach(th => {
     const alan = th.getAttribute('data-sirala');
-    const temizAd = th.textContent.replace(/ ▲| ▼/g, '');
-    th.textContent = temizAd + (alan === _egtSiralamaAlani ? (_egtSiralamaYon === 'asc' ? ' ▲' : ' ▼') : '');
+    const temizAd = th.textContent.replace(/ ▲| ▼| ⇅/g, '');
+    th.title = 'Sıralamak için tıklayın';
+    // Sıralanabilir başlıklar tıklanabilir olduğu belli olsun diye pasifken ⇅ gösterir.
+    th.textContent = temizAd + (alan === _egtSiralamaAlani ? (_egtSiralamaYon === 'asc' ? ' ▲' : ' ▼') : ' ⇅');
   });
+  const secim = document.getElementById('siralamaSecim');
+  if (secim) {
+    const deger = _egtSiralamaAlani ? `${_egtSiralamaAlani}|${_egtSiralamaYon}` : '';
+    secim.value = Array.from(secim.options).some(o => o.value === deger) ? deger : '';
+  }
+}
+
+function _egtSiralamaSecimiDegisti() {
+  const [alan, yon] = document.getElementById('siralamaSecim').value.split('|');
+  _egtSiralamaAlani = alan || null;
+  _egtSiralamaYon = yon || 'asc';
+  kayitTablosunuCiz(document.getElementById('aramaKutusu').value);
 }
 
 // bkz. modules/personel/ui.js _prsUstAltScrollKur/_prsUstAltScrollGenisligiGuncelle
@@ -727,6 +748,7 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('belgePdfDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
   document.getElementById('belgeFotoCekDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
   document.getElementById('belgeFotoSecDosya').addEventListener('change', _egtBelgeDosyasiSecildi);
+  document.getElementById('siralamaSecim').addEventListener('change', _egtSiralamaSecimiDegisti);
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeDurum').addEventListener('click', () => gorunumDegistir('durum'));
   document.getElementById('sekmeTemelIsg').addEventListener('click', () => gorunumDegistir('temelIsg'));

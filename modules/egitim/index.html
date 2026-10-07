@@ -47,6 +47,15 @@
       <div class="arac-cubugu">
         <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Personel veya eğitim türüne göre ara...">
         <select id="turFiltre" style="width:auto; min-width:160px;"><option value="">Tüm Eğitim Türleri</option></select>
+        <!-- Kullanıcı isteği: eğitim kayıtlarını eğitim tarihine göre sıralayabileyim.
+             (Tablo başlığına tıklayarak da sıralanır; bu liste aynısını görünür yapar.) -->
+        <select id="siralamaSecim" style="width:auto;" title="Kayıtları sırala">
+          <option value="">Sıralama: Son düzenlenen</option>
+          <option value="tarih|desc">Eğitim tarihi: yeniden eskiye</option>
+          <option value="tarih|asc">Eğitim tarihi: eskiden yeniye</option>
+          <option value="bitisTarihi|asc">Geçerlilik bitişi: yakın tarih önce</option>
+          <option value="personelAdi|asc">Personel adı: A–Z</option>
+        </select>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
@@ -773,7 +782,7 @@
   <script src="sinav-ui.js?v=2"></script>
   <script src="materyal.js?v=1"></script>
   <script src="materyal-ui.js?v=6"></script>
-  <script src="ui.js?v=6"></script>
+  <script src="ui.js?v=7"></script>
   <script src="cikti.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('egitim');
