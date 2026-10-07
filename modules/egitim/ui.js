@@ -734,6 +734,19 @@ function egitimSayfasiniBaslat(firma) {
   document.getElementById('temelIsgAramaKutusu').addEventListener('input', temelIsgTablosunuCiz);
   document.getElementById('temelIsgYilFiltre').addEventListener('change', temelIsgTablosunuCiz);
   document.getElementById('temelIsgBolumFiltre').addEventListener('change', temelIsgTablosunuCiz);
+  ['temelIsgBaslangic', 'temelIsgBitis', 'temelIsgTurFiltre', 'temelIsgAldiFiltre'].forEach(id =>
+    document.getElementById(id).addEventListener('change', temelIsgTablosunuCiz));
+  document.getElementById('temelIsgEylulKasimBtn').addEventListener('click', () => {
+    const yil = new Date().getFullYear();
+    document.getElementById('temelIsgBaslangic').value = `${yil}-09-01`;
+    document.getElementById('temelIsgBitis').value = `${yil}-11-30`;
+    temelIsgTablosunuCiz();
+  });
+  document.getElementById('temelIsgDonemTemizleBtn').addEventListener('click', () => {
+    ['temelIsgBaslangic', 'temelIsgBitis'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('temelIsgYilFiltre').value = '';
+    temelIsgTablosunuCiz();
+  });
   document.getElementById('temelIsgDisaAktarBtn').addEventListener('click', () => {
     excelDisaAktar(_temelIsgFiltrelenmisListe(), TEMEL_ISG_EXPORT_KOLONLARI, 'temel_isg_egitimleri.xlsx');
   });
@@ -1108,6 +1121,7 @@ const TEMEL_ISG_EXPORT_KOLONLARI = [
   { anahtar: 'gorev', baslik: 'Görev' },
   { anahtar: 'isveren', baslik: 'İşyeri Sicili' },
   { anahtar: 'tarihlerMetni', baslik: 'Eğitim Tarihleri' },
+  { anahtar: 'donemDurumMetni', baslik: 'Dönemde' },
   { anahtar: 'bitisTarihiMetni', baslik: 'Geçerlilik Bitiş' },
   { anahtar: 'durumMetni', baslik: 'Durum' }
 ];
@@ -1128,13 +1142,15 @@ function _temelIsgPersonelListesi() {
       .slice()
       .sort((a, b) => (a.tarih || '').localeCompare(b.tarih || ''));
 
-    const tarihlerMetni = kayitlar.length
-      ? kayitlar.map(k => {
-          const ilkTekrar = _egitimIlkMiTekrarMi(k, tumKayitlar);
-          const tarihMetni = k.tarih2 ? `${_egitimTarihGoruntu(k.tarih)} - ${_egitimTarihGoruntu(k.tarih2)}` : _egitimTarihGoruntu(k.tarih);
-          return `${tarihMetni} (${ilkTekrar === 'tekrar' ? 'Tekrar' : 'İlk'})`;
-        }).join(', ')
-      : '-';
+    // Her kayıt için ilk/tekrar ve görüntü metni önceden hesaplanır; dönem/tür
+    // filtresi bu zenginleştirilmiş kayıtlar üzerinden uygulanır (bkz.
+    // _temelIsgFiltrelenmisListe).
+    const zengin = kayitlar.map(k => {
+      const ilkTekrar = _egitimIlkMiTekrarMi(k, tumKayitlar);
+      const tarihMetni = k.tarih2 ? `${_egitimTarihGoruntu(k.tarih)} - ${_egitimTarihGoruntu(k.tarih2)}` : _egitimTarihGoruntu(k.tarih);
+      return { tarih: k.tarih || '', ilkTekrar, metin: `${tarihMetni} (${ilkTekrar === 'tekrar' ? 'Tekrar' : 'İlk'})` };
+    });
+    const tarihlerMetni = zengin.length ? zengin.map(z => z.metin).join(', ') : '-';
 
     const sonKayit = kayitlar[kayitlar.length - 1] || null;
 
@@ -1146,6 +1162,7 @@ function _temelIsgPersonelListesi() {
       gorev: p.gorev || '',
       isveren: p.isveren || '',
       kayitSayisi: kayitlar.length,
+      kayitlar: zengin,
       tarihlerMetni,
       bitisTarihi: sonKayit ? (sonKayit.bitisTarihi || '') : '',
       bitisTarihiMetni: sonKayit && sonKayit.bitisTarihi ? _egitimTarihGoruntu(sonKayit.bitisTarihi) : '-',
@@ -1205,30 +1222,71 @@ function _temelIsgBaslikOklariniGuncelle() {
   });
 }
 
-function _temelIsgFiltrelenmisListe() {
+// Kullanıcı isteği: "eylül ekim kasım aylarında temel eğitim tekrarı
+// yapıyoruz, bunları ayrı filtreleyebilmem lazım, kimlere yaptık, kaç kişiye
+// yaptık, kimlere yapmadık" — Yıl / Dönem (başlangıç–bitiş) / Eğitim türü
+// (İlk/Tekrar) filtreleri, personelin DÖNEMDE eğitim alıp almadığını belirler:
+//  - hiçbir dönem/tür/yıl filtresi yoksa "aldı" = hiç Temel İSG eğitimi var,
+//  - varsa "aldı" = filtreye uyan en az bir eğitim kaydı var ve satırda sadece
+//    o dönemin eğitim tarihleri gösterilir.
+// Dönüş: { liste (Alan/Almayan filtresi uygulanmış), ozet }; özet sayıları
+// arama/bölüm filtresine göre ama Alan/Almayan filtresinden ÖNCE hesaplanır.
+function _temelIsgFiltreVeOzet() {
   const aramaMetni = document.getElementById('temelIsgAramaKutusu').value.trim().toLowerCase();
   const yil = document.getElementById('temelIsgYilFiltre').value;
   const bolum = document.getElementById('temelIsgBolumFiltre').value;
+  const baslangic = document.getElementById('temelIsgBaslangic').value;
+  const bitis = document.getElementById('temelIsgBitis').value;
+  const tur = document.getElementById('temelIsgTurFiltre').value;
+  const aldiFiltre = document.getElementById('temelIsgAldiFiltre').value;
+  const donemFiltreAktif = !!(yil || baslangic || bitis || tur);
 
-  const liste = _temelIsgPersonelListesi()
+  const kapsam = _temelIsgPersonelListesi()
     .filter(p => !aramaMetni ||
       p.sicilNo.toLowerCase().includes(aramaMetni) ||
       p.adSoyad.toLowerCase().includes(aramaMetni) ||
       p.bolum.toLowerCase().includes(aramaMetni) ||
       p.gorev.toLowerCase().includes(aramaMetni))
-    .filter(p => !yil || p.tarihlerMetni.includes(yil))
-    .filter(p => !bolum || p.bolum === bolum);
+    .filter(p => !bolum || p.bolum === bolum)
+    .map(p => {
+      const eslesen = p.kayitlar.filter(k =>
+        (!yil || k.tarih.startsWith(yil)) &&
+        (!baslangic || k.tarih >= baslangic) &&
+        (!bitis || k.tarih <= bitis) &&
+        (!tur || k.ilkTekrar === tur));
+      const aldi = eslesen.length > 0;
+      return Object.assign({}, p, {
+        aldi,
+        tarihlerMetni: donemFiltreAktif ? (eslesen.length ? eslesen.map(k => k.metin).join(', ') : '-') : p.tarihlerMetni,
+        donemDurumMetni: aldi ? 'Aldı' : 'Almadı'
+      });
+    });
 
-  return _temelIsgSutunSiraliListe(liste);
+  const alanSayisi = kapsam.filter(p => p.aldi).length;
+  const liste = kapsam.filter(p => !aldiFiltre || (aldiFiltre === 'aldi' ? p.aldi : !p.aldi));
+  return {
+    liste: _temelIsgSutunSiraliListe(liste),
+    ozet: { toplam: kapsam.length, aldi: alanSayisi, almadi: kapsam.length - alanSayisi, donemFiltreAktif }
+  };
+}
+
+function _temelIsgFiltrelenmisListe() {
+  return _temelIsgFiltreVeOzet().liste;
 }
 
 function temelIsgTablosunuCiz() {
   const govde = document.getElementById('temelIsgTabloGovde');
   const bosDurum = document.getElementById('temelIsgBosDurum');
-  const liste = _temelIsgFiltrelenmisListe();
+  const { liste, ozet } = _temelIsgFiltreVeOzet();
 
   govde.innerHTML = '';
   _temelIsgBaslikOklariniGuncelle();
+
+  const kutu = (etiket, deger, renk) => `<div style="padding:8px 14px; border:1px solid var(--kenarlik); border-radius:8px; font-size:13px;">${etiket}: <b style="color:${renk};">${deger}</b></div>`;
+  document.getElementById('temelIsgOzet').innerHTML =
+    kutu('Toplam personel', ozet.toplam, 'inherit') +
+    kutu(ozet.donemFiltreAktif ? 'Bu dönemde eğitim alan' : 'Eğitim alan', ozet.aldi, '#15803d') +
+    kutu(ozet.donemFiltreAktif ? 'Bu dönemde eğitim almayan' : 'Hiç eğitim almayan', ozet.almadi, '#b91c1c');
 
   if (!liste.length) {
     bosDurum.classList.add('gorunur');
@@ -1246,6 +1304,7 @@ function temelIsgTablosunuCiz() {
       <td>${_egKacir(p.gorev) || '-'}</td>
       <td>${_egKacir(p.isveren) || '-'}</td>
       <td>${_egKacir(p.tarihlerMetni)}</td>
+      <td><span class="durum-rozet ${p.aldi ? 'durum-gecerli' : 'durum-gecmis'}">${p.donemDurumMetni}</span></td>
       <td>${_egKacir(p.bitisTarihiMetni)}</td>
       <td><span class="durum-rozet durum-${p.durum}">${_egKacir(p.durumMetni)}</span></td>
     `;
