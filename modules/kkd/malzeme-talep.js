@@ -460,14 +460,44 @@ function _malzemeTalepSiraNoUret(yil) {
   return (mevcut.length ? Math.max(...mevcut) : 0) + 1;
 }
 
+// Kullanıcı isteği: "belge no'yu değiştirmek istiyorum, değiştirdikten sonra
+// yeni hazırladıklarım o numaraya göre ilerlesin" — elle girilen belge no
+// sıra numarasına (sonundaki rakamlar) çevrilir; sonraki talepler
+// _malzemeTalepSiraNoUret'in "en yüksek sıra no + 1" kuralıyla bu numaradan
+// devam eder. "İSG.012" biçimindeki numaralarda üst belge no da (İSG.:12)
+// aynı kalıpla türetilir, farklı biçimlerde belge no'nun kendisi kullanılır.
+function _malzemeTalepBelgeNoCozumle(belgeNo) {
+  const temiz = String(belgeNo || '').trim();
+  const sayi = temiz.match(/(\d+)\s*$/);
+  const siraNo = sayi ? parseInt(sayi[1], 10) : null;
+  const isgKalibi = temiz.match(/^İSG\.(\d+)$/i);
+  const ustBelgeNo = isgKalibi ? `İSG.:${String(parseInt(isgKalibi[1], 10)).padStart(2, '0')}` : temiz;
+  return { belgeNo: temiz, siraNo, ustBelgeNo };
+}
+
+function _malzemeTalepBelgeNoKullanimda(belgeNo, haricId) {
+  const kucuk = String(belgeNo).toLocaleLowerCase('tr-TR');
+  return malzemeTalepTumunuGetir().some(t => t.id !== haricId && String(t.belgeNo || '').toLocaleLowerCase('tr-TR') === kucuk);
+}
+
 function malzemeTalepEkle(veriler, secilenMalzemeler) {
   const dogrulama = malzemeTalepDogrula(veriler, secilenMalzemeler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
   const yil = new Date(veriler.talepTarihi).getFullYear();
-  const siraNo = _malzemeTalepSiraNoUret(yil);
-  const belgeNo = `İSG.${String(siraNo).padStart(3, '0')}`;
-  const ustBelgeNo = `İSG.:${String(siraNo).padStart(2, '0')}`;
+  let siraNo = _malzemeTalepSiraNoUret(yil);
+  let belgeNo = `İSG.${String(siraNo).padStart(3, '0')}`;
+  let ustBelgeNo = `İSG.:${String(siraNo).padStart(2, '0')}`;
+
+  if ((veriler.belgeNo || '').trim()) {
+    const cozulen = _malzemeTalepBelgeNoCozumle(veriler.belgeNo);
+    if (_malzemeTalepBelgeNoKullanimda(cozulen.belgeNo, null)) {
+      return { basarili: false, hatalar: { belgeNo: `"${cozulen.belgeNo}" numarası başka bir talepte kullanılıyor.` } };
+    }
+    belgeNo = cozulen.belgeNo;
+    ustBelgeNo = cozulen.ustBelgeNo;
+    if (cozulen.siraNo != null) siraNo = cozulen.siraNo;
+  }
 
   const yeniKayit = malzemeTalepKaydiOlustur(Object.assign({}, veriler, {
     yil, siraNo, belgeNo, ustBelgeNo,
@@ -481,7 +511,23 @@ function malzemeTalepGuncelle(id, veriler, secilenMalzemeler) {
   const dogrulama = malzemeTalepDogrula(veriler, secilenMalzemeler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
-  const guncellenen = malzemeTalepGuncelleRepo(id, {
+  // Belge no değiştirildiyse (boş bırakılırsa mevcut korunur): benzersizlik
+  // kontrolü + sıra no/üst belge no güncellenir ki sonraki talepler bu
+  // numaradan devam etsin.
+  const mevcut = malzemeTalepIdIleGetirRepo(id);
+  const belgeNoGuncelleme = {};
+  const yeniBelgeNo = (veriler.belgeNo || '').trim();
+  if (mevcut && yeniBelgeNo && yeniBelgeNo !== mevcut.belgeNo) {
+    const cozulen = _malzemeTalepBelgeNoCozumle(yeniBelgeNo);
+    if (_malzemeTalepBelgeNoKullanimda(cozulen.belgeNo, id)) {
+      return { basarili: false, hatalar: { belgeNo: `"${cozulen.belgeNo}" numarası başka bir talepte kullanılıyor.` } };
+    }
+    belgeNoGuncelleme.belgeNo = cozulen.belgeNo;
+    belgeNoGuncelleme.ustBelgeNo = cozulen.ustBelgeNo;
+    if (cozulen.siraNo != null) belgeNoGuncelleme.siraNo = cozulen.siraNo;
+  }
+
+  const guncellenen = malzemeTalepGuncelleRepo(id, Object.assign({
     talepTarihi: veriler.talepTarihi,
     konu: veriler.konu.trim(),
     aciklama: (veriler.aciklama || '').trim(),
@@ -496,7 +542,7 @@ function malzemeTalepGuncelle(id, veriler, secilenMalzemeler) {
     unvan: (veriler.unvan || '').trim(),
     durum: veriler.durum || 'Taslak',
     malzemeler: JSON.parse(JSON.stringify(secilenMalzemeler))
-  });
+  }, belgeNoGuncelleme));
   if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
   return { basarili: true, kayit: guncellenen };
 }

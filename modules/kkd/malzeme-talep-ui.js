@@ -147,7 +147,7 @@ function _mtYeniTalepBaslat() {
     malzemeTalepOnizlemeYazdir(_duzenlenenTalepId);
   });
 
-  ['tTarih', 'tKonu', 'tMetin', 'tMudurluk', 'tHitap', 'tImzaYetkilisi', 'tUnvan'].forEach(id => {
+  ['tTarih', 'tBelgeNo', 'tKonu', 'tMetin', 'tMudurluk', 'tHitap', 'tImzaYetkilisi', 'tUnvan'].forEach(id => {
     document.getElementById(id).addEventListener('input', onizlemeGuncelle);
   });
 
@@ -160,6 +160,7 @@ function talepFormuSifirla() {
   const ayarlar = malzemeTalepAyarlariGetir();
   document.getElementById('talepFormBaslik').textContent = 'Yeni Talep';
   document.getElementById('tTarih').value = bugunIso();
+  document.getElementById('tBelgeNo').value = '';
   document.getElementById('tAciliyet').value = 'Normal';
   document.getElementById('tKonu').value = '';
   document.getElementById('tBirim').value = '';
@@ -262,8 +263,11 @@ function metinOner() {
 function _mtFormdanTaslakOlustur() {
   return {
     talepTarihi: document.getElementById('tTarih').value,
-    belgeNo: _duzenlenenTalepId ? (malzemeTalepIdIleGetirRepo(_duzenlenenTalepId) || {}).belgeNo : '',
-    ustBelgeNo: _duzenlenenTalepId ? (malzemeTalepIdIleGetirRepo(_duzenlenenTalepId) || {}).ustBelgeNo : '',
+    // Formdaki Belge No yazıldıysa önizleme onu gösterir (kayıttan önce de).
+    belgeNo: document.getElementById('tBelgeNo').value.trim() || (_duzenlenenTalepId ? (malzemeTalepIdIleGetirRepo(_duzenlenenTalepId) || {}).belgeNo : ''),
+    ustBelgeNo: document.getElementById('tBelgeNo').value.trim()
+      ? _malzemeTalepBelgeNoCozumle(document.getElementById('tBelgeNo').value).ustBelgeNo
+      : (_duzenlenenTalepId ? (malzemeTalepIdIleGetirRepo(_duzenlenenTalepId) || {}).ustBelgeNo : ''),
     konu: document.getElementById('tKonu').value,
     mudurluk: document.getElementById('tMudurluk').value,
     hitap: document.getElementById('tHitap').value,
@@ -285,6 +289,7 @@ function talepFormunuDoldur(t) {
   _duzenlenenTalepId = t.id;
   document.getElementById('talepFormBaslik').textContent = t.belgeNo + ' Talebini Düzenle';
   document.getElementById('tTarih').value = t.talepTarihi;
+  document.getElementById('tBelgeNo').value = t.belgeNo || '';
   document.getElementById('tAciliyet').value = t.aciliyet;
   document.getElementById('tKonu').value = t.konu;
   document.getElementById('tBirim').value = t.talepEdenBirim;
@@ -312,6 +317,7 @@ function talepFormGonderildi(e) {
 
   const veriler = {
     talepTarihi: document.getElementById('tTarih').value,
+    belgeNo: document.getElementById('tBelgeNo').value,
     konu: document.getElementById('tKonu').value,
     aciklama: document.getElementById('tAciklama').value,
     uretilenMetin: document.getElementById('tMetin').value,
@@ -340,6 +346,7 @@ function talepFormGonderildi(e) {
   }
 
   _duzenlenenTalepId = sonuc.kayit.id;
+  document.getElementById('tBelgeNo').value = sonuc.kayit.belgeNo;
   document.getElementById('talepFormBaslik').textContent = sonuc.kayit.belgeNo + ' kaydedildi';
   alert(sonuc.kayit.belgeNo + ' olarak kaydedildi.');
   onizlemeGuncelle();

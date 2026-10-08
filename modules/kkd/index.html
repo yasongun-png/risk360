@@ -165,6 +165,9 @@
                   <select id="tAciliyet"></select>
                 </div>
               </div>
+              <label for="tBelgeNo">Belge No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakılırsa otomatik verilir; değiştirirseniz sonraki talepler bu numaradan devam eder)</span></label>
+              <input type="text" id="tBelgeNo" placeholder="Otomatik (ör. İSG.003)">
+              <div class="alan-hatasi" id="tBelgeNoHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
               <label for="tKonu">Konu / Özü</label>
               <input type="text" id="tKonu">
               <div class="alan-hatasi" id="tKonuHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
@@ -807,8 +810,8 @@
   <script src="service.js"></script>
   <script src="ui.js"></script>
   <script src="cikti.js"></script>
-  <script src="malzeme-talep.js"></script>
-  <script src="malzeme-talep-ui.js"></script>
+  <script src="malzeme-talep.js?v=2"></script>
+  <script src="malzeme-talep-ui.js?v=2"></script>
   <script src="malzeme-talep-cikti.js"></script>
   <script>
     const kullanici = girisGerekliModul('kkd');
