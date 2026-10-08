@@ -36,7 +36,7 @@ function malzemeTalepOnizlemeHtmlUret(t) {
       .mt-a4 table{ width:100%; table-layout:fixed; border-collapse:collapse; }
       .mt-a4 th, .mt-a4 td{ border:1px solid #555; padding:4px; font-size:9pt; word-break:break-word; }
       .mt-dochead{ display:grid; grid-template-columns:1fr 1fr; font-weight:700; }
-      .mt-dochead .sag{ text-align:right; }
+      .mt-dochead .sag{ text-align:right; font-weight:400; }
       .mt-hitap{ text-align:center; margin:3rem 0; font-size:14pt; font-weight:700; }
       .mt-ozu{ text-align:right; margin-bottom:1.5rem; }
       .mt-govde{ text-align:justify; line-height:1.55; }
@@ -121,7 +121,13 @@ async function malzemeTalepWordOlustur(talepId) {
     rows: [new TableRow({
       children: [
         new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [new TextRun({ text: t.mudurluk, bold: true, font, size: bodySize })] })] }),
-        new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `Tarih: ${trTarih(t.talepTarihi)}\n${t.ustBelgeNo || t.belgeNo || 'TASLAK'}`, bold: true, font, size: bodySize })] })] })
+        new TableCell({ width: { size: 45, type: WidthType.PERCENTAGE }, borders: noBorder, children: [
+          // Kullanıcı isteği: tarih ve no kalın olmasın, no tarihin ALTINDA olsun
+          // (önceden tek TextRun içindeki "\n" Word'de satır başı olmuyor, aynı
+          // satırda yan yana çıkıyordu) — iki ayrı paragraf.
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `Tarih: ${trTarih(t.talepTarihi)}`, font, size: bodySize })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${t.ustBelgeNo || t.belgeNo || 'TASLAK'}`, font, size: bodySize })] })
+        ] })
       ]
     })]
   });
