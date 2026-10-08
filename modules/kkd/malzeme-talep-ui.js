@@ -189,6 +189,28 @@ function malzemePickerCiz(aramaMetni) {
   kutu.querySelectorAll('[data-pick]').forEach(btn => btn.addEventListener('click', () => malzemeSec(btn.getAttribute('data-pick'))));
 }
 
+// Kullanıcı isteği: "listeden tam yüz maskesi girdim ve özelliklerini girdim,
+// artık o özellikler sonraki siparişler için kayıtlı olmalı, gerekçeler de" —
+// bir talep kaydedilince, içindeki her malzemenin son girilen miktar/birim/
+// renk/beden/numara/marka/açıklama değerleri ve talebin gerekçesi o malzeme
+// için hatırlanır; aynı malzeme sonraki talepte seçilince otomatik dolar
+// (değiştirilebilir, bir sonraki kayıtta yeniden güncellenir).
+function _mtHatirlananAnahtari() { return tenantAnahtar('malzeme_talep_hatirlanan'); }
+function _mtHatirlananlariGetir() { return oku(_mtHatirlananAnahtari(), {}); }
+
+function _mtMalzemeDegerleriniHatirla(malzemeler, gerekce, ozelGerekce) {
+  const harita = _mtHatirlananlariGetir();
+  malzemeler.forEach(m => {
+    if (!m.malzemeId) return;
+    harita[m.malzemeId] = {
+      miktar: m.miktar, birim: m.birim, renk: m.renk || '', beden: m.beden || '',
+      numara: m.numara || '', marka: m.marka || '', aciklama: m.aciklama || '',
+      gerekce: gerekce || '', ozelGerekce: ozelGerekce || ''
+    };
+  });
+  yaz(_mtHatirlananAnahtari(), harita);
+}
+
 function malzemeSec(malzemeId) {
   if (_mtSecilenMalzemeler.some(m => m.malzemeId === malzemeId)) { alert('Bu malzeme zaten seçildi.'); return; }
   const malzeme = malzemeIdIleGetirRepo(malzemeId);
@@ -197,7 +219,20 @@ function malzemeSec(malzemeId) {
   const aktifTalep = malzemeAktifTalepteMi(malzemeId);
   if (aktifTalep && aktifTalep.id !== _duzenlenenTalepId) alert(`Devam eden ${aktifTalep.belgeNo} numaralı talep var.`);
 
-  _mtSecilenMalzemeler.push(malzemeTalepSatiriOlustur(malzeme, { miktar: malzeme.varsayilanMiktar || 1 }));
+  const satir = malzemeTalepSatiriOlustur(malzeme, { miktar: malzeme.varsayilanMiktar || 1 });
+  const hatirlanan = _mtHatirlananlariGetir()[malzemeId];
+  if (hatirlanan) {
+    ['miktar', 'birim', 'renk', 'beden', 'numara', 'marka', 'aciklama'].forEach(alan => {
+      if (hatirlanan[alan] !== undefined && hatirlanan[alan] !== '') satir[alan] = hatirlanan[alan];
+    });
+    // Gerekçe talebin geneline ait: sadece ilk malzeme seçilirken ve form henüz
+    // elle değiştirilmemişken (özel gerekçe boş) hatırlanan değer uygulanır.
+    if (!_mtSecilenMalzemeler.length && !document.getElementById('tOzelGerekce').value.trim()) {
+      if (hatirlanan.gerekce && MALZEME_TALEP_GEREKCELERI.includes(hatirlanan.gerekce)) document.getElementById('tGerekce').value = hatirlanan.gerekce;
+      if (hatirlanan.ozelGerekce) document.getElementById('tOzelGerekce').value = hatirlanan.ozelGerekce;
+    }
+  }
+  _mtSecilenMalzemeler.push(satir);
   secilenMalzemeleriCiz();
   onizlemeGuncelle();
 }
@@ -345,6 +380,7 @@ function talepFormGonderildi(e) {
     return;
   }
 
+  _mtMalzemeDegerleriniHatirla(_mtSecilenMalzemeler, document.getElementById('tGerekce').value, document.getElementById('tOzelGerekce').value.trim());
   _duzenlenenTalepId = sonuc.kayit.id;
   document.getElementById('tBelgeNo').value = sonuc.kayit.belgeNo;
   document.getElementById('talepFormBaslik').textContent = sonuc.kayit.belgeNo + ' kaydedildi';
