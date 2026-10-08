@@ -146,13 +146,25 @@ async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
 
 // Bir ekipman listesini bölüm adına göre gruplar (bölüm boşsa "Bölüm
 // Belirtilmemiş" altında toplanır), grup adına göre alfabetik sıralı döner.
+// Kullanıcı isteği: "word raporda numaralar karışık geliyor, 1'den başlayarak
+// sıralı gelmeli" — kayıtlar (gelen sırasıyla, yani ekipman no'ya göre
+// doğal/sayısal sıralı) bölüm bölüm ALFABETİK gruplanınca numaralar bölümler
+// arasında karışıyordu. Artık sıra bozulmaz: bölüm başlığı sadece ARDIŞIK aynı
+// bölümdeki ekipmanlar için bir kez yazılır, bölüm değişince yeni başlık açılır.
 function _kfBolumleraGrupla(kayitlar) {
-  const gruplar = {};
+  const gruplar = [];
   kayitlar.forEach(e => {
     const bolum = (e.bolum || '').trim() || 'Bölüm Belirtilmemiş';
-    (gruplar[bolum] = gruplar[bolum] || []).push(e);
+    const son = gruplar[gruplar.length - 1];
+    if (son && son.bolum === bolum) son.kayitlar.push(e);
+    else gruplar.push({ bolum, kayitlar: [e] });
   });
-  return Object.keys(gruplar).sort((a, b) => a.localeCompare(b, 'tr')).map(bolum => ({ bolum, kayitlar: gruplar[bolum] }));
+  return gruplar;
+}
+
+// "YD2" < "YD10" olacak şekilde doğal (sayısal) ekipman no karşılaştırması.
+function _kfEkipmanNoKarsilastir(a, b) {
+  return (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true });
 }
 
 // turFiltre boşsa (veya 'Tüm Türler') kayıt bulunan HER tür için ayrı,
@@ -180,7 +192,7 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, gor
 
   let uretilenBolumSayisi = 0;
   for (const tur of turler) {
-    const kayitlar = tumEkipman.filter(e => e.tur === tur).sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr'));
+    const kayitlar = tumEkipman.filter(e => e.tur === tur).sort(_kfEkipmanNoKarsilastir);
     if (kayitlar.length === 0) continue;
     const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
     cocuklar.push(_kfBaslik(`Kontrol Formu — ${tur}`, docx.HeadingLevel.HEADING_1, uretilenBolumSayisi > 0));
@@ -233,7 +245,7 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
   let liste = ekipmanlariGetir('');
   if (turFiltre) liste = liste.filter(e => e.tur === turFiltre);
   if (bolumFiltre) liste = liste.filter(e => (e.bolum || '').trim() === bolumFiltre);
-  liste.sort((a, b) => (a.tur || '').localeCompare(b.tur || '', 'tr') || (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr'));
+  liste.sort((a, b) => (a.tur || '').localeCompare(b.tur || '', 'tr') || _kfEkipmanNoKarsilastir(a, b));
 
   if (!liste.length) {
     alert('Liste raporu üretebilmek için önce ilgili tür/bölümde en az bir ekipman kaydı ekleyin.');
