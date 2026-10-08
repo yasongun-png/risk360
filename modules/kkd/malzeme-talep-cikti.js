@@ -145,7 +145,27 @@ async function malzemeTalepWordOlustur(talepId) {
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 850, after: 600 }, children: [new TextRun({ text: t.hitap, bold: true, font, size: bodySize })] }),
         new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 450 }, children: [new TextRun({ text: 'Özü: ', bold: true, font, size: bodySize }), new TextRun({ text: t.konu || '', font, size: bodySize })] }),
         new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 360, after: 550 }, children: [new TextRun({ text: t.duzenlenmisMetin || t.uretilenMetin || '', font, size: bodySize })] }),
-        new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 250, after: 450 }, children: [new TextRun({ text: `Saygılarımla,\n\n${t.imzaYetkilisi}\n${t.unvan}`, font, size: bodySize })] }),
+        // Kullanıcı isteği: "Saygılarımla, ad soyad, unvan alt alta olacak" —
+        // önceki tek TextRun içindeki "\n" Word'de satır başı olmuyordu; sağdaki
+        // %45'lik kenarlıksız hücrede (ön izlemedeki .mt-imza gibi) ortalı, ayrı satırlar.
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: Object.assign({}, noBorder, { insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } }),
+          rows: [new TableRow({
+            children: [
+              new TableCell({ width: { size: 55, type: WidthType.PERCENTAGE }, borders: noBorder, children: [new Paragraph({ children: [] })] }),
+              new TableCell({
+                width: { size: 45, type: WidthType.PERCENTAGE },
+                borders: noBorder,
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 250, after: 120 }, children: [new TextRun({ text: 'Saygılarımla,', font, size: bodySize })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t.imzaYetkilisi || '', font, size: bodySize })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 450 }, children: [new TextRun({ text: t.unvan || '', font, size: bodySize })] })
+                ]
+              })
+            ]
+          })]
+        }),
         new Paragraph({ spacing: { after: 350 }, children: [new TextRun({ text: ayarlar.paraf || '', font, size: bodySize })] }),
         ...(t.malzemeler.length ? [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: satirlar })] : [])
       ]
