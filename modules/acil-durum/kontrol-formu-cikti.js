@@ -132,7 +132,7 @@ async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
     // formunda" — Ekipman Kontrol Listesi (Word)'daki gibi yalnızca Yangın
     // Dolabı için.
     ...(ekipman.tur === 'Yangın Dolabı'
-      ? [_kfParagraf(`Dolap Değişimi Gerekli mi?: ${_kfTireVeyaDeger(ekipman.dolapDegisimGerekliMi)}`, { spacing: { before: 0, after: 80 } })]
+      ? [_kfParagraf(`Dolap Tipi: ${_kfTireVeyaDeger(ekipman.dolapTipi)}   |   Dolap Değişimi Gerekli mi?: ${_kfTireVeyaDeger(ekipman.dolapDegisimGerekliMi)}`, { spacing: { before: 0, after: 80 } })]
       : []),
     // Kullanıcı isteği: "yapılan işlemin hemen üstünde bakım yapanın adı
     // soyadı girilsin" — bkz. index.html'deki alan sırasıyla aynı.
@@ -270,7 +270,11 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
       ['Ekipman No', e => e.ekipmanNo], ['Bölüm', e => e.bolum], ['Lokasyon', e => e.lokasyon],
       ['Son Kontrol', e => e.sonKontrol], ['Sonraki Kontrol', e => e.sonrakiKontrol]
     ];
-    if (tur === 'Yangın Dolabı') kolonlar.push(['Dolap Değişimi Gerekli mi?', e => e.dolapDegisimGerekliMi]);
+    // Kullanıcı isteği: "dolap tipi de wordlerde yer alsın" — Dolap Tipi, Dolap Değişimi'nden önce.
+    if (tur === 'Yangın Dolabı') {
+      kolonlar.push(['Dolap Tipi', e => e.dolapTipi]);
+      kolonlar.push(['Dolap Değişimi Gerekli mi?', e => e.dolapDegisimGerekliMi]);
+    }
     kolonlar.push(['Bulgular', e => e.bulgular]);
     return kolonlar;
   };
