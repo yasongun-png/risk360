@@ -128,6 +128,12 @@ async function _kfEkipmanBlogu(ekipman, sorular, sayfaSonuOncesi) {
       _kfKontrolTablosu(ekipman.malzemeListesi.map(m => ({ id: m.id, soru: `${m.ad} (${m.adet || 1} adet)` })), ekipman.malzemeKontrolleri || {})
     ] : []),
     _kfParagraf(`Bulgular: ${_kfTireVeyaDeger(ekipman.bulgular)}`, { spacing: { before: 120, after: 80 } }),
+    // Kullanıcı isteği: "Dolap Değişimi Gerekli mi? de olsun ekipman kontrol
+    // formunda" — Ekipman Kontrol Listesi (Word)'daki gibi yalnızca Yangın
+    // Dolabı için.
+    ...(ekipman.tur === 'Yangın Dolabı'
+      ? [_kfParagraf(`Dolap Değişimi Gerekli mi?: ${_kfTireVeyaDeger(ekipman.dolapDegisimGerekliMi)}`, { spacing: { before: 0, after: 80 } })]
+      : []),
     // Kullanıcı isteği: "yapılan işlemin hemen üstünde bakım yapanın adı
     // soyadı girilsin" — bkz. index.html'deki alan sırasıyla aynı.
     _kfParagraf(`Bakım Yapan: ${_kfTireVeyaDeger(ekipman.bakimYapan)}`, { spacing: { before: 0, after: 80 } }),
