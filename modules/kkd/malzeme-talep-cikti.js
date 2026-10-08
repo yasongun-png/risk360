@@ -64,9 +64,15 @@ function malzemeTalepOnizlemeYazdir(talepId) {
   const mount = document.getElementById('yazdirmaAlani');
   mount.innerHTML = malzemeTalepOnizlemeHtmlUret(goruntulenecek);
   mount.style.display = 'block';
+  // Genel stil (#yazdirmaAlani) A4 YATAY yazdırır (bkz. assets/style.css); bu
+  // belge dikey olmalı -- yazdırma anında <head> sonuna geçici bir dikey @page
+  // kuralı eklenir, sonra kaldırılır (sınav kağıdında da aynı yöntem).
+  const dikeyStil = document.createElement('style');
+  dikeyStil.textContent = '@media print { @page { size: A4 portrait; margin: 12mm; } }';
+  document.head.appendChild(dikeyStil);
   setTimeout(() => {
     window.print();
-    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; }, 400);
+    setTimeout(() => { mount.innerHTML = ''; mount.style.display = 'none'; dikeyStil.remove(); }, 400);
   }, 80);
 }
 
@@ -125,7 +131,9 @@ async function malzemeTalepWordOlustur(talepId) {
   const belge = new Document({
     styles: { default: { document: { run: { font, size: bodySize }, paragraph: { spacing: { line: 340 } } } } },
     sections: [{
-      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1021, right: 907, bottom: 1021, left: 907 } } },
+      // Kullanıcı isteği: "malzeme talep word sayfası dikey olsun" — A4 dikey
+      // açıkça belirtilir (orientation PORTRAIT).
+      properties: { page: { size: { width: 11906, height: 16838, orientation: docx.PageOrientation.PORTRAIT }, margin: { top: 1021, right: 907, bottom: 1021, left: 907 } } },
       children: [
         ustBilgiTablosu,
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 850, after: 600 }, children: [new TextRun({ text: t.hitap, bold: true, font, size: bodySize })] }),
