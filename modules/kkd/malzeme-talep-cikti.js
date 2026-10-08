@@ -50,7 +50,7 @@ function malzemeTalepOnizlemeHtmlUret(t) {
     <div class="mt-ozu"><b>Özü:</b> ${_mtKacir(t.konu)}</div>
     <p class="mt-govde">${_mtKacir(t.duzenlenmisMetin || t.uretilenMetin)}</p>
     <div class="mt-imza">Saygılarımla,<br><br><b>${_mtKacir(t.imzaYetkilisi)}</b><br>${_mtKacir(t.unvan)}</div>
-    <div style="margin-top:1rem;">${_mtKacir(t.paraf || '')}</div>
+    <div style="margin-top:1rem; margin-bottom:3.1rem;">${_mtKacir(t.paraf || '')}</div>
     ${malzemelerHtml}
   </div>
   `;
@@ -166,7 +166,10 @@ async function malzemeTalepWordOlustur(talepId) {
             ]
           })]
         }),
-        new Paragraph({ spacing: { after: 350 }, children: [new TextRun({ text: ayarlar.paraf || '', font, size: bodySize })] }),
+        new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: ayarlar.paraf || '', font, size: bodySize })] }),
+        // Kullanıcı isteği: paraftan sonra iki satır boşluk.
+        new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: '', font, size: bodySize })] }),
+        new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: '', font, size: bodySize })] }),
         ...(t.malzemeler.length ? [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: satirlar })] : [])
       ]
     }]
