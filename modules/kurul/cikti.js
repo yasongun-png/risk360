@@ -1762,6 +1762,10 @@ async function pptxOlustur() {
       sl.addText(k.etiket, { x: M + 0.1, y: y + 0.72, w: kutuWUs - 0.2, h: 0.35, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
     });
     const grafikXUs = M + kutuWUs + 0.3;
+    // Değer ekseni aralığı en büyük değere göre seçilir (sabit 1 olunca 120+ değerde etiketler üst üste biniyordu).
+    const enBuyukUs = Math.max(1, ...usIstPptx.aylik.map(a => Math.max(a.acilan, a.kapatilan)));
+    const adimUs = [1, 2, 5, 10, 20, 25, 50, 100].find(s => enBuyukUs / s <= 6) || 100;
+    const ustSinirUs = Math.ceil((enBuyukUs * 1.1) / adimUs) * adimUs;
     sl.addChart(pptx.charts.BAR, [
       { name: 'Açılan', labels: usIstPptx.aylik.map(a => a.ay), values: usIstPptx.aylik.map(a => a.acilan) },
       { name: 'Kapatılan', labels: usIstPptx.aylik.map(a => a.ay), values: usIstPptx.aylik.map(a => a.kapatilan) }
@@ -1770,7 +1774,7 @@ async function pptxOlustur() {
       barDir: 'col', barGrouping: 'clustered', chartColors: ['DC2626', '16A34A'],
       showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFormatCode: '0',
       catAxisLabelFontSize: 11, valAxisLabelFontSize: 11,
-      valAxisMinVal: 0, valAxisMajorUnit: 1, valAxisLabelFormatCode: '0',
+      valAxisMinVal: 0, valAxisMaxVal: ustSinirUs, valAxisMajorUnit: adimUs, valAxisLabelFormatCode: '0',
       valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
       showLegend: true, legendPos: 'b', legendFontSize: 11
     });

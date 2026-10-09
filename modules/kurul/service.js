@@ -1042,7 +1042,8 @@ function toplantiUygunsuzlukIstatistikleriHesapla(toplanti) {
     return {
       ay: ad,
       acilan: yilinKayitlari.filter(k => String(k.bildirimTarihi || '').slice(5, 7) === ayNo).length,
-      kapatilan: yilinKayitlari.filter(k => kapaliMi(k) && String(k.kapanisTarihi || '').slice(5, 7) === ayNo).length
+      // Kapanış tarihi girilmemiş kapalı kayıtlar (ör. Excel'den aktarılanlar) bildirim ayına yazılır; böylece aylık toplam, kartlardaki Kapatılan sayısıyla tutarlı kalır.
+      kapatilan: yilinKayitlari.filter(k => kapaliMi(k) && String(k.kapanisTarihi || k.bildirimTarihi || '').slice(5, 7) === ayNo).length
     };
   });
 
