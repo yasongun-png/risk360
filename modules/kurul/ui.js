@@ -17,7 +17,7 @@ let _gundemTaslak = [];
 // kapsıyor).
 const VARSAYILAN_GUNDEM_MADDELERI = [
   'Olaylar; tehlike ve ramak kala bildirimleri, iş kazaları ve acil durumlar',
-  'Çalışan temsilcilerinin görüş ve önerileri',
+  'Çalışanların görüş ve önerileri',
   'Yeni görüşülecek konular',
   'Devreden kararlar',
   'Yapılan İSG çalışmaları',

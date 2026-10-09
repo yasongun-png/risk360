@@ -448,7 +448,7 @@ async function kurulRaporuWordOlustur() {
     H('2) Olaylar'),
     ...(olayKartlari.length ? olayKartlari.flat() : [P(_varsayilanliMetin('', 'olaylar'))]),
 
-    H('3) Çalışan Temsilcilerinin Görüş ve Önerileri'),
+    H('3) Çalışanların Görüş ve Önerileri'),
     P(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler')),
     P(' ', { spacing: { after: 400 } }),
 
@@ -594,7 +594,7 @@ async function konuBasliklariWordOlustur() {
   // (Sıra: Olaylardan hemen sonra — kullanıcı isteği.) Kullanıcı isteği: "çalışan temsilcisi görüşü girilmemiş olsa da başlığı
   // yaz mutlaka" — diğer bölümlerin aksine bu başlık boş olsa da HER ZAMAN
   // görünür (girilmemişse "-" yazılır).
-  bolumBasligi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
+  bolumBasligi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ');
   children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: (toplanti.calisanTemsilcisiGorusleri || '').trim() || '-', size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
 
   // Kararlar — kısa başlık + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
@@ -939,7 +939,7 @@ async function kurulRaporuPdfOlustur() {
       </div>
 
       <div class="section keep">
-        <h2>3) Çalışan Temsilcilerinin Görüş ve Önerileri</h2>
+        <h2>3) Çalışanların Görüş ve Önerileri</h2>
         <p>${_ciktiKacir(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler'))}</p>
       </div>
 
@@ -1398,9 +1398,9 @@ async function pptxOlustur() {
     });
   };
 
-  // Sıra: Olaylardan hemen sonra Çalışan Temsilcilerinin Görüş ve Önerileri (kullanıcı isteği).
-  bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışan temsilcilerinin değerlendirmesi');
-  metinSlaydi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
+  // Sıra: Olaylardan hemen sonra Çalışanların Görüş ve Önerileri (kullanıcı isteği).
+  bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışanların değerlendirmesi');
+  metinSlaydi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
 
   bolumAraSlaydi('KARARLAR', 'Yeni kararlar ve devreden kararların takibi');
   kararSlaytlariniEkle('YENİ KARAR', yeni);

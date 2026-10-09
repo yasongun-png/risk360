@@ -107,9 +107,15 @@ const KURUL_GOREVLERI = [
 // ve önerileri" maddesi (varsa) "Olaylar" maddesinin hemen arkasına alınır.
 // Kayıtlı toplantıların verisi değiştirilmez, sadece gösterim/çıktı sırası.
 function kurulGundemSirala(gundem) {
-  const liste = Array.isArray(gundem) ? gundem.slice() : [];
+  // Eski kayıtlı gündemlerdeki "Çalışan temsilcilerinin görüş ve önerileri"
+  // başlığı, kullanıcı isteğiyle "Çalışanların görüş ve önerileri" olarak
+  // gösterilir/basılır (kayıtlı veri değişmez).
+  const liste = (Array.isArray(gundem) ? gundem : []).map(g =>
+    /^çalışan temsilcilerinin görüş ve önerileri/i.test(String(g.baslik || '').trim().toLocaleLowerCase('tr-TR'))
+      ? Object.assign({}, g, { baslik: String(g.baslik).replace(/çalışan temsilcilerinin/i, 'Çalışanların') })
+      : g);
   const olayIndeks = liste.findIndex(g => /^olaylar/i.test(String(g.baslik || '').trim().toLocaleLowerCase('tr-TR')));
-  const gorusIndeks = liste.findIndex(g => /çalışan temsilci/i.test(String(g.baslik || '').toLocaleLowerCase('tr-TR')));
+  const gorusIndeks = liste.findIndex(g => /^çalışanların görüş/i.test(String(g.baslik || '').trim().toLocaleLowerCase('tr-TR')));
   if (olayIndeks === -1 || gorusIndeks === -1 || gorusIndeks === olayIndeks + 1) return liste;
   const olay = liste[olayIndeks];
   const [gorus] = liste.splice(gorusIndeks, 1);
