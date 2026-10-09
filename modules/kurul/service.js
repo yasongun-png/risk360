@@ -512,9 +512,14 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
   const aylikDagilim = AY_ADLARI.map((ad, i) => {
     const ayNo = String(i + 1).padStart(2, '0');
     const ayKayitlari = kayitlar.filter(k => String(k.kazaTarihi || '').slice(5, 7) === ayNo);
+    // Aylık kaza sayısı, yıllık "İş Kazası Sayısı" ile AYNI kurala uyar: sadece
+    // LTI + DART + Tıbbi Tedavi + Ölüm (ramak kala/ilk yardım vb. olaylar kaza
+    // sayılmaz) — aksi halde grafik, kaza olmayan aylarda da değer gösteriyordu.
+    const ayKazalari = ayKayitlari.filter(k =>
+      ['Kayıp Gün (LTI)', 'Kısıtlı İş / Transfer (DART)', 'Tıbbi Tedavi', 'Ölüm'].includes(k.olayTipi));
     return {
       ay: ad,
-      kazaSayisi: ayKayitlari.length,
+      kazaSayisi: ayKazalari.length,
       kayipGun: ayKayitlari.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0)
     };
   });
