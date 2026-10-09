@@ -776,6 +776,7 @@ function _kararBasligiVeMetni(kararMetni) {
 
 // notFormu=true: aynı içerik, ama her maddenin altında elle 'Alınan karar' yazmak için çizgili boşluk bırakır
 // (kullanıcı isteği: Konu Başlıkları'nın aynısı, her maddenin altında karar notu alanı).
+async function konuBasliklariWordOlustur(notFormu = false) {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
