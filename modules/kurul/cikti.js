@@ -1433,7 +1433,9 @@ async function pptxOlustur() {
   const kartBasligi = (sl, ustEtiket, baslik) => {
     sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
     sl.addText(ustEtiket, { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
-    sl.addText(baslik, { x: M, y: 0.68, w: 11.8, h: 0.5, fontSize: 21, bold: true, color: R.baslik, fontFace: 'Calibri' });
+    // Uzun başlık (ör. uygunsuzluk konusu cümle uzunluğunda) üst etiketin ve kutunun üstüne taşmasın: tek satıra sığacak şekilde küçült/kısalt.
+    const kisa = baslik.length > 90 ? baslik.slice(0, 87).trimEnd() + '...' : baslik;
+    sl.addText(kisa, { x: M, y: 0.68, w: 11.8, h: 0.5, fontSize: kisa.length > 55 ? 16 : 21, bold: true, color: R.baslik, fontFace: 'Calibri', valign: 'top', fit: 'shrink' });
   };
 
   // Meta bilgi tablosu: etiket/değer satırları, ince ayraç çizgili, açık
@@ -1706,7 +1708,9 @@ async function pptxOlustur() {
     const sl = yeniSlayt();
     kartBasligi(sl, `${baslikOnEki}  ·  ${sira} / ${toplam}`, k.konuBasligi || '-');
     sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-    sl.addText(k.uygunsuzluk || '-', { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top' });
+    // Açıklama boşsa (sadece '-') kutuda konu başlığının tamamı gösterilir (başlık üstte kısaltılıyor).
+    const aciklama = (k.uygunsuzluk && k.uygunsuzluk.trim() !== '-') ? k.uygunsuzluk : (k.konuBasligi || '-');
+    sl.addText(aciklama, { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top', fit: 'shrink' });
     if (k.durum) rozetEkle(sl, k.durum, M, 2.9, _renkGetir(DURUM_RENK, k.durum));
 
     const metaSatirlari = [
