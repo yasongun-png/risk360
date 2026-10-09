@@ -157,6 +157,79 @@ function _kazaAylikGrafikPngOlustur(aylikDagilim, yil) {
   return new Promise(coz => tuval.toBlob(blob => blob.arrayBuffer().then(buf => coz({ veri: new Uint8Array(buf), genislik: 600, yukseklik: 300 })), 'image/png'));
 }
 
+// Kullanıcı isteği: kurulda uygunsuzlukların değerlendirmesi (açılan/kapatılan,
+// tamamlama oranı). Aylık AÇILAN ve KAPATILAN uygunsuzluk sayıları gruplu sütun
+// grafiği olarak canvas ile çizilir; senkron çalışır (PDF şablonu da kullanır).
+function _aylikGrupluGrafikCiz(baslik, aylar, seriler) {
+  const G = 1400, Y = 700;
+  const tuval = document.createElement('canvas');
+  tuval.width = G; tuval.height = Y;
+  const c = tuval.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, G, Y);
+
+  const sol = 90, sag = 40, ust = 110, alt = 110;
+  const cizimG = G - sol - sag, cizimY = Y - ust - alt;
+  const enYuksek = Math.max(4, ...seriler.flatMap(se => se.degerler));
+  const adim = Math.max(1, Math.ceil(enYuksek / 6));
+  const tavan = Math.ceil(enYuksek / adim) * adim;
+
+  c.fillStyle = '#111827'; c.font = 'bold 34px Arial'; c.textAlign = 'center';
+  c.fillText(baslik, G / 2, 48);
+
+  // Gösterge
+  c.font = '22px Arial'; c.textAlign = 'left';
+  let gx = G / 2 - seriler.length * 110;
+  seriler.forEach(se => {
+    c.fillStyle = se.renk; c.fillRect(gx, 66, 26, 26);
+    c.fillStyle = '#374151'; c.fillText(se.ad, gx + 36, 88);
+    gx += 240;
+  });
+
+  c.textAlign = 'right'; c.strokeStyle = '#e5e7eb'; c.lineWidth = 1;
+  for (let v = 0; v <= tavan; v += adim) {
+    const y = ust + cizimY - (v / tavan) * cizimY;
+    c.beginPath(); c.moveTo(sol, y); c.lineTo(G - sag, y); c.stroke();
+    c.fillStyle = '#6b7280'; c.fillText(String(v), sol - 12, y + 8);
+  }
+
+  const kolonG = cizimG / aylar.length;
+  aylar.forEach((ay, i) => {
+    const grupG = kolonG * 0.76;
+    const cubukG = grupG / seriler.length;
+    seriler.forEach((se, j) => {
+      const x = sol + i * kolonG + kolonG * 0.12 + j * cubukG;
+      const h = (se.degerler[i] / tavan) * cizimY;
+      c.fillStyle = se.renk;
+      c.fillRect(x, ust + cizimY - h, cubukG - 4, h);
+      c.textAlign = 'center'; c.fillStyle = '#111827'; c.font = 'bold 22px Arial';
+      c.fillText(String(se.degerler[i]), x + (cubukG - 4) / 2, ust + cizimY - h - 8);
+    });
+    c.fillStyle = '#374151'; c.font = '22px Arial'; c.textAlign = 'center';
+    c.fillText(ay, sol + i * kolonG + kolonG / 2, ust + cizimY + 36);
+  });
+
+  c.strokeStyle = '#9ca3af'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(sol, ust + cizimY); c.lineTo(G - sag, ust + cizimY); c.stroke();
+
+  const dataUrl = tuval.toDataURL('image/png');
+  const ikili = atob(dataUrl.split(',')[1]);
+  const veri = new Uint8Array(ikili.length);
+  for (let i = 0; i < ikili.length; i++) veri[i] = ikili.charCodeAt(i);
+  return { dataUrl, veri, genislik: 600, yukseklik: 300 };
+}
+
+function _uygunsuzlukDegerlendirmeVerisi(toplanti) {
+  const ist = toplantiUygunsuzlukIstatistikleriHesapla(toplanti);
+  if (!ist) return null;
+  const oran = ist.tamamlamaOrani == null ? '-' : '%' + ist.tamamlamaOrani.toFixed(1).replace('.', ',');
+  const grafik = _aylikGrupluGrafikCiz(`${ist.yil} Yılı Aylık Açılan / Kapatılan Uygunsuzluklar`, ist.aylik.map(a => a.ay), [
+    { ad: 'Açılan', renk: '#dc2626', degerler: ist.aylik.map(a => a.acilan) },
+    { ad: 'Kapatılan', renk: '#16a34a', degerler: ist.aylik.map(a => a.kapatilan) }
+  ]);
+  return { ist, oran, grafik };
+}
+
+
 
 // dataURL/uzak URL -> ImageRun'a verilebilecek ham bayt dizisi. file://
 // altında fotoğraflar hep base64 data URL olarak geldiği için asıl yol odur
@@ -434,6 +507,22 @@ async function kurulRaporuWordOlustur() {
   }) : null;
   const kazaGrafikResmi = kazaIst ? await _kazaAylikGrafikPngOlustur(kazaIst.aylikDagilim, kazaIst.yil) : null;
 
+  // Uygunsuzlukların değerlendirmesi: bu yıl açılan / kapatılan / açık sayıları,
+  // tamamlama oranı ve aylık grafik (kullanıcı isteği).
+  const usVeri = _uygunsuzlukDegerlendirmeVerisi(toplanti);
+  const usTablo = usVeri ? new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    rows: [
+      [`${usVeri.ist.yil} Yılında Açılan Uygunsuzluk`, String(usVeri.ist.acilan)],
+      ['Bunlardan Kapatılan (Yapılan)', String(usVeri.ist.kapatilan)],
+      ['Hâlen Açık', String(usVeri.ist.acik)],
+      ['Tamamlama Oranı', usVeri.oran]
+    ].map(([etiket, deger]) => new docx.TableRow({ children: [
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+    ]}))
+  }) : null;
+
   // Kullanıcı isteği: kapak sayfasındaki logo/yazılar sayfaya düşeyde
   // ortalansın. docx.js'te paragraf listesi kendiliğinden dikeyde
   // ortalanmaz — tam sayfa yüksekliğinde, kenarlıksız TEK hücreli bir
@@ -530,11 +619,19 @@ async function kurulRaporuWordOlustur() {
     ...(kapananKartlari.length ? kapananKartlari.flat() : [P('Bu dönemde kapatılan uygunsuzluk bulunmamaktadır.')]),
     BR(),
 
-    H('10) İSG Kurulları İle İlgili Yasal Düzenleme'),
+    ...(usTablo ? [
+      H('10) Uygunsuzlukların Değerlendirmesi'),
+      usTablo,
+      P(' ', { spacing: { after: 200 } }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: usVeri.grafik.veri, transformation: { width: 600, height: 300 } })] }),
+      BR()
+    ] : []),
+
+    H('11) İSG Kurulları İle İlgili Yasal Düzenleme'),
     ...YONETMELIK_MADDELERI.flatMap(maddeParagraflari),
     BR(),
 
-    H('11) İmza Listesi'),
+    H('12) İmza Listesi'),
     katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
   ];
 
@@ -685,6 +782,19 @@ async function konuBasliklariWordOlustur() {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
     });
+  }
+
+  // Uygunsuzlukların değerlendirmesi: yıl içinde açılan / kapatılan / tamamlama oranı.
+  const usIstKb = toplantiUygunsuzlukIstatistikleriHesapla(toplanti);
+  if (usIstKb) {
+    bolumBasligi('UYGUNSUZLUKLARIN DEĞERLENDİRMESİ');
+    const oranKb = usIstKb.tamamlamaOrani == null ? '-' : '%' + usIstKb.tamamlamaOrani.toFixed(1).replace('.', ',');
+    [
+      `${usIstKb.yil} yılında açılan uygunsuzluk: ${usIstKb.acilan}`,
+      `Bunlardan kapatılan (yapılan): ${usIstKb.kapatilan}`,
+      `Hâlen açık: ${usIstKb.acik}`,
+      `Tamamlama oranı: ${oranKb}`
+    ].forEach(satir => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: satir, size: METIN_BOYUT })] })));
   }
 
   const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
@@ -1028,13 +1138,28 @@ async function kurulRaporuPdfOlustur() {
         ${kapananUygunsuzluklar.length ? kapananUygunsuzluklar.map(_pdfUygunsuzlukKarti).join('') : '<p class="empty">Bu dönemde kapatılan uygunsuzluk bulunmamaktadır.</p>'}
       </div>
 
+      ${(() => {
+        const v = _uygunsuzlukDegerlendirmeVerisi(toplanti);
+        if (!v) return '';
+        return `<div class="section keep">
+        <h2>10) Uygunsuzlukların Değerlendirmesi</h2>
+        ${_pdfTablo(['Gösterge', 'Değer'], [
+          [`${v.ist.yil} Yılında Açılan Uygunsuzluk`, String(v.ist.acilan)],
+          ['Bunlardan Kapatılan (Yapılan)', String(v.ist.kapatilan)],
+          ['Hâlen Açık', String(v.ist.acik)],
+          ['Tamamlama Oranı', v.oran]
+        ])}
+        <img src="${v.grafik.dataUrl}" style="width:100%; max-width:170mm; display:block; margin:4mm auto 0;">
+      </div>`;
+      })()}
+
       <div class="section">
-        <h2>10) İSG Kurulları İle İlgili Yasal Düzenleme</h2>
+        <h2>11) İSG Kurulları İle İlgili Yasal Düzenleme</h2>
         ${_yonetmelikMaddeleriGoruntuUret()}
       </div>
 
       <div class="section signature-section">
-        <h2>11) İmza Listesi</h2>
+        <h2>12) İmza Listesi</h2>
         ${_pdfTablo(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, '']), 'sign-table', [6, 22, 47, 25])}
       </div>
     </div>
@@ -1515,6 +1640,42 @@ async function pptxOlustur() {
   bolumAraSlaydi('UYGUNSUZLUKLAR', 'Ay içinde tespit edilen ve kapatılan uygunsuzluklar');
   uygunsuzlukSlaytlariniEkle('AY İÇİNDE TESPİT EDİLEN UYGUNSUZLUK', tespitEdilenUygunsuzluklar);
   uygunsuzlukSlaytlariniEkle('AY İÇİNDE KAPATILAN UYGUNSUZLUK', kapananUygunsuzluklar);
+
+  // Uygunsuzlukların değerlendirmesi (kullanıcı isteği): yıl içinde açılan /
+  // kapatılan / açık, tamamlama oranı kutuları + aylık açılan-kapatılan grafiği.
+  const usIstPptx = toplantiUygunsuzlukIstatistikleriHesapla(toplanti);
+  if (usIstPptx) {
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'UYGUNSUZLUKLAR', `${usIstPptx.yil} Yılı Uygunsuzlukların Değerlendirmesi`);
+    const oranPptx = usIstPptx.tamamlamaOrani == null ? '-' : '%' + usIstPptx.tamamlamaOrani.toFixed(1).replace('.', ',');
+    const kutularUs = [
+      { etiket: `${usIstPptx.yil} Yılında Açılan`, deger: String(usIstPptx.acilan) },
+      { etiket: 'Kapatılan (Yapılan)', deger: String(usIstPptx.kapatilan) },
+      { etiket: 'Hâlen Açık', deger: String(usIstPptx.acik) },
+      { etiket: 'Tamamlama Oranı', deger: oranPptx }
+    ];
+    const kutuWUs = 2.6;
+    kutularUs.forEach((k, i) => {
+      const y = 1.35 + i * 1.3;
+      sl.addShape(pptx.ShapeType.roundRect, { x: M, y, w: kutuWUs, h: 1.15, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addShape(pptx.ShapeType.rect, { x: M, y, w: kutuWUs, h: 0.07, fill: { color: R.birincil } });
+      sl.addText(k.deger, { x: M, y: y + 0.12, w: kutuWUs, h: 0.6, fontSize: 26, bold: true, color: R.birincil, align: 'center' });
+      sl.addText(k.etiket, { x: M + 0.1, y: y + 0.72, w: kutuWUs - 0.2, h: 0.35, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
+    });
+    const grafikXUs = M + kutuWUs + 0.3;
+    sl.addChart(pptx.charts.BAR, [
+      { name: 'Açılan', labels: usIstPptx.aylik.map(a => a.ay), values: usIstPptx.aylik.map(a => a.acilan) },
+      { name: 'Kapatılan', labels: usIstPptx.aylik.map(a => a.ay), values: usIstPptx.aylik.map(a => a.kapatilan) }
+    ], {
+      x: grafikXUs, y: 1.35, w: SW - grafikXUs - M, h: 5.3,
+      barDir: 'col', barGrouping: 'clustered', chartColors: ['DC2626', '16A34A'],
+      showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFormatCode: '0',
+      catAxisLabelFontSize: 11, valAxisLabelFontSize: 11,
+      valAxisMinVal: 0, valAxisMajorUnit: 1, valAxisLabelFormatCode: '0',
+      valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
+      showLegend: true, legendPos: 'b', legendFontSize: 11
+    });
+  }
 
   // "İSG Kurulları İle İlgili Yasal Düzenleme" — kullanıcı isteği: "yasal
   // düzenleme referansı raporlarda olmalı"; her madde (bkz. model.js

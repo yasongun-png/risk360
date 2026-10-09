@@ -1016,6 +1016,43 @@ function toplantiTespitEdilenUygunsuzluklariGetir(toplanti) {
     .map(_uygunsuzlukSatiriEsle);
 }
 
+// Kullanıcı isteği: "kurulda uygunsuzlukların değerlendirmesi olsun — bu yıl
+// içinde kaç uygunsuzluk açıldı, kaçı yapıldı, tamamlama oranı". Toplantının ait
+// olduğu YILDA (toplantı tarihine kadar) bildirilen uygunsuzluklar sayılır;
+// "yapıldı" = bu açılanlar içinde kapatılmış (durum Kapalı, kapanış tarihi
+// toplantı tarihinden sonra değil) olanlar. Tamamlama oranı = kapatılan / açılan.
+// Aylık kırılım: aylar için açılan (bildirim tarihine göre) ve kapatılan
+// (kapanış tarihine göre, yine bu yıl açılanlar içinden).
+function toplantiUygunsuzlukIstatistikleriHesapla(toplanti) {
+  const yil = String((toplanti && (toplanti.donem || toplanti.tarih)) || '').slice(0, 4);
+  if (!/^\d{4}$/.test(yil)) return null;
+  const sinir = (toplanti && toplanti.tarih) || '';
+
+  const yilinKayitlari = oku(tenantAnahtar('uygunsuzluk_kayitlari'), [])
+    .filter(k => String(k.bildirimTarihi || '').slice(0, 4) === yil)
+    .filter(k => !sinir || !k.bildirimTarihi || k.bildirimTarihi <= sinir);
+
+  const kapaliMi = k => k.durum === 'Kapalı' && (!sinir || !k.kapanisTarihi || k.kapanisTarihi <= sinir);
+  const acilan = yilinKayitlari.length;
+  const kapatilan = yilinKayitlari.filter(kapaliMi).length;
+
+  const AY_ADLARI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const aylik = AY_ADLARI.map((ad, i) => {
+    const ayNo = String(i + 1).padStart(2, '0');
+    return {
+      ay: ad,
+      acilan: yilinKayitlari.filter(k => String(k.bildirimTarihi || '').slice(5, 7) === ayNo).length,
+      kapatilan: yilinKayitlari.filter(k => kapaliMi(k) && String(k.kapanisTarihi || '').slice(5, 7) === ayNo).length
+    };
+  });
+
+  return {
+    yil, acilan, kapatilan, acik: acilan - kapatilan,
+    tamamlamaOrani: acilan ? (kapatilan * 100) / acilan : null,
+    aylik
+  };
+}
+
 // Kullanıcı isteği: "kapatılan/yeni açılan uygunsuzlukları da istersem
 // gündemden çıkarabileyim, ama orijinal (Uygunsuzluk modülündeki asıl kayıt)
 // yerinde kalsın" — ay içi faaliyet/eğitim ile aynı mekanizma: gerçek

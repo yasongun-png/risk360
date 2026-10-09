@@ -135,6 +135,19 @@ function toplantiDetaySayfasiniBaslat() {
     if (sayi === 0) alert('Dosya indirildi ama İmza Listesi\'nde e-postası olan katılımcı yok — "Gerekli" satırı boş gelecek. Önce E-postaları Yapıştır ile adresleri ekleyin.');
   });
 
+  // Uygunsuzlukların değerlendirmesi (otomatik hesap) — bkz. service.js
+  // toplantiUygunsuzlukIstatistikleriHesapla.
+  (function () {
+    const ist = toplantiUygunsuzlukIstatistikleriHesapla(toplanti);
+    const kutu = document.getElementById('uygunsuzlukDegerlendirmeKutusu');
+    if (!ist) { kutu.innerHTML = '<div class="bos-durum gorunur">Toplantı tarihi/dönemi olmadığından hesaplanamadı.</div>'; return; }
+    const oran = ist.tamamlamaOrani == null ? '-' : '%' + ist.tamamlamaOrani.toFixed(1).replace('.', ',');
+    const kart = (etiket, deger) => `<div class="istatistik-kutu"><span>${etiket}</span><b style="font-size:20px;">${deger}</b></div>`;
+    kutu.innerHTML = `<div class="istatistik-grid" style="grid-template-columns: repeat(4, minmax(140px,1fr));">
+      ${kart(ist.yil + ' Yılında Açılan', ist.acilan)}${kart('Kapatılan (Yapılan)', ist.kapatilan)}${kart('Hâlen Açık', ist.acik)}${kart('Tamamlama Oranı', oran)}
+    </div>`;
+  })();
+
   document.getElementById('yeniKararBtn').addEventListener('click', () => kararModalAc());
   document.getElementById('kararModalKapatBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararModalIptalBtn').addEventListener('click', kararModalKapat);
