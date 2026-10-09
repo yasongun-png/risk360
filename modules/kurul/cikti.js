@@ -67,7 +67,7 @@ function toplantiTakvimDavetiOlustur(organizatorEposta) {
   const bitis = new Date(baslangic.getTime() + 60 * 60000);
   const bicim = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
 
-  const gundem = (toplanti.gundem || []).map((g, i) => `${i + 1}) ${g.baslik}`).join('\n');
+  const gundem = (kurulGundemSirala(toplanti.gundem || [])).map((g, i) => `${i + 1}) ${g.baslik}`).join('\n');
   const aciklama = `İş Sağlığı ve Güvenliği Kurulu toplantısı (${_ciktiDonemMetni(toplanti)}).\n\nGÜNDEM\n${gundem || '-'}`;
   const katilimcilar = toplantiImzalariniGetir(_toplantiId).filter(i => i.eposta);
 
@@ -284,7 +284,7 @@ async function kurulRaporuWordOlustur() {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
-  const gundem = toplanti.gundem || [];
+  const gundem = kurulGundemSirala(toplanti.gundem || []);
   const olaylarHam = toplantiOlaylariniGetir(_toplantiId);
   const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
   if (!(await _oyEksikKontrolVeUyar(yeniHam, devredenHam))) return;
@@ -448,27 +448,28 @@ async function kurulRaporuWordOlustur() {
     H('2) Olaylar'),
     ...(olayKartlari.length ? olayKartlari.flat() : [P(_varsayilanliMetin('', 'olaylar'))]),
 
-    H('3) Bu Toplantıda Alınan Kararlar'),
+    H('3) Çalışan Temsilcilerinin Görüş ve Önerileri'),
+    P(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler')),
+    P(' ', { spacing: { after: 400 } }),
+
+    H('4) Bu Toplantıda Alınan Kararlar'),
     ...(yeniKartlari.length ? yeniKartlari.flat() : [P('Karar alınmamıştır.')]),
     ...(yeni.some(k => kararOyDokumMetni(k)) ? [P(KARAR_OY_DOKUM_DIPNOTU, { italics: true })] : []),
 
-    H('4) Önceki Toplantılardan Devreden Kararlar'),
+    H('5) Önceki Toplantılardan Devreden Kararlar'),
     ...(devredenKartlari.length ? devredenKartlari.flat() : [P(_varsayilanliMetin('', 'devredenKararlar'))]),
     ...(devreden.some(k => kararOyDokumMetni(k)) ? [P(KARAR_OY_DOKUM_DIPNOTU, { italics: true })] : []),
     BR(),
 
-    H('5) Ay İçinde Yapılan Eğitimler'),
+    H('6) Ay İçinde Yapılan Eğitimler'),
     aylikEgitimler.length ? table(['Eğitim Adı', 'Tarih', 'Katılımcı Sayısı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), k.katilimciSayisi, k.birim])) : P('Bu dönemde verilen eğitim bulunmamaktadır.'),
     P(' ', { spacing: { after: 400 } }),
 
-    H('6) Ay İçi İSG Çalışmaları'),
+    H('7) Ay İçi İSG Çalışmaları'),
     P(_varsayilanliMetin(toplanti.faaliyetMetni, 'ayIciCalismalar')),
     ayIciFaaliyetler.length ? table(['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet, f.aciklama])) : P(' '),
     toplanti.metrikler ? P('Metrikler: ' + toplanti.metrikler) : P(' '),
 
-    H('7) Çalışan Temsilcilerinin Görüş ve Önerileri'),
-    P(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler')),
-    P(' ', { spacing: { after: 400 } }),
     BR(),
 
     H('8) Ay İçinde Tespit Edilen Uygunsuzluklar'),
@@ -534,7 +535,7 @@ async function konuBasliklariWordOlustur() {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
-  const gundem = toplanti.gundem || [];
+  const gundem = kurulGundemSirala(toplanti.gundem || []);
   const olaylar = toplantiOlaylariniGetir(_toplantiId);
   const { devreden, yeni } = _ciktiKararVerisi(_toplantiId);
 
@@ -590,6 +591,12 @@ async function konuBasliklariWordOlustur() {
     });
   }
 
+  // (Sıra: Olaylardan hemen sonra — kullanıcı isteği.) Kullanıcı isteği: "çalışan temsilcisi görüşü girilmemiş olsa da başlığı
+  // yaz mutlaka" — diğer bölümlerin aksine bu başlık boş olsa da HER ZAMAN
+  // görünür (girilmemişse "-" yazılır).
+  bolumBasligi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
+  children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: (toplanti.calisanTemsilcisiGorusleri || '').trim() || '-', size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
+
   // Kararlar — kısa başlık + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
   const kararBolumuEkle = (baslikMetni, kararlar) => {
     if (!kararlar.length) return;
@@ -607,12 +614,6 @@ async function konuBasliklariWordOlustur() {
 
   kararBolumuEkle('BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR', yeni);
   kararBolumuEkle('ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR', devreden);
-
-  // Kullanıcı isteği: "çalışan temsilcisi görüşü girilmemiş olsa da başlığı
-  // yaz mutlaka" — diğer bölümlerin aksine bu başlık boş olsa da HER ZAMAN
-  // görünür (girilmemişse "-" yazılır).
-  bolumBasligi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ');
-  children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: (toplanti.calisanTemsilcisiGorusleri || '').trim() || '-', size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
 
   // Kullanıcı isteği: Kararlar (C/D) gibi Uygunsuzluklar da tek birleşik
   // bölüm yerine, Kapatılan / Yeni Açılan diye AYRI iki bölüm olsun.
@@ -801,7 +802,7 @@ async function kurulRaporuPdfOlustur() {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
-  const gundem = toplanti.gundem || [];
+  const gundem = kurulGundemSirala(toplanti.gundem || []);
   const olaylarHam = toplantiOlaylariniGetir(_toplantiId);
   const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
   if (!(await _oyEksikKontrolVeUyar(yeniHam, devredenHam))) return;
@@ -937,33 +938,33 @@ async function kurulRaporuPdfOlustur() {
         ${olaylar.length ? olaylar.map(o => _pdfInfoCardGrid(o.tur, gunAyYil(o.tarih), [['Yer', o.yer], ['Birim', o.birim], ['Oluş Şekli', o.olusSekli], ['Kök Neden', o.kokNeden], ['İş Günü Kaybı', o.isGunuKaybi]]) + _pdfOlayKararTakibiBlogu(o) + _pdfOlayFotoBlogu(o)).join('') : `<p class="empty">${_ciktiKacir(_varsayilanliMetin('', 'olaylar'))}</p>`}
       </div>
 
+      <div class="section keep">
+        <h2>3) Çalışan Temsilcilerinin Görüş ve Önerileri</h2>
+        <p>${_ciktiKacir(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler'))}</p>
+      </div>
+
       <div class="section">
-        <h2>3) Bu Toplantıda Alınan Kararlar</h2>
+        <h2>4) Bu Toplantıda Alınan Kararlar</h2>
         ${yeni.length ? yeni.map(_pdfKararKarti).join('') : '<p class="empty">Karar bulunmamaktadır.</p>'}
         ${yeni.some(k => kararOyDokumMetni(k)) ? `<p class="note">${_ciktiKacir(KARAR_OY_DOKUM_DIPNOTU)}</p>` : ''}
       </div>
 
       <div class="section">
-        <h2>4) Önceki Toplantılardan Devreden Kararlar</h2>
+        <h2>5) Önceki Toplantılardan Devreden Kararlar</h2>
         ${devreden.length ? devreden.map(_pdfKararKarti).join('') : `<p class="empty">${_ciktiKacir(_varsayilanliMetin('', 'devredenKararlar'))}</p>`}
         ${devreden.some(k => kararOyDokumMetni(k)) ? `<p class="note">${_ciktiKacir(KARAR_OY_DOKUM_DIPNOTU)}</p>` : ''}
       </div>
 
       <div class="section">
-        <h2>5) Ay İçinde Yapılan Eğitimler</h2>
+        <h2>6) Ay İçinde Yapılan Eğitimler</h2>
         ${_pdfTablo(['Eğitim Adı', 'Tarih', 'Katılımcı Sayısı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), k.katilimciSayisi, k.birim]))}
       </div>
 
       <div class="section">
-        <h2>6) Ay İçi İSG Çalışmaları</h2>
+        <h2>7) Ay İçi İSG Çalışmaları</h2>
         <p>${_ciktiKacir(_varsayilanliMetin(toplanti.faaliyetMetni, 'ayIciCalismalar'))}</p>
         ${ayIciFaaliyetler.length ? _pdfTablo(['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet, f.aciklama])) : ''}
         ${toplanti.metrikler ? `<p><b>Metrikler:</b> ${_ciktiKacir(toplanti.metrikler)}</p>` : ''}
-      </div>
-
-      <div class="section keep">
-        <h2>7) Çalışan Temsilcilerinin Görüş ve Önerileri</h2>
-        <p>${_ciktiKacir(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler'))}</p>
       </div>
 
       <div class="section">
@@ -1026,7 +1027,7 @@ async function pptxOlustur() {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
-  const gundem = toplanti.gundem || [];
+  const gundem = kurulGundemSirala(toplanti.gundem || []);
   const olaylarHam = toplantiOlaylariniGetir(_toplantiId);
   const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
   if (!(await _oyEksikKontrolVeUyar(yeniHam, devredenHam))) return;
@@ -1397,6 +1398,10 @@ async function pptxOlustur() {
     });
   };
 
+  // Sıra: Olaylardan hemen sonra Çalışan Temsilcilerinin Görüş ve Önerileri (kullanıcı isteği).
+  bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışan temsilcilerinin değerlendirmesi');
+  metinSlaydi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
+
   bolumAraSlaydi('KARARLAR', 'Yeni kararlar ve devreden kararların takibi');
   kararSlaytlariniEkle('YENİ KARAR', yeni);
   kararSlaytlariniEkle('DEVREDEN KARAR', devreden);
@@ -1404,9 +1409,6 @@ async function pptxOlustur() {
   bolumAraSlaydi('EĞİTİM VE FAALİYETLER', 'Ay içinde yapılan eğitimler ve İSG çalışmaları');
   tabloSlaydi('AY İÇİNDE YAPILAN EĞİTİMLER', ['Eğitim Adı', 'Tarih', 'Katılımcı', 'Birim'], aylikEgitimler.map(k => [k.egitimAdi, gunAyYil(k.egitimTarihi), String(k.katilimciSayisi), k.birim]), [4, 2.5, 2, 3]);
   tabloSlaydi('AY İÇİ İSG ÇALIŞMALARI', ['Faaliyet', 'Adet', 'Açıklama'], ayIciFaaliyetler.map(f => [f.faaliyet, f.adet || '', f.aciklama || '']), [3, 1.5, 7]);
-
-  bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışan temsilcilerinin değerlendirmesi');
-  metinSlaydi('ÇALIŞAN TEMSİLCİLERİNİN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
 
   // Kullanıcı isteği: "ay içinde tespit edilen uygunsuzluklar ve kapatılan
   // uygunsuzluklar da tek tek slaytlarda ayrı slaytlarda olmalı" — önceden

@@ -380,8 +380,8 @@ function gundemListesiniCiz(toplanti) {
   // olarak gösterilir — kullanıcı isteği: "toplantı tarihine kadar olan
   // olayları da gündeme ekleyelim".
   const olaylarMetni = toplantiOlaylarGundemMetni(toplanti.id);
-  kutu.innerHTML = toplanti.gundem.length
-    ? `<ol style="padding-left:20px; font-size:13px;">${toplanti.gundem.map(g => {
+  kutu.innerHTML = kurulGundemSirala(toplanti.gundem).length
+    ? `<ol style="padding-left:20px; font-size:13px;">${kurulGundemSirala(toplanti.gundem).map(g => {
         const otoNot = /^olaylar/i.test(g.baslik.trim()) && olaylarMetni
           ? `<div style="margin-top:2px; color:var(--metin-soluk); font-size:12px;">${_ktKacir(olaylarMetni)}</div>`
           : '';

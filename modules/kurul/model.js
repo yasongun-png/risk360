@@ -101,6 +101,22 @@ const KURUL_GOREVLERI = [
   'Üye'
 ];
 
+// Kullanıcı isteği: "İSG kurulunda olaylardan sonra çalışan temsilcisi görüşleri
+// olsun, tüm raporlarda, toplantı konu başlıklarında, pptx'de de bu sırayla
+// olacak, gündemi de buna göre düzenle" — gündemde "Çalışan temsilcilerinin görüş
+// ve önerileri" maddesi (varsa) "Olaylar" maddesinin hemen arkasına alınır.
+// Kayıtlı toplantıların verisi değiştirilmez, sadece gösterim/çıktı sırası.
+function kurulGundemSirala(gundem) {
+  const liste = Array.isArray(gundem) ? gundem.slice() : [];
+  const olayIndeks = liste.findIndex(g => /^olaylar/i.test(String(g.baslik || '').trim().toLocaleLowerCase('tr-TR')));
+  const gorusIndeks = liste.findIndex(g => /çalışan temsilci/i.test(String(g.baslik || '').toLocaleLowerCase('tr-TR')));
+  if (olayIndeks === -1 || gorusIndeks === -1 || gorusIndeks === olayIndeks + 1) return liste;
+  const olay = liste[olayIndeks];
+  const [gorus] = liste.splice(gorusIndeks, 1);
+  liste.splice(liste.indexOf(olay) + 1, 0, gorus);
+  return liste;
+}
+
 function katilimcilariAyir(metin) {
   return String(metin || '')
     .split(/[;,\n]+/)
@@ -504,7 +520,7 @@ function tutanakMetniUret(toplanti, kararlar, baskanSekreter) {
   satirlar.push(`Katılımcılar: ${toplanti.katilimcilar.join(', ') || '-'}`);
   satirlar.push('');
   satirlar.push('Gündem:');
-  toplanti.gundem.forEach((g, i) => satirlar.push(`${i + 1}. ${g.baslik}${g.not ? ' - ' + g.not : ''}`));
+  kurulGundemSirala(toplanti.gundem).forEach((g, i) => satirlar.push(`${i + 1}. ${g.baslik}${g.not ? ' - ' + g.not : ''}`));
   satirlar.push('');
   satirlar.push('Kararlar:');
   kararlar.forEach((k, i) => satirlar.push(`${i + 1}. ${k.kararMetni} | Sorumlu: ${k.sorumlu || '-'} | Termin: ${gunAyYil(k.termin) || '-'} | Öncelik: ${k.oncelik}`));
