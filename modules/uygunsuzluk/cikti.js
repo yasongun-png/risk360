@@ -811,11 +811,13 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
     sl.addText(`UYGUNSUZLUK  ·  ${i + 1} / ${cozulmus.length}${k.aksiyonNo ? '  ·  ' + k.aksiyonNo : ''}`, { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
     // Uzun başlık kesilmez: iki satıra yayılır (çok uzunsa yazı küçülür), üst etiketin ve kutunun üstüne taşmaz.
-    const kisa = baslik.length > 170 ? baslik.slice(0, 167).trimEnd() + '...' : baslik;
+    const baslikSeridi = String(k.bolum || '').trim() || baslik;
+    const kisa = baslikSeridi.length > 170 ? baslikSeridi.slice(0, 167).trimEnd() + '...' : baslikSeridi;
     sl.addText(kisa, { x: M, y: 0.68, w: 12.2, h: 0.64, fontSize: kisa.length <= 60 ? 21 : (kisa.length <= 110 ? 17 : 14), bold: true, color: R.baslik, fontFace: 'Calibri', valign: 'top', fit: 'shrink' });
 
     // Açıklama boşsa kutuda başlığın tamamı gösterilir (başlık üstte kısaltılıyor).
-    const aciklama = (k.aciklama && k.aciklama.trim() !== '-') ? k.aciklama : baslik;
+    // Beyaz kutu = Uygunsuzluk Tanımı (modül tablosundaki gibi başlık + açıklama); başlık şeridinde ise tesis/birim görünür, böylece aynı cümle iki kez yazılmaz.
+    const aciklama = baslik + ((k.aciklama && k.aciklama.trim() !== '-' && k.aciklama.trim() !== baslik.trim()) ? ' — ' + k.aciklama.trim() : '');
     sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
     sl.addText(aciklama, { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top', fit: 'shrink' });
 
@@ -850,7 +852,7 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
       f.background = { color: '0B1220' };
       f.addImage(resimNesnesi(url, { x: 0.5, y: 0.5, w: SW - 1, h: SH - 1.3, sizing: { type: 'contain', w: SW - 1, h: SH - 1.3 } }));
       f.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.7, w: SW, h: 0.7, fill: { color: R.baslik, transparency: 15 } });
-      f.addText(`${kisa} — ${etiket}`, { x: 0.5, y: SH - 0.7, w: SW - 1, h: 0.7, fontSize: 14, bold: true, color: 'FFFFFF', valign: 'middle' });
+      f.addText(`${baslik.length > 110 ? baslik.slice(0, 107).trimEnd() + '...' : baslik} — ${etiket}`, { x: 0.5, y: SH - 0.7, w: SW - 1, h: 0.7, fontSize: 14, bold: true, color: 'FFFFFF', valign: 'middle' });
     });
   });
 
