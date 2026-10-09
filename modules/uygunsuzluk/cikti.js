@@ -754,6 +754,45 @@ async function uygunsuzlukKayitPdfUrlOlustur(id) {
 // Kullanıcı isteği: Uygunsuzluk modülünde seçilen uygunsuzlukların, İSG Kurulu
 // PPTX'iyle uyumlu (aynı renk/şerit/rozet/kart düzeni) sunuma çevrilmesi.
 // Her uygunsuzluk: tanım kartı + (varsa) öncesi/sonrası tam ekran fotoğraf slaytı.
+// ==================== PPTX FOTOĞRAF YERLEŞİMİ ====================
+// Kullanıcı isteği: dik (portre) çekilmiş fotoğraflar slayta yayılıyordu.
+// pptxgenjs'in sizing:contain seçeneği gerçek en-boy oranını bilmediği için
+// bozuyordu; bu yüzden fotoğrafın gerçek ölçüsü okunur ve kutuya oran bozulmadan
+// (ortalanarak) yerleştirilir.
+const _fotoOlcuOnbellek = new Map();
+
+function _fotoOlcuOku(url) {
+  return new Promise(coz => {
+    if (!url) return coz(null);
+    const im = new Image();
+    im.onload = () => coz({ w: im.naturalWidth, h: im.naturalHeight });
+    im.onerror = () => coz(null);
+    im.src = url;
+  });
+}
+
+function _fotoUrlleriniTopla(nesne, sonuc = new Set(), derinlik = 0) {
+  if (derinlik > 6 || nesne == null) return sonuc;
+  if (typeof nesne === 'string') { if (/^(data:image|https?:)/i.test(nesne)) sonuc.add(nesne); return sonuc; }
+  if (Array.isArray(nesne)) { nesne.forEach(n => _fotoUrlleriniTopla(n, sonuc, derinlik + 1)); return sonuc; }
+  if (typeof nesne === 'object') Object.keys(nesne).forEach(a => _fotoUrlleriniTopla(nesne[a], sonuc, derinlik + 1));
+  return sonuc;
+}
+
+async function fotoOlculeriniHazirla(...kaynaklar) {
+  const urller = Array.from(_fotoUrlleriniTopla(kaynaklar)).filter(u => !_fotoOlcuOnbellek.has(u));
+  await Promise.all(urller.map(async u => _fotoOlcuOnbellek.set(u, await _fotoOlcuOku(u))));
+}
+
+// x,y,w,h kutusuna sığan, ortalanmış addImage seçeneklerini döner (ölçü okunamadıysa sizing:contain'e düşer).
+function fotoSigdirNesnesi(url, x, y, w, h) {
+  const kaynak = /^https?:\/\//i.test(url) ? { path: url } : { data: url };
+  const o = _fotoOlcuOnbellek.get(url);
+  if (!o || !o.w || !o.h) return Object.assign(kaynak, { x, y, w, h, sizing: { type: 'contain', w, h } });
+  const oran = Math.min(w / o.w, h / o.h);
+  const iw = o.w * oran, ih = o.h * oran;
+  return Object.assign(kaynak, { x: x + (w - iw) / 2, y: y + (h - ih) / 2, w: iw, h: ih });
+}
 async function uygunsuzlukKurulPptxOlustur(kayitlar) {
   if (!kayitlar || !kayitlar.length) { alert('Sunuma eklenecek uygunsuzluk yok.'); return; }
   if (typeof PptxGenJS === 'undefined') { alert('PPTX kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).'); return; }
@@ -765,6 +804,7 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     Promise.all(kayitlar.map(async k => Object.assign({}, k, { fotoOncesi: await fotoBuyukCoz(k.fotoOncesi), fotoSonrasi: await fotoBuyukCoz(k.fotoSonrasi) })))
   ]);
 
+  await fotoOlculeriniHazirla(cozulmus, logoUrl);
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
   const R = { bg: 'F1F5F9', baslik: '0F172A', soluk: '64748B', cizgi: 'E2E8F0', birincil: '1D4ED8', birincilKoyu: '15316B' };
@@ -782,7 +822,6 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     title: MASTER,
     background: { color: R.bg },
     objects: [
-      { rect: { x: 0, y: 0, w: '100%', h: 0.09, fill: { color: R.birincil } } },
       { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
       { text: { text: firmaAdi, options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
       { text: { text: 'İSG Kurul Toplantısı  ·  Uygunsuzluklar  ·  ' + bugunMetni, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
@@ -795,7 +834,7 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
   kapak.background = { color: R.birincilKoyu };
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
-  if (logoUrl) kapak.addImage(resimNesnesi(logoUrl, { x: SW / 2 - 0.75, y: 0.85, w: 1.5, h: 1.5, sizing: { type: 'contain', w: 1.5, h: 1.5 } }));
+  if (logoUrl) kapak.addImage(fotoSigdirNesnesi(logoUrl, SW / 2 - 0.75, 0.85, 1.5, 1.5));
   kapak.addText('UYGUNSUZLUKLAR', { x: 1, y: 2.75, w: SW - 2, h: 1.1, fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri' });
   kapak.addText(firmaAdi, { x: 1, y: 3.95, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
   kapak.addText(`${cozulmus.length} uygunsuzluk  ·  ${bugunMetni}`, { x: 1, y: 4.75, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
@@ -843,14 +882,14 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     if (foto) {
       const b = 3.5, x = 8.55, y = 1.35;
       sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: y - 0.06, w: b + 0.12, h: b + 0.12, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-      sl.addImage(resimNesnesi(foto, { x, y, w: b, h: b, sizing: { type: 'contain', w: b, h: b } }));
+      sl.addImage(fotoSigdirNesnesi(foto, x, y, b, b));
     }
 
     [['Öncesi', k.fotoOncesi], ['Sonrası', k.fotoSonrasi]].forEach(([etiket, url]) => {
       if (!url) return;
       const f = pptx.addSlide();
       f.background = { color: '0B1220' };
-      f.addImage(resimNesnesi(url, { x: 0.5, y: 0.5, w: SW - 1, h: SH - 1.3, sizing: { type: 'contain', w: SW - 1, h: SH - 1.3 } }));
+      f.addImage(fotoSigdirNesnesi(url, 0.5, 0.5, SW - 1, SH - 1.3));
       f.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.7, w: SW, h: 0.7, fill: { color: R.baslik, transparency: 15 } });
       f.addText(`${baslik.length > 110 ? baslik.slice(0, 107).trimEnd() + '...' : baslik} — ${etiket}`, { x: 0.5, y: SH - 0.7, w: SW - 1, h: 0.7, fontSize: 14, bold: true, color: 'FFFFFF', valign: 'middle' });
     });

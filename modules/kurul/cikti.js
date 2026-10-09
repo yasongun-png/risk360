@@ -1316,6 +1316,45 @@ async function kurulRaporuPdfOlustur() {
 
 // ==================== 5) PPTX OLUŞTUR ====================
 
+// ==================== PPTX FOTOĞRAF YERLEŞİMİ ====================
+// Kullanıcı isteği: dik (portre) çekilmiş fotoğraflar slayta yayılıyordu.
+// pptxgenjs'in sizing:contain seçeneği gerçek en-boy oranını bilmediği için
+// bozuyordu; bu yüzden fotoğrafın gerçek ölçüsü okunur ve kutuya oran bozulmadan
+// (ortalanarak) yerleştirilir.
+const _fotoOlcuOnbellek = new Map();
+
+function _fotoOlcuOku(url) {
+  return new Promise(coz => {
+    if (!url) return coz(null);
+    const im = new Image();
+    im.onload = () => coz({ w: im.naturalWidth, h: im.naturalHeight });
+    im.onerror = () => coz(null);
+    im.src = url;
+  });
+}
+
+function _fotoUrlleriniTopla(nesne, sonuc = new Set(), derinlik = 0) {
+  if (derinlik > 6 || nesne == null) return sonuc;
+  if (typeof nesne === 'string') { if (/^(data:image|https?:)/i.test(nesne)) sonuc.add(nesne); return sonuc; }
+  if (Array.isArray(nesne)) { nesne.forEach(n => _fotoUrlleriniTopla(n, sonuc, derinlik + 1)); return sonuc; }
+  if (typeof nesne === 'object') Object.keys(nesne).forEach(a => _fotoUrlleriniTopla(nesne[a], sonuc, derinlik + 1));
+  return sonuc;
+}
+
+async function fotoOlculeriniHazirla(...kaynaklar) {
+  const urller = Array.from(_fotoUrlleriniTopla(kaynaklar)).filter(u => !_fotoOlcuOnbellek.has(u));
+  await Promise.all(urller.map(async u => _fotoOlcuOnbellek.set(u, await _fotoOlcuOku(u))));
+}
+
+// x,y,w,h kutusuna sığan, ortalanmış addImage seçeneklerini döner (ölçü okunamadıysa sizing:contain'e düşer).
+function fotoSigdirNesnesi(url, x, y, w, h) {
+  const kaynak = /^https?:\/\//i.test(url) ? { path: url } : { data: url };
+  const o = _fotoOlcuOnbellek.get(url);
+  if (!o || !o.w || !o.h) return Object.assign(kaynak, { x, y, w, h, sizing: { type: 'contain', w, h } });
+  const oran = Math.min(w / o.w, h / o.h);
+  const iw = o.w * oran, ih = o.h * oran;
+  return Object.assign(kaynak, { x: x + (w - iw) / 2, y: y + (h - ih) / 2, w: iw, h: ih });
+}
 async function pptxOlustur() {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
@@ -1341,6 +1380,7 @@ async function pptxOlustur() {
     _pdfUygunsuzluklariFotoCoz(kapananUygunsuzluklarHam),
     fotoBuyukCoz(firma ? firmaLogoGetir(firma.id) : '')
   ]);
+  await fotoOlculeriniHazirla(devreden, yeni, olaylar, tespitEdilenUygunsuzluklar, kapananUygunsuzluklar, logoUrl);
 
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
@@ -1395,8 +1435,7 @@ async function pptxOlustur() {
   s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
   s.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
   if (logoUrl) {
-    const gorsel = { x: SW / 2 - 0.75, y: 0.85, w: 1.5, h: 1.5, sizing: { type: 'contain', w: 1.5, h: 1.5 } };
-    s.addImage(Object.assign(/^https?:\/\//i.test(logoUrl) ? { path: logoUrl } : { data: logoUrl }, gorsel));
+    s.addImage(fotoSigdirNesnesi(logoUrl, SW / 2 - 0.75, 0.85, 1.5, 1.5));
   }
   s.addText('İŞ SAĞLIĞI VE GÜVENLİĞİ\nKURUL TOPLANTISI', { x: 1, y: 2.75, w: SW - 2, h: 1.6, fontSize: 38, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', lineSpacingMultiple: 1.08 });
   s.addText(_denetimAktifFirmaAdi(), { x: 1, y: 4.35, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
@@ -1446,8 +1485,7 @@ async function pptxOlustur() {
   const kucukFotoEkle = (sl, url, x, y, boyut) => {
     if (!url) return;
     sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: y - 0.06, w: boyut + 0.12, h: boyut + 0.12, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-    const gorsel = { x, y, w: boyut, h: boyut, sizing: { type: 'contain', w: boyut, h: boyut } };
-    sl.addImage(Object.assign(/^https?:\/\//i.test(url) ? { path: url } : { data: url }, gorsel));
+    sl.addImage(fotoSigdirNesnesi(url, x, y, boyut, boyut));
   };
 
   // Başlık şeridi: sol renkli çubuk + üst bilgi satırı (sıra/toplam) — tüm
@@ -1600,8 +1638,7 @@ async function pptxOlustur() {
     if (!url) return;
     const sl = pptx.addSlide();
     sl.background = { color: '0B1220' };
-    const gorsel = { x: 0.5, y: 0.5, w: SW - 1, h: SH - 1.3, sizing: { type: 'contain', w: SW - 1, h: SH - 1.3 } };
-    sl.addImage(Object.assign(/^https?:\/\//i.test(url) ? { path: url } : { data: url }, gorsel));
+    sl.addImage(fotoSigdirNesnesi(url, 0.5, 0.5, SW - 1, SH - 1.3));
     sl.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.7, w: SW, h: 0.7, fill: { color: R.baslik, transparency: 15 } });
     sl.addText(baslik, { x: 0.5, y: SH - 0.7, w: SW - 1, h: 0.7, fontSize: 14, bold: true, color: 'FFFFFF', valign: 'middle' });
   };
@@ -1825,14 +1862,14 @@ async function fotoSunumuPptxOlustur() {
     return;
   }
 
+  await fotoOlculeriniHazirla(fotolar.map(f => f.url));
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
   const SW = 13.33, SH = 7.5;
   fotolar.forEach(f => {
     const sl = pptx.addSlide();
     sl.background = { color: '0B1220' };
-    const gorsel = { x: 0.4, y: 0.35, w: SW - 0.8, h: SH - 1.35, sizing: { type: 'contain', w: SW - 0.8, h: SH - 1.35 } };
-    sl.addImage(Object.assign(/^https?:\/\//i.test(f.url) ? { path: f.url } : { data: f.url }, gorsel));
+    sl.addImage(fotoSigdirNesnesi(f.url, 0.4, 0.35, SW - 0.8, SH - 1.35));
     sl.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.75, w: SW, h: 0.75, fill: { color: '0F172A' } });
     sl.addText(`${f.kararNo}   ·   ${f.etiket}`, { x: 0.5, y: SH - 0.75, w: SW - 1, h: 0.75, fontSize: 20, bold: true, color: 'FFFFFF', valign: 'middle' });
   });
