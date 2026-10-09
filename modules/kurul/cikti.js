@@ -1692,6 +1692,43 @@ async function pptxOlustur() {
   await pptx.writeFile({ fileName: `Kurul_Toplantisi_${toplanti.toplantiNo}.pptx` });
 }
 
+// ==================== FOTOĞRAF SUNUMU (PPTX) ====================
+// Kullanıcı isteği: "isg kurulu modülünde pptx sunum var aynı şekilde sadece
+// fotoların ve karar noların olduğu, sırasıyla bir sunum istiyorum, indirilebilir
+// olsun" — kurul raporundaki sırayla (önce Bu Toplantıda Alınan Kararlar, sonra
+// Devreden Kararlar) her kararın TÜM fotoğrafları (öncesi/sonrası/ekler) tam
+// ekran birer slayt, altında sadece Karar No + fotoğraf etiketi. Kapak/metin yok.
+async function fotoSunumuPptxOlustur() {
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  if (!toplanti) return;
+
+  const { devreden: devredenHam, yeni: yeniHam } = _ciktiKararVerisi(_toplantiId);
+  const [yeni, devreden] = await Promise.all([_pdfKararlariFotoCoz(yeniHam), _pdfKararlariFotoCoz(devredenHam)]);
+
+  const fotolar = [];
+  yeni.concat(devreden).forEach(k => {
+    _pdfKararFotograflari(k).forEach(f => fotolar.push({ kararNo: k.kararNo || '-', etiket: f.etiket, url: f.url }));
+  });
+  if (!fotolar.length) {
+    alert('Bu toplantının kararlarında (yeni ve devreden) fotoğraf bulunamadı.');
+    return;
+  }
+
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+  const SW = 13.33, SH = 7.5;
+  fotolar.forEach(f => {
+    const sl = pptx.addSlide();
+    sl.background = { color: '0B1220' };
+    const gorsel = { x: 0.4, y: 0.35, w: SW - 0.8, h: SH - 1.35, sizing: { type: 'contain', w: SW - 0.8, h: SH - 1.35 } };
+    sl.addImage(Object.assign(/^https?:\/\//i.test(f.url) ? { path: f.url } : { data: f.url }, gorsel));
+    sl.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.75, w: SW, h: 0.75, fill: { color: '0F172A' } });
+    sl.addText(`${f.kararNo}   ·   ${f.etiket}`, { x: 0.5, y: SH - 0.75, w: SW - 1, h: 0.75, fontSize: 20, bold: true, color: 'FFFFFF', valign: 'middle' });
+  });
+
+  await pptx.writeFile({ fileName: `Kurul_Foto_Sunumu_${toplanti.toplantiNo}.pptx` });
+}
+
 // ==================== ATAMA YAZISI (WORD) ====================
 // İmza Listesi'ndeki bir kişi için tek sayfalık görevlendirme yazısı —
 // kullanıcı isteği: "isimlerin yanlarında buton olsun tıkladığımda atama
@@ -1861,6 +1898,14 @@ function ciktiButonlariniBagla() {
     } catch (e) {
       console.error(e);
       alert('PPTX üretilemedi: ' + (e.message || e));
+    }
+  });
+  document.getElementById('btnFotoPPTX').addEventListener('click', async () => {
+    try {
+      await fotoSunumuPptxOlustur();
+    } catch (e) {
+      console.error(e);
+      alert('Foto sunumu üretilemedi: ' + (e.message || e));
     }
   });
   document.getElementById('btnImzaListesiWord').addEventListener('click', async () => {
