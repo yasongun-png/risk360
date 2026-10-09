@@ -425,7 +425,7 @@ async function kurulRaporuWordOlustur() {
   const kazaIstatistikTablosu = kazaIst ? new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Vefat)', String(kazaIst.kazaSayisi)],
+      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi)', String(kazaIst.kazaSayisi)],
       ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)]
     ].map(([etiket, deger]) => new docx.TableRow({ children: [
       _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
@@ -1286,7 +1286,7 @@ async function pptxOlustur() {
       valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
       showLegend: false
     });
-    sl.addText('(*) İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Vefat. Toplantı tarihine kadar kayıtlı kazalar gösterilir.', { x: M, y: 6.75, w: SW - 2 * M, h: 0.4, fontSize: 9, italic: true, color: R.soluk });
+    sl.addText('(*) İş kazası sayısı = LTI + DART + Tıbbi Tedavi. Toplantı tarihine kadar kayıtlı kazalar gösterilir.', { x: M, y: 6.75, w: SW - 2 * M, h: 0.4, fontSize: 9, italic: true, color: R.soluk });
   }
 
   // Kullanıcı isteği: "hangi ay kaç kaza olmuş ve hangi ay kaç gün rapor
