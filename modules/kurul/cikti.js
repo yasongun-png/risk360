@@ -758,117 +758,6 @@ function _denetimAktifFirmaAdi() {
   return firma ? firma.ad : '';
 }
 
-// ==================== 3b) KARAR NOT ALMA FORMU (WORD) ====================
-// Kullanıcı isteği: toplantıda kararları elle not alabilmek için, her konunun
-// başlığı (karar no / konu) ve altında "Alınan Karar" için boş yer bulunan
-// indirilebilir Word dokümanı. Konular rapordaki bölümlerle aynı kaynaktan gelir.
-async function kararNotFormuWordOlustur() {
-  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
-  if (!toplanti) return;
-
-  const olaylar = toplantiOlaylariniGetir(_toplantiId);
-  const { devreden, yeni } = _ciktiKararVerisi(_toplantiId);
-  const tespit = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
-  const kapanan = toplantiKapananUygunsuzluklariGetir(toplanti);
-
-  const GENISLIK = { size: 100, type: docx.WidthType.PERCENTAGE };
-  const KENARLIK = { style: docx.BorderStyle.SINGLE, size: 6, color: '64748B' };
-  const KENARLIKLAR = { top: KENARLIK, bottom: KENARLIK, left: KENARLIK, right: KENARLIK };
-  const par = (metin, secenek) => new docx.Paragraph(Object.assign({ children: [new docx.TextRun({ text: metin, size: 20, bold: !!(secenek && secenek.bold) })], spacing: { before: 40, after: 40 } }, secenek && secenek.par));
-
-  const children = [
-    new docx.Paragraph({
-      alignment: docx.AlignmentType.CENTER,
-      spacing: { after: 60 },
-      children: [new docx.TextRun({ text: `${_ciktiDonemMetni(toplanti)} İSG KURULU – KARAR NOT FORMU`, bold: true, size: 30 })]
-    }),
-    new docx.Paragraph({
-      alignment: docx.AlignmentType.CENTER,
-      spacing: { after: 200 },
-      children: [new docx.TextRun({ text: `${toplanti.toplantiNo || ''}  |  ${_ciktiTarihSaat(toplanti)}  |  ${toplanti.yer || ''}`, size: 20, color: '475569' })]
-    })
-  ];
-
-  const bolumBasligi = (metin) => children.push(new docx.Paragraph({
-    keepNext: true,
-    spacing: { before: 240, after: 100 },
-    children: [new docx.TextRun({ text: metin, bold: true, size: 24, color: '15316B' })]
-  }));
-
-  // Her konu: koyu başlık satırı (no — konu) + isteğe bağlı bilgi satırı + boş "Alınan Karar" kutusu.
-  const konuKutusu = (baslik, bilgi, kutuYuksekligi) => {
-    const satirlar = [
-      new docx.TableRow({
-        cantSplit: true,
-        children: [new docx.TableCell({
-          borders: KENARLIKLAR,
-          shading: { type: docx.ShadingType.CLEAR, fill: 'E2E8F0', color: 'auto' },
-          children: [par(baslik, { bold: true, par: { keepNext: true } })].concat(bilgi ? [par(bilgi, { par: { keepNext: true } })] : [])
-        })]
-      }),
-      new docx.TableRow({
-        cantSplit: true,
-        height: { value: kutuYuksekligi || 1700, rule: docx.HeightRule.ATLEAST },
-        children: [new docx.TableCell({
-          borders: KENARLIKLAR,
-          children: [new docx.Paragraph({ spacing: { before: 40 }, children: [new docx.TextRun({ text: 'Alınan karar / not:', size: 16, color: '94A3B8', italics: true })] })]
-        })]
-      })
-    ];
-    children.push(new docx.Table({ width: GENISLIK, rows: satirlar }));
-    children.push(new docx.Paragraph({ text: '', spacing: { after: 120 } }));
-  };
-
-  const kararlariEkle = (liste) => liste.forEach((k, i) => {
-    const { baslik, govde } = _kararBasligiVeMetni(k.kararMetni);
-    const bilgi = [govde, `Sorumlu: ${k.sorumlu || '-'}`, k.termin ? `Termin: ${gunAyYil(k.termin)}` : ''].filter(Boolean).join('  |  ');
-    konuKutusu(`${k.kararNo || (i + 1) + '.'} — ${baslik}`, bilgi);
-  });
-
-  if (devreden.length) { bolumBasligi('A) ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR'); kararlariEkle(devreden); }
-
-  if (olaylar.length) {
-    bolumBasligi('B) OLAYLAR');
-    olaylar.forEach((o, i) => {
-      const kisi = o.adSoyad ? `Kazalı: ${o.adSoyad}  |  ` : '';
-      konuKutusu(`Olay ${i + 1} — ${o.tarih ? gunAyYil(o.tarih) : '—'} – ${o.yer || '—'}`, `${kisi}${o.tur || '-'}${o.olusSekli ? '  |  ' + o.olusSekli : ''}`);
-    });
-  }
-
-  bolumBasligi('C) ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ');
-  konuKutusu('Çalışanların görüş ve önerileri', '', 2400);
-
-  if (yeni.length) { bolumBasligi('D) BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR'); kararlariEkle(yeni); }
-
-  if (kapanan.length) {
-    bolumBasligi('E) KAPATILAN UYGUNSUZLUKLAR');
-    kapanan.forEach((k, i) => konuKutusu(`${i + 1}. ${k.konuBasligi || '-'}`, `Kapanış: ${gunAyYil(k.kapanisTarihi) || '-'}  |  Bölüm: ${k.bolum || '-'}`, 1200));
-  }
-  if (tespit.length) {
-    bolumBasligi('F) YENİ AÇILAN UYGUNSUZLUKLAR');
-    tespit.forEach((k, i) => konuKutusu(`${i + 1}. ${k.konuBasligi || '-'}`, `Tespit: ${gunAyYil(k.tespitTarihi) || '-'}  |  Bölüm: ${k.bolum || '-'}  |  Durum: ${k.durum || '-'}`, 1200));
-  }
-
-  bolumBasligi('G) DİLEK VE TEMENNİLER / DİĞER KONULAR');
-  konuKutusu('Diğer konular', '', 3000);
-
-  const doc = new docx.Document({
-    sections: [{
-      properties: { page: { margin: { top: 850, right: 850, bottom: 850, left: 850 } } },
-      footers: {
-        default: new docx.Footer({
-          children: [new docx.Paragraph({
-            alignment: docx.AlignmentType.CENTER,
-            children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '64748B' })]
-          })]
-        })
-      },
-      children
-    }]
-  });
-  const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `Kurul_Karar_Not_Formu_${toplanti.toplantiNo}.docx`);
-}
 // ==================== 3) KONU BAŞLIKLARI (WORD) ====================
 
 // kararMetni "{no}/{no} - {Kısa Başlık}: {Tam Metin}" biçimindeyse kısa başlığı
@@ -885,7 +774,8 @@ function _kararBasligiVeMetni(kararMetni) {
   return { baslik: baslik || metin, govde };
 }
 
-async function konuBasliklariWordOlustur() {
+// notFormu=true: aynı içerik, ama her maddenin altında elle 'Alınan karar' yazmak için çizgili boşluk bırakır
+// (kullanıcı isteği: Konu Başlıkları'nın aynısı, her maddenin altında karar notu alanı).
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
@@ -904,7 +794,7 @@ async function konuBasliklariWordOlustur() {
 
   const baslikParagrafi = new docx.Paragraph({
     alignment: docx.AlignmentType.CENTER,
-    children: [new docx.TextRun({ text: `${_ciktiDonemMetni(toplanti)} İSG KURUL TOPLANTI KONU BAŞLIKLARI`, bold: true, size: ANA_BASLIK_BOYUT })],
+    children: [new docx.TextRun({ text: `${_ciktiDonemMetni(toplanti)} İSG KURUL TOPLANTI ${notFormu ? 'KARAR NOT FORMU' : 'KONU BAŞLIKLARI'}`, bold: true, size: ANA_BASLIK_BOYUT })],
     spacing: { after: 150 }
   });
 
@@ -913,6 +803,14 @@ async function konuBasliklariWordOlustur() {
   // ayrı (tek sütunlu) bir bölümde, geri kalan tüm liste ise aynı sayfada
   // (SectionType.CONTINUOUS — yeni sayfaya geçmeden) 2 sütunlu akar.
   const children = [];
+
+  const notAlani = (satir = 3) => {
+    if (!notFormu) return;
+    const cizgi = { bottom: { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8', space: 1 } };
+    children.push(new docx.Paragraph({ border: cizgi, spacing: { before: 40 }, children: [new docx.TextRun({ text: 'Alınan karar:', size: 15, italics: true, color: '64748B' })] }));
+    for (let i = 1; i < satir; i++) children.push(new docx.Paragraph({ border: cizgi, spacing: { before: 280 }, children: [] }));
+    children.push(new docx.Paragraph({ spacing: { after: 100 }, children: [] }));
+  };
 
   // Kullanıcı isteği: "neden D'den F'e atlıyor" — harfler artık sabit
   // yazılmıyor, yalnızca fiilen görünen (dolu) bölümlere göre otomatik
@@ -930,6 +828,7 @@ async function konuBasliklariWordOlustur() {
     bolumBasligi('GÜNDEM');
     gundem.forEach((g, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${g.baslik}${g.not ? ' — ' + g.not : ''}`, size: METIN_BOYUT })] }));
+      notAlani(3);
     });
   }
 
@@ -942,6 +841,7 @@ async function konuBasliklariWordOlustur() {
         ? `Kazalı: ${o.adSoyad} | ${o.tur || '-'} | ${o.olusSekli || '-'}`
         : (o.olusSekli || o.tur || '-');
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: detay, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
+      notAlani(3);
     });
   }
 
@@ -950,6 +850,7 @@ async function konuBasliklariWordOlustur() {
   // görünür (girilmemişse "-" yazılır).
   bolumBasligi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ');
   children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: (toplanti.calisanTemsilcisiGorusleri || '').trim() || '-', size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
+  notAlani(5);
 
   // Kararlar — kısa başlık + tam metin + varsa Aksiyon + Sorumlu/Durum/Termin.
   const kararBolumuEkle = (baslikMetni, kararlar) => {
@@ -963,6 +864,7 @@ async function konuBasliklariWordOlustur() {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Sorumlu: ${k.sorumlu || '-'}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Durum: ${k.durumGoruntu || k.durum || '-'}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Termin: ${gunAyYil(k.termin) || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
+      notAlani(3);
     });
   };
 
@@ -979,6 +881,7 @@ async function konuBasliklariWordOlustur() {
     kapananUygunsuzluklar.forEach((k, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
+      notAlani(2);
     });
   }
 
@@ -987,6 +890,7 @@ async function konuBasliklariWordOlustur() {
     tespitEdilenUygunsuzluklar.forEach((k, i) => {
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
+      notAlani(2);
     });
   }
 
@@ -1001,17 +905,23 @@ async function konuBasliklariWordOlustur() {
       `Hâlen açık: ${usIstKb.acik}`,
       `Tamamlama oranı: ${oranKb}`
     ].forEach(satir => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: satir, size: METIN_BOYUT })] })));
+    notAlani(3);
+  }
+
+  if (notFormu) {
+    bolumBasligi('DİLEK VE TEMENNİLER / DİĞER KONULAR');
+    notAlani(6);
   }
 
   const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
   const doc = new docx.Document({
     sections: [
       { properties: { page: { margin: darKenar } }, children: [baslikParagrafi] },
-      { properties: { type: docx.SectionType.CONTINUOUS, page: { margin: darKenar }, column: { count: 2, space: 360 } }, children }
+      { properties: { type: docx.SectionType.CONTINUOUS, page: { margin: darKenar }, column: { count: notFormu ? 1 : 2, space: 360 } }, children }
     ]
   });
   const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `Konu_Basliklari_${toplanti.toplantiNo}.docx`);
+  saveAs(blob, `${notFormu ? 'Kurul_Karar_Not_Formu' : 'Konu_Basliklari'}_${toplanti.toplantiNo}.docx`);
 }
 
 // ==================== 4) KURUL RAPORU (PDF) ====================
@@ -2103,7 +2013,7 @@ function ciktiButonlariniBagla() {
     }
   });
   document.getElementById('btnKararNotFormu').addEventListener('click', async () => {
-    try { await kararNotFormuWordOlustur(); } catch (e) { console.error(e); alert('Not formu üretilemedi: ' + (e.message || e)); }
+    try { await konuBasliklariWordOlustur(true); } catch (e) { console.error(e); alert('Not formu üretilemedi: ' + (e.message || e)); }
   });
   document.getElementById('btnFotoPPTX').addEventListener('click', async () => {
     try {
