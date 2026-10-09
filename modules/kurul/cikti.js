@@ -83,7 +83,7 @@ async function toplantiDavetiWordOlustur(indir = true) {
         // olan olayları da gündeme ekleyelim") — bkz. service.js
         // toplantiOlaylarGundemMetni.
         ...gundem.flatMap((g, i) => {
-          const satirlar = [new docx.Paragraph({ text: `${i + 1}) ${g.baslik}`, spacing: { after: 60 } })];
+          const satirlar = [new docx.Paragraph({ spacing: { after: 60 }, children: [new docx.TextRun({ text: `${i + 1}) ${g.baslik}`, bold: true })] })];
           if (/^olaylar/i.test(g.baslik.trim())) {
             const olaylarMetni = toplantiOlaylarGundemMetni(toplanti.id);
             if (olaylarMetni) {
@@ -110,7 +110,7 @@ async function toplantiDavetiWordOlustur(indir = true) {
               children: [
                 ['ADI VE SOYADI', 30], ['GÖREVİ', 38], ['İMZA', 32]
               ].map(([baslik, genislik]) =>
-                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: baslik, spacing: { before: 120, after: 120 } })] })
+                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
               )
             }),
             ...katilimcilar.map((k, i) => new docx.TableRow({
@@ -1907,7 +1907,7 @@ async function imzaListesiWordOlustur() {
               children: [
                 ['SIRA', 8], ['ADI VE SOYADI', 30], ['ÜNVAN / KURULDAKİ GÖREVİ', 30], ['İMZA', 32]
               ].map(([baslik, genislik]) =>
-                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ text: baslik, spacing: { before: 120, after: 120 } })] })
+                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
               )
             }),
             ...imzalar.map(i => new docx.TableRow({
