@@ -810,8 +810,9 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     const sl = pptx.addSlide({ masterName: MASTER });
     sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
     sl.addText(`UYGUNSUZLUK  ·  ${i + 1} / ${cozulmus.length}${k.aksiyonNo ? '  ·  ' + k.aksiyonNo : ''}`, { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
-    const kisa = baslik.length > 90 ? baslik.slice(0, 87).trimEnd() + '...' : baslik;
-    sl.addText(kisa, { x: M, y: 0.68, w: 11.8, h: 0.5, fontSize: kisa.length > 55 ? 16 : 21, bold: true, color: R.baslik, fontFace: 'Calibri', valign: 'top', fit: 'shrink' });
+    // Uzun başlık kesilmez: iki satıra yayılır (çok uzunsa yazı küçülür), üst etiketin ve kutunun üstüne taşmaz.
+    const kisa = baslik.length > 170 ? baslik.slice(0, 167).trimEnd() + '...' : baslik;
+    sl.addText(kisa, { x: M, y: 0.68, w: 12.2, h: 0.64, fontSize: kisa.length <= 60 ? 21 : (kisa.length <= 110 ? 17 : 14), bold: true, color: R.baslik, fontFace: 'Calibri', valign: 'top', fit: 'shrink' });
 
     // Açıklama boşsa kutuda başlığın tamamı gösterilir (başlık üstte kısaltılıyor).
     const aciklama = (k.aciklama && k.aciklama.trim() !== '-') ? k.aciklama : baslik;
