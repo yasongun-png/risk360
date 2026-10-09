@@ -80,6 +80,7 @@
           <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
           <button type="button" class="ikincil" id="wordRaporBtn">Word Raporu</button>
+          <button type="button" class="ikincil" id="kurulPptxBtn" title="Tablodaki kutucuklarla seçtiğiniz (seçim yoksa listelenen) uygunsuzlukları İSG Kurulu sunumu formatında PPTX yapar">📊 Kurul Sunumu (PPTX)</button>
           <button type="button" class="ikincil" id="listeMailBtn">✉️ Listeyi Mail Gönder</button>
           <button type="button" class="ikincil" id="raporMetniBtn">Rapor Kapak Metni</button>
           <button type="button" class="ikincil" id="mailMetniBtn">✉️ Mail Metni</button>
@@ -88,9 +89,9 @@
         </div>
       </div>
       <div class="tablo-scroll">
-        <table class="veri-tablosu" style="table-layout:fixed; min-width:1350px;">
+        <table class="veri-tablosu" style="table-layout:fixed; min-width:1394px;">
           <colgroup>
-            <col style="width:180px;">
+            <col style="width:44px;"><col style="width:180px;">
             <col style="width:90px;"><col style="width:95px;"><col style="width:85px;">
             <col style="width:260px;">
             <col style="width:80px;"><col style="width:80px;"><col style="width:100px;">
@@ -101,7 +102,7 @@
           <thead>
             <!-- Kaydırma gerektirmeden hep tıklanabilir olsun diye (sticky sütun bu
                  tabloda güvenilir çalışmadığı için) İşlemler en başa alındı. -->
-            <tr><th>İşlemler</th><th>No</th><th>Tesis / Birim</th><th>Bildirim Tarihi</th><th>Uygunsuzluk Tanımı</th><th>Risk Seviyesi</th><th>Termin</th><th>Sorumlu</th><th>Öncesi</th><th>Sonrası</th><th>Durum</th><th>Kapanış Tarihi</th><th>Kapanış Açıklaması</th></tr>
+            <tr><th style="text-align:center;"><input type="checkbox" id="usTumunuSec" title="Listelenenlerin tümünü seç / bırak" style="width:auto; margin:0;"></th><th>İşlemler</th><th>No</th><th>Tesis / Birim</th><th>Bildirim Tarihi</th><th>Uygunsuzluk Tanımı</th><th>Risk Seviyesi</th><th>Termin</th><th>Sorumlu</th><th>Öncesi</th><th>Sonrası</th><th>Durum</th><th>Kapanış Tarihi</th><th>Kapanış Açıklaması</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>
@@ -451,6 +452,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="../../core/data.js"></script>
   <script src="../../core/auth.js"></script>
@@ -467,8 +469,8 @@
   <script src="validation.js"></script>
   <script src="repository.js"></script>
   <script src="service.js"></script>
-  <script src="ui.js?v=5"></script>
-  <script src="cikti.js?v=3"></script>
+  <script src="ui.js?v=6"></script>
+  <script src="cikti.js?v=4"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
 

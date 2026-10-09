@@ -183,6 +183,19 @@ function uygunsuzlukSayfasiniBaslat() {
     try { await uygunsuzlukRaporuWordOlustur(); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
     finally { btn.disabled = false; btn.textContent = 'Word Raporu'; }
   });
+  // Kullanıcı isteği: seçilen uygunsuzlukları İSG Kurulu PPTX'iyle uyumlu sunuma çevir.
+  // Kutucuk işaretlenmemişse o an listelenen (arama/filtre uygulanmış) kayıtlar kullanılır.
+  document.getElementById('kurulPptxBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('kurulPptxBtn');
+    const listelenen = uygunsuzluklariGetir(document.getElementById('aramaKutusu').value, _usAktifFiltreleriGetir());
+    const secilenler = _usSecilenIdler.size ? listelenen.filter(k => _usSecilenIdler.has(k.id)) : listelenen;
+    if (!secilenler.length) { alert('Sunuma eklenecek uygunsuzluk yok.'); return; }
+    if (!_usSecilenIdler.size && !(await onayModali('Kutucukla seçim yapmadınız; listelenen ' + secilenler.length + ' uygunsuzluğun tamamı sunuma eklensin mi?', 'Oluştur'))) return;
+    const eski = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Sunum hazırlanıyor...';
+    try { await uygunsuzlukKurulPptxOlustur(secilenler); } catch (hata) { console.error(hata); alert('Sunum üretilemedi: ' + (hata.message || hata)); }
+    finally { btn.disabled = false; btn.textContent = eski; }
+  });
   document.getElementById('raporMetniBtn').addEventListener('click', raporMetniModalAc);
   document.getElementById('raporMetniKapatBtn').addEventListener('click', raporMetniModalKapat);
   document.getElementById('raporMetniIptalBtn').addEventListener('click', raporMetniModalKapat);
@@ -796,6 +809,9 @@ function _usTanimHucresiUret(k) {
   return `<div class="us-tanim-hucre" title="${_usKacir(tamMetin)}">${_usKacir(tamMetin)}</div>`;
 }
 
+// Kurul sunumu (PPTX) için tabloda işaretlenen kayıtlar — yeniden çizimlerde korunur.
+const _usSecilenIdler = new Set();
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
@@ -813,6 +829,7 @@ function kayitlariCiz(aramaMetni) {
   kayitlar.forEach(k => {
     const satir = document.createElement('tr');
     satir.innerHTML = `
+      <td style="text-align:center;"><input type="checkbox" data-us-sec="${_usKacir(k.id)}" ${_usSecilenIdler.has(k.id) ? 'checked' : ''} style="width:auto; margin:0;"></td>
       <td>${_islemButonlariUret(k)}</td>
       <td>${_usKacir(k.aksiyonNo)}</td>
       <td>${_usKacir(k.bolum)}</td>
@@ -831,6 +848,30 @@ function kayitlariCiz(aramaMetni) {
   });
 
   fotoReferanslariCoz(govde);
+
+  const tumunuSec = document.getElementById('usTumunuSec');
+  const secimDurumunuGuncelle = () => {
+    const kutular = govde.querySelectorAll('[data-us-sec]');
+    const secili = Array.from(kutular).filter(cb => cb.checked).length;
+    tumunuSec.checked = kutular.length > 0 && secili === kutular.length;
+    tumunuSec.indeterminate = secili > 0 && secili < kutular.length;
+    const btn = document.getElementById('kurulPptxBtn');
+    if (btn) btn.textContent = _usSecilenIdler.size ? `📊 Kurul Sunumu (PPTX) — ${_usSecilenIdler.size} seçili` : '📊 Kurul Sunumu (PPTX)';
+  };
+  govde.querySelectorAll('[data-us-sec]').forEach(cb => cb.addEventListener('change', () => {
+    const id = cb.getAttribute('data-us-sec');
+    if (cb.checked) _usSecilenIdler.add(id); else _usSecilenIdler.delete(id);
+    secimDurumunuGuncelle();
+  }));
+  tumunuSec.onchange = () => {
+    govde.querySelectorAll('[data-us-sec]').forEach(cb => {
+      cb.checked = tumunuSec.checked;
+      const id = cb.getAttribute('data-us-sec');
+      if (cb.checked) _usSecilenIdler.add(id); else _usSecilenIdler.delete(id);
+    });
+    secimDurumunuGuncelle();
+  };
+  secimDurumunuGuncelle();
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', () => uygunsuzlukFormunuYazdir(btn.getAttribute('data-form'))));

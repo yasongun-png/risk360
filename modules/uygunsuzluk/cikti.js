@@ -749,3 +749,109 @@ async function uygunsuzlukKayitPdfUrlOlustur(id) {
   })();
   return Promise.race([yukleme, zamanAsimi]);
 }
+
+// ==================== KURUL SUNUMU (PPTX) ====================
+// Kullanıcı isteği: Uygunsuzluk modülünde seçilen uygunsuzlukların, İSG Kurulu
+// PPTX'iyle uyumlu (aynı renk/şerit/rozet/kart düzeni) sunuma çevrilmesi.
+// Her uygunsuzluk: tanım kartı + (varsa) öncesi/sonrası tam ekran fotoğraf slaytı.
+async function uygunsuzlukKurulPptxOlustur(kayitlar) {
+  if (!kayitlar || !kayitlar.length) { alert('Sunuma eklenecek uygunsuzluk yok.'); return; }
+  if (typeof PptxGenJS === 'undefined') { alert('PPTX kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).'); return; }
+
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const firmaAdi = firma ? firma.ad : '';
+  const [logoUrl, cozulmus] = await Promise.all([
+    fotoBuyukCoz(firma && typeof firmaLogoGetir === 'function' ? firmaLogoGetir(firma.id) : ''),
+    Promise.all(kayitlar.map(async k => Object.assign({}, k, { fotoOncesi: await fotoBuyukCoz(k.fotoOncesi), fotoSonrasi: await fotoBuyukCoz(k.fotoSonrasi) })))
+  ]);
+
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+  const R = { bg: 'F1F5F9', baslik: '0F172A', soluk: '64748B', cizgi: 'E2E8F0', birincil: '1D4ED8', birincilKoyu: '15316B' };
+  const DURUM_RENK = {
+    'Açık': { fg: 'B45309', bg: 'FEF3C7' }, 'Devam Ediyor': { fg: '1D4ED8', bg: 'DBEAFE' },
+    'Onay Bekliyor': { fg: '7C3AED', bg: 'EDE9FE' }, 'Kapalı': { fg: '15803D', bg: 'DCFCE7' },
+    'Gecikmiş': { fg: 'B91C1C', bg: 'FEE2E2' }, 'İptal': { fg: '64748B', bg: 'E2E8F0' }
+  };
+  const M = 0.55, SW = 13.33, SH = 7.5;
+  const bugunMetni = gunAyYil(new Date().toISOString().slice(0, 10));
+  const resimNesnesi = (url, ek) => Object.assign(/^https?:\/\//i.test(url) ? { path: url } : { data: url }, ek);
+
+  const MASTER = 'US_MASTER';
+  pptx.defineSlideMaster({
+    title: MASTER,
+    background: { color: R.bg },
+    objects: [
+      { rect: { x: 0, y: 0, w: '100%', h: 0.09, fill: { color: R.birincil } } },
+      { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
+      { text: { text: firmaAdi, options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
+      { text: { text: 'İSG Kurul Toplantısı  ·  Uygunsuzluklar  ·  ' + bugunMetni, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
+    ],
+    slideNumber: { x: SW - 0.7, y: SH - 0.4, w: 0.4, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle' }
+  });
+
+  // Kapak
+  const kapak = pptx.addSlide();
+  kapak.background = { color: R.birincilKoyu };
+  kapak.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
+  kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
+  if (logoUrl) kapak.addImage(resimNesnesi(logoUrl, { x: SW / 2 - 0.75, y: 0.85, w: 1.5, h: 1.5, sizing: { type: 'contain', w: 1.5, h: 1.5 } }));
+  kapak.addText('UYGUNSUZLUKLAR', { x: 1, y: 2.75, w: SW - 2, h: 1.1, fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri' });
+  kapak.addText(firmaAdi, { x: 1, y: 3.95, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
+  kapak.addText(`${cozulmus.length} uygunsuzluk  ·  ${bugunMetni}`, { x: 1, y: 4.75, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
+
+  cozulmus.forEach((k, i) => {
+    const foto = k.fotoOncesi || k.fotoSonrasi || '';
+    const metinGenislik = foto ? 7.3 : SW - 2 * M;
+    const baslik = String(k.baslik || '-');
+    const durum = k.durumGoruntu || k.durum || '';
+    const renk = DURUM_RENK[durum] || { fg: R.soluk, bg: R.cizgi };
+
+    const sl = pptx.addSlide({ masterName: MASTER });
+    sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
+    sl.addText(`UYGUNSUZLUK  ·  ${i + 1} / ${cozulmus.length}${k.aksiyonNo ? '  ·  ' + k.aksiyonNo : ''}`, { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
+    const kisa = baslik.length > 90 ? baslik.slice(0, 87).trimEnd() + '...' : baslik;
+    sl.addText(kisa, { x: M, y: 0.68, w: 11.8, h: 0.5, fontSize: kisa.length > 55 ? 16 : 21, bold: true, color: R.baslik, fontFace: 'Calibri', valign: 'top', fit: 'shrink' });
+
+    // Açıklama boşsa kutuda başlığın tamamı gösterilir (başlık üstte kısaltılıyor).
+    const aciklama = (k.aciklama && k.aciklama.trim() !== '-') ? k.aciklama : baslik;
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addText(aciklama, { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top', fit: 'shrink' });
+
+    if (durum) {
+      const w = Math.max(0.9, 0.1 * durum.length + 0.35);
+      sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 2.9, w, h: 0.34, rectRadius: 0.17, fill: { color: renk.bg }, line: { type: 'none' } });
+      sl.addText(durum, { x: M, y: 2.9, w, h: 0.34, fontSize: 11, bold: true, color: renk.fg, align: 'center', valign: 'middle' });
+    }
+    const alinanOnlem = [k.duzelticiFaaliyet, k.onleyiciFaaliyet].filter(Boolean).join(' / ') || k.kanitAciklamasi || '';
+    const meta = [
+      ['Bölüm', k.bolum || '-'],
+      ['Bildirim', gunAyYil(k.bildirimTarihi) || '-'],
+      ['Termin', gunAyYil(k.termin) || '-'],
+      ['Kapanış', gunAyYil(k.kapanisTarihi) || '-'],
+      ['Sorumlu', k.sorumlu || '-']
+    ];
+    if (k.riskSeviyesi) meta.splice(3, 0, ['Risk Seviyesi', k.riskSeviyesi]);
+    if (alinanOnlem) meta.push(['Alınan Önlem', alinanOnlem]);
+    sl.addTable(meta.map(([e, d]) => [
+      { text: e, options: { bold: true, color: R.soluk, fill: { color: R.bg } } },
+      { text: String(d), options: { color: R.baslik, fill: { color: 'FFFFFF' } } }
+    ]), { x: M, y: 3.4, w: metinGenislik, colW: [1.9, metinGenislik - 1.9], fontSize: 11.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+    if (foto) {
+      const b = 3.5, x = 8.55, y = 1.35;
+      sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: y - 0.06, w: b + 0.12, h: b + 0.12, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addImage(resimNesnesi(foto, { x, y, w: b, h: b, sizing: { type: 'contain', w: b, h: b } }));
+    }
+
+    [['Öncesi', k.fotoOncesi], ['Sonrası', k.fotoSonrasi]].forEach(([etiket, url]) => {
+      if (!url) return;
+      const f = pptx.addSlide();
+      f.background = { color: '0B1220' };
+      f.addImage(resimNesnesi(url, { x: 0.5, y: 0.5, w: SW - 1, h: SH - 1.3, sizing: { type: 'contain', w: SW - 1, h: SH - 1.3 } }));
+      f.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.7, w: SW, h: 0.7, fill: { color: R.baslik, transparency: 15 } });
+      f.addText(`${kisa} — ${etiket}`, { x: 0.5, y: SH - 0.7, w: SW - 1, h: 0.7, fontSize: 14, bold: true, color: 'FFFFFF', valign: 'middle' });
+    });
+  });
+
+  await pptx.writeFile({ fileName: `Uygunsuzluk_Kurul_Sunumu_${new Date().toISOString().slice(0, 10)}.pptx` });
+}
