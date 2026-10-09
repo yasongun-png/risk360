@@ -123,17 +123,6 @@ function toplantiDetaySayfasiniBaslat() {
     setTimeout(() => { durum.textContent = ''; }, 2500);
   });
 
-  document.getElementById('btnDavetTakvim').addEventListener('click', () => {
-    // Organizatör = Outlook'taki "Kimden" adresi; bir kez sorulup hatırlanır.
-    const anahtar = tenantAnahtar('kurul_organizator_eposta');
-    let organizator = oku(anahtar, '');
-    if (!organizator) {
-      organizator = (prompt('Outlook\'ta toplantıyı gönderecek e-posta adresiniz (Kimden):') || '').trim();
-      if (organizator) yaz(anahtar, organizator);
-    }
-    const sayi = toplantiTakvimDavetiOlustur(organizator);
-    if (sayi === 0) alert('Dosya indirildi ama İmza Listesi\'nde e-postası olan katılımcı yok — "Gerekli" satırı boş gelecek. Önce E-postaları Yapıştır ile adresleri ekleyin.');
-  });
 
   // Uygunsuzlukların değerlendirmesi (otomatik hesap) — bkz. service.js
   // toplantiUygunsuzlukIstatistikleriHesapla.
