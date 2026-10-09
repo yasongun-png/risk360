@@ -109,6 +109,55 @@ async function _oyEksikKontrolVeUyar(yeni, devreden) {
 
 // ==================== 2) KURUL RAPORU (WORD) ====================
 
+// Kullanıcı isteği: "iş kazası verilerinde sıklık hızı, LTR vb. yerine aylık
+// kaza sayıları grafiği koyabiliriz, bir sayfa" — Word raporunda docx.js yerel
+// grafik üretemediğinden, aylık kaza sayıları sütun grafiği canvas ile çizilip
+// PNG olarak eklenir (PPTX'te yerel grafik kullanılır).
+function _kazaAylikGrafikPngOlustur(aylikDagilim, yil) {
+  const G = 1400, Y = 700;
+  const tuval = document.createElement('canvas');
+  tuval.width = G; tuval.height = Y;
+  const c = tuval.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, G, Y);
+
+  const sol = 90, sag = 40, ust = 90, alt = 110;
+  const cizimG = G - sol - sag, cizimY = Y - ust - alt;
+  const degerler = aylikDagilim.map(a => a.kazaSayisi);
+  const enYuksek = Math.max(4, ...degerler);
+  const adim = Math.max(1, Math.ceil(enYuksek / 6));
+  const tavan = Math.ceil(enYuksek / adim) * adim;
+
+  c.fillStyle = '#111827'; c.font = 'bold 34px Arial'; c.textAlign = 'center';
+  c.fillText(`${yil} Yılı Aylık İş Kazası Sayıları`, G / 2, 52);
+
+  c.font = '22px Arial'; c.textAlign = 'right'; c.strokeStyle = '#e5e7eb'; c.lineWidth = 1;
+  for (let v = 0; v <= tavan; v += adim) {
+    const y = ust + cizimY - (v / tavan) * cizimY;
+    c.beginPath(); c.moveTo(sol, y); c.lineTo(G - sag, y); c.stroke();
+    c.fillStyle = '#6b7280'; c.fillText(String(v), sol - 12, y + 8);
+  }
+
+  const kolonG = cizimG / aylikDagilim.length;
+  aylikDagilim.forEach((a, i) => {
+    const x = sol + i * kolonG + kolonG * 0.18;
+    const w = kolonG * 0.64;
+    const h = (a.kazaSayisi / tavan) * cizimY;
+    c.fillStyle = '#1d4ed8';
+    c.fillRect(x, ust + cizimY - h, w, h);
+    c.textAlign = 'center';
+    c.fillStyle = '#111827'; c.font = 'bold 26px Arial';
+    c.fillText(String(a.kazaSayisi), x + w / 2, ust + cizimY - h - 10);
+    c.fillStyle = '#374151'; c.font = '22px Arial';
+    c.fillText(a.ay, x + w / 2, ust + cizimY + 36);
+  });
+
+  c.strokeStyle = '#9ca3af'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(sol, ust + cizimY); c.lineTo(G - sag, ust + cizimY); c.stroke();
+
+  return new Promise(coz => tuval.toBlob(blob => blob.arrayBuffer().then(buf => coz({ veri: new Uint8Array(buf), genislik: 600, yukseklik: 300 })), 'image/png'));
+}
+
+
 // dataURL/uzak URL -> ImageRun'a verilebilecek ham bayt dizisi. file://
 // altında fotoğraflar hep base64 data URL olarak geldiği için asıl yol odur
 // (bkz. core/data.js fotoYukle IS_FILE_PROTOCOL); uzak Storage URL'i için
@@ -373,19 +422,17 @@ async function kurulRaporuWordOlustur() {
   // ilk konularda [yıl] içinde gerçekleşen iş kazası sayısı, toplam iş
   // günü kaybı, kaza sıklık ağırlık oranı ve kaza sıklık hızı yer alsın".
   const kazaIst = toplantiKazaIstatistikleriHesapla(toplanti);
-  const oranGoster = v => v == null ? 'Yıllık çalışma saati girilmemiş' : v.toFixed(2);
   const kazaIstatistikTablosu = kazaIst ? new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
       ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Vefat)', String(kazaIst.kazaSayisi)],
-      ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)],
-      ['Kaza Sıklık Hızı (LTIFR)', oranGoster(kazaIst.kazaSiklikHizi)],
-      ['Kaza Ağırlık Oranı', oranGoster(kazaIst.kazaAgirlikOrani)]
+      ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)]
     ].map(([etiket, deger]) => new docx.TableRow({ children: [
       _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
       _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
     ]}))
   }) : null;
+  const kazaGrafikResmi = kazaIst ? await _kazaAylikGrafikPngOlustur(kazaIst.aylikDagilim, kazaIst.yil) : null;
 
   // Kullanıcı isteği: kapak sayfasındaki logo/yazılar sayfaya düşeyde
   // ortalansın. docx.js'te paragraf listesi kendiliğinden dikeyde
@@ -427,10 +474,14 @@ async function kurulRaporuWordOlustur() {
     bilgiTablosu,
     P(' ', { spacing: { after: 400 } }),
 
+    // Aylık kaza sayıları grafiği kendi sayfasında (kullanıcı isteği: "bir sayfa").
     ...(kazaIstatistikTablosu ? [
+      BR(),
       H(`${kazaIst.yil} Yılı İş Kazası İstatistikleri`),
       kazaIstatistikTablosu,
-      P(' ', { spacing: { after: 400 } })
+      P(' ', { spacing: { after: 300 } }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: kazaGrafikResmi.veri, transformation: { width: 600, height: 300 } })] }),
+      BR()
     ] : []),
 
     H('1) Gündem'),
@@ -1206,24 +1257,36 @@ async function pptxOlustur() {
   // sonra, kurumsal stat-kartı görünümünde tek bir slaytta gösterilir.
   const kazaIst = toplantiKazaIstatistikleriHesapla(toplanti);
   if (kazaIst) {
-    const oranGoster = v => v == null ? 'Saat girilmemiş' : v.toFixed(2);
     const sl = yeniSlayt();
-    kartBasligi(sl, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı İş Kazası İstatistikleri`);
+    kartBasligi(sl, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı Aylık İş Kazası Sayıları`);
+    // Kullanıcı isteği: sıklık hızı/ağırlık oranı yerine aylık kaza sayıları grafiği.
     const kutular = [
       { etiket: 'İş Kazası Sayısı', deger: String(kazaIst.kazaSayisi) },
-      { etiket: 'Toplam İş Günü Kaybı', deger: String(kazaIst.toplamKayipGun) },
-      { etiket: 'Kaza Sıklık Hızı (LTIFR)', deger: oranGoster(kazaIst.kazaSiklikHizi) },
-      { etiket: 'Kaza Ağırlık Oranı', deger: oranGoster(kazaIst.kazaAgirlikOrani) }
+      { etiket: 'Toplam İş Günü Kaybı', deger: String(kazaIst.toplamKayipGun) }
     ];
-    const kutuW = (SW - 2 * M - 3 * 0.3) / 4;
+    const kutuW = 2.6;
     kutular.forEach((k, i) => {
-      const x = M + i * (kutuW + 0.3);
-      sl.addShape(pptx.ShapeType.roundRect, { x, y: 1.6, w: kutuW, h: 1.9, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-      sl.addShape(pptx.ShapeType.rect, { x, y: 1.6, w: kutuW, h: 0.08, fill: { color: R.birincil } });
-      sl.addText(k.deger, { x, y: 1.95, w: kutuW, h: 0.9, fontSize: 30, bold: true, color: R.birincil, align: 'center' });
-      sl.addText(k.etiket, { x: x + 0.1, y: 2.85, w: kutuW - 0.2, h: 0.6, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
+      const y = 1.4 + i * 1.75;
+      sl.addShape(pptx.ShapeType.roundRect, { x: M, y, w: kutuW, h: 1.55, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addShape(pptx.ShapeType.rect, { x: M, y, w: kutuW, h: 0.08, fill: { color: R.birincil } });
+      sl.addText(k.deger, { x: M, y: y + 0.2, w: kutuW, h: 0.8, fontSize: 30, bold: true, color: R.birincil, align: 'center' });
+      sl.addText(k.etiket, { x: M + 0.1, y: y + 0.95, w: kutuW - 0.2, h: 0.5, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
     });
-    sl.addText(`(*) LTI: Kayıp Gün, DART: Kısıtlı İş/Transfer. İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Vefat. Sıklık/ağırlık oranı, Olay/Kaza modülü Ayarlar'daki yıllık çalışma saatine göre hesaplanır.`, { x: M, y: 3.8, w: SW - 2 * M, h: 0.6, fontSize: 9, italic: true, color: R.soluk });
+    const grafikX = M + kutuW + 0.3;
+    sl.addChart(pptx.charts.BAR, [{
+      name: 'İş Kazası Sayısı',
+      labels: kazaIst.aylikDagilim.map(a => a.ay),
+      values: kazaIst.aylikDagilim.map(a => a.kazaSayisi)
+    }], {
+      x: grafikX, y: 1.35, w: SW - grafikX - M, h: 5.3,
+      barDir: 'col', chartColors: [R.birincil],
+      showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 12, dataLabelFormatCode: '0',
+      catAxisLabelFontSize: 11, valAxisLabelFontSize: 11,
+      valAxisMinVal: 0, valAxisMajorUnit: 1, valAxisLabelFormatCode: '0',
+      valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
+      showLegend: false
+    });
+    sl.addText('(*) İş kazası sayısı = LTI + DART + Tıbbi Tedavi + Vefat. Toplantı tarihine kadar kayıtlı kazalar gösterilir.', { x: M, y: 6.75, w: SW - 2 * M, h: 0.4, fontSize: 9, italic: true, color: R.soluk });
   }
 
   // Kullanıcı isteği: "hangi ay kaç kaza olmuş ve hangi ay kaç gün rapor
