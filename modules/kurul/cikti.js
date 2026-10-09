@@ -1753,30 +1753,15 @@ async function pptxOlustur() {
       { etiket: 'Hâlen Açık', deger: String(usIstPptx.acik) },
       { etiket: 'Tamamlama Oranı', deger: oranPptx }
     ];
-    const kutuWUs = 2.6;
+    // Kullanıcı isteği: aylık grafik kaldırıldı, sadece rakamlar kalsın — dört kutu slayta yayılır (2x2).
+    const bosluk = 0.4, kutuWUs = (SW - 2 * M - bosluk) / 2, kutuHUs = 2.3;
     kutularUs.forEach((k, i) => {
-      const y = 1.35 + i * 1.3;
-      sl.addShape(pptx.ShapeType.roundRect, { x: M, y, w: kutuWUs, h: 1.15, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-      sl.addShape(pptx.ShapeType.rect, { x: M, y, w: kutuWUs, h: 0.07, fill: { color: R.birincil } });
-      sl.addText(k.deger, { x: M, y: y + 0.12, w: kutuWUs, h: 0.6, fontSize: 26, bold: true, color: R.birincil, align: 'center' });
-      sl.addText(k.etiket, { x: M + 0.1, y: y + 0.72, w: kutuWUs - 0.2, h: 0.35, fontSize: 11, color: R.soluk, align: 'center', valign: 'top' });
-    });
-    const grafikXUs = M + kutuWUs + 0.3;
-    // Değer ekseni aralığı en büyük değere göre seçilir (sabit 1 olunca 120+ değerde etiketler üst üste biniyordu).
-    const enBuyukUs = Math.max(1, ...usIstPptx.aylik.map(a => Math.max(a.acilan, a.kapatilan)));
-    const adimUs = [1, 2, 5, 10, 20, 25, 50, 100].find(s => enBuyukUs / s <= 6) || 100;
-    const ustSinirUs = Math.ceil((enBuyukUs * 1.1) / adimUs) * adimUs;
-    sl.addChart(pptx.charts.BAR, [
-      { name: 'Açılan', labels: usIstPptx.aylik.map(a => a.ay), values: usIstPptx.aylik.map(a => a.acilan) },
-      { name: 'Kapatılan', labels: usIstPptx.aylik.map(a => a.ay), values: usIstPptx.aylik.map(a => a.kapatilan) }
-    ], {
-      x: grafikXUs, y: 1.35, w: SW - grafikXUs - M, h: 5.3,
-      barDir: 'col', barGrouping: 'clustered', chartColors: ['DC2626', '16A34A'],
-      showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFormatCode: '0',
-      catAxisLabelFontSize: 11, valAxisLabelFontSize: 11,
-      valAxisMinVal: 0, valAxisMaxVal: ustSinirUs, valAxisMajorUnit: adimUs, valAxisLabelFormatCode: '0',
-      valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
-      showLegend: true, legendPos: 'b', legendFontSize: 11
+      const x = M + (i % 2) * (kutuWUs + bosluk);
+      const y = 1.5 + Math.floor(i / 2) * (kutuHUs + bosluk);
+      sl.addShape(pptx.ShapeType.roundRect, { x, y, w: kutuWUs, h: kutuHUs, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addShape(pptx.ShapeType.rect, { x, y, w: kutuWUs, h: 0.09, fill: { color: R.birincil } });
+      sl.addText(k.deger, { x, y: y + 0.35, w: kutuWUs, h: 1.1, fontSize: 54, bold: true, color: R.birincil, align: 'center', valign: 'middle' });
+      sl.addText(k.etiket, { x: x + 0.1, y: y + 1.5, w: kutuWUs - 0.2, h: 0.55, fontSize: 18, color: R.soluk, align: 'center', valign: 'top' });
     });
   }
 
