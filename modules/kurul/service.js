@@ -439,7 +439,7 @@ function _kurulOtomatikOlaylariGetir(toplanti) {
     .map(k => ({
       id: 'oto-' + k.id,
       toplantiId: toplanti.id,
-      tur: k.olayTipi || '-',
+      tur: k.olayTipi === 'Ölüm' ? 'İş Kazası' : (k.olayTipi || '-'),
       tarih: k.kazaTarihi || '',
       yer: k.kazaYeri || '',
       birim: k.bolum || '',
@@ -535,7 +535,7 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
     .sort((a, b) => (Number(b.kayipGun) || 0) - (Number(a.kayipGun) || 0))
     .map(k => ({
       tarih: k.kazaTarihi || '',
-      tur: k.olayTipi || '-',
+      tur: k.olayTipi === 'Ölüm' ? 'İş Kazası' : (k.olayTipi || '-'),
       yer: k.kazaYeri || '',
       kayipGun: Number(k.kayipGun) || 0,
       // Kullanıcı isteği: "kazaların nasıl olduğu ile ilgili bilgi yok,
@@ -570,7 +570,9 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
   const ayarlar = oku(tenantAnahtar('olay_kaza_ayarlari'), {});
 
   const ayNo = k => Number(String(k.kazaTarihi || '').slice(5, 7));
+  // Kullanıcı isteği: ramak kala sayıları şimdilik istatistiklerde yer almasın.
   const donemKayitlari = y => tumKayitlar.filter(k =>
+    k.olayTipi !== 'Ramak Kala' &&
     String(k.kazaTarihi || '').slice(0, 4) === String(y) && ayNo(k) >= 1 && ayNo(k) <= sonAy &&
     (y !== yil || !toplanti.tarih || k.kazaTarihi <= toplanti.tarih));
 
@@ -589,17 +591,15 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
       yil: y, kayitlar,
       toplamOlay: kayitlar.length,
       kazaSayisi: kazalar.length,
-      ramakKala: sayac('Ramak Kala'),
       ilkYardim: sayac('İlk Yardım'),
       tehlikeBildirimi: sayac('Tehlike Bildirimi'),
       maddiHasar: sayac('Maddi Hasar'),
-      lti, dart: sayac('Kısıtlı İş / Transfer (DART)'), tibbi: sayac('Tıbbi Tedavi'), olum: sayac('Ölüm'),
+      lti, dart: sayac('Kısıtlı İş / Transfer (DART)'), tibbi: sayac('Tıbbi Tedavi'),
       toplamKayipGun,
       ortKayipGun: kayipGunluKaza ? toplamKayipGun / kayipGunluKaza : null,
       calismaSaati: saat,
       siklikHizi: saat ? (lti * 1000000) / saat : null,
-      agirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null,
-      ramakKalaKazaOrani: kazalar.length ? sayac('Ramak Kala') / kazalar.length : null
+      agirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null
     };
   };
 
@@ -608,7 +608,6 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
 
   const aylik = (ozet, filtre) => AY_ADLARI.slice(0, sonAy).map((ad, i) => ozet.kayitlar.filter(k => ayNo(k) === i + 1 && filtre(k)).length);
   const kazaMi = k => KAZA_TIPLERI.includes(k.olayTipi);
-  const ramakMi = k => k.olayTipi === 'Ramak Kala';
   const aylar = AY_ADLARI.slice(0, sonAy);
 
   const dagilim = (anahtarFn, kayitlar, enFazla) => {
@@ -633,9 +632,9 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
     yil, sonAy, sonAyAdi: AY_ADLARI[sonAy - 1], yillar,
     aylar,
     aylikKaza: { bu: aylik(bu, kazaMi), onceki: aylik(onceki, kazaMi) },
-    aylikRamak: { bu: aylik(bu, ramakMi), onceki: aylik(onceki, ramakMi) },
-    olayTurleri: dagilim(k => k.olayTipi, bu.kayitlar, 10),
-    yaralanmaTurleri: dagilim(k => k.yaralanmaTuru, bu.kayitlar, 8),
+    // Kullanıcı isteği: "ölüm" ifadesi hiçbir yerde geçmesin.
+    olayTurleri: dagilim(k => (/ölüm/i.test(k.olayTipi || '') ? '' : k.olayTipi), bu.kayitlar, 10),
+    yaralanmaTurleri: dagilim(k => (/ölüm/i.test(k.yaralanmaTuru || '') ? '' : k.yaralanmaTuru), bu.kayitlar, 8),
     yaralananUzuvlar: dagilim(k => k.yaralananUzuv, bu.kayitlar, 8),
     bolumler: dagilim(k => k.bolum || k.kazaYeri, bu.kayitlar, 8),
     sonKazaTarihi, kazasizGun

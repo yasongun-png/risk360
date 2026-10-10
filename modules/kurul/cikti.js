@@ -313,7 +313,7 @@ function _aylikGrupluGrafikCiz(baslik, aylar, seriler) {
   return { dataUrl, veri, genislik: 600, yukseklik: 300 };
 }
 
-// ==================== DETAYLI İSG İSTATİSTİKLERİ (kaza / ramak kala) ====================
+// ==================== DETAYLI İSG İSTATİSTİKLERİ (iş kazası) ====================
 // Kullanıcı isteği: yıllık ve aylık iş kazası, ramak kala kayıtlarıyla ilgili ilk
 // sayfalarda detaylı, profesyonel istatistikler (kaza türleri, iş günü kaybı,
 // önceki yıllarla kıyaslama). Veri: service.js toplantiDetayliKazaIstatistikleri.
@@ -336,12 +336,10 @@ function _istKarsilastirmaSatirlari(kd) {
   const satir = (etiket, alan, ondalik) => [etiket, _istSayi(y2[alan], ondalik), _istSayi(y1[alan], ondalik), _istSayi(y0[alan], ondalik), _istDegisim(y0[alan], y1[alan])];
   return [
     satir('Toplam Olay Bildirimi', 'toplamOlay'),
-    satir('İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi+Ölüm)', 'kazaSayisi'),
+    satir('İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi)', 'kazaSayisi'),
     satir('   · Kayıp Günlü Kaza (LTI)', 'lti'),
     satir('   · Kısıtlı İş / Transfer (DART)', 'dart'),
     satir('   · Tıbbi Tedavi', 'tibbi'),
-    satir('   · Ölüm', 'olum'),
-    satir('Ramak Kala', 'ramakKala'),
     satir('İlk Yardım', 'ilkYardim'),
     satir('Tehlike Bildirimi', 'tehlikeBildirimi'),
     satir('Maddi Hasar', 'maddiHasar'),
@@ -349,8 +347,7 @@ function _istKarsilastirmaSatirlari(kd) {
     satir('Kayıp Günlü Kaza Başına Ort. Kayıp Gün', 'ortKayipGun', 1),
     satir('Çalışma Saati', 'calismaSaati'),
     satir('Kaza Sıklık Hızı (LTI x 1.000.000 / saat)', 'siklikHizi', 2),
-    satir('Kaza Ağırlık Oranı (kayıp gün x 1.000.000 / saat)', 'agirlikOrani', 2),
-    satir('Ramak Kala / İş Kazası Oranı', 'ramakKalaKazaOrani', 1)
+    satir('Kaza Ağırlık Oranı (kayıp gün x 1.000.000 / saat)', 'agirlikOrani', 2)
   ];
 }
 
@@ -745,19 +742,16 @@ async function kurulRaporuWordOlustur() {
     ]
   });
 
-  // Detaylı iş kazası / ramak kala istatistik bölümü (Word).
+  // Detaylı iş kazası istatistik bölümü (Word).
   const kazaDetayElemanlari = (() => {
     const kd = toplantiDetayliKazaIstatistikleri(toplanti);
     if (!kd) return [];
     const [y2, y1, y0] = kd.yillar;
     const resim = (g) => new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 160 }, children: [new docx.ImageRun({ data: g.veri, transformation: { width: g.genislik, height: g.yukseklik } })] });
-    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp Gün (LTI) + Kısıtlı İş (DART) + Tıbbi Tedavi + Ölüm. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.`;
+    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp Gün (LTI) + Kısıtlı İş (DART) + Tıbbi Tedavi. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.`;
     const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
     const grafikKaza = _aylikGrupluGrafikCiz(`Aylık İş Kazası Sayıları: ${y1.yil} / ${y0.yil}`, kd.aylar, [
       { ad: String(y1.yil), renk: '#94a3b8', degerler: kd.aylikKaza.onceki }, { ad: String(y0.yil), renk: '#1d4ed8', degerler: kd.aylikKaza.bu }
-    ]);
-    const grafikRamak = _aylikGrupluGrafikCiz(`Aylık Ramak Kala Sayıları: ${y1.yil} / ${y0.yil}`, kd.aylar, [
-      { ad: String(y1.yil), renk: '#94a3b8', degerler: kd.aylikRamak.onceki }, { ad: String(y0.yil), renk: '#ea580c', degerler: kd.aylikRamak.bu }
     ]);
     const dagilimGrafikleri = [
       _yatayCubukGrafikCiz(`${y0.yil} Olay Türlerine Göre Dağılım`, kd.olayTurleri, '#1d4ed8'),
@@ -774,9 +768,8 @@ async function kurulRaporuWordOlustur() {
       P(' ', { spacing: { after: 160 } }),
       P(kazasiz, { bold: true }),
       BR(),
-      H('Aylık İş Kazası ve Ramak Kala Karşılaştırması'),
+      H('Aylık İş Kazası Karşılaştırması'),
       resim(grafikKaza),
-      resim(grafikRamak),
       BR(),
       H('Kaza Türleri ve Dağılımlar'),
       resim(dagilimGrafikleri[0]),
@@ -1760,7 +1753,7 @@ async function pptxOlustur() {
     }
   }
 
-  // Kullanıcı isteği: yıllık/aylık iş kazası ve ramak kala istatistikleri,
+  // Kullanıcı isteği: yıllık/aylık iş kazası istatistikleri,
   // kaza türleri, iş günü kaybı ve önceki yıllarla kıyaslama (ilk slaytlarda).
   const kdPptx = toplantiDetayliKazaIstatistikleri(toplanti);
   if (kdPptx) {
@@ -1770,7 +1763,7 @@ async function pptxOlustur() {
     // 1) Yıllık karşılaştırma tablosu
     {
       const sl = yeniSlayt();
-      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `${kdPptx.yil} Yılı İş Kazası ve Ramak Kala Karşılaştırması (Ocak–${kdPptx.sonAyAdi})`);
+      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `${kdPptx.yil} Yılı İş Kazası Karşılaştırması (Ocak–${kdPptx.sonAyAdi})`);
       const satirlar = _istKarsilastirmaSatirlari(kdPptx);
       const tabloW = SW - 2 * M;
       sl.addTable([
@@ -1793,27 +1786,21 @@ async function pptxOlustur() {
       sl.addText('Önceki yıllar aynı dönem (Ocak–' + kdPptx.sonAyAdi + ') için hesaplanmıştır.  ▲ artış  ▼ azalış', { x: 7.4, y: 6.72, w: SW - 7.4 - M, h: 0.35, fontSize: 9, italic: true, color: R.soluk, align: 'right' });
     }
 
-    // 2) Aylık karşılaştırma: iş kazası ve ramak kala (iki grafik yan yana)
+    // 2) Aylık karşılaştırma: iş kazası sayıları (geçen yıl / bu yıl)
     {
       const sl = yeniSlayt();
-      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `Aylık İş Kazası ve Ramak Kala Sayıları: ${y1.yil} / ${y0.yil}`);
-      const grafikW = (SW - 2 * M - 0.3) / 2;
-      const ciz = (x, baslik, seri, renk) => {
-        sl.addText(baslik, { x, y: 1.3, w: grafikW, h: 0.35, fontSize: 13, bold: true, color: R.baslik, align: 'center' });
-        sl.addChart(pptx.charts.BAR, [
-          { name: String(y1.yil), labels: kdPptx.aylar, values: seri.onceki },
-          { name: String(y0.yil), labels: kdPptx.aylar, values: seri.bu }
-        ], {
-          x, y: 1.65, w: grafikW, h: 5.0,
-          barDir: 'col', barGrouping: 'clustered', chartColors: ['94A3B8', renk],
-          showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 9, dataLabelFormatCode: '0',
-          catAxisLabelFontSize: 10, valAxisLabelFontSize: 10, valAxisMinVal: 0, valAxisLabelFormatCode: '0',
-          valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
-          showLegend: true, legendPos: 'b', legendFontSize: 11
-        });
-      };
-      ciz(M, 'İş Kazası Sayıları', kdPptx.aylikKaza, R.birincil);
-      ciz(M + grafikW + 0.3, 'Ramak Kala Sayıları', kdPptx.aylikRamak, 'EA580C');
+      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `Aylık İş Kazası Sayıları: ${y1.yil} / ${y0.yil}`);
+      sl.addChart(pptx.charts.BAR, [
+        { name: String(y1.yil), labels: kdPptx.aylar, values: kdPptx.aylikKaza.onceki },
+        { name: String(y0.yil), labels: kdPptx.aylar, values: kdPptx.aylikKaza.bu }
+      ], {
+        x: M, y: 1.4, w: SW - 2 * M, h: 5.3,
+        barDir: 'col', barGrouping: 'clustered', chartColors: ['94A3B8', R.birincil],
+        showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 11, dataLabelFormatCode: '0',
+        catAxisLabelFontSize: 11, valAxisLabelFontSize: 11, valAxisMinVal: 0, valAxisLabelFormatCode: '0',
+        valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
+        showLegend: true, legendPos: 'b', legendFontSize: 12
+      });
     }
 
     // 3-4) Dağılımlar: olay türleri / yaralanma türleri, yaralanan uzuv / bölüm
