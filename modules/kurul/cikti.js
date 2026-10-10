@@ -773,7 +773,8 @@ async function kurulRaporuWordOlustur() {
     borders: { top: _kapakKenarYok, bottom: _kapakKenarYok, left: _kapakKenarYok, right: _kapakKenarYok, insideHorizontal: _kapakKenarYok, insideVertical: _kapakKenarYok },
     rows: [
       new docx.TableRow({ cantSplit: true,
-        height: { value: 15200, rule: docx.HeightRule.EXACT },
+        // Sayfa içi yükseklik ~15400 twip; kapak tablosundan sonraki sayfa sonu paragrafı da aynı sayfaya sığsın diye düşük tutuldu (aksi halde boş 2. sayfa oluşuyordu).
+          height: { value: 14300, rule: docx.HeightRule.EXACT },
         children: [
           new docx.TableCell({
             verticalAlign: docx.VerticalAlign.CENTER,
