@@ -482,8 +482,8 @@ async function _wordFotoParagraflari(fotoListesi) {
   // fotoğraftan geniş olduğu için aralarında ~0,3" boşluk kalır.
   const yok = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const kenarsiz = { top: yok, bottom: yok, left: yok, right: yok };
-  // Kullanıcı isteği: fotoğraflar 1/3 oranında büyütüldü (85 -> 113 px); bir satıra en çok 3 fotoğraf sığar.
-  const HUCRE = 2650, FOTO = 150, SATIRDA = 3;
+  // Kullanıcı isteği: fotoğraflar 1/3 oranında büyütüldü (85 -> 113 px); bir satıra 4 fotoğraf sayfa eni kadar yer kaplar (sayfa içi genişlik 10466 twip).
+  const HUCRE = 2616, FOTO = 160, SATIRDA = 4;
   const satirlar = [];
   for (let i = 0; i < gecerli.length; i += SATIRDA) satirlar.push(gecerli.slice(i, i + SATIRDA));
   return [
