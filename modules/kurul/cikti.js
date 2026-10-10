@@ -777,10 +777,10 @@ async function kurulRaporuWordOlustur() {
       BR(),
       resim(dagilimGrafikleri[2]),
       resim(dagilimGrafikleri[3]),
-      ...(kazaIst && kazaIst.kazalarKayipGuneSirali && kazaIst.kazalarKayipGuneSirali.length ? [
+      ...(kd.kazalarTumu.length ? [
         P(' ', { spacing: { after: 120 } }),
-        P('Kayıp günlü kazalar (en yüksekten en düşüğe)', { bold: true }),
-        table(['Tarih', 'Tür', 'Yer', 'Kayıp Gün'], kazaIst.kazalarKayipGuneSirali.slice(0, 10).map(k => [gunAyYil(k.tarih) || '-', k.tur, k.yer || '-', String(k.kayipGun)]))
+        P(`${kd.yil} Yılı İş Kazaları ve Açıklamaları (Ocak–${kd.sonAyAdi})`, { bold: true }),
+        table(['Tarih', 'Tür', 'Yer / Birim', 'Kayıp Gün', 'Açıklama'], kd.kazalarTumu.map(k => [gunAyYil(k.tarih) || '-', k.tur, k.yer || '-', String(k.kayipGun), k.aciklama || 'Açıklama girilmemiş.']))
       ] : []),
       BR()
     ];
@@ -1830,6 +1830,31 @@ async function pptxOlustur() {
     dagilimSlaydi(`${kdPptx.yil} Yılı Yaralanan Uzuv ve Bölüm Dağılımları (Ocak–${kdPptx.sonAyAdi})`,
       { baslik: 'Yaralanan Uzuv', veri: kdPptx.yaralananUzuvlar, renk: '7C3AED' },
       { baslik: 'Bölüm / Birim', veri: kdPptx.bolumler, renk: '0F766E' });
+
+    // 5) Tüm iş kazaları ve açıklamaları (kullanıcı isteği) — her slaytta 4 kaza.
+    const KAZA_SATIRI_SLAYT = 4;
+    const kazaListesi = kdPptx.kazalarTumu;
+    for (let bas = 0; bas < kazaListesi.length; bas += KAZA_SATIRI_SLAYT) {
+      const grup = kazaListesi.slice(bas, bas + KAZA_SATIRI_SLAYT);
+      const sl = yeniSlayt();
+      const sayfaNo = Math.floor(bas / KAZA_SATIRI_SLAYT) + 1, sayfaSayisi = Math.ceil(kazaListesi.length / KAZA_SATIRI_SLAYT);
+      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `${kdPptx.yil} Yılı İş Kazaları ve Açıklamaları  ·  ${sayfaNo} / ${sayfaSayisi}`);
+      const tabloW = SW - 2 * M;
+      sl.addTable([
+        [baslikHucre('Tarih'), baslikHucre('Tür'), baslikHucre('Yer / Birim', 'left'), baslikHucre('Kayıp Gün'), baslikHucre('Açıklama', 'left')],
+        ...grup.map((k, i) => {
+          const zemin = { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, valign: 'top' };
+          const aciklama = k.aciklama ? (k.aciklama.length > 420 ? k.aciklama.slice(0, 417).trimEnd() + '...' : k.aciklama) : 'Açıklama girilmemiş.';
+          return [
+            { text: gunAyYil(k.tarih) || '-', options: Object.assign({ color: R.baslik, align: 'center' }, zemin) },
+            { text: k.tur, options: Object.assign({ color: R.baslik, align: 'center' }, zemin) },
+            { text: k.yer || '-', options: Object.assign({ color: R.baslik }, zemin) },
+            { text: String(k.kayipGun), options: Object.assign({ color: R.birincil, bold: true, align: 'center' }, zemin) },
+            { text: aciklama, options: Object.assign({ color: R.baslik, italic: !k.aciklama }, zemin) }
+          ];
+        })
+      ], { x: M, y: 1.4, w: tabloW, colW: [tabloW * 0.1, tabloW * 0.12, tabloW * 0.16, tabloW * 0.09, tabloW * 0.53], fontSize: 10.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+    }
   }
 
   bolumAraSlaydi('GÜNDEM', 'Toplantı gündem maddeleri');

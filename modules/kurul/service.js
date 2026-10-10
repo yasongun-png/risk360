@@ -621,6 +621,20 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
     return Array.from(harita.entries()).sort((a, b) => b[1] - a[1]).slice(0, enFazla || 8).map(([etiket, sayi]) => ({ etiket, sayi }));
   };
 
+  // Kullanıcı isteği: tüm kazaların açıklaması da olsun — bu yılın (Ocak–toplantı ayı) TÜM iş kazaları,
+  // tarih sırasıyla, oluş şekli açıklamasıyla.
+  const kazalarTumu = bu.kayitlar
+    .filter(k => KAZA_TIPLERI.includes(k.olayTipi))
+    .slice()
+    .sort((a, b) => String(a.kazaTarihi).localeCompare(String(b.kazaTarihi)))
+    .map(k => ({
+      tarih: k.kazaTarihi || '',
+      tur: k.olayTipi === 'Ölüm' ? 'İş Kazası' : (k.olayTipi || '-'),
+      yer: [k.bolum, k.kazaYeri].filter((v, i, a) => v && a.indexOf(v) === i).join(' / '),
+      kayipGun: Number(k.kayipGun) || 0,
+      aciklama: String((typeof olayAciklamaOnEkiTemizle === 'function' ? olayAciklamaOnEkiTemizle(k.aciklama) : k.aciklama) || k.olayOzeti || '').trim()
+    }));
+
   // Son kazadan bu yana geçen gün: toplantı tarihine kadarki en son iş kazası (tüm yıllar).
   let sonKazaTarihi = '';
   tumKayitlar.filter(k => KAZA_TIPLERI.includes(k.olayTipi) && k.kazaTarihi && (!toplanti.tarih || k.kazaTarihi <= toplanti.tarih))
@@ -630,7 +644,7 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
 
   return {
     yil, sonAy, sonAyAdi: AY_ADLARI[sonAy - 1], yillar,
-    aylar,
+    aylar, kazalarTumu,
     aylikKaza: { bu: aylik(bu, kazaMi), onceki: aylik(onceki, kazaMi) },
     // Kullanıcı isteği: "ölüm" ifadesi hiçbir yerde geçmesin.
     olayTurleri: dagilim(k => (/ölüm/i.test(k.olayTipi || '') ? '' : k.olayTipi), bu.kayitlar, 10),
