@@ -585,16 +585,27 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
     String(k.kazaTarihi || '').slice(0, 4) === String(y) && ayNo(k) >= 1 && ayNo(k) <= sonAy &&
     (y !== yil || !toplanti.tarih || k.kazaTarihi <= toplanti.tarih));
 
+  const kayitliSaat = y => {
+    const aylikSaat = ayarlar.aylikCalismaSaatleri && ayarlar.aylikCalismaSaatleri[y];
+    return aylikSaat
+      ? Object.keys(aylikSaat).filter(a => Number(a) <= sonAy).reduce((t, a) => t + (Number((aylikSaat[a] && aylikSaat[a].saat) || 0)), 0)
+      : (y === yil ? Number(ayarlar.yillikCalismaSaati || 0) : 0);
+  };
+
   const yilOzeti = y => {
     const kayitlar = donemKayitlari(y);
     const sayac = tip => kayitlar.filter(k => k.olayTipi === tip).length;
     const kazalar = kayitlar.filter(k => KAZA_TIPLERI.includes(k.olayTipi));
     const lti = sayac('Kayıp Gün (LTI)');
     const toplamKayipGun = kayitlar.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0);
-    const aylikSaat = ayarlar.aylikCalismaSaatleri && ayarlar.aylikCalismaSaatleri[y];
-    const saat = aylikSaat
-      ? Object.keys(aylikSaat).filter(a => Number(a) <= sonAy).reduce((t, a) => t + (Number((aylikSaat[a] && aylikSaat[a].saat) || 0)), 0)
-      : (y === yil ? Number(ayarlar.yillikCalismaSaati || 0) : 0);
+    let saat = kayitliSaat(y);
+    // Kullanıcı isteği: önceki yılın çalışma saati girilmemişse tahmin et — bu yılın aynı
+    // dönem saatinin 1/3 fazlası (x 4/3). Gerçek saat girilirse o kullanılır.
+    let saatTahmini = false;
+    if (!saat && y !== yil) {
+      const buSaat = kayitliSaat(yil);
+      if (buSaat) { saat = buSaat * 4 / 3; saatTahmini = true; }
+    }
     const kayipGunluKaza = kazalar.filter(k => Number(k.kayipGun) > 0).length;
     return {
       yil: y, kayitlar,
@@ -606,7 +617,7 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
       lti, dart: sayac('Kısıtlı İş / Transfer (DART)'), tibbi: sayac('Tıbbi Tedavi'),
       toplamKayipGun,
       ortKayipGun: kayipGunluKaza ? toplamKayipGun / kayipGunluKaza : null,
-      calismaSaati: saat,
+      calismaSaati: saat, saatTahmini,
       siklikHizi: saat ? (lti * 1000000) / saat : null,
       agirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null
     };
@@ -653,6 +664,7 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
 
   return {
     yil, sonAy, sonAyAdi: AY_ADLARI[sonAy - 1], yillar,
+    tahminiSaatYillari: yillar.filter(x => x.saatTahmini).map(x => x.yil),
     aylar, kazalarTumu,
     aylikKaza: { bu: aylik(bu, kazaMi), onceki: aylik(onceki, kazaMi) },
     // Kullanıcı isteği: "ölüm" ifadesi hiçbir yerde geçmesin.

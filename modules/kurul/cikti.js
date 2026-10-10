@@ -800,7 +800,7 @@ async function kurulRaporuWordOlustur() {
     if (!kd) return [];
     const [y2, y1, y0] = kd.yillar;
     const resim = (g) => new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 160 }, children: [new docx.ImageRun({ data: g.veri, transformation: { width: g.genislik, height: g.yukseklik } })] });
-    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.`;
+    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.${kd.tahminiSaatYillari.length ? ` ${kd.tahminiSaatYillari.join(', ')} yılı çalışma saati girilmediği için bu yılın aynı dönem saatinin 1/3 fazlası olarak tahmin edilmiştir.` : ''}`;
     const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
     const grafikKaza = _aylikGrupluGrafikCiz(`Aylık İş Kazası Sayıları: ${y1.yil} / ${y0.yil}`, kd.aylar, [
       { ad: String(y1.yil), renk: '#94a3b8', degerler: kd.aylikKaza.onceki }, { ad: String(y0.yil), renk: '#1d4ed8', degerler: kd.aylikKaza.bu }
@@ -1835,7 +1835,7 @@ async function pptxOlustur() {
       ], { x: M, y: 1.35, w: tabloW, colW: [tabloW * 0.43, tabloW * 0.12, tabloW * 0.12, tabloW * 0.12, tabloW * 0.21], fontSize: 10, rowH: 0.3, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
       const kazasizMetni = kdPptx.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kdPptx.sonKazaTarihi)}  ·  Kazasız geçen gün: ${kdPptx.kazasizGun}`;
       sl.addText(kazasizMetni, { x: M, y: 6.72, w: 7.2, h: 0.35, fontSize: 12, bold: true, color: R.birincil });
-      sl.addText('Önceki yıllar aynı dönem (Ocak–' + kdPptx.sonAyAdi + ') için hesaplanmıştır.  ▲ artış  ▼ azalış', { x: 7.4, y: 6.72, w: SW - 7.4 - M, h: 0.35, fontSize: 9, italic: true, color: R.soluk, align: 'right' });
+      sl.addText('Önceki yıllar aynı dönem (Ocak–' + kdPptx.sonAyAdi + ') için hesaplanmıştır.' + (kdPptx.tahminiSaatYillari.length ? ' ' + kdPptx.tahminiSaatYillari.join(', ') + ' çalışma saati tahminidir (bu yılın 1/3 fazlası).' : '') + '  ▲ artış  ▼ azalış', { x: 7.4, y: 6.72, w: SW - 7.4 - M, h: 0.35, fontSize: 9, italic: true, color: R.soluk, align: 'right' });
     }
 
     // 2) Aylık karşılaştırma: iş kazası sayıları (geçen yıl / bu yıl)
