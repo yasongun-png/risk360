@@ -431,15 +431,32 @@ async function _wordFotoParagraflari(fotoListesi) {
   const baytli = await Promise.all(fotoListesi.map(async f => ({ etiket: f.etiket, bytes: await _wordGorselBaytlari(f.url) })));
   const gecerli = baytli.filter(f => f.bytes);
   if (!gecerli.length) return [];
+  // Kullanıcı isteği: fotoğraflar arasında küçük boşluk — her fotoğraf (altında kendi
+  // etiketiyle) kenarlıksız bir tablonun ayrı hücresine konur; hücre genişliği
+  // fotoğraftan geniş olduğu için aralarında ~0,3" boşluk kalır.
+  const yok = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const kenarsiz = { top: yok, bottom: yok, left: yok, right: yok };
+  const HUCRE = 1700;
   return [
-    new docx.Paragraph({
-      children: gecerli.map(f => new docx.ImageRun({ data: f.bytes, transformation: { width: 85, height: 85 } })),
-      spacing: { before: 80, after: 20 }
+    new docx.Table({
+      width: { size: HUCRE * gecerli.length, type: docx.WidthType.DXA },
+      columnWidths: gecerli.map(() => HUCRE),
+      layout: docx.TableLayoutType.FIXED,
+      borders: { top: yok, bottom: yok, left: yok, right: yok, insideHorizontal: yok, insideVertical: yok },
+      rows: [new docx.TableRow({
+        cantSplit: true,
+        children: gecerli.map(f => new docx.TableCell({
+          width: { size: HUCRE, type: docx.WidthType.DXA },
+          borders: kenarsiz,
+          margins: { top: 60, bottom: 20, left: 0, right: 0 },
+          children: [
+            new docx.Paragraph({ children: [new docx.ImageRun({ data: f.bytes, transformation: { width: 85, height: 85 } })] }),
+            new docx.Paragraph({ children: [new docx.TextRun({ text: f.etiket, size: 16, italics: true, color: '64748B' })] })
+          ]
+        }))
+      })]
     }),
-    new docx.Paragraph({
-      children: gecerli.map((f, i) => new docx.TextRun({ text: (i ? '   ' : '') + f.etiket, size: 16, italics: true, color: '64748B' })),
-      spacing: { after: 160 }
-    })
+    new docx.Paragraph({ children: [], spacing: { after: 120 } })
   ];
 }
 
