@@ -880,7 +880,7 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
       { text: String(d), options: { color: R.baslik, fill: { color: 'FFFFFF' } } }
     ]), { x: M, y: 3.4, w: metinGenislik, colW: [1.9, metinGenislik - 1.9], fontSize: 11.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
     if (foto) {
-      const b = 4.67, x = 8.05, y = 1.35;
+      const b = 3.5, x = 8.55, y = 1.35;
       sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: y - 0.06, w: b + 0.12, h: b + 0.12, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
       sl.addImage(fotoSigdirNesnesi(foto, x, y, b, b));
     }

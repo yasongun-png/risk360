@@ -1966,7 +1966,7 @@ async function pptxOlustur() {
     metaTablosuEkle(sl, metaSatirlari, M, 3.1, metinGenislik);
     if (o.oncelik) rozetEkle(sl, o.oncelik, M, 2.98 - 0.42, _renkGetir(ONCELIK_RENK, o.oncelik));
     if (o.durum) rozetEkle(sl, o.durum, M + 1.3, 2.98 - 0.42, _renkGetir(DURUM_RENK, o.durum));
-    if (foto) kucukFotoEkle(sl, foto, 8.05, 1.35, 4.67);
+    if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
   };
 
   if (olaylar.length) {
@@ -2012,7 +2012,7 @@ async function pptxOlustur() {
       ['Kapanış / Kanıt', [k.kapanisTarihi, k.kanit].filter(Boolean).join(' / ') || '-']
     ];
     metaTablosuEkle(sl, metaSatirlari, M, 3.4, metinGenislik);
-    if (foto) kucukFotoEkle(sl, foto, 8.05, 1.35, 4.67);
+    if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
 
     const sl2 = yeniSlayt();
     kartBasligi(sl2, `${baslikOnEki}  ·  ${sira} / ${toplam}  ·  ${k.kararNo}`, 'Aksiyon İlerleme Notu');
@@ -2077,7 +2077,7 @@ async function pptxOlustur() {
     ];
     if (k.alinanOnlem) metaSatirlari.push(['Alınan Önlem', k.alinanOnlem]);
     metaTablosuEkle(sl, metaSatirlari, M, 3.4, metinGenislik);
-    if (foto) kucukFotoEkle(sl, foto, 8.05, 1.35, 4.67);
+    if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
   };
 
   const uygunsuzlukSlaytlariniEkle = (baslikOnEki, liste) => {
