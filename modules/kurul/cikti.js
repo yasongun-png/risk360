@@ -482,25 +482,28 @@ async function _wordFotoParagraflari(fotoListesi) {
   // fotoğraftan geniş olduğu için aralarında ~0,3" boşluk kalır.
   const yok = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const kenarsiz = { top: yok, bottom: yok, left: yok, right: yok };
-  const HUCRE = 1700;
+  // Kullanıcı isteği: fotoğraflar 1/3 oranında büyütüldü (85 -> 113 px); bir satıra en çok 4 fotoğraf sığar.
+  const HUCRE = 2050, FOTO = 113, SATIRDA = 4;
+  const satirlar = [];
+  for (let i = 0; i < gecerli.length; i += SATIRDA) satirlar.push(gecerli.slice(i, i + SATIRDA));
   return [
     new docx.Table({
-      width: { size: HUCRE * gecerli.length, type: docx.WidthType.DXA },
-      columnWidths: gecerli.map(() => HUCRE),
+      width: { size: HUCRE * Math.min(SATIRDA, gecerli.length), type: docx.WidthType.DXA },
+      columnWidths: Array.from({ length: Math.min(SATIRDA, gecerli.length) }, () => HUCRE),
       layout: docx.TableLayoutType.FIXED,
       borders: { top: yok, bottom: yok, left: yok, right: yok, insideHorizontal: yok, insideVertical: yok },
-      rows: [new docx.TableRow({
+      rows: satirlar.map(grup => new docx.TableRow({
         cantSplit: true,
-        children: gecerli.map(f => new docx.TableCell({
+        children: grup.map(f => new docx.TableCell({
           width: { size: HUCRE, type: docx.WidthType.DXA },
           borders: kenarsiz,
           margins: { top: 60, bottom: 20, left: 0, right: 0 },
           children: [
-            new docx.Paragraph({ children: [new docx.ImageRun({ data: f.bytes, transformation: { width: 85, height: 85 } })] }),
+            new docx.Paragraph({ children: [new docx.ImageRun({ data: f.bytes, transformation: { width: FOTO, height: FOTO } })] }),
             new docx.Paragraph({ children: [new docx.TextRun({ text: f.etiket, size: 16, italics: true, color: '64748B' })] })
           ]
         }))
-      })]
+      }))
     }),
     new docx.Paragraph({ children: [], spacing: { after: 120 } })
   ];
@@ -1342,7 +1345,7 @@ async function kurulRaporuPdfOlustur() {
       #kurulPdfReport .decision-meta b, #kurulPdfReport .decision-action b{ display:block; color:#111827; font-size:8pt; margin-bottom:2px; }
       #kurulPdfReport .decision-action{ border-top:1px solid #cbd5e1; padding:5px 6px; overflow-wrap:anywhere; }
       #kurulPdfReport .decision-photo{ border-top:1px solid #cbd5e1; padding:5px 6px; display:flex; flex-wrap:wrap; gap:3mm; }
-      #kurulPdfReport .decision-photo img{ max-width:28mm; max-height:28mm; object-fit:cover; border:1px solid #cbd5e1; }
+      #kurulPdfReport .decision-photo img{ max-width:37mm; max-height:37mm; object-fit:cover; border:1px solid #cbd5e1; }
       #kurulPdfReport .decision-photo small{ font-size:7pt; color:#64748b; }
 
       #kurulPdfReport .sign-table td{ height:12mm; vertical-align:middle; font-size:8.3pt; }
