@@ -6,6 +6,8 @@ function _ktKacir(v) {
 
 let _toplantiId = null;
 let _duzenlenenKararId = null;
+// Karar penceresi bir olaydan ("→ Karar" butonu) açıldıysa o olayın anahtarı — kaydedilen karara kaynakOlayId olarak yazılır.
+let _kararKaynakOlayId = '';
 let _duzenlenenOlayId = null;
 let _duzenlenenAyIciFaaliyetId = null;
 let _kararFotoOncesi = '';
@@ -504,6 +506,69 @@ function kararlariCiz() {
 
 // ==================== OLAYLAR ====================
 
+// ==================== OLAYDAN KARARA AKTARMA ====================
+// Düzenle ile "yükseltilmiş" otomatik olay farklı bir id alsa da (kaynakKazaId) aynı
+// olay sayılsın diye anahtar her zaman Olay/Kaza kaydına göre üretilir.
+function _olayKararAnahtari(o) {
+  if (o.otomatik) return o.id;
+  return o.kaynakKazaId ? 'oto-' + o.kaynakKazaId : o.id;
+}
+
+function _olayKararButonuUret(o, aktarilanKararlar) {
+  const karar = aktarilanKararlar.get(_olayKararAnahtari(o));
+  if (karar) {
+    return `<span title="Bu olay Kararlar bölümüne aktarıldı" style="font-size:11px; color:#15803d; font-weight:600; margin-right:6px;">✓ Karar ${_ktKacir(karar.kararNo)}</span>`;
+  }
+  return `<button class="tablo-buton" data-karara-aktar="${o.id}" title="Bu olayı Kararlar bölümüne aktar">→ Karar</button>`;
+}
+
+// Olayın bilgilerinden dolu bir "Yeni Karar" penceresi açar; kullanıcı metni/sorumluyu
+// tamamlayıp Kaydet'e basınca karar oluşur (Sorumlu ve Karar Metni zorunludur).
+function olayiKararaAktar(olay) {
+  const anahtar = _olayKararAnahtari(olay);
+  const mevcut = kararTumunuGetir().find(k => k.toplantiId === _toplantiId && k.kaynakOlayId === anahtar);
+  if (mevcut) {
+    alert('Bu olay zaten Kararlar bölümüne aktarılmış (Karar No: ' + mevcut.kararNo + ').');
+    return;
+  }
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  const olaylarGundemi = (toplanti.gundem || []).find(g => /^olaylar/i.test(String(g.baslik || '').trim()));
+  const yerMetni = [olay.yer, olay.birim].filter((v, i, a) => v && a.indexOf(v) === i).join(' / ');
+  const ozet = String(olay.olusSekli || '').trim();
+  // Elle girilmiş olayda karar metni zaten varsa o kullanılır; yoksa olay özetinden taslak üretilir.
+  const taslakMetin = (olay.kararMetni && olay.kararMetni.trim())
+    ? olay.kararMetni.trim()
+    : `${gunAyYil(olay.tarih) || '-'} tarihinde${yerMetni ? ' ' + yerMetni + ' bölümünde' : ''} meydana gelen "${olay.tur}" olayı${ozet ? ': ' + ozet : ''}${olay.kokNeden ? ' Kök neden: ' + olay.kokNeden + '.' : ''} Tekrarının önlenmesi için gerekli önlemlerin alınmasına karar verilmiştir.`;
+  const katilimciSayisi = toplantiImzalariniGetir(_toplantiId).filter(i => i.katildiMi).length;
+  _kararKaynakOlayId = anahtar;
+  kararModalAc({
+    id: '',
+    kararNo: '',
+    kararMetni: taslakMetin,
+    kaynakGundem: olaylarGundemi ? olaylarGundemi.baslik : 'Olaylar',
+    yasalSartlar: [],
+    yasalDayanak: '',
+    sorumlu: olay.sorumlu || '',
+    termin: olay.termin || '',
+    oncelik: olay.oncelik || 'Normal',
+    durum: 'Açık',
+    kapanisTarihi: '',
+    kanit: '',
+    aksiyonNotu: '',
+    oy: '',
+    oySonucu: '',
+    oyKabul: katilimciSayisi,
+    oyRet: 0,
+    oyCekimser: 0,
+    devrederMi: true,
+    fotoOncesi: '',
+    fotoSonrasi: '',
+    fotografEk: (olay.fotograflar || []).filter(f => f && f.url).slice(0, 3).map(f => ({ url: f.url }))
+  });
+  _kararKaynakOlayId = anahtar;
+  document.getElementById('kararModalBaslik').textContent = 'Olaydan Yeni Karar — ' + (olay.tur || '');
+}
+
 function olaylariCiz() {
   const govde = document.getElementById('olayTabloGovde');
   const bosDurum = document.getElementById('olayBosDurum');
@@ -523,6 +588,9 @@ function olaylariCiz() {
   // taşıma değil, aynı toplantı içinde sıralama).
   const manuelOlaylar = olaylar.filter(o => !o.otomatik);
   let manuelSira = -1;
+  // Kullanıcı isteği: Olay/Kaza modülünden gelen iş kazası / ramak kala olaylarını tek
+  // butonla Kararlar bölümüne aktarma — daha önce aktarılanlar işaretlenir (çift aktarım olmaz).
+  const aktarilanKararlar = new Map(kararTumunuGetir().filter(k => k.toplantiId === _toplantiId && k.kaynakOlayId).map(k => [k.kaynakOlayId, k]));
 
   olaylar.forEach(o => {
     if (!o.otomatik) manuelSira++;
@@ -537,6 +605,7 @@ function olaylariCiz() {
       <td>${o.otomatik ? '-' : (_ktKacir(o.durum) || '-')}</td>
       <td>${_olayFotoHucresiUret(o)}</td>
       <td class="sutun-sabit">
+        ${_olayKararButonuUret(o, aktarilanKararlar)}
         ${!o.otomatik && manuelSira > 0 ? `<button class="tablo-buton" data-yukari="${o.id}" title="Yukarı taşı">▲</button>` : ''}
         ${!o.otomatik && manuelSira < manuelOlaylar.length - 1 ? `<button class="tablo-buton" data-asagi="${o.id}" title="Aşağı taşı">▼</button>` : ''}
         <button class="tablo-buton" data-duzenle="${o.id}">Düzenle</button>
@@ -574,6 +643,10 @@ function olaylariCiz() {
       kurulOlayiSil(id);
       olaylariCiz();
     }
+  }));
+  govde.querySelectorAll('[data-karara-aktar]').forEach(btn => btn.addEventListener('click', () => {
+    const olay = olaylar.find(o => o.id === btn.getAttribute('data-karara-aktar'));
+    if (olay) olayiKararaAktar(olay);
   }));
   govde.querySelectorAll('[data-yukari]').forEach(btn => btn.addEventListener('click', () => {
     kurulOlayiYukariTasi(btn.getAttribute('data-yukari'));
@@ -837,8 +910,10 @@ function kararKapanisAlanlariniGuncelle() {
 }
 
 function kararModalAc(karar) {
-  _duzenlenenKararId = karar ? karar.id : null;
-  document.getElementById('kararModalBaslik').textContent = karar ? 'Kararı Düzenle' : 'Yeni Karar';
+  // id'si olmayan bir taslak (olaydan aktarma) yeni karar gibi kaydedilir.
+  _duzenlenenKararId = karar && karar.id ? karar.id : null;
+  _kararKaynakOlayId = '';
+  document.getElementById('kararModalBaslik').textContent = karar && karar.id ? 'Kararı Düzenle' : 'Yeni Karar';
   document.getElementById('kararNo').value = karar ? karar.kararNo : '';
   document.getElementById('kararMetni').value = karar ? karar.kararMetni : '';
   document.getElementById('kararKaynakGundem').value = karar ? karar.kaynakGundem : '';
@@ -878,6 +953,7 @@ function kararModalAc(karar) {
 function kararModalKapat() {
   document.getElementById('kararModalKatman').classList.remove('acik');
   _duzenlenenKararId = null;
+  _kararKaynakOlayId = '';
 }
 
 function temizleKararFormHatalari() {
@@ -909,7 +985,8 @@ function kararFormGonderildi(e) {
     devrederMi: document.getElementById('kararDevrederMi').checked,
     fotoOncesi: _kararFotoOncesi,
     fotoSonrasi: _kararFotoSonrasi,
-    fotografEk: _kararFotoEk
+    fotografEk: _kararFotoEk,
+    kaynakOlayId: _duzenlenenKararId ? '' : _kararKaynakOlayId
   };
 
   const sonuc = _duzenlenenKararId
@@ -926,6 +1003,7 @@ function kararFormGonderildi(e) {
 
   kararModalKapat();
   kararlariCiz();
+  olaylariCiz();
 }
 
 // ==================== AY İÇİNDE TESPİT EDİLEN UYGUNSUZLUKLAR (salt okunur) ====================
