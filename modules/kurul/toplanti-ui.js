@@ -428,7 +428,13 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
     // (karar başka toplantıya taşınamayacağından, olayın kendi toplantısına
     // bağlı olduğundan) bu satırlarda gösterilmez.
     const olayId = k.olayKaynakli ? k.id.replace(/^olay-/, '') : null;
+    // Kullanıcı isteği: Düzenle/Taşı/Sil düğmeleri tablonun solunda (ilk sütun).
     satir.innerHTML = `
+      <td style="white-space:nowrap;">
+        ${olayId
+          ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
+          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button><button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
+      </td>
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
       <td>${_ktKacir(k.kararMetni)}</td>
@@ -438,11 +444,6 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
       <td>${_ktKacir(k.oncelik)}</td>
       <td>${_ktKacir(k.durumGoruntu)}${tamamlandiRozeti}</td>
       <td>${_kararFotoHucresiUret(k)}</td>
-      <td class="sutun-sabit">
-        ${olayId
-          ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
-          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button><button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
-      </td>
     `;
     govde.appendChild(satir);
   });
