@@ -110,15 +110,15 @@ async function toplantiDavetiWordOlustur(indir = true) {
               children: [
                 ['ADI VE SOYADI', 30], ['GÖREVİ', 38], ['İMZA', 32]
               ].map(([baslik, genislik]) =>
-                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
+                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ keepNext: true, spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
               )
             }),
             ...katilimcilar.map((k, i) => new docx.TableRow({ cantSplit: true,
               height: { value: 400, rule: docx.HeightRule.ATLEAST },
               children: [
-                new docx.TableCell({ children: [new docx.Paragraph({ text: `${i + 1}) ${k.adSoyad}`, spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: k.unvan || '', spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: '', spacing: { before: 60, after: 60 } })] })
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: `${i + 1}) ${k.adSoyad}`, spacing: { before: 60, after: 60 } })] }),
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: k.unvan || '', spacing: { before: 60, after: 60 } })] }),
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: '', spacing: { before: 60, after: 60 } })] })
               ]
             }))
           ]
@@ -2256,16 +2256,16 @@ async function imzaListesiWordOlustur() {
               children: [
                 ['SIRA', 8], ['ADI VE SOYADI', 30], ['ÜNVAN / KURULDAKİ GÖREVİ', 30], ['İMZA', 32]
               ].map(([baslik, genislik]) =>
-                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
+                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ keepNext: true, spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
               )
             }),
             ...imzalar.map(i => new docx.TableRow({ cantSplit: true,
               height: { value: 350, rule: docx.HeightRule.ATLEAST },
               children: [
-                new docx.TableCell({ children: [new docx.Paragraph({ text: i.siraNo, spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: i.adSoyad, spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: [i.unvan, i.kuruldakiGorev].filter(Boolean).join(' / '), spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ text: '', spacing: { before: 60, after: 60 } })] })
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: i.siraNo, spacing: { before: 60, after: 60 } })] }),
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: i.adSoyad, spacing: { before: 60, after: 60 } })] }),
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: [i.unvan, i.kuruldakiGorev].filter(Boolean).join(' / '), spacing: { before: 60, after: 60 } })] }),
+                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: '', spacing: { before: 60, after: 60 } })] })
               ]
             }))
           ]
