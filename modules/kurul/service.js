@@ -554,6 +554,93 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
   };
 }
 
+// Kullanıcı isteği: kurul raporunun ilk sayfalarında yıllık/aylık iş kazası ve
+// ramak kala istatistikleri — kaza türleri, iş günü kaybı ve önceki yıllarla
+// kıyaslama. Karşılaştırma ADİL olsun diye geçmiş yıllar da toplantının ait
+// olduğu aya kadar (Ocak–toplantı ayı) alınır; bu yılda ayrıca toplantı tarihine
+// kadarki kayıtlar sayılır. Oranlar (sıklık hızı/ağırlık oranı) toplantı
+// yılıyla aynı formül; önceki yılın aylık çalışma saati girilmemişse null.
+function toplantiDetayliKazaIstatistikleri(toplanti) {
+  const yil = Number(String((toplanti && (toplanti.donem || toplanti.tarih)) || '').slice(0, 4));
+  if (!yil) return null;
+  const sonAy = toplanti.tarih ? Number(String(toplanti.tarih).slice(5, 7)) : (toplanti.donem ? Number(String(toplanti.donem).slice(5, 7)) || 12 : 12);
+  const AY_ADLARI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  const KAZA_TIPLERI = ['Kayıp Gün (LTI)', 'Kısıtlı İş / Transfer (DART)', 'Tıbbi Tedavi', 'Ölüm'];
+  const tumKayitlar = oku(tenantAnahtar('olay_kaza_kayitlari'), []);
+  const ayarlar = oku(tenantAnahtar('olay_kaza_ayarlari'), {});
+
+  const ayNo = k => Number(String(k.kazaTarihi || '').slice(5, 7));
+  const donemKayitlari = y => tumKayitlar.filter(k =>
+    String(k.kazaTarihi || '').slice(0, 4) === String(y) && ayNo(k) >= 1 && ayNo(k) <= sonAy &&
+    (y !== yil || !toplanti.tarih || k.kazaTarihi <= toplanti.tarih));
+
+  const yilOzeti = y => {
+    const kayitlar = donemKayitlari(y);
+    const sayac = tip => kayitlar.filter(k => k.olayTipi === tip).length;
+    const kazalar = kayitlar.filter(k => KAZA_TIPLERI.includes(k.olayTipi));
+    const lti = sayac('Kayıp Gün (LTI)');
+    const toplamKayipGun = kayitlar.reduce((t, k) => t + (Number(k.kayipGun) || 0), 0);
+    const aylikSaat = ayarlar.aylikCalismaSaatleri && ayarlar.aylikCalismaSaatleri[y];
+    const saat = aylikSaat
+      ? Object.keys(aylikSaat).filter(a => Number(a) <= sonAy).reduce((t, a) => t + (Number((aylikSaat[a] && aylikSaat[a].saat) || 0)), 0)
+      : (y === yil ? Number(ayarlar.yillikCalismaSaati || 0) : 0);
+    const kayipGunluKaza = kazalar.filter(k => Number(k.kayipGun) > 0).length;
+    return {
+      yil: y, kayitlar,
+      toplamOlay: kayitlar.length,
+      kazaSayisi: kazalar.length,
+      ramakKala: sayac('Ramak Kala'),
+      ilkYardim: sayac('İlk Yardım'),
+      tehlikeBildirimi: sayac('Tehlike Bildirimi'),
+      maddiHasar: sayac('Maddi Hasar'),
+      lti, dart: sayac('Kısıtlı İş / Transfer (DART)'), tibbi: sayac('Tıbbi Tedavi'), olum: sayac('Ölüm'),
+      toplamKayipGun,
+      ortKayipGun: kayipGunluKaza ? toplamKayipGun / kayipGunluKaza : null,
+      calismaSaati: saat,
+      siklikHizi: saat ? (lti * 1000000) / saat : null,
+      agirlikOrani: saat ? (toplamKayipGun * 1000000) / saat : null,
+      ramakKalaKazaOrani: kazalar.length ? sayac('Ramak Kala') / kazalar.length : null
+    };
+  };
+
+  const yillar = [yil - 2, yil - 1, yil].map(yilOzeti);
+  const bu = yillar[2], onceki = yillar[1];
+
+  const aylik = (ozet, filtre) => AY_ADLARI.slice(0, sonAy).map((ad, i) => ozet.kayitlar.filter(k => ayNo(k) === i + 1 && filtre(k)).length);
+  const kazaMi = k => KAZA_TIPLERI.includes(k.olayTipi);
+  const ramakMi = k => k.olayTipi === 'Ramak Kala';
+  const aylar = AY_ADLARI.slice(0, sonAy);
+
+  const dagilim = (anahtarFn, kayitlar, enFazla) => {
+    const harita = new Map();
+    kayitlar.forEach(k => {
+      const a = String(anahtarFn(k) || '').trim();
+      if (!a) return;
+      const gorunen = a.charAt(0).toLocaleUpperCase('tr-TR') + a.slice(1).toLocaleLowerCase('tr-TR');
+      harita.set(gorunen, (harita.get(gorunen) || 0) + 1);
+    });
+    return Array.from(harita.entries()).sort((a, b) => b[1] - a[1]).slice(0, enFazla || 8).map(([etiket, sayi]) => ({ etiket, sayi }));
+  };
+
+  // Son kazadan bu yana geçen gün: toplantı tarihine kadarki en son iş kazası (tüm yıllar).
+  let sonKazaTarihi = '';
+  tumKayitlar.filter(k => KAZA_TIPLERI.includes(k.olayTipi) && k.kazaTarihi && (!toplanti.tarih || k.kazaTarihi <= toplanti.tarih))
+    .forEach(k => { if (k.kazaTarihi > sonKazaTarihi) sonKazaTarihi = k.kazaTarihi; });
+  const referans = toplanti.tarih ? new Date(toplanti.tarih + 'T00:00:00') : new Date();
+  const kazasizGun = sonKazaTarihi ? Math.max(0, Math.round((referans - new Date(sonKazaTarihi + 'T00:00:00')) / 86400000)) : null;
+
+  return {
+    yil, sonAy, sonAyAdi: AY_ADLARI[sonAy - 1], yillar,
+    aylar,
+    aylikKaza: { bu: aylik(bu, kazaMi), onceki: aylik(onceki, kazaMi) },
+    aylikRamak: { bu: aylik(bu, ramakMi), onceki: aylik(onceki, ramakMi) },
+    olayTurleri: dagilim(k => k.olayTipi, bu.kayitlar, 10),
+    yaralanmaTurleri: dagilim(k => k.yaralanmaTuru, bu.kayitlar, 8),
+    yaralananUzuvlar: dagilim(k => k.yaralananUzuv, bu.kayitlar, 8),
+    bolumler: dagilim(k => k.bolum || k.kazaYeri, bu.kayitlar, 8),
+    sonKazaTarihi, kazasizGun
+  };
+}
 // Gündemdeki "Olaylar" maddesinin altında gösterilmek üzere, bu toplantının
 // (otomatik + elle eklenen, toplantı tarihine kadar olan) olaylarının kısa
 // bir dökümü — kullanıcı isteği: "toplantı tarihine kadar olan olayları da
