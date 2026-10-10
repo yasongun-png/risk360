@@ -106,14 +106,14 @@ async function toplantiDavetiWordOlustur(indir = true) {
             // devam ediyordu — güvenli pay bırakmak için 400 twip'e indirildi
             // (yine de eski varsayılan 350'den biraz daha ferah, ve GÖREVİ
             // genişlediği için 2 satıra taşma da daha az olacak).
-            new docx.TableRow({
+            new docx.TableRow({ cantSplit: true,
               children: [
                 ['ADI VE SOYADI', 30], ['GÖREVİ', 38], ['İMZA', 32]
               ].map(([baslik, genislik]) =>
                 new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
               )
             }),
-            ...katilimcilar.map((k, i) => new docx.TableRow({
+            ...katilimcilar.map((k, i) => new docx.TableRow({ cantSplit: true,
               height: { value: 400, rule: docx.HeightRule.ATLEAST },
               children: [
                 new docx.TableCell({ children: [new docx.Paragraph({ text: `${i + 1}) ${k.adSoyad}`, spacing: { before: 60, after: 60 } })] }),
@@ -524,8 +524,8 @@ const _wordHucre = (children, opts = {}) => new docx.TableCell({
   ...opts
 });
 const _wordEtiketDeger = (etiket, deger) => [
-  new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT, color: '111827' })] }),
-  new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger ?? '') || '-', size: KURUL_WORD_METIN_BOYUT })] })
+  new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT, color: '111827' })] }),
+  new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(deger ?? '') || '-', size: KURUL_WORD_METIN_BOYUT })] })
 ];
 
 // Olayın Karar Metni/Sorumlu/Termin/Öncelik/Durum/Oy alanları (bkz. model.js
@@ -534,18 +534,18 @@ const _wordEtiketDeger = (etiket, deger) => [
 function _wordOlayKararTakibiSatirlari(o) {
   const satirlar = [];
   if (!(o.kararMetni || o.sorumlu || o.termin)) return satirlar;
-  if (o.kararMetni) satirlar.push(new docx.TableRow({ children: [_wordHucre(_wordEtiketDeger('Karar Metni', o.kararMetni), { columnSpan: 2 })] }));
-  satirlar.push(new docx.TableRow({ children: [
+  if (o.kararMetni) satirlar.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Karar Metni', o.kararMetni), { columnSpan: 2 })] }));
+  satirlar.push(new docx.TableRow({ cantSplit: true, children: [
     _wordHucre(_wordEtiketDeger('Sorumlu', o.sorumlu)),
     _wordHucre(_wordEtiketDeger('Termin', gunAyYil(o.termin)))
   ]}));
-  satirlar.push(new docx.TableRow({ children: [
+  satirlar.push(new docx.TableRow({ cantSplit: true, children: [
     _wordHucre(_wordEtiketDeger('Öncelik', o.oncelik)),
     _wordHucre(_wordEtiketDeger('Durum', o.durum))
   ]}));
   const oyDokumu = kararOyDokumMetni(o);
   if (o.oySonucu || oyDokumu) {
-    satirlar.push(new docx.TableRow({ children: [_wordHucre(_wordEtiketDeger('Oy Sonucu', [[o.oy, o.oySonucu].filter(Boolean).join(' — '), oyDokumu && `(${oyDokumu})`].filter(Boolean).join('  ')), { columnSpan: 2 })] }));
+    satirlar.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Oy Sonucu', [[o.oy, o.oySonucu].filter(Boolean).join(' — '), oyDokumu && `(${oyDokumu})`].filter(Boolean).join('  ')), { columnSpan: 2 })] }));
   }
   return satirlar;
 }
@@ -558,16 +558,16 @@ async function _wordOlayKarti(o) {
   const tablo = new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      new docx.TableRow({ children: [
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: o.tur || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: gunAyYil(o.tarih) || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge })
+      new docx.TableRow({ cantSplit: true, children: [
+        _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: o.tur || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+        _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: gunAyYil(o.tarih) || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge })
       ]}),
-      new docx.TableRow({ children: [
+      new docx.TableRow({ cantSplit: true, children: [
         _wordHucre(_wordEtiketDeger('Yer', o.yer)),
         _wordHucre(_wordEtiketDeger('Birim', o.birim))
       ]}),
-      new docx.TableRow({ children: [ _wordHucre(_wordEtiketDeger('Oluş Şekli', o.olusSekli), { columnSpan: 2 }) ] }),
-      new docx.TableRow({ children: [
+      new docx.TableRow({ cantSplit: true, children: [ _wordHucre(_wordEtiketDeger('Oluş Şekli', o.olusSekli), { columnSpan: 2 }) ] }),
+      new docx.TableRow({ cantSplit: true, children: [
         _wordHucre(_wordEtiketDeger('Kök Neden', o.kokNeden)),
         _wordHucre(_wordEtiketDeger('İş Günü Kaybı', o.isGunuKaybi))
       ]}),
@@ -584,20 +584,20 @@ async function _wordOlayKarti(o) {
 // varsa aksiyon/oy/kapanış notları; fotoğraflar tablonun altına ayrı eklenir.
 async function _wordKararKarti(k) {
   const notSatirlari = [];
-  if (k.aksiyonNotu) notSatirlari.push(new docx.TableRow({ children: [_wordHucre(_wordEtiketDeger('Aksiyon', k.aksiyonNotu), { columnSpan: 4 })] }));
+  if (k.aksiyonNotu) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Aksiyon', k.aksiyonNotu), { columnSpan: 4 })] }));
   const oyDokumu = kararOyDokumMetni(k);
-  if (k.oySonucu || oyDokumu) notSatirlari.push(new docx.TableRow({ children: [_wordHucre(_wordEtiketDeger('Oy Sonucu', [[k.oy, k.oySonucu].filter(Boolean).join(' — '), oyDokumu && `(${oyDokumu})`].filter(Boolean).join('  ')), { columnSpan: 4 })] }));
-  if (k.kanit || k.kapanisTarihi) notSatirlari.push(new docx.TableRow({ children: [_wordHucre(_wordEtiketDeger('Kapanış / Kanıt', [gunAyYil(k.kapanisTarihi), k.kanit].filter(Boolean).join(' / ')), { columnSpan: 4 })] }));
+  if (k.oySonucu || oyDokumu) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Oy Sonucu', [[k.oy, k.oySonucu].filter(Boolean).join(' — '), oyDokumu && `(${oyDokumu})`].filter(Boolean).join('  ')), { columnSpan: 4 })] }));
+  if (k.kanit || k.kapanisTarihi) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Kapanış / Kanıt', [gunAyYil(k.kapanisTarihi), k.kanit].filter(Boolean).join(' / ')), { columnSpan: 4 })] }));
 
   const tablo = new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      new docx.TableRow({ children: [
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kararNo || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kaynakGundem || '', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
+      new docx.TableRow({ cantSplit: true, children: [
+        _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: k.kararNo || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
+        _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: k.kaynakGundem || '', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
       ]}),
-      new docx.TableRow({ children: [ _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.kararMetni || '', size: KURUL_WORD_METIN_BOYUT })] }), { columnSpan: 4 }) ] }),
-      new docx.TableRow({ children: [
+      new docx.TableRow({ cantSplit: true, children: [ _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: k.kararMetni || '', size: KURUL_WORD_METIN_BOYUT })] }), { columnSpan: 4 }) ] }),
+      new docx.TableRow({ cantSplit: true, children: [
         _wordHucre(_wordEtiketDeger('Sorumlu', k.sorumlu)),
         _wordHucre(_wordEtiketDeger('Termin', gunAyYil(k.termin))),
         _wordHucre(_wordEtiketDeger('Öncelik', k.oncelik)),
@@ -614,17 +614,17 @@ async function _wordKararKarti(k) {
 // Uygunsuzluklar için PDF'teki "decision-card" görünümünün Word karşılığı
 // (bkz. cikti.js _pdfUygunsuzlukKarti) — Kararlarla aynı kart mantığı, farklı alanlar.
 async function _wordUygunsuzlukKarti(k) {
-  const onlemSatiri = k.alinanOnlem ? [new docx.TableRow({ children: [_wordHucre(_wordEtiketDeger('Alınan Önlem', k.alinanOnlem), { columnSpan: 4 })] })] : [];
+  const onlemSatiri = k.alinanOnlem ? [new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Alınan Önlem', k.alinanOnlem), { columnSpan: 4 })] })] : [];
 
   const tablo = new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      new docx.TableRow({ children: [
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.bolum || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
-        _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.konuBasligi || '', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
+      new docx.TableRow({ cantSplit: true, children: [
+        _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: k.bolum || '-', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 25, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 1 }),
+        _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: k.konuBasligi || '', bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 75, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge, columnSpan: 3 })
       ]}),
-      new docx.TableRow({ children: [ _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: k.uygunsuzluk || '', size: KURUL_WORD_METIN_BOYUT })] }), { columnSpan: 4 }) ] }),
-      new docx.TableRow({ children: [
+      new docx.TableRow({ cantSplit: true, children: [ _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: k.uygunsuzluk || '', size: KURUL_WORD_METIN_BOYUT })] }), { columnSpan: 4 }) ] }),
+      new docx.TableRow({ cantSplit: true, children: [
         _wordHucre(_wordEtiketDeger('Tespit', gunAyYil(k.tespitTarihi))),
         _wordHucre(_wordEtiketDeger('Kapanış', gunAyYil(k.kapanisTarihi))),
         _wordHucre(_wordEtiketDeger('Sorumlu', k.sorumlu)),
@@ -702,12 +702,12 @@ async function kurulRaporuWordOlustur() {
   const table = (headers, rows) => new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      new docx.TableRow({
+      new docx.TableRow({ cantSplit: true,
         tableHeader: true,
-        children: headers.map(h => new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: h, bold: true, size: KURUL_WORD_METIN_BOYUT })] })] }))
+        children: headers.map(h => new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: h, bold: true, size: KURUL_WORD_METIN_BOYUT })] })] }))
       }),
-      ...rows.map(r => new docx.TableRow({
-        children: r.map(c => new docx.TableCell({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(c ?? ''), size: KURUL_WORD_METIN_BOYUT })] })] }))
+      ...rows.map(r => new docx.TableRow({ cantSplit: true,
+        children: r.map(c => new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(c ?? ''), size: KURUL_WORD_METIN_BOYUT })] })] }))
       }))
     ]
   });
@@ -723,9 +723,9 @@ async function kurulRaporuWordOlustur() {
       ['Kurul Başkanı', bsRapor.baskan || '-'],
       ['Kurul Sekreteri', bsRapor.yazman || '-'],
       ['Katılımcı Sayısı', katilanlar.length || '-']
-    ].map(([etiket, deger]) => new docx.TableRow({ children: [
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 30, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 70, type: docx.WidthType.PERCENTAGE } })
+    ].map(([etiket, deger]) => new docx.TableRow({ cantSplit: true, children: [
+      _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 30, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 70, type: docx.WidthType.PERCENTAGE } })
     ]}))
   });
 
@@ -739,9 +739,9 @@ async function kurulRaporuWordOlustur() {
     rows: [
       ['İş Kazası Sayısı (Kayıp Günlü + Kısıtlı İş + Tıbbi Tedavi)', String(kazaIst.kazaSayisi)],
       ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)]
-    ].map(([etiket, deger]) => new docx.TableRow({ children: [
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+    ].map(([etiket, deger]) => new docx.TableRow({ cantSplit: true, children: [
+      _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
     ]}))
   }) : null;
   const kazaGrafikResmi = kazaIst ? await _kazaAylikGrafikPngOlustur(kazaIst.aylikDagilim, kazaIst.yil) : null;
@@ -756,9 +756,9 @@ async function kurulRaporuWordOlustur() {
       ['Bunlardan Kapatılan (Yapılan)', String(usVeri.ist.kapatilan)],
       ['Hâlen Açık', String(usVeri.ist.acik)],
       ['Tamamlama Oranı', usVeri.oran]
-    ].map(([etiket, deger]) => new docx.TableRow({ children: [
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
-      _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
+    ].map(([etiket, deger]) => new docx.TableRow({ cantSplit: true, children: [
+      _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
+      _wordHucre(new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(deger), size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE } })
     ]}))
   }) : null;
 
@@ -772,7 +772,7 @@ async function kurulRaporuWordOlustur() {
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     borders: { top: _kapakKenarYok, bottom: _kapakKenarYok, left: _kapakKenarYok, right: _kapakKenarYok, insideHorizontal: _kapakKenarYok, insideVertical: _kapakKenarYok },
     rows: [
-      new docx.TableRow({
+      new docx.TableRow({ cantSplit: true,
         height: { value: 15200, rule: docx.HeightRule.EXACT },
         children: [
           new docx.TableCell({
@@ -2209,7 +2209,7 @@ async function atamaYazisiWordOlustur(imzaId) {
         new docx.Table({
           width: { size: 100, type: docx.WidthType.PERCENTAGE },
           borders: { top: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideHorizontal: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
-          rows: [new docx.TableRow({ children: [
+          rows: [new docx.TableRow({ cantSplit: true, children: [
             new docx.TableCell({ borders: { top: { style: docx.BorderStyle.SINGLE, size: 4, color: '111827' } }, margins: { top: 100 }, children: [
               new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'Tebliğ Eden', size: 18, color: '64748B' })] }),
               new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 100 }, children: [new docx.TextRun({ text: bsAtama.baskan || '-', bold: true })] }),
@@ -2252,14 +2252,14 @@ async function imzaListesiWordOlustur() {
           rows: [
             // Kullanıcı isteği: sütun genişlikleri artırıldı (eşit dörtte-bir
             // varsayılanı yerine SIRA dar, diğer üç sütun daha geniş).
-            new docx.TableRow({
+            new docx.TableRow({ cantSplit: true,
               children: [
                 ['SIRA', 8], ['ADI VE SOYADI', 30], ['ÜNVAN / KURULDAKİ GÖREVİ', 30], ['İMZA', 32]
               ].map(([baslik, genislik]) =>
                 new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
               )
             }),
-            ...imzalar.map(i => new docx.TableRow({
+            ...imzalar.map(i => new docx.TableRow({ cantSplit: true,
               height: { value: 350, rule: docx.HeightRule.ATLEAST },
               children: [
                 new docx.TableCell({ children: [new docx.Paragraph({ text: i.siraNo, spacing: { before: 60, after: 60 } })] }),
