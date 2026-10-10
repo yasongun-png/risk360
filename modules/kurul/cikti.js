@@ -336,9 +336,9 @@ function _istKarsilastirmaSatirlari(kd) {
   const satir = (etiket, alan, ondalik) => [etiket, _istSayi(y2[alan], ondalik), _istSayi(y1[alan], ondalik), _istSayi(y0[alan], ondalik), _istDegisim(y0[alan], y1[alan])];
   return [
     satir('Toplam Olay Bildirimi', 'toplamOlay'),
-    satir('İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi)', 'kazaSayisi'),
-    satir('   · Kayıp Günlü Kaza (LTI)', 'lti'),
-    satir('   · Kısıtlı İş / Transfer (DART)', 'dart'),
+    satir('İş Kazası Sayısı (Kayıp Günlü + Kısıtlı İş + Tıbbi Tedavi)', 'kazaSayisi'),
+    satir('   · Kayıp Günlü Kaza', 'lti'),
+    satir('   · Kısıtlı İş / Görev Değişikliği', 'dart'),
     satir('   · Tıbbi Tedavi', 'tibbi'),
     satir('İlk Yardım', 'ilkYardim'),
     satir('Tehlike Bildirimi', 'tehlikeBildirimi'),
@@ -346,9 +346,58 @@ function _istKarsilastirmaSatirlari(kd) {
     satir('Toplam İş Günü Kaybı', 'toplamKayipGun'),
     satir('Kayıp Günlü Kaza Başına Ort. Kayıp Gün', 'ortKayipGun', 1),
     satir('Çalışma Saati', 'calismaSaati'),
-    satir('Kaza Sıklık Hızı (LTI x 1.000.000 / saat)', 'siklikHizi', 2),
+    satir('Kaza Sıklık Hızı (kayıp günlü kaza x 1.000.000 / çalışma saati)', 'siklikHizi', 2),
     satir('Kaza Ağırlık Oranı (kayıp gün x 1.000.000 / saat)', 'agirlikOrani', 2)
   ];
+}
+
+// Pasta (daire) grafik — canvas, senkron. Sol: daire, sağ: açıklamalı gösterge (adet ve yüzde).
+function _pastaGrafikCiz(baslik, kayitlar) {
+  const G = 1400, Y = 760;
+  const RENKLER = ['#1d4ed8', '#dc2626', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#475569'];
+  const tuval = document.createElement('canvas');
+  tuval.width = G; tuval.height = Y;
+  const c = tuval.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, G, Y);
+  c.fillStyle = '#111827'; c.font = 'bold 34px Arial'; c.textAlign = 'center';
+  c.fillText(baslik, G / 2, 56);
+  const toplam = kayitlar.reduce((t, k) => t + k.sayi, 0);
+  if (!toplam) {
+    c.fillStyle = '#6b7280'; c.font = '26px Arial'; c.fillText('Kayıt bulunmamaktadır.', G / 2, 300);
+  } else {
+    const cx = 380, cy = 420, r = 270;
+    let aci = -Math.PI / 2;
+    kayitlar.forEach((k, i) => {
+      const dilim = (k.sayi / toplam) * Math.PI * 2;
+      c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, r, aci, aci + dilim); c.closePath();
+      c.fillStyle = RENKLER[i % RENKLER.length]; c.fill();
+      c.strokeStyle = '#ffffff'; c.lineWidth = 4; c.stroke();
+      if (k.sayi / toplam >= 0.06) {
+        const orta = aci + dilim / 2;
+        c.fillStyle = '#ffffff'; c.font = 'bold 28px Arial'; c.textAlign = 'center';
+        c.fillText('%' + Math.round((k.sayi / toplam) * 100), cx + Math.cos(orta) * r * 0.66, cy + Math.sin(orta) * r * 0.66 + 10);
+      }
+      aci += dilim;
+    });
+    c.textAlign = 'left';
+    kayitlar.forEach((k, i) => {
+      const y = 160 + i * 62;
+      c.fillStyle = RENKLER[i % RENKLER.length]; c.fillRect(760, y, 34, 34);
+      c.fillStyle = '#374151'; c.font = '28px Arial';
+      let etiket = k.etiket;
+      while (c.measureText(etiket).width > 380 && etiket.length > 4) etiket = etiket.slice(0, -2);
+      if (etiket !== k.etiket) etiket = etiket.trimEnd() + '…';
+      c.fillText(etiket, 812, y + 28);
+      c.fillStyle = '#111827'; c.font = 'bold 28px Arial'; c.textAlign = 'right';
+      c.fillText(`${k.sayi}  (%${Math.round((k.sayi / toplam) * 100)})`, G - 60, y + 28);
+      c.textAlign = 'left';
+    });
+  }
+  const dataUrl = tuval.toDataURL('image/png');
+  const ikili = atob(dataUrl.split(',')[1]);
+  const veri = new Uint8Array(ikili.length);
+  for (let i = 0; i < ikili.length; i++) veri[i] = ikili.charCodeAt(i);
+  return { dataUrl, veri, genislik: 600, yukseklik: Math.round(600 * Y / G) };
 }
 
 // Yatay çubuk grafik (dağılımlar için) — canvas, senkron.
@@ -685,7 +734,7 @@ async function kurulRaporuWordOlustur() {
   const kazaIstatistikTablosu = kazaIst ? new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      ['İş Kazası Sayısı (LTI+DART+Tıbbi Tedavi)', String(kazaIst.kazaSayisi)],
+      ['İş Kazası Sayısı (Kayıp Günlü + Kısıtlı İş + Tıbbi Tedavi)', String(kazaIst.kazaSayisi)],
       ['Toplam İş Günü Kaybı', String(kazaIst.toplamKayipGun)]
     ].map(([etiket, deger]) => new docx.TableRow({ children: [
       _wordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: etiket, bold: true, size: KURUL_WORD_METIN_BOYUT })] }), { width: { size: 50, type: docx.WidthType.PERCENTAGE }, shading: _wordGolge }),
@@ -748,7 +797,7 @@ async function kurulRaporuWordOlustur() {
     if (!kd) return [];
     const [y2, y1, y0] = kd.yillar;
     const resim = (g) => new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 160 }, children: [new docx.ImageRun({ data: g.veri, transformation: { width: g.genislik, height: g.yukseklik } })] });
-    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp Gün (LTI) + Kısıtlı İş (DART) + Tıbbi Tedavi. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.`;
+    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.`;
     const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
     const grafikKaza = _aylikGrupluGrafikCiz(`Aylık İş Kazası Sayıları: ${y1.yil} / ${y0.yil}`, kd.aylar, [
       { ad: String(y1.yil), renk: '#94a3b8', degerler: kd.aylikKaza.onceki }, { ad: String(y0.yil), renk: '#1d4ed8', degerler: kd.aylikKaza.bu }
@@ -756,8 +805,8 @@ async function kurulRaporuWordOlustur() {
     const dagilimGrafikleri = [
       _yatayCubukGrafikCiz(`${y0.yil} Olay Türlerine Göre Dağılım`, kd.olayTurleri, '#1d4ed8'),
       _yatayCubukGrafikCiz(`${y0.yil} Kaza / Yaralanma Türleri`, kd.yaralanmaTurleri, '#dc2626'),
-      _yatayCubukGrafikCiz(`${y0.yil} Yaralanan Uzuv Dağılımı`, kd.yaralananUzuvlar, '#7c3aed'),
-      _yatayCubukGrafikCiz(`${y0.yil} Bölüm / Birim Dağılımı`, kd.bolumler, '#0f766e')
+      _pastaGrafikCiz(`${y0.yil} Yaralanan Uzuv Dağılımı`, kd.yaralananUzuvlar),
+      _pastaGrafikCiz(`${y0.yil} Bölüm / Birim Dağılımı`, kd.bolumler)
     ];
     return [
       BR(),
@@ -1699,7 +1748,7 @@ async function pptxOlustur() {
       valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
       showLegend: false
     });
-    sl.addText('(*) İş kazası sayısı = LTI + DART + Tıbbi Tedavi. Toplantı tarihine kadar kayıtlı kazalar gösterilir.', { x: M, y: 6.75, w: SW - 2 * M, h: 0.4, fontSize: 9, italic: true, color: R.soluk });
+    sl.addText('(*) İş kazası sayısı = Kayıp günlü kaza + kısıtlı iş + tıbbi tedavi. Toplantı tarihine kadar kayıtlı kazalar gösterilir.', { x: M, y: 6.75, w: SW - 2 * M, h: 0.4, fontSize: 9, italic: true, color: R.soluk });
   }
 
   // Kullanıcı isteği: "hangi ay kaç kaza olmuş ve hangi ay kaç gün rapor
@@ -1815,6 +1864,16 @@ async function pptxOlustur() {
           sl.addText('Kayıt bulunmamaktadır.', { x, y: 1.75, w: grafikW, h: 0.9, fontSize: 12, color: R.soluk, align: 'center', valign: 'middle' });
           return;
         }
+        if (g.pasta) {
+          const PASTA_RENKLERI = ['1D4ED8', 'DC2626', '16A34A', 'F59E0B', '7C3AED', '0891B2', 'DB2777', '65A30D', 'EA580C', '475569'];
+          sl.addChart(pptx.charts.PIE, [{ name: g.baslik, labels: g.veri.map(v => v.etiket), values: g.veri.map(v => v.sayi) }], {
+            x, y: 1.65, w: grafikW, h: 5.0,
+            chartColors: PASTA_RENKLERI.slice(0, g.veri.length),
+            showPercent: true, showValue: false, showLabel: false, dataLabelColor: 'FFFFFF', dataLabelFontSize: 12, dataLabelFormatCode: '0%',
+            showLegend: true, legendPos: 'r', legendFontSize: 11
+          });
+          return;
+        }
         sl.addChart(pptx.charts.BAR, [{ name: g.baslik, labels: g.veri.map(v => v.etiket), values: g.veri.map(v => v.sayi) }], {
           x, y: 1.65, w: grafikW, h: 5.0,
           barDir: 'bar', chartColors: [g.renk], catAxisOrientation: 'maxMin',
@@ -1828,8 +1887,8 @@ async function pptxOlustur() {
       { baslik: 'Olay Türlerine Göre', veri: kdPptx.olayTurleri, renk: R.birincil },
       { baslik: 'Kaza / Yaralanma Türleri', veri: kdPptx.yaralanmaTurleri, renk: 'DC2626' });
     dagilimSlaydi(`${kdPptx.yil} Yılı Yaralanan Uzuv ve Bölüm Dağılımları (Ocak–${kdPptx.sonAyAdi})`,
-      { baslik: 'Yaralanan Uzuv', veri: kdPptx.yaralananUzuvlar, renk: '7C3AED' },
-      { baslik: 'Bölüm / Birim', veri: kdPptx.bolumler, renk: '0F766E' });
+      { baslik: 'Yaralanan Uzuv', veri: kdPptx.yaralananUzuvlar, renk: '7C3AED', pasta: true },
+      { baslik: 'Bölüm / Birim', veri: kdPptx.bolumler, renk: '0F766E', pasta: true });
 
     // 5) Tüm iş kazaları ve açıklamaları (kullanıcı isteği) — her slaytta 4 kaza.
     const KAZA_SATIRI_SLAYT = 4;

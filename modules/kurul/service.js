@@ -439,7 +439,7 @@ function _kurulOtomatikOlaylariGetir(toplanti) {
     .map(k => ({
       id: 'oto-' + k.id,
       toplantiId: toplanti.id,
-      tur: k.olayTipi === 'Ölüm' ? 'İş Kazası' : (k.olayTipi || '-'),
+      tur: kazaTipiGorunen(k.olayTipi),
       tarih: k.kazaTarihi || '',
       yer: k.kazaYeri || '',
       birim: k.bolum || '',
@@ -535,7 +535,7 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
     .sort((a, b) => (Number(b.kayipGun) || 0) - (Number(a.kayipGun) || 0))
     .map(k => ({
       tarih: k.kazaTarihi || '',
-      tur: k.olayTipi === 'Ölüm' ? 'İş Kazası' : (k.olayTipi || '-'),
+      tur: kazaTipiGorunen(k.olayTipi),
       yer: k.kazaYeri || '',
       kayipGun: Number(k.kayipGun) || 0,
       // Kullanıcı isteği: "kazaların nasıl olduğu ile ilgili bilgi yok,
@@ -560,6 +560,15 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
 // olduğu aya kadar (Ocak–toplantı ayı) alınır; bu yılda ayrıca toplantı tarihine
 // kadarki kayıtlar sayılır. Oranlar (sıklık hızı/ağırlık oranı) toplantı
 // yılıyla aynı formül; önceki yılın aylık çalışma saati girilmemişse null.
+// Kullanıcı isteği: raporlarda İngilizce ifade (LTI, DART) görünmesin — olay tipinin Türkçe gösterimi.
+function kazaTipiGorunen(tip) {
+  const t = String(tip || '');
+  if (t === 'Kayıp Gün (LTI)') return 'Kayıp Günlü Kaza';
+  if (t === 'Kısıtlı İş / Transfer (DART)') return 'Kısıtlı İş / Görev Değişikliği';
+  if (t === 'Ölüm') return 'İş Kazası';
+  return t || '-';
+}
+
 function toplantiDetayliKazaIstatistikleri(toplanti) {
   const yil = Number(String((toplanti && (toplanti.donem || toplanti.tarih)) || '').slice(0, 4));
   if (!yil) return null;
@@ -629,7 +638,7 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
     .sort((a, b) => String(a.kazaTarihi).localeCompare(String(b.kazaTarihi)))
     .map(k => ({
       tarih: k.kazaTarihi || '',
-      tur: k.olayTipi === 'Ölüm' ? 'İş Kazası' : (k.olayTipi || '-'),
+      tur: kazaTipiGorunen(k.olayTipi),
       yer: [k.bolum, k.kazaYeri].filter((v, i, a) => v && a.indexOf(v) === i).join(' / '),
       kayipGun: Number(k.kayipGun) || 0,
       aciklama: String((typeof olayAciklamaOnEkiTemizle === 'function' ? olayAciklamaOnEkiTemizle(k.aciklama) : k.aciklama) || k.olayOzeti || '').trim()
@@ -647,7 +656,7 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
     aylar, kazalarTumu,
     aylikKaza: { bu: aylik(bu, kazaMi), onceki: aylik(onceki, kazaMi) },
     // Kullanıcı isteği: "ölüm" ifadesi hiçbir yerde geçmesin.
-    olayTurleri: dagilim(k => (/ölüm/i.test(k.olayTipi || '') ? '' : k.olayTipi), bu.kayitlar, 10),
+    olayTurleri: dagilim(k => (/ölüm/i.test(k.olayTipi || '') ? '' : kazaTipiGorunen(k.olayTipi)), bu.kayitlar, 10),
     yaralanmaTurleri: dagilim(k => (/ölüm/i.test(k.yaralanmaTuru || '') ? '' : k.yaralanmaTuru), bu.kayitlar, 8),
     yaralananUzuvlar: dagilim(k => k.yaralananUzuv, bu.kayitlar, 8),
     bolumler: dagilim(k => k.bolum || k.kazaYeri, bu.kayitlar, 8),
