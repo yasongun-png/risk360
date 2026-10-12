@@ -1072,12 +1072,12 @@ async function kurulRaporuWordOlustur() {
     // Kullanıcı isteği: iş kazası istatistikleri yasal düzenlemeden önce, raporun son bölümlerinde yer alsın.
     ...kazaDetayElemanlari,
 
-    // Taranmış imzalı toplantı daveti + imza listesi (yüklenmişse): Yasal Düzenleme'den hemen önce.
-    ...taramaElemanlari,
-
     H('12) İSG Kurulları İle İlgili Yasal Düzenleme'),
     ...YONETMELIK_MADDELERI.flatMap(maddeParagraflari),
     BR(),
+
+    // Taranmış imzalı toplantı daveti + imza listesi (yüklenmişse): Yasal Düzenleme'den sonra.
+    ...taramaElemanlari,
 
     H('13) İmza Listesi'),
     katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
