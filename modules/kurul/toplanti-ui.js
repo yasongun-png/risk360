@@ -1016,7 +1016,7 @@ function imzaFormGonderildi(e) {
 }
 
 function kararKapanisAlanlariniGuncelle() {
-  const kapali = document.getElementById('kararDurum').value === 'Kapalı';
+  const kapali = kararKapaliMi(document.getElementById('kararDurum').value);
   document.getElementById('kapanisSatiri').style.display = kapali ? '' : 'none';
 }
 

@@ -170,7 +170,7 @@ function toplantiKararlariniGetir(toplantiId) {
 // bu alanlara sahip olamayacağından burada zaten yer almaz (termin hep boş).
 function _olayKaynakliDevredenKararlariGetir(toplanti) {
   return olayTumunuGetir()
-    .filter(o => o.termin && o.toplantiId !== toplanti.id && o.durum !== 'Kapalı' && o.durum !== 'İptal')
+    .filter(o => o.termin && o.toplantiId !== toplanti.id && !kararKapaliMi(o.durum) && o.durum !== 'İptal')
     .filter(o => {
       const eviToplanti = toplantiIdIleGetirRepo(o.toplantiId);
       return eviToplanti && eviToplanti.tarih && toplanti.tarih && eviToplanti.tarih < toplanti.tarih;
@@ -212,7 +212,7 @@ function toplantiKararGruplariniGetir(toplantiId) {
     if (k.toplantiId === toplantiId) return false;
     const eviToplanti = toplantiIdIleGetirRepo(k.toplantiId);
     if (eviToplanti && eviToplanti.tarih && toplanti.tarih && eviToplanti.tarih >= toplanti.tarih) return false;
-    if (k.durum !== 'Kapalı') return k.devrederMi !== false;
+    if (!kararKapaliMi(k.durum)) return k.devrederMi !== false;
     return !k.devredenTamamlandiGosterildi;
   }).concat(_olayKaynakliDevredenKararlariGetir(toplanti));
 
@@ -225,7 +225,7 @@ function toplantiKararGruplariniGetir(toplantiId) {
 function toplantiKararGruplariniGetirVeIsaretle(toplantiId) {
   const gruplar = toplantiKararGruplariniGetir(toplantiId);
   gruplar.devreden.forEach(k => {
-    if (k.durum === 'Kapalı' && !k.devredenTamamlandiGosterildi) {
+    if (kararKapaliMi(k.durum) && !k.devredenTamamlandiGosterildi) {
       kararGuncelleRepo(k.id, { devredenTamamlandiGosterildi: true });
     }
   });
@@ -270,7 +270,7 @@ function tumKararlariGetir(aramaMetni, filtreler) {
   liste = liste.map(k => Object.assign({}, k, {
     toplantiBasligi: (toplantilar.find(t => t.id === k.toplantiId) || {}).baslik || 'Silinmiş Toplantı',
     toplantiNo: (toplantilar.find(t => t.id === k.toplantiId) || {}).toplantiNo || '-',
-    suAndaDevredenMi: k.durum !== 'Kapalı' && k.durum !== 'İptal' && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)
+    suAndaDevredenMi: !kararKapaliMi(k.durum) && k.durum !== 'İptal' && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)
   }));
 
   if (f.toplantiId) liste = liste.filter(k => k.toplantiId === f.toplantiId);
@@ -370,7 +370,7 @@ function kararGuncelle(id, veriler) {
     oyRet: veriler.oyRet === '' || veriler.oyRet == null ? null : Number(veriler.oyRet),
     oyCekimser: veriler.oyCekimser === '' || veriler.oyCekimser == null ? null : Number(veriler.oyCekimser),
     devrederMi: veriler.devrederMi !== undefined ? !!veriler.devrederMi : (mevcut ? mevcut.devrederMi !== false : true),
-    kapanisTarihi: veriler.durum === 'Kapalı' ? (veriler.kapanisTarihi || _bugun()) : '',
+    kapanisTarihi: kararKapaliMi(veriler.durum) ? (veriler.kapanisTarihi || _bugun()) : '',
     kanit: (veriler.kanit || '').trim(),
     aksiyonNotu: (veriler.aksiyonNotu || '').trim(),
     fotoOncesi: veriler.fotoOncesi || '',
@@ -1278,11 +1278,11 @@ function kurulOzetiHesapla() {
   return {
     toplamToplanti: toplantilar.length,
     toplamKarar: kararlar.length,
-    acikKarar: kararlar.filter(k => k.durumGoruntu !== 'Kapalı' && k.durumGoruntu !== 'İptal').length,
-    kapaliKarar: kararlar.filter(k => k.durum === 'Kapalı').length,
+    acikKarar: kararlar.filter(k => !kararKapaliMi(k.durumGoruntu) && k.durumGoruntu !== 'İptal').length,
+    kapaliKarar: kararlar.filter(k => kararKapaliMi(k.durum)).length,
     gecikmisKarar: kararlar.filter(k => k.durumGoruntu === 'Gecikmiş').length,
     // Şu anda hâlâ açık olup en son toplantıdan önce açılmış (yani otomatik
     // olarak bir sonraki toplantıya devreden) karar sayısı.
-    devredenKarar: kararlar.filter(k => k.durum !== 'Kapalı' && k.durum !== 'İptal' && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)).length
+    devredenKarar: kararlar.filter(k => !kararKapaliMi(k.durum) && k.durum !== 'İptal' && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)).length
   };
 }

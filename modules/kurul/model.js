@@ -1,7 +1,10 @@
 // İSG Kurulu veri modeli: Toplantılar ve Kararlar.
 
 const TOPLANTI_DURUMLARI = ['Planlandı', 'Tamamlandı', 'Ertelendi', 'İptal'];
-const KARAR_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Kapalı', 'İptal'];
+const KARAR_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Tamamlandı', 'Kapalı', 'İptal'];
+// Kullanıcı isteği: karar durumuna "Tamamlandı" eklendi — "Kapalı" ile aynı şekilde kapanmış sayılır
+// (devreden listesine girmez, kapanış tarihi atanır).
+function kararKapaliMi(durum) { return durum === 'Kapalı' || durum === 'Tamamlandı'; }
 const GUNDEM_TURLERI = ['Genel', 'İş Kazası', 'Risk', 'Uygunsuzluk', 'Eğitim', 'Yasal Şart', 'Yüklenici', 'Acil Durum', 'Diğer'];
 
 // Kullanıcı isteği: "kararlar, olaylar ve önceki toplantı kararları için
@@ -515,7 +518,7 @@ function ayYilSiraNoUret(toplantiTarihi, sira) {
 }
 
 function kararGecikmisMi(karar, bugunStr) {
-  if (karar.durum === 'Kapalı' || karar.durum === 'İptal') return false;
+  if (kararKapaliMi(karar.durum) || karar.durum === 'İptal') return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(karar.termin || '')) return false;
   return karar.termin < (bugunStr || new Date().toISOString().slice(0, 10));
 }
