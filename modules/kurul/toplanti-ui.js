@@ -135,7 +135,7 @@ function toplantiDetaySayfasiniBaslat() {
     const oran = ist.tamamlamaOrani == null ? '-' : '%' + ist.tamamlamaOrani.toFixed(1).replace('.', ',');
     const kart = (etiket, deger) => `<div class="istatistik-kutu"><span>${etiket}</span><b style="font-size:20px;">${deger}</b></div>`;
     kutu.innerHTML = `<div class="istatistik-grid" style="grid-template-columns: repeat(4, minmax(140px,1fr));">
-      ${kart(ist.yil + ' Yılında Açılan', ist.acilan)}${kart('Kapatılan (Yapılan)', ist.kapatilan)}${kart('Hâlen Açık', ist.acik)}${kart('Tamamlama Oranı', oran)}
+      ${kart(ist.yil + ' Yılında Açılan', ist.acilan)}${kart('Kapatılan Uygunsuzluklar', ist.kapatilan)}${kart('Hâlen Açık', ist.acik)}${kart('Tamamlama Oranı', oran)}
     </div>`;
   })();
 

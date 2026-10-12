@@ -929,7 +929,7 @@ async function kurulRaporuWordOlustur() {
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
       [`${usVeri.ist.yil} Yılında Açılan Uygunsuzluk`, String(usVeri.ist.acilan)],
-      ['Bunlardan Kapatılan (Yapılan)', String(usVeri.ist.kapatilan)],
+      ['Kapatılan Uygunsuzluklar', String(usVeri.ist.kapatilan)],
       ['Hâlen Açık', String(usVeri.ist.acik)],
       ['Tamamlama Oranı', usVeri.oran]
     ].map(([etiket, deger]) => new docx.TableRow({ cantSplit: true, children: [
@@ -1261,7 +1261,7 @@ async function konuBasliklariWordOlustur(notFormu = false) {
     const oranKb = usIstKb.tamamlamaOrani == null ? '-' : '%' + usIstKb.tamamlamaOrani.toFixed(1).replace('.', ',');
     [
       `${usIstKb.yil} yılında açılan uygunsuzluk: ${usIstKb.acilan}`,
-      `Bunlardan kapatılan (yapılan): ${usIstKb.kapatilan}`,
+      `Kapatılan uygunsuzluk: ${usIstKb.kapatilan}`,
       `Hâlen açık: ${usIstKb.acik}`,
       `Tamamlama oranı: ${oranKb}`
     ].forEach(satir => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: satir, size: METIN_BOYUT })] })));
@@ -1621,7 +1621,7 @@ async function kurulRaporuPdfOlustur() {
         <h2>10) Uygunsuzlukların Değerlendirmesi</h2>
         ${_pdfTablo(['Gösterge', 'Değer'], [
           [`${v.ist.yil} Yılında Açılan Uygunsuzluk`, String(v.ist.acilan)],
-          ['Bunlardan Kapatılan (Yapılan)', String(v.ist.kapatilan)],
+          ['Kapatılan Uygunsuzluklar', String(v.ist.kapatilan)],
           ['Hâlen Açık', String(v.ist.acik)],
           ['Tamamlama Oranı', v.oran]
         ])}
@@ -2168,7 +2168,7 @@ async function pptxOlustur() {
     const oranPptx = usIstPptx.tamamlamaOrani == null ? '-' : '%' + usIstPptx.tamamlamaOrani.toFixed(1).replace('.', ',');
     const kutularUs = [
       { etiket: `${usIstPptx.yil} Yılında Açılan`, deger: String(usIstPptx.acilan) },
-      { etiket: 'Kapatılan (Yapılan)', deger: String(usIstPptx.kapatilan) },
+      { etiket: 'Kapatılan Uygunsuzluklar', deger: String(usIstPptx.kapatilan) },
       { etiket: 'Hâlen Açık', deger: String(usIstPptx.acik) },
       { etiket: 'Tamamlama Oranı', deger: oranPptx }
     ];
