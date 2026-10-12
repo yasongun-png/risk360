@@ -216,6 +216,20 @@ function toplantiKararGruplariniGetir(toplantiId) {
     return !k.devredenTamamlandiGosterildi;
   }).concat(_olayKaynakliDevredenKararlariGetir(toplanti));
 
+  // Kullanıcı isteği: devreden kararlar karar numarasına göre, en eskiden başlayarak sıralı olsun
+  // (numara "AY.YIL/SIRA" biçimindedir: önce yıl, sonra ay, sonra sıra). Numarası çözülemeyenler sona kalır.
+  const siraAnahtari = k => {
+    const m = String(k.kararNo || '').match(/^(\d{1,2})\.(\d{4})\/(\d+)/);
+    return m ? [Number(m[2]), Number(m[1]), Number(m[3])] : null;
+  };
+  devreden.sort((a, b) => {
+    const ka = siraAnahtari(a), kb = siraAnahtari(b);
+    if (ka && kb) return (ka[0] - kb[0]) || (ka[1] - kb[1]) || (ka[2] - kb[2]);
+    if (ka) return -1;
+    if (kb) return 1;
+    return String(a.olusturmaTarihi || a.termin || '').localeCompare(String(b.olusturmaTarihi || b.termin || ''));
+  });
+
   return { devreden, yeni };
 }
 
