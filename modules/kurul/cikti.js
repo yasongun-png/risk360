@@ -38,14 +38,22 @@ function _varsayilanliMetin(deger, anahtar) {
   return temiz || KURUL_RAPOR_VARSAYILANLARI[anahtar] || '';
 }
 
-// Çalışanların Görüş ve Önerileri serbest metindir; her satır bir madde sayılır (baştaki "-", "•", "1." gibi
-// işaretler atılır) ve çıktılarda No / Görüş tablosu olarak gösterilir. Boşsa varsayılan metin tek madde olur.
+// Çalışanların Görüş ve Önerileri serbest metindir; her satır bir maddedir (baştaki "-", "•", "1." gibi
+// işaretler atılır). Satırda "|" varsa solu görüş/öneri, sağı "toplantıda konuşulacak" konudur; yoksa ikinci
+// sütun boş kalır. Çıktılarda iki sütunlu tablo olarak gösterilir: [{ gorus, konusulacak }].
 function _gorusMaddeleri(metin) {
   const maddeler = String(metin || '').split('\n')
     .map(satir => satir.trim().replace(/^([-–—•*·]|\d+\s*[.)])\s*/, '').trim())
-    .filter(Boolean);
-  return maddeler.length ? maddeler : [_varsayilanliMetin('', 'gorusler')];
+    .filter(Boolean)
+    .map(satir => {
+      const i = satir.indexOf('|');
+      return i === -1 ? { gorus: satir, konusulacak: '' } : { gorus: satir.slice(0, i).trim(), konusulacak: satir.slice(i + 1).trim() };
+    });
+  return maddeler.length ? maddeler : [{ gorus: _varsayilanliMetin('', 'gorusler'), konusulacak: '' }];
 }
+
+const GORUS_TABLO_BASLIKLARI = ['Görüş ve Öneri', 'Toplantıda Konuşulacaklar'];
+const _gorusSatirlari = metin => _gorusMaddeleri(metin).map((g, i) => [`${i + 1}. ${g.gorus}`, g.konusulacak]);
 
 // ==================== 1) TOPLANTI DAVETİ (WORD) ====================
 
@@ -1048,7 +1056,7 @@ async function kurulRaporuWordOlustur() {
     ...(olayKartlari.length ? olayKartlari.flat() : [P(_varsayilanliMetin('', 'olaylar'))]),
 
     H('3) Çalışanların Görüş ve Önerileri'),
-    table(['No', 'Görüş ve Öneri'], _gorusMaddeleri(toplanti.calisanTemsilcisiGorusleri).map((g, i) => [String(i + 1), g]), [8, 92]),
+    table(GORUS_TABLO_BASLIKLARI, _gorusSatirlari(toplanti.calisanTemsilcisiGorusleri), [50, 50]),
     P(' ', { spacing: { after: 400 } }),
 
     H('4) Bu Toplantıda Alınan Kararlar'),
@@ -1590,7 +1598,7 @@ async function kurulRaporuPdfOlustur() {
 
       <div class="section keep">
         <h2>3) Çalışanların Görüş ve Önerileri</h2>
-        ${_pdfTablo(['No', 'Görüş ve Öneri'], _gorusMaddeleri(toplanti.calisanTemsilcisiGorusleri).map((g, i) => [String(i + 1), g]), '', [8, 92])}
+        ${_pdfTablo(GORUS_TABLO_BASLIKLARI, _gorusSatirlari(toplanti.calisanTemsilcisiGorusleri), '', [50, 50])}
       </div>
 
       <div class="section">
@@ -2117,7 +2125,7 @@ async function pptxOlustur() {
 
   // Sıra: Olaylardan hemen sonra Çalışanların Görüş ve Önerileri (kullanıcı isteği).
   bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışanların değerlendirmesi');
-  tabloSlaydi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ', ['No', 'Görüş ve Öneri'], _gorusMaddeleri(toplanti.calisanTemsilcisiGorusleri).map((g, i) => [String(i + 1), g]), [1, 11]);
+  tabloSlaydi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ', GORUS_TABLO_BASLIKLARI, _gorusSatirlari(toplanti.calisanTemsilcisiGorusleri), [1, 1]);
 
   bolumAraSlaydi('KARARLAR', 'Yeni kararlar ve devreden kararların takibi');
   kararSlaytlariniEkle('YENİ KARAR', yeni);
