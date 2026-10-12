@@ -110,7 +110,9 @@ function aksiyonOlustur(veriler) {
     sorumlu: (veriler.sorumlu || '').trim(),
     termin: veriler.termin || '',
     durum: veriler.durum || 'Açık',
-    kanit: (veriler.kanit || '').trim()
+    kanit: (veriler.kanit || '').trim(),
+    // Kullanıcı isteği: kanıt yanına fotoğraf — satırın kanıt/kapanış fotoğrafı (tek fotoğraf).
+    kanitFoto: veriler.kanitFoto || ''
   };
 }
 

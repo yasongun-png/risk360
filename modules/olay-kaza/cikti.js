@@ -188,13 +188,20 @@ async function kazaRaporuWordOlustur(id) {
   const mevzuatDocx = mevzuatSatirlari.map(m => new docx.Paragraph({ text: m, bullet: { level: 0 } }));
 
   const aksiyonlar = Array.isArray(k.aksiyonlar) ? k.aksiyonlar.filter(a => a.baslik || a.duzelticiFaaliyet) : [];
+  // Kullanıcı isteği: kanıt (metin) ve kanıt fotoğrafı formda da görünsün.
+  const aksiyonFotolari = await Promise.all(aksiyonlar.map(a => _okFotoVerisiGetir(a.kanitFoto, 150)));
+  const aksiyonGenislikleri = [19, 19, 12, 10, 10, 30];
   const aksiyonDocx = [new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      new docx.TableRow({ children: ['Uygunsuzluk Tanımı', 'Düzeltici Faaliyet', 'Sorumlu', 'Termin', 'Durum'].map(b => _okWordEtiketHucresi(b, 20)) }),
-      ...aksiyonlar.map(a => new docx.TableRow({ children: [
-        _okWordDegerHucresi(a.baslik, 20), _okWordDegerHucresi(a.duzelticiFaaliyet, 20),
-        _okWordDegerHucresi(a.sorumlu, 20), _okWordDegerHucresi(gunAyYil(a.termin), 20), _okWordDegerHucresi(a.durum, 20)
+      new docx.TableRow({ children: ['Uygunsuzluk Tanımı', 'Düzeltici Faaliyet', 'Sorumlu', 'Termin', 'Durum', 'Kanıt'].map((b, i) => _okWordEtiketHucresi(b, aksiyonGenislikleri[i])) }),
+      ...aksiyonlar.map((a, i) => new docx.TableRow({ cantSplit: true, children: [
+        _okWordDegerHucresi(a.baslik, 19), _okWordDegerHucresi(a.duzelticiFaaliyet, 19),
+        _okWordDegerHucresi(a.sorumlu, 12), _okWordDegerHucresi(gunAyYil(a.termin), 10), _okWordDegerHucresi(a.durum, 10),
+        _okWordHucre([
+          new docx.Paragraph(String(a.kanit || '') || (aksiyonFotolari[i] ? '' : '-')),
+          ...(aksiyonFotolari[i] ? [new docx.Paragraph({ children: [new docx.ImageRun({ data: aksiyonFotolari[i].veri, transformation: { width: aksiyonFotolari[i].genislik, height: aksiyonFotolari[i].yukseklik } })] })] : [])
+        ], { width: { size: aksiyonGenislikleri[5], type: docx.WidthType.PERCENTAGE } })
       ]}))
     ]
   })];

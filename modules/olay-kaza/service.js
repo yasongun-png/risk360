@@ -121,6 +121,7 @@ function _aksiyonlariUygunsuzluguYaz(aksiyonlar, olayKaydi) {
       duzelticiFaaliyet: a.duzelticiFaaliyet,
       sorumlu: a.sorumlu,
       termin: a.termin,
+      fotoSonrasi: a.kanitFoto || '',
       yasalDayanak: olayKaydi.ilgiliMevzuat || ''
     });
     if (!sonuc || !sonuc.basarili) {

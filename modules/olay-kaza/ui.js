@@ -468,7 +468,7 @@ function aksiyonSatiriEkle() {
 function aksiyonListesiniCiz() {
   const kutu = document.getElementById('aksiyonListesi');
   kutu.innerHTML = _aksiyonTaslak.map(a => `
-    <div style="display:grid; grid-template-columns: 1.6fr 1.6fr 1fr 110px 110px 1fr 32px; gap:8px; align-items:start; margin-bottom:8px;">
+    <div style="display:grid; grid-template-columns: 1.6fr 1.6fr 1fr 110px 110px 1fr 96px 32px; gap:8px; align-items:start; margin-bottom:8px;">
       <input placeholder="Uygunsuzluk Tanımı" data-aksiyon-alan="baslik" data-aksiyon-id="${a.id}" value="${a.baslik.replace(/"/g, '&quot;')}">
       <input placeholder="Düzeltici Faaliyet" data-aksiyon-alan="duzelticiFaaliyet" data-aksiyon-id="${a.id}" value="${a.duzelticiFaaliyet.replace(/"/g, '&quot;')}">
       <input placeholder="Sorumlu" data-aksiyon-alan="sorumlu" data-aksiyon-id="${a.id}" value="${a.sorumlu.replace(/"/g, '&quot;')}">
@@ -477,6 +477,10 @@ function aksiyonListesiniCiz() {
         ${AKSIYON_DURUMLARI.map(d => `<option ${a.durum === d ? 'selected' : ''}>${d}</option>`).join('')}
       </select>
       <input placeholder="Kanıt" data-aksiyon-alan="kanit" data-aksiyon-id="${a.id}" value="${a.kanit.replace(/"/g, '&quot;')}">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <label class="tablo-buton" style="cursor:pointer; margin:0;" title="Kanıt fotoğrafı ekle">📷<input type="file" accept="image/*" data-aksiyon-foto="${a.id}" style="display:none;"></label>
+        ${a.kanitFoto ? `<span style="display:inline-flex; flex-direction:column; align-items:center;"><img data-foto-ref="${a.kanitFoto}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);"><button type="button" class="tablo-buton sil" data-aksiyon-foto-kaldir="${a.id}" style="font-size:10px; padding:0 4px;">Kaldır</button></span>` : ''}
+      </div>
       <button type="button" class="tablo-buton sil" data-aksiyon-sil="${a.id}" title="Sil">✕</button>
     </div>
   `).join('') || '<p style="font-size:12px; color:var(--metin-soluk);">Henüz uygunsuzluk eklenmedi.</p>';
@@ -485,6 +489,29 @@ function aksiyonListesiniCiz() {
     el.addEventListener('input', () => {
       const a = _aksiyonTaslak.find(x => x.id === el.getAttribute('data-aksiyon-id'));
       if (a) a[el.getAttribute('data-aksiyon-alan')] = el.value;
+    });
+  });
+  fotoReferanslariCoz(kutu);
+  kutu.querySelectorAll('[data-aksiyon-foto]').forEach(girdi => {
+    girdi.addEventListener('change', async () => {
+      const dosya = girdi.files[0];
+      girdi.value = '';
+      if (!dosya) return;
+      const a = _aksiyonTaslak.find(x => x.id === girdi.getAttribute('data-aksiyon-foto'));
+      if (!a) return;
+      try {
+        const sonuc = await fotoYukle(dosya, 'olay-kaza/aksiyon-' + (_duzenlenenKayitId || 'gecici'));
+        a.kanitFoto = sonuc.url;
+        aksiyonListesiniCiz();
+      } catch (hata) {
+        alert(hata.message || 'Fotoğraf yüklenemedi.');
+      }
+    });
+  });
+  kutu.querySelectorAll('[data-aksiyon-foto-kaldir]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const a = _aksiyonTaslak.find(x => x.id === btn.getAttribute('data-aksiyon-foto-kaldir'));
+      if (a) { a.kanitFoto = ''; aksiyonListesiniCiz(); }
     });
   });
   kutu.querySelectorAll('[data-aksiyon-sil]').forEach(btn => {
