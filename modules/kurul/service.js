@@ -624,6 +624,8 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
   };
 
   const yillar = [yil - 2, yil - 1, yil].map(yilOzeti);
+  // Kullanıcı isteği: basit 5 yıllık iş kazası karşılaştırması (aynı dönem: Ocak–toplantı ayı).
+  const besYil = [yil - 4, yil - 3, yil - 2, yil - 1, yil].map(y => y >= yil - 2 ? yillar[y - (yil - 2)] : yilOzeti(y));
   const bu = yillar[2], onceki = yillar[1];
 
   const aylik = (ozet, filtre) => AY_ADLARI.slice(0, sonAy).map((ad, i) => ozet.kayitlar.filter(k => ayNo(k) === i + 1 && filtre(k)).length);
@@ -663,7 +665,7 @@ function toplantiDetayliKazaIstatistikleri(toplanti) {
   const kazasizGun = sonKazaTarihi ? Math.max(0, Math.round((referans - new Date(sonKazaTarihi + 'T00:00:00')) / 86400000)) : null;
 
   return {
-    yil, sonAy, sonAyAdi: AY_ADLARI[sonAy - 1], yillar,
+    yil, sonAy, sonAyAdi: AY_ADLARI[sonAy - 1], yillar, besYil,
     tahminiSaatYillari: yillar.filter(x => x.saatTahmini).map(x => x.yil),
     aylar, kazalarTumu,
     aylikKaza: { bu: aylik(bu, kazaMi), onceki: aylik(onceki, kazaMi) },

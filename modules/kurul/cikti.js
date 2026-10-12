@@ -801,10 +801,14 @@ async function kurulRaporuWordOlustur() {
     if (!kd) return [];
     const [y2, y1, y0] = kd.yillar;
     const resim = (g) => new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 160 }, children: [new docx.ImageRun({ data: g.veri, transformation: { width: g.genislik, height: g.yukseklik } })] });
-    const donemNotu = `Önceki yıllar, toplantı dönemine uygun olarak aynı aralıkta (Ocak–${kd.sonAyAdi}) karşılaştırılmıştır. İş kazası = Kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Oranlar için ilgili yılın aylık çalışma saati Olay/Kaza modülünde girilmiş olmalıdır.${kd.tahminiSaatYillari.length ? ` ${kd.tahminiSaatYillari.join(', ')} yılı çalışma saati girilmediği için bu yılın aynı dönem saatinin 1/3 fazlası olarak tahmin edilmiştir.` : ''}`;
+    const donemNotu = `Yıllar, toplantı dönemine uygun olarak aynı aralık (Ocak–${kd.sonAyAdi}) için karşılaştırılmıştır. İş kazası = kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi.`;
     const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
-    const grafikKaza = _aylikGrupluGrafikCiz(`Aylık İş Kazası Sayıları: ${y1.yil} / ${y0.yil}`, kd.aylar, [
-      { ad: String(y1.yil), renk: '#94a3b8', degerler: kd.aylikKaza.onceki }, { ad: String(y0.yil), renk: '#1d4ed8', degerler: kd.aylikKaza.bu }
+    const yilEtiketleri = kd.besYil.map(y => String(y.yil));
+    const grafikKaza = _aylikGrupluGrafikCiz(`Yıllara Göre İş Kazası Sayısı (Ocak–${kd.sonAyAdi})`, yilEtiketleri, [
+      { ad: 'İş Kazası Sayısı', renk: '#1d4ed8', degerler: kd.besYil.map(y => y.kazaSayisi) }
+    ]);
+    const grafikKayip = _aylikGrupluGrafikCiz(`Yıllara Göre Toplam İş Günü Kaybı (Ocak–${kd.sonAyAdi})`, yilEtiketleri, [
+      { ad: 'İş Günü Kaybı', renk: '#dc2626', degerler: kd.besYil.map(y => y.toplamKayipGun) }
     ]);
     const dagilimGrafikleri = [
       _yatayCubukGrafikCiz(`${y0.yil} Olay Türlerine Göre Dağılım`, kd.olayTurleri, '#1d4ed8'),
@@ -814,15 +818,19 @@ async function kurulRaporuWordOlustur() {
     ];
     return [
       BR(),
-      H(`${kd.yil} Yılı İSG İstatistikleri (Ocak–${kd.sonAyAdi})`),
+      H(`İş Kazası İstatistikleri — 5 Yıllık Karşılaştırma (Ocak–${kd.sonAyAdi})`),
       P(donemNotu, { italics: true }),
       P(' ', { spacing: { after: 100 } }),
-      table(['Gösterge', String(y2.yil), String(y1.yil), String(y0.yil), `${y1.yil} ile Değişim`], _istKarsilastirmaSatirlari(kd)),
+      table(['Gösterge', ...yilEtiketleri], [
+        ['İş Kazası Sayısı', ...kd.besYil.map(y => String(y.kazaSayisi))],
+        ['Kayıp Günlü Kaza', ...kd.besYil.map(y => String(y.lti))],
+        ['Toplam İş Günü Kaybı', ...kd.besYil.map(y => String(y.toplamKayipGun))]
+      ]),
       P(' ', { spacing: { after: 160 } }),
       P(kazasiz, { bold: true }),
-      BR(),
-      H('Aylık İş Kazası Karşılaştırması'),
+      P(' ', { spacing: { after: 100 } }),
       resim(grafikKaza),
+      resim(grafikKayip),
       BR(),
       H('Kaza Türleri ve Dağılımlar'),
       resim(dagilimGrafikleri[0]),
@@ -1813,47 +1821,35 @@ async function pptxOlustur() {
     const [y2, y1, y0] = kdPptx.yillar;
     const baslikHucre = (t, hiza) => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil }, align: hiza || 'center', valign: 'middle' } });
 
-    // 1) Yıllık karşılaştırma tablosu
+    // 1) Basit 5 yıllık iş kazası karşılaştırması: üstte küçük tablo, altta iki grafik (kullanıcı isteği)
     {
       const sl = yeniSlayt();
-      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `${kdPptx.yil} Yılı İş Kazası Karşılaştırması (Ocak–${kdPptx.sonAyAdi})`);
-      const satirlar = _istKarsilastirmaSatirlari(kdPptx);
+      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `İş Kazaları — 5 Yıllık Karşılaştırma (Ocak–${kdPptx.sonAyAdi})`);
+      const yillarPptx = kdPptx.besYil.map(y => String(y.yil));
       const tabloW = SW - 2 * M;
+      const hucre = (t, secenek) => ({ text: t, options: Object.assign({ color: R.baslik, align: 'center', fill: { color: 'FFFFFF' } }, secenek || {}) });
       sl.addTable([
-        [baslikHucre('Gösterge', 'left'), baslikHucre(String(y2.yil)), baslikHucre(String(y1.yil)), baslikHucre(String(y0.yil)), baslikHucre(`${y1.yil} ile Değişim`)],
-        ...satirlar.map((s, i) => {
-          const ana = !s[0].startsWith('   ');
-          const zemin = { fill: { color: i % 2 ? R.bg : 'FFFFFF' } };
-          const degisimRenk = s[4].startsWith('▲') ? 'B91C1C' : (s[4].startsWith('▼') ? '15803D' : R.soluk);
-          return [
-            { text: ana ? s[0] : '      ' + s[0].trim(), options: Object.assign({ color: R.baslik, bold: ana }, zemin) },
-            { text: s[1], options: Object.assign({ color: R.soluk, align: 'center' }, zemin) },
-            { text: s[2], options: Object.assign({ color: R.soluk, align: 'center' }, zemin) },
-            { text: s[3], options: Object.assign({ color: R.baslik, bold: true, align: 'center' }, zemin) },
-            { text: s[4], options: Object.assign({ color: degisimRenk, bold: true, align: 'center' }, zemin) }
-          ];
-        })
-      ], { x: M, y: 1.35, w: tabloW, colW: [tabloW * 0.43, tabloW * 0.12, tabloW * 0.12, tabloW * 0.12, tabloW * 0.21], fontSize: 10, rowH: 0.3, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+        [baslikHucre('Gösterge', 'left'), ...yillarPptx.map(y => baslikHucre(y))],
+        [hucre('İş Kazası Sayısı', { align: 'left', bold: true }), ...kdPptx.besYil.map((y, i) => hucre(String(y.kazaSayisi), { bold: i === 4, color: i === 4 ? R.birincil : R.baslik }))],
+        [hucre('Kayıp Günlü Kaza', { align: 'left', bold: true, fill: { color: R.bg } }), ...kdPptx.besYil.map((y, i) => hucre(String(y.lti), { fill: { color: R.bg }, bold: i === 4 }))],
+        [hucre('Toplam İş Günü Kaybı', { align: 'left', bold: true }), ...kdPptx.besYil.map((y, i) => hucre(String(y.toplamKayipGun), { bold: i === 4, color: i === 4 ? 'DC2626' : R.baslik }))]
+      ], { x: M, y: 1.35, w: tabloW, colW: [tabloW * 0.25, ...yillarPptx.map(() => tabloW * 0.15)], fontSize: 12, rowH: 0.36, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+      const grafikW = (SW - 2 * M - 0.3) / 2;
+      const ciz = (x, baslik, degerler, renk) => {
+        sl.addText(baslik, { x, y: 3.0, w: grafikW, h: 0.32, fontSize: 12, bold: true, color: R.baslik, align: 'center' });
+        sl.addChart(pptx.charts.BAR, [{ name: baslik, labels: yillarPptx, values: degerler }], {
+          x, y: 3.3, w: grafikW, h: 3.3,
+          barDir: 'col', chartColors: [renk],
+          showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 12, dataLabelFormatCode: '0',
+          catAxisLabelFontSize: 11, valAxisLabelFontSize: 10, valAxisMinVal: 0, valAxisLabelFormatCode: '0',
+          valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' }, showLegend: false
+        });
+      };
+      ciz(M, 'İş Kazası Sayısı', kdPptx.besYil.map(y => y.kazaSayisi), R.birincil);
+      ciz(M + grafikW + 0.3, 'Toplam İş Günü Kaybı', kdPptx.besYil.map(y => y.toplamKayipGun), 'DC2626');
       const kazasizMetni = kdPptx.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kdPptx.sonKazaTarihi)}  ·  Kazasız geçen gün: ${kdPptx.kazasizGun}`;
       sl.addText(kazasizMetni, { x: M, y: 6.72, w: 7.2, h: 0.35, fontSize: 12, bold: true, color: R.birincil });
-      sl.addText('Önceki yıllar aynı dönem (Ocak–' + kdPptx.sonAyAdi + ') için hesaplanmıştır.' + (kdPptx.tahminiSaatYillari.length ? ' ' + kdPptx.tahminiSaatYillari.join(', ') + ' çalışma saati tahminidir (bu yılın 1/3 fazlası).' : '') + '  ▲ artış  ▼ azalış', { x: 7.4, y: 6.72, w: SW - 7.4 - M, h: 0.35, fontSize: 9, italic: true, color: R.soluk, align: 'right' });
-    }
-
-    // 2) Aylık karşılaştırma: iş kazası sayıları (geçen yıl / bu yıl)
-    {
-      const sl = yeniSlayt();
-      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `Aylık İş Kazası Sayıları: ${y1.yil} / ${y0.yil}`);
-      sl.addChart(pptx.charts.BAR, [
-        { name: String(y1.yil), labels: kdPptx.aylar, values: kdPptx.aylikKaza.onceki },
-        { name: String(y0.yil), labels: kdPptx.aylar, values: kdPptx.aylikKaza.bu }
-      ], {
-        x: M, y: 1.4, w: SW - 2 * M, h: 5.3,
-        barDir: 'col', barGrouping: 'clustered', chartColors: ['94A3B8', R.birincil],
-        showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 11, dataLabelFormatCode: '0',
-        catAxisLabelFontSize: 11, valAxisLabelFontSize: 11, valAxisMinVal: 0, valAxisLabelFormatCode: '0',
-        valGridLine: { color: 'E5E7EB', size: 0.5 }, catGridLine: { style: 'none' },
-        showLegend: true, legendPos: 'b', legendFontSize: 12
-      });
+      sl.addText('Yıllar aynı dönem (Ocak–' + kdPptx.sonAyAdi + ') için karşılaştırılmıştır.', { x: 7.4, y: 6.72, w: SW - 7.4 - M, h: 0.35, fontSize: 9, italic: true, color: R.soluk, align: 'right' });
     }
 
     // 3-4) Dağılımlar: olay türleri / yaralanma türleri, yaralanan uzuv / bölüm
