@@ -1,9 +1,10 @@
 // İSG Kurulu veri modeli: Toplantılar ve Kararlar.
 
 const TOPLANTI_DURUMLARI = ['Planlandı', 'Tamamlandı', 'Ertelendi', 'İptal'];
-const KARAR_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Tamamlandı', 'Kapalı', 'İptal'];
-// Kullanıcı isteği: karar durumuna "Tamamlandı" eklendi — "Kapalı" ile aynı şekilde kapanmış sayılır
-// (devreden listesine girmez, kapanış tarihi atanır).
+const KARAR_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Tamamlandı', 'İptal'];
+// Kullanıcı isteği: "Kapalı" yerine "Tamamlandı". Eski kayıtlardaki "Kapalı" değeri de kapanmış sayılır
+// ve "Tamamlandı" olarak gösterilir (bkz. kararDurumGoster); devreden listesine girmez, kapanış tarihi atanır.
+function kararDurumGoster(durum) { return durum === 'Kapalı' ? 'Tamamlandı' : durum; }
 function kararKapaliMi(durum) { return durum === 'Kapalı' || durum === 'Tamamlandı'; }
 const GUNDEM_TURLERI = ['Genel', 'İş Kazası', 'Risk', 'Uygunsuzluk', 'Eğitim', 'Yasal Şart', 'Yüklenici', 'Acil Durum', 'Diğer'];
 

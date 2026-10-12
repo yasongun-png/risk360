@@ -448,7 +448,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
 
   kararlar.forEach(k => {
     const satir = document.createElement('tr');
-    const tamamlandiRozeti = k.durum === 'Kapalı' ? ' <span style="font-size:10px; color:var(--metin-soluk);">(Tamamlandı)</span>' : '';
+    const tamamlandiRozeti = '';
     // Kullanıcı isteği: "İSG kuruluna diğer modüllerden gelen bilgileri
     // silebileyim veya yeniden düzenleyebileyim" — Olay/Kaza modülünden bir
     // olayın (örn. ramak kala) termin/sorumlu girilerek "karar-benzeri" hale
@@ -819,7 +819,7 @@ function olayModalAc(olay) {
   bolumButonlariCiz('olaySorumluBolumButonlari', 'olaySorumlu', 'tekli');
   document.getElementById('olayTermin').value = olay ? (olay.termin || '') : '';
   document.getElementById('olayOncelik').innerHTML = ['Düşük', 'Normal', 'Yüksek', 'Kritik'].map(o => `<option ${olay && olay.oncelik === o ? 'selected' : ''}>${o}</option>`).join('');
-  document.getElementById('olayDurum').innerHTML = KARAR_DURUMLARI.map(d => `<option ${olay && olay.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('olayDurum').innerHTML = KARAR_DURUMLARI.map(d => `<option ${olay && kararDurumGoster(olay.durum) === d ? 'selected' : ''}>${d}</option>`).join('');
   if (!olay) document.getElementById('olayOncelik').value = 'Normal';
 
   document.getElementById('olayOy').value = olay ? (olay.oy || '') : '';
@@ -1035,7 +1035,7 @@ function kararModalAc(karar) {
   bolumButonlariCiz('kararSorumluBolumButonlari', 'kararSorumlu', 'tekli');
   document.getElementById('kararTermin').value = karar ? karar.termin : '';
   document.getElementById('kararOncelik').innerHTML = ['Düşük', 'Normal', 'Yüksek', 'Kritik'].map(o => `<option ${karar && karar.oncelik === o ? 'selected' : ''}>${o}</option>`).join('');
-  document.getElementById('kararDurum').innerHTML = KARAR_DURUMLARI.map(d => `<option ${karar && karar.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('kararDurum').innerHTML = KARAR_DURUMLARI.map(d => `<option ${karar && kararDurumGoster(karar.durum) === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('kararKapanisTarihi').value = karar ? karar.kapanisTarihi : '';
   document.getElementById('kararKanit').value = karar ? karar.kanit : '';
   document.getElementById('kararAksiyonNotu').value = karar ? (karar.aksiyonNotu || '') : '';

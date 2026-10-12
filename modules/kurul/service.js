@@ -43,7 +43,7 @@ function denetimTemizle() {
 function _kararZenginlestir(karar) {
   const gecikmisMi = kararGecikmisMi(karar, _bugun());
   return Object.assign({}, karar, {
-    durumGoruntu: gecikmisMi ? 'Gecikmiş' : karar.durum
+    durumGoruntu: gecikmisMi ? 'Gecikmiş' : kararDurumGoster(karar.durum)
   });
 }
 
