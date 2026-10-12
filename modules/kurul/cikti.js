@@ -249,15 +249,16 @@ async function _taramaElemanlariUret(toplanti) {
   }
   if (!hepsi.length) return [];
   const elemanlar = [];
-  hepsi.forEach((s, i) => {
-    if (i > 0) elemanlar.push(new docx.Paragraph({ children: [new docx.PageBreak()] }));
-    const oran = Math.min(690 / s.w, 950 / s.h);
+  // Sayfa sonu ayrı bir boş paragrafla değil pageBreakBefore ile verilir: aksi halde önceki içerik sayfayı
+  // doldurduğunda sayfa sonu paragrafı yeni sayfaya düşüp BOŞ sayfa oluşturuyordu.
+  hepsi.forEach((s) => {
+    const oran = Math.min(690 / s.w, 940 / s.h);
     elemanlar.push(new docx.Paragraph({
+      pageBreakBefore: true,
       alignment: docx.AlignmentType.CENTER,
       children: [new docx.ImageRun({ data: s.bytes, transformation: { width: Math.round(s.w * oran), height: Math.round(s.h * oran) } })]
     }));
   });
-  elemanlar.push(new docx.Paragraph({ children: [new docx.PageBreak()] }));
   return elemanlar;
 }
 
@@ -1080,12 +1081,11 @@ async function kurulRaporuWordOlustur() {
 
     H('12) İSG Kurulları İle İlgili Yasal Düzenleme'),
     ...YONETMELIK_MADDELERI.flatMap(maddeParagraflari),
-    BR(),
 
     // Taranmış imzalı toplantı daveti + imza listesi (yüklenmişse): Yasal Düzenleme'den sonra.
     ...taramaElemanlari,
 
-    H('13) İmza Listesi'),
+    new docx.Paragraph({ text: '13) İmza Listesi', heading: docx.HeadingLevel.HEADING_2, pageBreakBefore: true }),
     katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
   ];
 
