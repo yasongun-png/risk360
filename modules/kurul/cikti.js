@@ -208,6 +208,12 @@ async function _oyEksikKontrolVeUyar(yeni, devreden) {
 // sayfaları pdf.js ile görüntüye çevrilir; fotoğraf ise tek sayfadır.
 async function _taramaSayfalari(referans) {
   if (!referans) return [];
+  // Çok sayfalı tarama "fotoref:a|fotoref:b" biçiminde saklanır (bkz. toplanti-ui.js _ktTaramaDosyasiIsle).
+  if (String(referans).includes('|')) {
+    const sonuc = [];
+    for (const r of String(referans).split('|')) sonuc.push(...await _taramaSayfalari(r));
+    return sonuc;
+  }
   const dataUrl = await fotoBuyukCoz(referans);
   if (!dataUrl) return [];
   const pngBayt = tuval => new Promise(coz => tuval.toBlob(b => b.arrayBuffer().then(buf => coz(new Uint8Array(buf))), 'image/png'));

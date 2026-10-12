@@ -355,7 +355,7 @@ function _ktBelgeOnizlemeCiz(onek, alan) {
   const referans = toplanti && toplanti[alan];
   document.getElementById(onek + 'Onizleme').innerHTML = belgeOnizlemeHtml(onek, !!referans);
   if (referans) {
-    document.getElementById(onek + 'AcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(referans); });
+    document.getElementById(onek + 'AcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(String(referans).split('|')[0]); });
     document.getElementById(onek + 'KaldirBtn').addEventListener('click', () => {
       toplantiGuncelle(_toplantiId, Object.assign({}, toplanti, { [alan]: '' }));
       _ktBelgeOnizlemeCiz(onek, alan);
@@ -363,12 +363,42 @@ function _ktBelgeOnizlemeCiz(onek, alan) {
   }
 }
 
-function _ktBelgeKur(onek, alanId, baslik, alan) {
+// Taranmış davet/imza listesi: PDF ise her sayfa pdf.js ile JPEG'e çevrilip (Firestore alan sınırına sığacak
+// şekilde sıkıştırılarak) ayrı kaydedilir; alanın değeri "fotoref:a|fotoref:b" biçiminde sayfa listesidir.
+async function _ktTaramaDosyasiIsle(dosya, firmaSlug) {
+  if (dosya.type !== 'application/pdf') return belgeDosyasiIsle(dosya, firmaSlug);
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF işleyici yüklenemedi (internet bağlantısını kontrol edin).');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await dosya.arrayBuffer()) }).promise;
+  if (pdf.numPages > 6) throw new Error('PDF en fazla 6 sayfa olabilir.');
+  const SINIR = 900000;
+  const referanslar = [];
+  for (let no = 1; no <= pdf.numPages; no++) {
+    const sayfa = await pdf.getPage(no);
+    let olcek = 1.6, kalite = 0.75, dataUrl = '';
+    for (let deneme = 0; deneme < 5; deneme++) {
+      const gorunum = sayfa.getViewport({ scale: olcek });
+      const tuval = document.createElement('canvas');
+      tuval.width = Math.round(gorunum.width); tuval.height = Math.round(gorunum.height);
+      const c = tuval.getContext('2d');
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, tuval.width, tuval.height);
+      await sayfa.render({ canvasContext: c, viewport: gorunum }).promise;
+      dataUrl = tuval.toDataURL('image/jpeg', kalite);
+      if (dataUrl.length < SINIR) break;
+      olcek *= 0.8; kalite = Math.max(0.5, kalite - 0.08);
+    }
+    if (dataUrl.length >= SINIR) throw new Error(no + '. sayfa çok büyük; daha düşük çözünürlükte tarayın.');
+    referanslar.push(await fotoBuyukKaydet(dataUrl, firmaSlug || ''));
+  }
+  return referanslar.join('|');
+}
+
+function _ktBelgeKur(onek, alanId, baslik, alan, taramaMi) {
   document.getElementById(alanId).innerHTML = belgeYukleyiciHtml(onek, baslik);
   belgeYukleyiciBagla(onek, async dosya => {
     try {
       const firma = aktifFirmaGetir();
-      const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
+      const referans = taramaMi ? await _ktTaramaDosyasiIsle(dosya, firma ? firma.slug : '') : await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
       const mevcut = toplantiIdIleGetirRepo(_toplantiId);
       toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, { [alan]: referans }));
       _ktBelgeOnizlemeCiz(onek, alan);
@@ -381,8 +411,8 @@ function _ktBelgeKur(onek, alanId, baslik, alan) {
 
 function _ktBelgeAlaniniKur() {
   _ktBelgeKur('ktBelge', 'ktBelgeAlani', 'İmzalı Kurul Tutanağı', 'imzaliBelgeUrl');
-  _ktBelgeKur('ktDavet', 'ktDavetAlani', 'İmzalı Toplantı Daveti (taranmış)', 'imzaliDavetUrl');
-  _ktBelgeKur('ktImza', 'ktImzaAlani', 'İmzalı İmza Listesi (taranmış)', 'imzaliImzaListesiUrl');
+  _ktBelgeKur('ktDavet', 'ktDavetAlani', 'İmzalı Toplantı Daveti (taranmış)', 'imzaliDavetUrl', true);
+  _ktBelgeKur('ktImza', 'ktImzaAlani', 'İmzalı İmza Listesi (taranmış)', 'imzaliImzaListesiUrl', true);
 }
 
 function gundemListesiniCiz(toplanti) {

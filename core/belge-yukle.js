@@ -34,10 +34,10 @@ async function belgeDosyasiIsle(dosya, firmaSlug) {
   const pdfMi = dosya.type === 'application/pdf';
   const fotoMi = dosya.type.startsWith('image/');
   if (!pdfMi && !fotoMi) throw new Error('Lütfen bir PDF dosyası veya fotoğraf seçin.');
-  // Firestore belge başına ~1MB sınırı var; base64 kodlama ham boyutu ~%37
-  // büyüttüğünden 2MB üzerindeki PDF'ler güvenli aralığın dışında kalır.
-  // Fotoğraflar zaten fotoSikistir ile küçültüldüğünden bu sınıra takılmaz.
-  if (pdfMi && dosya.size > 2 * 1024 * 1024) throw new Error('PDF dosyası çok büyük (maks. 2 MB). Lütfen daha küçük bir dosya seçin.');
+  // Firestore'da tek alan ~1 MB (1.048.487 bayt) ile sınırlı; base64 kodlama ham boyutu ~%37
+  // büyüttüğünden ~700 KB üzeri PDF'ler kaydedilemez ("The value of property deger is longer than
+  // 1048487 bytes" hatası). Fotoğraflar fotoSikistir ile küçültüldüğünden bu sınıra takılmaz.
+  if (pdfMi && dosya.size > 700 * 1024) throw new Error('PDF dosyası çok büyük (maks. ~700 KB). Daha küçük/sıkıştırılmış bir PDF veya fotoğraf seçin.');
   const dataUrl = pdfMi ? await _belgePdfDataUrlOku(dosya) : await fotoSikistir(dosya, 1600, 0.7);
   return fotoBuyukKaydet(dataUrl, firmaSlug || '');
 }
