@@ -457,6 +457,66 @@ function _yillikTrendGrafikCiz(baslik, etiketler, degerler, renk, soluk) {
   return { dataUrl, veri, genislik: 600, yukseklik: Math.round(600 * Y / G) };
 }
 
+// İki pasta grafiği yan yana tek görselde (Word): kullanıcı isteği — daha az, daha düzgün grafik.
+// Her dilimde yüzde; sağda adet/etiket göstergesi (en çok 6 dilim, kalanı "Diğer").
+function _ikiPastaGrafikCiz(baslikSol, kayitSol, baslikSag, kayitSag) {
+  const G = 1400, Y = 620;
+  const RENKLER = ['#1d4ed8', '#dc2626', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#94a3b8'];
+  const tuval = document.createElement('canvas');
+  tuval.width = G; tuval.height = Y;
+  const c = tuval.getContext('2d');
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, G, Y);
+  const grupla = (liste) => {
+    const ilk = liste.slice(0, 6);
+    const kalan = liste.slice(6).reduce((t, k) => t + k.sayi, 0);
+    return kalan ? ilk.concat([{ etiket: 'Diğer', sayi: kalan }]) : ilk;
+  };
+  const ciz = (x0, baslik, liste) => {
+    c.textAlign = 'left'; c.fillStyle = '#0f172a'; c.font = 'bold 34px Arial';
+    c.fillText(baslik, x0 + 20, 56);
+    c.fillStyle = '#94a3b8'; c.fillRect(x0 + 20, 76, 60, 5);
+    const kayitlar = grupla(liste);
+    const toplam = kayitlar.reduce((t, k) => t + k.sayi, 0);
+    if (!toplam) { c.fillStyle = '#6b7280'; c.font = '26px Arial'; c.fillText('Kayıt bulunmamaktadır.', x0 + 20, 200); return; }
+    const cx = x0 + 190, cy = 340, r = 160;
+    let aci = -Math.PI / 2;
+    kayitlar.forEach((k, i) => {
+      const dilim = (k.sayi / toplam) * Math.PI * 2;
+      c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, r, aci, aci + dilim); c.closePath();
+      c.fillStyle = RENKLER[i % RENKLER.length]; c.fill();
+      c.strokeStyle = '#ffffff'; c.lineWidth = 4; c.stroke();
+      if (k.sayi / toplam >= 0.08) {
+        const orta = aci + dilim / 2;
+        c.fillStyle = '#ffffff'; c.font = 'bold 26px Arial'; c.textAlign = 'center';
+        c.fillText('%' + Math.round((k.sayi / toplam) * 100), cx + Math.cos(orta) * r * 0.62, cy + Math.sin(orta) * r * 0.62 + 9);
+      }
+      aci += dilim;
+    });
+    c.textAlign = 'left';
+    kayitlar.forEach((k, i) => {
+      const y = 170 + i * 62;
+      c.fillStyle = RENKLER[i % RENKLER.length]; c.fillRect(x0 + 390, y, 28, 28);
+      c.fillStyle = '#334155'; c.font = '26px Arial';
+      let etiket = k.etiket;
+      while (c.measureText(etiket).width > 200 && etiket.length > 4) etiket = etiket.slice(0, -2);
+      if (etiket !== k.etiket) etiket = etiket.trimEnd() + '…';
+      c.fillText(etiket, x0 + 430, y + 24);
+      c.fillStyle = '#0f172a'; c.font = 'bold 26px Arial'; c.textAlign = 'right';
+      c.fillText(String(k.sayi), x0 + 680, y + 24);
+      c.textAlign = 'left';
+    });
+  };
+  ciz(0, baslikSol, kayitSol);
+  ciz(700, baslikSag, kayitSag);
+  c.strokeStyle = '#e2e8f0'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(700, 30); c.lineTo(700, Y - 30); c.stroke();
+  const dataUrl = tuval.toDataURL('image/png');
+  const ikili = atob(dataUrl.split(',')[1]);
+  const veri = new Uint8Array(ikili.length);
+  for (let i = 0; i < ikili.length; i++) veri[i] = ikili.charCodeAt(i);
+  return { dataUrl, veri, genislik: 600, yukseklik: Math.round(600 * Y / G) };
+}
+
 // Yatay çubuk grafik (dağılımlar için) — canvas, senkron.
 function _yatayCubukGrafikCiz(baslik, kayitlar, renk) {
   const G = 1400, SATIR = 62, UST = 100, ALT = 30, SOL = 560, SAG = 140;
@@ -862,13 +922,7 @@ async function kurulRaporuWordOlustur() {
     const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
     const yilEtiketleri = kd.besYil.map(y => String(y.yil));
     const grafikKaza = _yillikTrendGrafikCiz(`Yıllara Göre İş Kazası Sayısı (Ocak–${kd.sonAyAdi})`, yilEtiketleri, kd.besYil.map(y => y.kazaSayisi), '#1d4ed8', '#c7d2e5');
-    const grafikKayip = _yillikTrendGrafikCiz(`Yıllara Göre Toplam İş Günü Kaybı (Ocak–${kd.sonAyAdi})`, yilEtiketleri, kd.besYil.map(y => y.toplamKayipGun), '#dc2626', '#e6c9c9');
-    const dagilimGrafikleri = [
-      _yatayCubukGrafikCiz(`${y0.yil} Olay Türlerine Göre Dağılım`, kd.olayTurleri, '#1d4ed8'),
-      _yatayCubukGrafikCiz(`${y0.yil} Kaza / Yaralanma Türleri`, kd.yaralanmaTurleri, '#dc2626'),
-      _pastaGrafikCiz(`${y0.yil} Yaralanan Uzuv Dağılımı`, kd.yaralananUzuvlar),
-      _pastaGrafikCiz(`${y0.yil} Bölüm / Birim Dağılımı`, kd.bolumler)
-    ];
+    const dagilimResmi = _ikiPastaGrafikCiz(`${y0.yil} Kaza / Yaralanma Türleri`, kd.yaralanmaTurleri, `${y0.yil} Yaralanan Uzuv`, kd.yaralananUzuvlar);
     return [
       H(`11) İş Kazası İstatistikleri — 5 Yıllık Karşılaştırma (Ocak–${kd.sonAyAdi})`),
       P(donemNotu, { italics: true }),
@@ -882,14 +936,13 @@ async function kurulRaporuWordOlustur() {
       P(kazasiz, { bold: true }),
       P(' ', { spacing: { after: 100 } }),
       resim(grafikKaza),
-      resim(grafikKayip),
       BR(),
-      H('Kaza Türleri ve Dağılımlar'),
-      resim(dagilimGrafikleri[0]),
-      resim(dagilimGrafikleri[1]),
-      BR(),
-      resim(dagilimGrafikleri[2]),
-      resim(dagilimGrafikleri[3]),
+      H('Kaza Dağılımı'),
+      resim(dagilimResmi),
+      ...(kd.bolumler.length ? [
+        P('Bölüm / Birim Dağılımı', { bold: true }),
+        table(['Bölüm / Birim', 'Adet'], kd.bolumler.map(b => [b.etiket, String(b.sayi)]))
+      ] : []),
       ...(kd.kazalarTumu.length ? [
         P(' ', { spacing: { after: 120 } }),
         P(`${kd.yil} Yılı İş Kazaları ve Açıklamaları (Ocak–${kd.sonAyAdi})`, { bold: true }),
@@ -2087,62 +2140,60 @@ async function pptxOlustur() {
         [hucre('Kayıp Günlü Kaza', { align: 'left', bold: true, fill: { color: R.bg } }), ...kdPptx.besYil.map((y, i) => hucre(String(y.lti), { fill: { color: R.bg }, bold: i === 4 }))],
         [hucre('Toplam İş Günü Kaybı', { align: 'left', bold: true }), ...kdPptx.besYil.map((y, i) => hucre(String(y.toplamKayipGun), { bold: i === 4, color: i === 4 ? 'DC2626' : R.baslik }))]
       ], { x: M, y: 1.35, w: tabloW, colW: [tabloW * 0.25, ...yillarPptx.map(() => tabloW * 0.15)], fontSize: 12, rowH: 0.36, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
-      const grafikW = (SW - 2 * M - 0.3) / 2;
-      const ciz = (x, baslik, degerler, renk, soluk) => {
-        sl.addText(baslik, { x, y: 3.0, w: grafikW, h: 0.32, fontSize: 12, bold: true, color: R.baslik, align: 'center' });
-        sl.addChart(pptx.charts.BAR, [{ name: baslik, labels: yillarPptx, values: degerler }], {
-          x, y: 3.3, w: grafikW, h: 3.3,
-          barDir: 'col', barGapWidthPct: 60,
-          chartColors: [soluk, soluk, soluk, soluk, renk],
-          showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 14, dataLabelFontBold: true, dataLabelColor: '334155', dataLabelFormatCode: '0',
-          catAxisLabelFontSize: 12, valAxisHidden: true, valAxisMinVal: 0,
-          valGridLine: { style: 'none' }, catGridLine: { style: 'none' }, showLegend: false
-        });
-      };
-      ciz(M, 'İş Kazası Sayısı', kdPptx.besYil.map(y => y.kazaSayisi), R.birincil, 'C7D2E5');
-      ciz(M + grafikW + 0.3, 'Toplam İş Günü Kaybı', kdPptx.besYil.map(y => y.toplamKayipGun), 'DC2626', 'E6C9C9');
+      const baslikGrafik = `Yıllara Göre İş Kazası Sayısı (Ocak–${kdPptx.sonAyAdi})`;
+      sl.addText(baslikGrafik, { x: M, y: 3.0, w: SW - 2 * M, h: 0.32, fontSize: 13, bold: true, color: R.baslik, align: 'center' });
+      sl.addChart(pptx.charts.BAR, [{ name: baslikGrafik, labels: yillarPptx, values: kdPptx.besYil.map(y => y.kazaSayisi) }], {
+        x: M + 1.5, y: 3.3, w: SW - 2 * M - 3, h: 3.35,
+        barDir: 'col', barGapWidthPct: 70,
+        chartColors: ['C7D2E5', 'C7D2E5', 'C7D2E5', 'C7D2E5', R.birincil],
+        showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 16, dataLabelFontBold: true, dataLabelColor: '334155', dataLabelFormatCode: '0',
+        catAxisLabelFontSize: 13, valAxisHidden: true, valAxisMinVal: 0,
+        valGridLine: { style: 'none' }, catGridLine: { style: 'none' }, showLegend: false
+      });
       const kazasizMetni = kdPptx.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kdPptx.sonKazaTarihi)}  ·  Kazasız geçen gün: ${kdPptx.kazasizGun}`;
       sl.addText(kazasizMetni, { x: M, y: 6.72, w: 7.2, h: 0.35, fontSize: 12, bold: true, color: R.birincil });
       sl.addText('Yıllar aynı dönem (Ocak–' + kdPptx.sonAyAdi + ') için karşılaştırılmıştır.', { x: 7.4, y: 6.72, w: SW - 7.4 - M, h: 0.35, fontSize: 9, italic: true, color: R.soluk, align: 'right' });
     }
 
-    // 3-4) Dağılımlar: olay türleri / yaralanma türleri, yaralanan uzuv / bölüm
-    const dagilimSlaydi = (baslik, sol, sag) => {
+    // 2) Dağılım: kaza/yaralanma türü ve yaralanan uzuv (pasta) + bölüm/birim listesi — tek slayt
+    {
       const sl = yeniSlayt();
-      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', baslik);
-      const grafikW = (SW - 2 * M - 0.3) / 2;
-      [[M, sol], [M + grafikW + 0.3, sag]].forEach(([x, g]) => {
-        sl.addText(g.baslik, { x, y: 1.3, w: grafikW, h: 0.35, fontSize: 13, bold: true, color: R.baslik, align: 'center' });
-        if (!g.veri.length) {
-          sl.addShape(pptx.ShapeType.roundRect, { x, y: 1.75, w: grafikW, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-          sl.addText('Kayıt bulunmamaktadır.', { x, y: 1.75, w: grafikW, h: 0.9, fontSize: 12, color: R.soluk, align: 'center', valign: 'middle' });
+      kartBasligi(sl, 'İSG İSTATİSTİKLERİ', `${kdPptx.yil} Yılı Kaza Dağılımı (Ocak–${kdPptx.sonAyAdi})`);
+      const PASTA_RENKLERI = ['1D4ED8', 'DC2626', '16A34A', 'F59E0B', '7C3AED', '0891B2', '94A3B8'];
+      const kolonW = (SW - 2 * M - 0.6) / 3;
+      const pastaGrup = (liste) => {
+        const ilk = liste.slice(0, 6);
+        const kalan = liste.slice(6).reduce((t, k) => t + k.sayi, 0);
+        return kalan ? ilk.concat([{ etiket: 'Diğer', sayi: kalan }]) : ilk;
+      };
+      [[M, 'Kaza / Yaralanma Türleri', kdPptx.yaralanmaTurleri], [M + kolonW + 0.3, 'Yaralanan Uzuv', kdPptx.yaralananUzuvlar]].forEach(([x, baslik, ham]) => {
+        sl.addText(baslik, { x, y: 1.3, w: kolonW, h: 0.35, fontSize: 13, bold: true, color: R.baslik, align: 'center' });
+        const veri = pastaGrup(ham);
+        if (!veri.length) {
+          sl.addText('Kayıt bulunmamaktadır.', { x, y: 1.8, w: kolonW, h: 0.6, fontSize: 12, color: R.soluk, align: 'center' });
           return;
         }
-        if (g.pasta) {
-          const PASTA_RENKLERI = ['1D4ED8', 'DC2626', '16A34A', 'F59E0B', '7C3AED', '0891B2', 'DB2777', '65A30D', 'EA580C', '475569'];
-          sl.addChart(pptx.charts.PIE, [{ name: g.baslik, labels: g.veri.map(v => v.etiket), values: g.veri.map(v => v.sayi) }], {
-            x, y: 1.65, w: grafikW, h: 5.0,
-            chartColors: PASTA_RENKLERI.slice(0, g.veri.length),
-            showPercent: true, showValue: false, showLabel: false, dataLabelColor: 'FFFFFF', dataLabelFontSize: 12, dataLabelFormatCode: '0%',
-            showLegend: true, legendPos: 'r', legendFontSize: 11
-          });
-          return;
-        }
-        sl.addChart(pptx.charts.BAR, [{ name: g.baslik, labels: g.veri.map(v => v.etiket), values: g.veri.map(v => v.sayi) }], {
-          x, y: 1.65, w: grafikW, h: 5.0,
-          barDir: 'bar', chartColors: [g.renk], catAxisOrientation: 'maxMin',
-          showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 11, dataLabelFormatCode: '0',
-          catAxisLabelFontSize: 10, valAxisHidden: true, valAxisMinVal: 0, valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
-          showLegend: false
+        sl.addChart(pptx.charts.PIE, [{ name: baslik, labels: veri.map(v => v.etiket), values: veri.map(v => v.sayi) }], {
+          x, y: 1.7, w: kolonW, h: 4.9,
+          chartColors: PASTA_RENKLERI.slice(0, veri.length),
+          showPercent: true, showValue: false, showLabel: false, dataLabelColor: 'FFFFFF', dataLabelFontSize: 12, dataLabelFontBold: true, dataLabelFormatCode: '0%',
+          showLegend: true, legendPos: 'b', legendFontSize: 11
         });
       });
-    };
-    dagilimSlaydi(`${kdPptx.yil} Yılı Kaza Türleri ve Dağılımlar (Ocak–${kdPptx.sonAyAdi})`,
-      { baslik: 'Olay Türlerine Göre', veri: kdPptx.olayTurleri, renk: R.birincil },
-      { baslik: 'Kaza / Yaralanma Türleri', veri: kdPptx.yaralanmaTurleri, renk: 'DC2626' });
-    dagilimSlaydi(`${kdPptx.yil} Yılı Yaralanan Uzuv ve Bölüm Dağılımları (Ocak–${kdPptx.sonAyAdi})`,
-      { baslik: 'Yaralanan Uzuv', veri: kdPptx.yaralananUzuvlar, renk: '7C3AED', pasta: true },
-      { baslik: 'Bölüm / Birim', veri: kdPptx.bolumler, renk: '0F766E', pasta: true });
+      const xBolum = M + 2 * (kolonW + 0.3);
+      sl.addText('Bölüm / Birim', { x: xBolum, y: 1.3, w: kolonW, h: 0.35, fontSize: 13, bold: true, color: R.baslik, align: 'center' });
+      if (kdPptx.bolumler.length) {
+        sl.addTable([
+          [baslikHucre('Bölüm / Birim', 'left'), baslikHucre('Adet')],
+          ...kdPptx.bolumler.map((b, i) => [
+            { text: b.etiket, options: { color: R.baslik, fill: { color: i % 2 ? R.bg : 'FFFFFF' } } },
+            { text: String(b.sayi), options: { color: R.birincil, bold: true, align: 'center', fill: { color: i % 2 ? R.bg : 'FFFFFF' } } }
+          ])
+        ], { x: xBolum, y: 1.75, w: kolonW, colW: [kolonW * 0.78, kolonW * 0.22], fontSize: 11, rowH: 0.36, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+      } else {
+        sl.addText('Kayıt bulunmamaktadır.', { x: xBolum, y: 1.8, w: kolonW, h: 0.6, fontSize: 12, color: R.soluk, align: 'center' });
+      }
+    }
 
     // 5) Tüm iş kazaları ve açıklamaları (kullanıcı isteği) — her slaytta 4 kaza.
     const KAZA_SATIRI_SLAYT = 4;
