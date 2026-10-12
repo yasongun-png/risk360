@@ -75,11 +75,16 @@
 
     <div class="dashboard-ust" style="margin-top:24px;">
       <h3 style="margin:0;">Çalışanların Görüş ve Önerileri</h3>
-      <button type="button" class="birincil" id="calisanGorusKaydetBtn" style="width:auto;">Kaydet</button>
+      <button type="button" class="birincil" id="calisanGorusEkleBtn" style="width:auto;">+ Çalışan Görüşü Ekle</button>
     </div>
-    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 8px;">Rapor, PPTX ve tutanak çıktılarında "Çalışanların Görüş ve Önerileri" iki sütunlu tablo olarak yer alır: her satır bir maddedir. Satırı <b>konu | konuşulanlar, kararlar, takip yöntemi</b> biçiminde yazarsanız "|" den sonrası ikinci sütuna geçer; "|" yoksa ikinci sütun boş kalır (toplantıda doldurulur). Boş bırakılırsa varsayılan metin basılır.</p>
-    <textarea id="calisanGorusMetni" rows="5" placeholder="Çalışanların bu toplantıda dile getirdiği görüş ve önerileri yazın..."></textarea>
-    <span id="calisanGorusDurum" style="font-size:12px; color:var(--metin-soluk);"></span>
+    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 8px;">Çalışanların bu toplantıda dile getirdiği görüş ve öneriler. Rapor, PPTX ve tutanak çıktılarında "Konu | Konuşulanlar, Kararlar, Takip Yöntemi" tablosu olarak yer alır. Hiç eklenmezse varsayılan metin basılır.</p>
+    <div class="tablo-scroll">
+      <table class="veri-tablosu">
+        <thead><tr><th style="width:150px;">İşlemler</th><th style="width:60px;">No</th><th>Konu</th><th>Konuşulanlar, Kararlar, Takip Yöntemi</th></tr></thead>
+        <tbody id="calisanGorusTabloGovde"></tbody>
+      </table>
+    </div>
+    <div class="bos-durum" id="calisanGorusBosDurum"></div>
 
     <div class="dashboard-ust" style="margin-top:24px;">
       <h3 style="margin:0;">Kararlar</h3>
@@ -428,6 +433,24 @@
   </div>
 
   <!-- İMZA MODAL -->
+  <div class="modal-katman" id="calisanGorusModalKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 id="calisanGorusModalBaslik">Çalışan Görüşü Ekle</h3>
+      <form id="calisanGorusForm">
+        <label for="calisanGorusKonu">Konu <span style="color:var(--metin-soluk); font-weight:400;">(çalışanın görüş / önerisi)</span></label>
+        <textarea id="calisanGorusKonu" rows="3" placeholder="Örn: Nitrik asit tesisinde ham su ve yangın suyu ana giriş vanalarına platform kurulması talebi."></textarea>
+        <div class="alan-hatasi" id="calisanGorusKonuHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <label for="calisanGorusTakip">Konuşulanlar, Kararlar, Takip Yöntemi <span style="color:var(--metin-soluk); font-weight:400;">(opsiyonel)</span></label>
+        <textarea id="calisanGorusTakip" rows="4" placeholder="Örn: İş talebi yenilenecek, kurul maddesi olarak eklendi."></textarea>
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="calisanGorusIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="calisanGorusKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <div class="modal-katman" id="imzaModalKatman">
     <div class="modal-kutu">
       <h3 id="imzaModalBaslik">Katılımcı Ekle</h3>
@@ -512,7 +535,7 @@
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=14"></script>
-  <script src="toplanti-ui.js?v=20"></script>
+  <script src="toplanti-ui.js?v=21"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

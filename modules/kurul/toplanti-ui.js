@@ -112,19 +112,11 @@ function toplantiDetaySayfasiniBaslat() {
   // Önerileri" başlığı var ama uygulamada giriş yöntemi yoktu (alan sadece
   // "Toplantıyı Düzenle" penceresinin en altındaydı) — toplantı sayfasında
   // kendi bölümüyle girilir.
-  const gorusKutusu = document.getElementById('calisanGorusMetni');
-  gorusKutusu.value = toplanti.calisanTemsilcisiGorusleri || '';
-  document.getElementById('calisanGorusKaydetBtn').addEventListener('click', () => {
-    const mevcut = toplantiIdIleGetirRepo(_toplantiId);
-    const sonuc = toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, {
-      katilimcilar: (mevcut.katilimcilar || []).join(', '),
-      calisanTemsilcisiGorusleri: gorusKutusu.value
-    }));
-    const durum = document.getElementById('calisanGorusDurum');
-    durum.textContent = sonuc.basarili ? 'Kaydedildi ✓' : 'Kaydedilemedi.';
-    setTimeout(() => { durum.textContent = ''; }, 2500);
-  });
-
+  calisanGorusleriniCiz();
+  document.getElementById('calisanGorusEkleBtn').addEventListener('click', () => calisanGorusModalAc(-1));
+  document.getElementById('calisanGorusKapatBtn').addEventListener('click', calisanGorusModalKapat);
+  document.getElementById('calisanGorusIptalBtn').addEventListener('click', calisanGorusModalKapat);
+  document.getElementById('calisanGorusForm').addEventListener('submit', calisanGorusFormGonderildi);
 
   // Uygunsuzlukların değerlendirmesi (otomatik hesap) — bkz. service.js
   // toplantiUygunsuzlukIstatistikleriHesapla.
@@ -543,6 +535,87 @@ function kararlariCiz() {
 }
 
 // ==================== OLAYLAR ====================
+
+// ==================== ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ ====================
+// Kullanıcı isteği: "Çalışan Görüşü Ekle" ile giriş alanı. Veri, çıktıların okuduğu aynı serbest metin alanında
+// (calisanTemsilcisiGorusleri) tutulur: her görüş bir satır, "konu | konuşulanlar, kararlar, takip" biçiminde
+// (bkz. cikti.js _gorusMaddeleri).
+let _duzenlenenGorusIndex = -1;
+
+function _calisanGorusListesi() {
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  const metin = String((toplanti && toplanti.calisanTemsilcisiGorusleri) || '').trim();
+  return metin ? _gorusMaddeleri(metin) : [];
+}
+
+function _calisanGorusKaydet(liste) {
+  const mevcut = toplantiIdIleGetirRepo(_toplantiId);
+  const temiz = t => String(t || '').replace(/[|\n\r]+/g, ' ').trim();
+  const metin = liste.map(g => temiz(g.gorus) + (temiz(g.konusulacak) ? ' | ' + temiz(g.konusulacak) : '')).join('\n');
+  return toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, {
+    katilimcilar: (mevcut.katilimcilar || []).join(', '),
+    calisanTemsilcisiGorusleri: metin
+  }));
+}
+
+function calisanGorusleriniCiz() {
+  const govde = document.getElementById('calisanGorusTabloGovde');
+  const bosDurum = document.getElementById('calisanGorusBosDurum');
+  const liste = _calisanGorusListesi();
+  govde.innerHTML = '';
+  if (!liste.length) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = 'Çalışan görüşü eklenmedi. "+ Çalışan Görüşü Ekle" ile ekleyebilirsiniz.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+  liste.forEach((g, i) => {
+    const satir = document.createElement('tr');
+    satir.innerHTML = `
+      <td style="white-space:nowrap;"><button class="tablo-buton" data-gorus-duzenle="${i}">Düzenle</button><button class="tablo-buton sil" data-gorus-sil="${i}">Sil</button></td>
+      <td>${i + 1}</td>
+      <td>${_ktKacir(g.gorus)}</td>
+      <td>${_ktKacir(g.konusulacak) || '-'}</td>
+    `;
+    govde.appendChild(satir);
+  });
+  govde.querySelectorAll('[data-gorus-duzenle]').forEach(btn => btn.addEventListener('click', () => calisanGorusModalAc(Number(btn.getAttribute('data-gorus-duzenle')))));
+  govde.querySelectorAll('[data-gorus-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!(await onayModali('Bu çalışan görüşünü silmek istediğinize emin misiniz?', 'Sil'))) return;
+    const yeni = _calisanGorusListesi();
+    yeni.splice(Number(btn.getAttribute('data-gorus-sil')), 1);
+    _calisanGorusKaydet(yeni);
+    calisanGorusleriniCiz();
+  }));
+}
+
+function calisanGorusModalAc(index) {
+  _duzenlenenGorusIndex = index;
+  const g = index >= 0 ? _calisanGorusListesi()[index] : null;
+  document.getElementById('calisanGorusModalBaslik').textContent = g ? 'Çalışan Görüşünü Düzenle' : 'Çalışan Görüşü Ekle';
+  document.getElementById('calisanGorusKonu').value = g ? g.gorus : '';
+  document.getElementById('calisanGorusTakip').value = g ? g.konusulacak : '';
+  document.getElementById('calisanGorusKonuHata').textContent = '';
+  document.getElementById('calisanGorusModalKatman').classList.add('acik');
+  document.getElementById('calisanGorusKonu').focus();
+}
+
+function calisanGorusModalKapat() {
+  document.getElementById('calisanGorusModalKatman').classList.remove('acik');
+  _duzenlenenGorusIndex = -1;
+}
+
+function calisanGorusFormGonderildi(e) {
+  e.preventDefault();
+  const gorus = document.getElementById('calisanGorusKonu').value.trim();
+  if (!gorus) { document.getElementById('calisanGorusKonuHata').textContent = 'Konu zorunludur.'; return; }
+  const liste = _calisanGorusListesi();
+  const kayit = { gorus, konusulacak: document.getElementById('calisanGorusTakip').value.trim() };
+  if (_duzenlenenGorusIndex >= 0 && liste[_duzenlenenGorusIndex]) liste[_duzenlenenGorusIndex] = kayit; else liste.push(kayit);
+  _calisanGorusKaydet(liste);
+  calisanGorusModalKapat();
+  calisanGorusleriniCiz();
+}
 
 // ==================== OLAYDAN KARARA AKTARMA ====================
 // Düzenle ile "yükseltilmiş" otomatik olay farklı bir id alsa da (kaynakKazaId) aynı
