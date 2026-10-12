@@ -1085,8 +1085,11 @@ async function kurulRaporuWordOlustur() {
     // Taranmış imzalı toplantı daveti + imza listesi (yüklenmişse): Yasal Düzenleme'den sonra.
     ...taramaElemanlari,
 
-    new docx.Paragraph({ text: '13) İmza Listesi', heading: docx.HeadingLevel.HEADING_2, pageBreakBefore: true }),
-    katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
+    // Kullanıcı isteği: imzalı (taranmış) davet/imza listesi yüklendiyse sistemin kendi imza listesi sayfası eklenmez.
+    ...(taramaElemanlari.length ? [] : [
+      new docx.Paragraph({ text: '13) İmza Listesi', heading: docx.HeadingLevel.HEADING_2, pageBreakBefore: true }),
+      katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
+    ])
   ];
 
   const doc = new docx.Document({
