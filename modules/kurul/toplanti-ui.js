@@ -349,32 +349,40 @@ function bilgiKartiniCiz(toplanti) {
 
 // Kullanıcı isteği: "üretilen ör. kurul tutanağı imzalı pdf halini
 // yükleyebileyim" (bkz. core/belge-yukle.js).
-function _ktBelgeOnizlemeCiz() {
+// Genel belge alanı (PDF/fotoğraf): onek -> "<onek>Onizleme", alan -> toplantı kaydındaki alan adı.
+function _ktBelgeOnizlemeCiz(onek, alan) {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
-  document.getElementById('ktBelgeOnizleme').innerHTML = belgeOnizlemeHtml('ktBelge', !!(toplanti && toplanti.imzaliBelgeUrl));
-  if (toplanti && toplanti.imzaliBelgeUrl) {
-    document.getElementById('ktBelgeAcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(toplanti.imzaliBelgeUrl); });
-    document.getElementById('ktBelgeKaldirBtn').addEventListener('click', () => {
-      toplantiGuncelle(_toplantiId, Object.assign({}, toplanti, { imzaliBelgeUrl: '' }));
-      _ktBelgeOnizlemeCiz();
+  const referans = toplanti && toplanti[alan];
+  document.getElementById(onek + 'Onizleme').innerHTML = belgeOnizlemeHtml(onek, !!referans);
+  if (referans) {
+    document.getElementById(onek + 'AcLink').addEventListener('click', e => { e.preventDefault(); belgeDosyasiniAc(referans); });
+    document.getElementById(onek + 'KaldirBtn').addEventListener('click', () => {
+      toplantiGuncelle(_toplantiId, Object.assign({}, toplanti, { [alan]: '' }));
+      _ktBelgeOnizlemeCiz(onek, alan);
     });
   }
 }
 
-function _ktBelgeAlaniniKur() {
-  document.getElementById('ktBelgeAlani').innerHTML = belgeYukleyiciHtml('ktBelge', 'İmzalı Kurul Tutanağı');
-  belgeYukleyiciBagla('ktBelge', async dosya => {
+function _ktBelgeKur(onek, alanId, baslik, alan) {
+  document.getElementById(alanId).innerHTML = belgeYukleyiciHtml(onek, baslik);
+  belgeYukleyiciBagla(onek, async dosya => {
     try {
       const firma = aktifFirmaGetir();
       const referans = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
       const mevcut = toplantiIdIleGetirRepo(_toplantiId);
-      toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, { imzaliBelgeUrl: referans }));
-      _ktBelgeOnizlemeCiz();
+      toplantiGuncelle(_toplantiId, Object.assign({}, mevcut, { [alan]: referans }));
+      _ktBelgeOnizlemeCiz(onek, alan);
     } catch (hata) {
       alert(hata.message || 'Belge yüklenemedi.');
     }
   });
-  _ktBelgeOnizlemeCiz();
+  _ktBelgeOnizlemeCiz(onek, alan);
+}
+
+function _ktBelgeAlaniniKur() {
+  _ktBelgeKur('ktBelge', 'ktBelgeAlani', 'İmzalı Kurul Tutanağı', 'imzaliBelgeUrl');
+  _ktBelgeKur('ktDavet', 'ktDavetAlani', 'İmzalı Toplantı Daveti (taranmış)', 'imzaliDavetUrl');
+  _ktBelgeKur('ktImza', 'ktImzaAlani', 'İmzalı İmza Listesi (taranmış)', 'imzaliImzaListesiUrl');
 }
 
 function gundemListesiniCiz(toplanti) {

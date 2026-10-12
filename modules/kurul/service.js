@@ -131,7 +131,11 @@ function toplantiGuncelle(id, veriler) {
     faaliyetMetni: (veriler.faaliyetMetni || '').trim(),
     metrikler: (veriler.metrikler || '').trim(),
     calisanTemsilcisiGorusleri: (veriler.calisanTemsilcisiGorusleri || '').trim(),
-    notlar: (veriler.notlar || '').trim()
+    notlar: (veriler.notlar || '').trim(),
+    // Taranmış/imzalı belgeler (bkz. toplanti-ui.js _ktBelgeKur): gönderilmezse mevcut değer korunur.
+    imzaliBelgeUrl: veriler.imzaliBelgeUrl !== undefined ? veriler.imzaliBelgeUrl : (mevcut ? mevcut.imzaliBelgeUrl || '' : ''),
+    imzaliDavetUrl: veriler.imzaliDavetUrl !== undefined ? veriler.imzaliDavetUrl : (mevcut ? mevcut.imzaliDavetUrl || '' : ''),
+    imzaliImzaListesiUrl: veriler.imzaliImzaListesiUrl !== undefined ? veriler.imzaliImzaListesiUrl : (mevcut ? mevcut.imzaliImzaListesiUrl || '' : '')
   });
   _denetimEkle('toplanti', id, 'guncelle', mevcut, guncellenen);
   return { basarili: true, toplanti: guncellenen };

@@ -191,6 +191,10 @@ function toplantiOlustur(veriler) {
     // Kullanıcı isteği: "üretilen ör. kurul tutanağı imzalı pdf halini
     // yükleyebileyim" — ıslak imzalı/taranmış tutanak (bkz. core/belge-yukle.js).
     imzaliBelgeUrl: veriler.imzaliBelgeUrl || '',
+    // Kullanıcı isteği: imzalı toplantı daveti ve imza listesi taranıp yüklenir; Kurul Raporu'nda
+    // "Yasal Düzenleme"den hemen önce sayfa olarak yer alır (bkz. cikti.js _taramaElemanlariUret).
+    imzaliDavetUrl: veriler.imzaliDavetUrl || '',
+    imzaliImzaListesiUrl: veriler.imzaliImzaListesiUrl || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

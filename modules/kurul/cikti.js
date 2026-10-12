@@ -202,6 +202,59 @@ async function _oyEksikKontrolVeUyar(yeni, devreden) {
   return onayModali(`Aşağıdaki kararlarda oy dökümü (Kabul/Ret/Çekimser) girilmemiş:\n\n${satirlar.join('\n')}\n\nYine de rapor oluşturulsun mu?`, 'Yine de Oluştur');
 }
 
+// ==================== TARANMIŞ BELGE SAYFALARI (Word raporu) ====================
+// Kullanıcı isteği: imzalı toplantı daveti ve imza listesi taranıp yüklenir; raporda
+// "Yasal Düzenleme"den hemen önce her biri bir sayfa olarak yer alır. PDF ise tüm
+// sayfaları pdf.js ile görüntüye çevrilir; fotoğraf ise tek sayfadır.
+async function _taramaSayfalari(referans) {
+  if (!referans) return [];
+  const dataUrl = await fotoBuyukCoz(referans);
+  if (!dataUrl) return [];
+  const pngBayt = tuval => new Promise(coz => tuval.toBlob(b => b.arrayBuffer().then(buf => coz(new Uint8Array(buf))), 'image/png'));
+  if (dataUrl.startsWith('data:application/pdf')) {
+    if (typeof pdfjsLib === 'undefined') throw new Error('PDF görüntüleyici yüklenemedi (internet bağlantısını kontrol edin).');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const ikili = atob(dataUrl.split(',')[1]);
+    const veri = new Uint8Array(ikili.length);
+    for (let i = 0; i < ikili.length; i++) veri[i] = ikili.charCodeAt(i);
+    const pdf = await pdfjsLib.getDocument({ data: veri }).promise;
+    const sayfalar = [];
+    for (let no = 1; no <= pdf.numPages; no++) {
+      const sayfa = await pdf.getPage(no);
+      const gorunum = sayfa.getViewport({ scale: 1.6 });
+      const tuval = document.createElement('canvas');
+      tuval.width = gorunum.width; tuval.height = gorunum.height;
+      await sayfa.render({ canvasContext: tuval.getContext('2d'), viewport: gorunum }).promise;
+      sayfalar.push({ bytes: await pngBayt(tuval), w: gorunum.width, h: gorunum.height });
+    }
+    return sayfalar;
+  }
+  const olcu = await _fotoOlcuOku(dataUrl);
+  const bytes = await _wordGorselBaytlari(dataUrl);
+  return bytes && olcu ? [{ bytes, w: olcu.w, h: olcu.h }] : [];
+}
+
+// Her sayfa kendi sayfasında, tam sayfa (kenar boşlukları içinde, oran korunarak) görüntü olarak eklenir.
+async function _taramaElemanlariUret(toplanti) {
+  const hepsi = [];
+  for (const referans of [toplanti.imzaliDavetUrl, toplanti.imzaliImzaListesiUrl]) {
+    try { hepsi.push(...await _taramaSayfalari(referans)); }
+    catch (hata) { console.error('Taranmış belge eklenemedi:', hata); alert('Taranmış belge rapora eklenemedi: ' + (hata.message || hata)); }
+  }
+  if (!hepsi.length) return [];
+  const elemanlar = [];
+  hepsi.forEach((s, i) => {
+    if (i > 0) elemanlar.push(new docx.Paragraph({ children: [new docx.PageBreak()] }));
+    const oran = Math.min(690 / s.w, 950 / s.h);
+    elemanlar.push(new docx.Paragraph({
+      alignment: docx.AlignmentType.CENTER,
+      children: [new docx.ImageRun({ data: s.bytes, transformation: { width: Math.round(s.w * oran), height: Math.round(s.h * oran) } })]
+    }));
+  });
+  elemanlar.push(new docx.Paragraph({ children: [new docx.PageBreak()] }));
+  return elemanlar;
+}
+
 // ==================== 2) KURUL RAPORU (WORD) ====================
 
 // Kullanıcı isteği: "iş kazası verilerinde sıklık hızı, LTR vb. yerine aylık
@@ -952,6 +1005,8 @@ async function kurulRaporuWordOlustur() {
     ];
   })();
 
+  const taramaElemanlari = await _taramaElemanlariUret(toplanti);
+
   const kapakCocuklari = [
     kapakTablosu,
     BR(),
@@ -1016,6 +1071,9 @@ async function kurulRaporuWordOlustur() {
 
     // Kullanıcı isteği: iş kazası istatistikleri yasal düzenlemeden önce, raporun son bölümlerinde yer alsın.
     ...kazaDetayElemanlari,
+
+    // Taranmış imzalı toplantı daveti + imza listesi (yüklenmişse): Yasal Düzenleme'den hemen önce.
+    ...taramaElemanlari,
 
     H('12) İSG Kurulları İle İlgili Yasal Düzenleme'),
     ...YONETMELIK_MADDELERI.flatMap(maddeParagraflari),
