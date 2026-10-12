@@ -1030,6 +1030,31 @@ async function kurulRaporuWordOlustur() {
     ];
   })();
 
+  // Karar çalışma istatistikleri (Word) — bkz. service.js toplantiKararIstatistikleriHesapla.
+  const kararIstatistikElemanlari = (() => {
+    const ki = toplantiKararIstatistikleriHesapla(toplanti);
+    if (!ki) return [];
+    const oran = ki.oran == null ? '-' : '%' + ki.oran.toFixed(1).replace('.', ',');
+    return [
+      H(`Karar Çalışma İstatistikleri (${ki.yil} Yılı)`),
+      table(['Gösterge', 'Sayı'], [
+        [`${ki.yil} yılında alınan karar`, String(ki.alinan)],
+        ['Bu toplantıda alınan karar', String(ki.buToplantiAlinan)],
+        ['Önceki toplantılardan devreden (açık) karar', String(ki.devreden)],
+        ['Tamamlanan karar', String(ki.tamamlanan)],
+        ['Açık (devam eden) karar', String(ki.acik)],
+        ['Geciken karar', String(ki.geciken)],
+        ['Tamamlanma oranı', oran]
+      ], [75, 25]),
+      P(' ', { spacing: { after: 120 } }),
+      ...(ki.toplantilar.length > 1 ? [
+        P('Toplantı bazında kararlar', { bold: true }),
+        table(['Toplantı', 'Alınan Karar', 'Tamamlanan', 'Açık'], ki.toplantilar.map(t => [t.toplantiNo, String(t.alinan), String(t.tamamlanan), String(t.acik)]))
+      ] : []),
+      P(' ', { spacing: { after: 300 } })
+    ];
+  })();
+
   const taramaElemanlari = await _taramaElemanlariUret(toplanti);
 
   const kapakCocuklari = [
@@ -1039,6 +1064,9 @@ async function kurulRaporuWordOlustur() {
     H('Toplantı Bilgileri'),
     bilgiTablosu,
     P(' ', { spacing: { after: 400 } }),
+
+    // Kullanıcı isteği: karar çalışma istatistikleri Gündem'in üstünde yer alsın.
+    ...kararIstatistikElemanlari,
 
     H('1) Gündem'),
     ...(gundem.length ? gundem.flatMap((g, i) => {
@@ -2000,6 +2028,46 @@ async function pptxOlustur() {
     } else {
       sl.addShape(pptx.ShapeType.roundRect, { x: sagX, y: 1.8, w: sagW, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
       sl.addText('Kayıp günlü kaza bulunmamaktadır.', { x: sagX, y: 1.8, w: sagW, h: 0.9, fontSize: 11, color: R.soluk, align: 'center', valign: 'middle' });
+    }
+  }
+
+  // Kullanıcı isteği: karar çalışma istatistikleri (kaç karar alındı, kaçı tamamlandı) Gündem'in üstünde.
+  const kiPptx = toplantiKararIstatistikleriHesapla(toplanti);
+  if (kiPptx) {
+    const sl = yeniSlayt();
+    kartBasligi(sl, 'ÇALIŞMA İSTATİSTİKLERİ', `${kiPptx.yil} Yılı Karar İstatistikleri`);
+    const oranKi = kiPptx.oran == null ? '-' : '%' + kiPptx.oran.toFixed(1).replace('.', ',');
+    const kutularKi = [
+      { etiket: `${kiPptx.yil} Yılında Alınan Karar`, deger: String(kiPptx.alinan), renk: R.birincil },
+      { etiket: 'Tamamlanan', deger: String(kiPptx.tamamlanan), renk: '15803D' },
+      { etiket: 'Açık (Devam Eden)', deger: String(kiPptx.acik), renk: 'B45309' },
+      { etiket: 'Geciken', deger: String(kiPptx.geciken), renk: 'B91C1C' },
+      { etiket: 'Tamamlanma Oranı', deger: oranKi, renk: R.birincil }
+    ];
+    const aralikKi = 0.25, kutuWKi = (SW - 2 * M - 4 * aralikKi) / 5;
+    kutularKi.forEach((k, i) => {
+      const x = M + i * (kutuWKi + aralikKi), y = 1.4;
+      sl.addShape(pptx.ShapeType.roundRect, { x, y, w: kutuWKi, h: 1.9, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+      sl.addShape(pptx.ShapeType.rect, { x, y, w: kutuWKi, h: 0.08, fill: { color: k.renk } });
+      sl.addText(k.deger, { x, y: y + 0.2, w: kutuWKi, h: 0.95, fontSize: 40, bold: true, color: k.renk, align: 'center', valign: 'middle' });
+      sl.addText(k.etiket, { x: x + 0.08, y: y + 1.2, w: kutuWKi - 0.16, h: 0.6, fontSize: 12, color: R.soluk, align: 'center', valign: 'top' });
+    });
+    if (kiPptx.toplantilar.length) {
+      const tabloWKi = SW - 2 * M;
+      const bas = (t, hiza) => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil }, align: hiza || 'center' } });
+      sl.addText('Toplantı bazında kararlar', { x: M, y: 3.55, w: tabloWKi, h: 0.32, fontSize: 13, bold: true, color: R.baslik });
+      sl.addTable([
+        [bas('Toplantı', 'left'), bas('Alınan Karar'), bas('Tamamlanan'), bas('Açık')],
+        ...kiPptx.toplantilar.slice(-8).map((t, i) => {
+          const zemin = { fill: { color: i % 2 ? R.bg : 'FFFFFF' } };
+          return [
+            { text: t.toplantiNo, options: Object.assign({ color: R.baslik }, zemin) },
+            { text: String(t.alinan), options: Object.assign({ color: R.baslik, align: 'center' }, zemin) },
+            { text: String(t.tamamlanan), options: Object.assign({ color: '15803D', bold: true, align: 'center' }, zemin) },
+            { text: String(t.acik), options: Object.assign({ color: 'B45309', bold: true, align: 'center' }, zemin) }
+          ];
+        })
+      ], { x: M, y: 3.9, w: tabloWKi, colW: [tabloWKi * 0.4, tabloWKi * 0.2, tabloWKi * 0.2, tabloWKi * 0.2], fontSize: 12, rowH: 0.34, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
     }
   }
 

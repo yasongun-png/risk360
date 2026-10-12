@@ -1143,6 +1143,39 @@ function toplantiTespitEdilenUygunsuzluklariGetir(toplanti) {
     .map(_uygunsuzlukSatiriEsle);
 }
 
+// Kullanıcı isteği: kurul çalışma istatistikleri — yıl içinde (toplantı tarihine kadar) kaç karar alındı,
+// kaçı tamamlandı, kaçı açık/geciken. İptal edilen kararlar sayıma girmez. Toplantı bazında kırılım da verilir.
+function toplantiKararIstatistikleriHesapla(toplanti) {
+  const yil = String((toplanti && (toplanti.donem || toplanti.tarih)) || '').slice(0, 4);
+  if (!/^\d{4}$/.test(yil)) return null;
+  const sinir = toplanti.tarih || '';
+  const toplantilar = toplantiTumunuGetir()
+    .filter(t => String(t.donem || t.tarih || '').slice(0, 4) === yil && (!sinir || !t.tarih || t.tarih <= sinir))
+    .sort((a, b) => String(a.tarih || '').localeCompare(String(b.tarih || '')));
+  const idler = new Set(toplantilar.map(t => t.id));
+  const kararlar = kararTumunuGetir().filter(k => idler.has(k.toplantiId));
+  const gecerli = kararlar.filter(k => k.durum !== 'İptal');
+  const tamamlandiMi = k => kararKapaliMi(k.durum) && (!sinir || !k.kapanisTarihi || k.kapanisTarihi <= sinir);
+  const tamamlanan = gecerli.filter(tamamlandiMi);
+  const acik = gecerli.filter(k => !tamamlandiMi(k));
+  const geciken = acik.filter(k => kararGecikmisMi(k, sinir || _bugun()));
+  return {
+    yil,
+    alinan: gecerli.length,
+    tamamlanan: tamamlanan.length,
+    acik: acik.length,
+    geciken: geciken.length,
+    iptal: kararlar.length - gecerli.length,
+    oran: gecerli.length ? (tamamlanan.length * 100) / gecerli.length : null,
+    buToplantiAlinan: gecerli.filter(k => k.toplantiId === toplanti.id).length,
+    devreden: acik.filter(k => k.toplantiId !== toplanti.id).length,
+    toplantilar: toplantilar.map(t => {
+      const kt = gecerli.filter(k => k.toplantiId === t.id);
+      return { toplantiNo: t.toplantiNo || '-', alinan: kt.length, tamamlanan: kt.filter(tamamlandiMi).length, acik: kt.filter(k => !tamamlandiMi(k)).length };
+    })
+  };
+}
+
 // Kullanıcı isteği: "kurulda uygunsuzlukların değerlendirmesi olsun — bu yıl
 // içinde kaç uygunsuzluk açıldı, kaçı yapıldı, tamamlama oranı". Toplantının ait
 // olduğu YILDA (toplantı tarihine kadar) bildirilen uygunsuzluklar sayılır;

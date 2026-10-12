@@ -528,7 +528,23 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
 // toplantıda devreden olarak görünür; kapananlar kapandıktan sonraki ilk
 // toplantıda "(Tamamlandı)" ile bir kez gösterilip bir daha görünmez. Elle
 // "devret" işlemine gerek yoktur.
+// Karar çalışma istatistikleri kutusu (bkz. service.js toplantiKararIstatistikleriHesapla).
+function kararIstatistikleriniCiz() {
+  const kutu = document.getElementById('kararIstatistikKutusu');
+  if (!kutu) return;
+  const ist = toplantiKararIstatistikleriHesapla(toplantiIdIleGetirRepo(_toplantiId));
+  if (!ist) { kutu.innerHTML = '<div class="bos-durum gorunur">Toplantı tarihi/dönemi olmadığından hesaplanamadı.</div>'; return; }
+  const oran = ist.oran == null ? '-' : '%' + ist.oran.toFixed(1).replace('.', ',');
+  const kart = (etiket, deger) => `<div class="istatistik-kutu"><span>${etiket}</span><b style="font-size:20px;">${deger}</b></div>`;
+  const satirlar = ist.toplantilar.map(t => `<tr><td>${_ktKacir(t.toplantiNo)}</td><td>${t.alinan}</td><td>${t.tamamlanan}</td><td>${t.acik}</td></tr>`).join('');
+  kutu.innerHTML = `<div class="istatistik-grid" style="grid-template-columns: repeat(5, minmax(120px,1fr));">
+      ${kart(ist.yil + ' Yılında Alınan Karar', ist.alinan)}${kart('Tamamlanan', ist.tamamlanan)}${kart('Açık (Devam Eden)', ist.acik)}${kart('Geciken', ist.geciken)}${kart('Tamamlanma Oranı', oran)}
+    </div>
+    <div class="tablo-scroll" style="margin-top:10px;"><table class="veri-tablosu"><thead><tr><th>Toplantı</th><th>Alınan Karar</th><th>Tamamlanan</th><th>Açık</th></tr></thead><tbody>${satirlar}</tbody></table></div>`;
+}
+
 function kararlariCiz() {
+  kararIstatistikleriniCiz();
   const { devreden, yeni } = toplantiKararGruplariniGetirVeIsaretle(_toplantiId);
   _kararTablosunuCiz('kararDevredenTabloGovde', 'kararDevredenBosDurum', 'Devreden karar bulunmamaktadır.', devreden);
   _kararTablosunuCiz('kararYeniTabloGovde', 'kararYeniBosDurum', 'Bu toplantı için henüz karar eklenmedi.', yeni);
