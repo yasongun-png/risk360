@@ -39,7 +39,7 @@ function _varsayilanliMetin(deger, anahtar) {
 }
 
 // Çalışanların Görüş ve Önerileri serbest metindir; her satır bir maddedir (baştaki "-", "•", "1." gibi
-// işaretler atılır). Satırda "|" varsa solu görüş/öneri, sağı "toplantıda konuşulacak" konudur; yoksa ikinci
+// işaretler atılır). Satırda "|" varsa solu konu (görüş/öneri), sağı konuşulanlar, kararlar ve takip yöntemidir; yoksa ikinci
 // sütun boş kalır. Çıktılarda iki sütunlu tablo olarak gösterilir: [{ gorus, konusulacak }].
 function _gorusMaddeleri(metin) {
   const maddeler = String(metin || '').split('\n')
@@ -52,7 +52,7 @@ function _gorusMaddeleri(metin) {
   return maddeler.length ? maddeler : [{ gorus: _varsayilanliMetin('', 'gorusler'), konusulacak: '' }];
 }
 
-const GORUS_TABLO_BASLIKLARI = ['Görüş ve Öneri', 'Toplantıda Konuşulacaklar'];
+const GORUS_TABLO_BASLIKLARI = ['Konu', 'Konuşulanlar, Kararlar, Takip Yöntemi'];
 const _gorusSatirlari = metin => _gorusMaddeleri(metin).map((g, i) => [`${i + 1}. ${g.gorus}`, g.konusulacak]);
 
 // ==================== 1) TOPLANTI DAVETİ (WORD) ====================
