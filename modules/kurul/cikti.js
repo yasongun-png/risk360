@@ -38,6 +38,15 @@ function _varsayilanliMetin(deger, anahtar) {
   return temiz || KURUL_RAPOR_VARSAYILANLARI[anahtar] || '';
 }
 
+// Çalışanların Görüş ve Önerileri serbest metindir; her satır bir madde sayılır (baştaki "-", "•", "1." gibi
+// işaretler atılır) ve çıktılarda No / Görüş tablosu olarak gösterilir. Boşsa varsayılan metin tek madde olur.
+function _gorusMaddeleri(metin) {
+  const maddeler = String(metin || '').split('\n')
+    .map(satir => satir.trim().replace(/^([-–—•*·]|\d+\s*[.)])\s*/, '').trim())
+    .filter(Boolean);
+  return maddeler.length ? maddeler : [_varsayilanliMetin('', 'gorusler')];
+}
+
 // ==================== 1) TOPLANTI DAVETİ (WORD) ====================
 
 // indir=false: dosyayı indirmez, { blob, dosyaAdi } döner — "Toplantı Daveti
@@ -876,15 +885,16 @@ async function kurulRaporuWordOlustur() {
     ])
   ];
 
-  const table = (headers, rows) => new docx.Table({
+  // genislikler (isteğe bağlı): sütun yüzdeleri, ör. [8, 92]
+  const table = (headers, rows, genislikler) => new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
       new docx.TableRow({ cantSplit: true,
         tableHeader: true,
-        children: headers.map(h => new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: h, bold: true, size: KURUL_WORD_METIN_BOYUT })] })] }))
+        children: headers.map((h, ci) => new docx.TableCell({ ...(genislikler ? { width: { size: genislikler[ci], type: docx.WidthType.PERCENTAGE } } : {}), children: [new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: h, bold: true, size: KURUL_WORD_METIN_BOYUT })] })] }))
       }),
       ...rows.map(r => new docx.TableRow({ cantSplit: true,
-        children: r.map(c => new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(c ?? ''), size: KURUL_WORD_METIN_BOYUT })] })] }))
+        children: r.map((c, ci) => new docx.TableCell({ ...(genislikler ? { width: { size: genislikler[ci], type: docx.WidthType.PERCENTAGE } } : {}), children: [new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: String(c ?? ''), size: KURUL_WORD_METIN_BOYUT })] })] }))
       }))
     ]
   });
@@ -1038,7 +1048,7 @@ async function kurulRaporuWordOlustur() {
     ...(olayKartlari.length ? olayKartlari.flat() : [P(_varsayilanliMetin('', 'olaylar'))]),
 
     H('3) Çalışanların Görüş ve Önerileri'),
-    P(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler')),
+    table(['No', 'Görüş ve Öneri'], _gorusMaddeleri(toplanti.calisanTemsilcisiGorusleri).map((g, i) => [String(i + 1), g]), [8, 92]),
     P(' ', { spacing: { after: 400 } }),
 
     H('4) Bu Toplantıda Alınan Kararlar'),
@@ -1580,7 +1590,7 @@ async function kurulRaporuPdfOlustur() {
 
       <div class="section keep">
         <h2>3) Çalışanların Görüş ve Önerileri</h2>
-        <p>${_ciktiKacir(_varsayilanliMetin(toplanti.calisanTemsilcisiGorusleri, 'gorusler'))}</p>
+        ${_pdfTablo(['No', 'Görüş ve Öneri'], _gorusMaddeleri(toplanti.calisanTemsilcisiGorusleri).map((g, i) => [String(i + 1), g]), '', [8, 92])}
       </div>
 
       <div class="section">
@@ -2107,7 +2117,7 @@ async function pptxOlustur() {
 
   // Sıra: Olaylardan hemen sonra Çalışanların Görüş ve Önerileri (kullanıcı isteği).
   bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışanların değerlendirmesi');
-  metinSlaydi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ', toplanti.calisanTemsilcisiGorusleri || KURUL_RAPOR_VARSAYILANLARI.gorusler);
+  tabloSlaydi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ', ['No', 'Görüş ve Öneri'], _gorusMaddeleri(toplanti.calisanTemsilcisiGorusleri).map((g, i) => [String(i + 1), g]), [1, 11]);
 
   bolumAraSlaydi('KARARLAR', 'Yeni kararlar ve devreden kararların takibi');
   kararSlaytlariniEkle('YENİ KARAR', yeni);
