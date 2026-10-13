@@ -224,66 +224,58 @@ async function csgbEskiSurumKayitlariniTasi(denetimId) {
   return { basarili: true, tasinan: bulunan.kayitlar.length };
 }
 
-// ---- Mükerrer madde birleştirme ----
-// Taşıma, aynı denetime Excel'le zaten girilmiş maddelerin yanına eski
-// kayıtları da ekleyince her madde iki kez göründü. Aynı denetimdeki aynı
-// Madde No'lu maddeler tek maddede birleştirilir.
+// ---- Uygunsuzluk'tan taşınıp mükerrer olan maddeleri silme ----
+// Taşıma, Excel'le ÇSGB sayfasına zaten girilmiş maddelerin yanına
+// Uygunsuzluk'taki eski kayıtları da ekledi; her madde iki kez göründü.
+// Kullanıcı isteği: "geri taşıma, Uygunsuzluk'tan gelenleri sil".
+// Uygunsuzluk'tan gelenler, ayrı ÇSGB sayfası yayına girmeden (8629fc9,
+// 2026-10-13 17:00:25 TSİ) oluşturulmuştur -- o anda ÇSGB madde deposu yoktu.
+// Sadece aynı denetimde aynı Madde No'lu, sonradan girilmiş bir eşi olanlar
+// silinir; eşi olmayan madde kalır.
+const _CSGB_AYRI_SAYFA_BASLANGICI = Date.parse('2026-10-13T14:00:25Z');
 
-function _csgbMaddeNoAnahtari(m) {
-  const no = String(m.denetimMaddeNo || '').trim().toLocaleLowerCase('tr');
-  return no ? m.denetimId + '|' + no : '';
+function _csgbMaddeOlusturmaZamani(m) {
+  const t = Date.parse(m.olusturmaTarihi || '');
+  if (Number.isFinite(t)) return t;
+  const idZamani = parseInt(String(m.id || '').slice(0, 8), 36);
+  return Number.isFinite(idZamani) ? idZamani : NaN;
 }
 
-function csgbMukerrerMaddeGruplari() {
+function _csgbUygunsuzluktanGelenMi(m) {
+  return _csgbMaddeOlusturmaZamani(m) < _CSGB_AYRI_SAYFA_BASLANGICI;
+}
+
+// { silinecekler: [madde], kalanEsi: {silinenId: kalanId}, esiOlmayan: sayı }
+function csgbUygunsuzluktanGelenMukerrerleriBul() {
   const gruplar = {};
-  csgbMaddeleriTumunuGetir().forEach(m => {
-    const a = _csgbMaddeNoAnahtari(m);
-    if (a) (gruplar[a] = gruplar[a] || []).push(m);
+  const tum = csgbMaddeleriTumunuGetir();
+  tum.forEach(m => {
+    const no = String(m.denetimMaddeNo || '').trim().toLocaleLowerCase('tr');
+    if (no) (gruplar[m.denetimId + '|' + no] = gruplar[m.denetimId + '|' + no] || []).push(m);
   });
-  return Object.values(gruplar).filter(g => g.length > 1);
+  const silinecekler = [];
+  const kalanEsi = {};
+  Object.values(gruplar).forEach(g => {
+    const yeniler = g.filter(m => !_csgbUygunsuzluktanGelenMi(m));
+    if (!yeniler.length) return;
+    g.filter(_csgbUygunsuzluktanGelenMi).forEach(m => { silinecekler.push(m); kalanEsi[m.id] = yeniler[0].id; });
+  });
+  const esiOlmayan = tum.filter(m => _csgbUygunsuzluktanGelenMi(m) && !kalanEsi[m.id]).length;
+  return { silinecekler, kalanEsi, esiOlmayan };
 }
 
-// Kalan madde: toplantı notu olan, yoksa en ilerlemiş, eşitse en eski olan.
-// Boş alanları ve kanıtları diğer kopyalardan tamamlanır; diğer kopyalara
-// yazılmış toplantı notları kalan maddeye aktarılır.
-async function csgbMukerrerMaddeleriBirlestir() {
-  const gruplar = csgbMukerrerMaddeGruplari();
-  if (!gruplar.length) return { basarili: true, birlesen: 0 };
-  const toplantilar = csgbToplantilariTumunuGetir();
-  const notSayisi = id => toplantilar.filter(t => ((t.maddeNotlari || {})[id] || '').trim()).length;
-  const yeniId = {};
-  const birlesikler = {};
-
-  gruplar.forEach(g => {
-    const sirali = g.slice().sort((a, b) =>
-      notSayisi(b.id) - notSayisi(a.id) ||
-      csgbMaddeYuzdesi(b) - csgbMaddeYuzdesi(a) ||
-      (a.olusturmaTarihi || '').localeCompare(b.olusturmaTarihi || ''));
-    const birlesik = Object.assign({}, sirali[0]);
-    sirali.slice(1).forEach(m => {
-      Object.keys(m).forEach(k => {
-        if (k === 'kanitlar') return;
-        const v = birlesik[k];
-        if ((v === undefined || v === null || v === '') && m[k] !== '' && m[k] != null) birlesik[k] = m[k];
-      });
-      const refler = new Set((birlesik.kanitlar || []).map(x => x.ref));
-      birlesik.kanitlar = (birlesik.kanitlar || []).concat((m.kanitlar || []).filter(x => x && x.ref && !refler.has(x.ref) && refler.add(x.ref)));
-      yeniId[m.id] = birlesik.id;
-    });
-    birlesikler[birlesik.id] = csgbMaddeOlustur(birlesik);
-  });
-
-  const maddeler = csgbMaddeleriTumunuGetir()
-    .filter(m => !yeniId[m.id])
-    .map(m => birlesikler[m.id] || m);
-  const yazim = await csgbMaddeleriYazRepo(maddeler);
-  if (!yazim.basarili) return { basarili: false, hata: 'Maddeler buluta yazılamadı, hiçbir şey değişmedi.' };
+// Silinen kopyalara yazılmış toplantı notları (varsa) eşine aktarılır.
+async function csgbUygunsuzluktanGelenMukerrerleriSil() {
+  const { silinecekler, kalanEsi } = csgbUygunsuzluktanGelenMukerrerleriBul();
+  if (!silinecekler.length) return { basarili: true, silinen: 0 };
+  const yazim = await csgbMaddeleriYazRepo(csgbMaddeleriTumunuGetir().filter(m => !kalanEsi[m.id]));
+  if (!yazim.basarili) return { basarili: false, hata: 'Maddeler buluta yazılamadı, hiçbir şey silinmedi.' };
 
   let toplantiDegisti = false;
-  const yeniToplantilar = toplantilar.map(t => {
+  const toplantilar = csgbToplantilariTumunuGetir().map(t => {
     const notlar = Object.assign({}, t.maddeNotlari || {});
     Object.keys(notlar).forEach(id => {
-      const hedef = yeniId[id];
+      const hedef = kalanEsi[id];
       if (!hedef) return;
       const eklenecek = (notlar[id] || '').trim();
       const mevcut = (notlar[hedef] || '').trim();
@@ -293,9 +285,8 @@ async function csgbMukerrerMaddeleriBirlestir() {
     });
     return Object.assign({}, t, { maddeNotlari: notlar });
   });
-  if (toplantiDegisti) await yazVeSonucuGetir(_csgbToplantiAnahtari(), yeniToplantilar);
-
-  return { basarili: true, birlesen: gruplar.length, silinen: Object.keys(yeniId).length };
+  if (toplantiDegisti) await yazVeSonucuGetir(_csgbToplantiAnahtari(), toplantilar);
+  return { basarili: true, silinen: silinecekler.length };
 }
 
 function csgbToplantiSil(id) {
