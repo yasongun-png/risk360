@@ -275,7 +275,7 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('iceAktarBtn').addEventListener('click', () => document.getElementById('iceAktarDosya').click());
   document.getElementById('iceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
-    excelIceAktar(dosya, UYGUNSUZLUK_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+    excelIceAktar(dosya, UYGUNSUZLUK_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
       const konuSecili = uygunsuzlukKonulariniGetir().find(k => k.id === _secilenKonuId);
@@ -285,8 +285,17 @@ function uygunsuzlukSayfasiniBaslat() {
         satir.kapanisTarihi = excelTarihiNormallestir(satir.kapanisTarihi);
         if (konuSecili) { satir.konuId = konuSecili.id; satir.konuAdi = konuSecili.ad; }
       });
-      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, uygunsuzlukEkle);
-      alert(excelIceAktarOzetMesaji(sonuc));
+      // Satır satır uygunsuzlukEkle yerine TEK bir bulut yazımı (uygunsuzlukTopluEkle): kayıtlar buluta gerçekten
+      // yazılana kadar beklenir ve sonuç (başarılı/başarısız) kullanıcıya bildirilir.
+      const iceAktarBtn = document.getElementById('iceAktarBtn');
+      const eskiMetin = iceAktarBtn.textContent;
+      iceAktarBtn.disabled = true; iceAktarBtn.textContent = 'Kaydediliyor...';
+      let sonuc;
+      try { sonuc = await uygunsuzlukTopluEkle(satirlar); }
+      finally { iceAktarBtn.disabled = false; iceAktarBtn.textContent = eskiMetin; }
+      let mesaj = excelIceAktarOzetMesaji(sonuc);
+      if (sonuc.bulutBasarili === false) mesaj += '\n\nUYARI: Kayıtlar buluta YAZILAMADI (belge boyutu sınırı aşılmış olabilir). Sayfayı yenilerseniz kaybolurlar; Excel dosyasını daha az satırla bölerek aktarın.';
+      alert(mesaj);
       _konuSecimDoldur();
       _usBolumFiltreDoldur();
       kayitlariCiz(document.getElementById('aramaKutusu').value);

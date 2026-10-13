@@ -246,6 +246,16 @@ function _bulutYaziSiraya(anahtar, yazFn) {
   return buSira;
 }
 
+// Bekleyen (henüz sunucudan onay gelmemiş) bulut yazımı varken sayfa yenilenir/kapanırsa o yazımlar yarıda
+// kesilir ve kayıtlar kaybolur (ör. 84 satırlık Excel aktarımı sıralı yazıldığı için birkaç saniye sürer ve
+// kullanıcı F5 yaparsa yalnızca yazılabilenler kalır). Tarayıcıdan "Siteden ayrılmak istiyor musunuz?" uyarısı çıkarılır.
+window.addEventListener('beforeunload', e => {
+  if (Object.keys(_bulutYaziBeklemedeSayaci).length) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
 function yaz(anahtar, deger) {
   if (_yaziEklemeEngelleMi(anahtar, deger)) {
     alert('Bu modülde yeni kayıt ekleme yetkiniz yok. Sadece Personel ve Eğitim modüllerine kayıt ekleyebilirsiniz.');
