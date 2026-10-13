@@ -102,6 +102,20 @@ async function _csgbEskiSurumTasimasiniSor() {
     alert(sonuc.basarili ? `${sonuc.tasinan} madde ÇSGB Denetimi sayfasına taşındı.` : sonuc.hata);
     csgbCiz();
   }
+  await _csgbMukerrerMaddeleriSor();
+}
+
+// Aynı denetimde aynı Madde No'lu birden fazla madde varsa birleştirmeyi önerir (bkz. csgb-service.js).
+async function _csgbMukerrerMaddeleriSor() {
+  const gruplar = csgbMukerrerMaddeGruplari();
+  if (!gruplar.length) return;
+  const fazla = gruplar.reduce((t, g) => t + g.length - 1, 0);
+  const mesaj = `${gruplar.length} madde numarası aynı denetimde birden fazla kez kayıtlı (${fazla} fazla kopya). ` +
+    `Aynı numaralı maddeler tek maddede birleştirilsin mi? Boş alanlar, kanıtlar ve toplantı notları kalan maddeye aktarılır.`;
+  if (!(await onayModali(mesaj, 'Evet, Birleştir'))) return;
+  const sonuc = await csgbMukerrerMaddeleriBirlestir();
+  alert(sonuc.basarili ? `${sonuc.birlesen} madde birleştirildi, ${sonuc.silinen} fazla kopya kaldırıldı.` : sonuc.hata);
+  csgbCiz();
 }
 
 function csgbCiz() {
