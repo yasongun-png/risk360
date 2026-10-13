@@ -20,9 +20,7 @@ function uygunsuzluklariGetir(aramaMetni, filtreler) {
       k.baslik.toLowerCase().includes(kucuk) ||
       k.bolum.toLowerCase().includes(kucuk) ||
       k.sorumlu.toLowerCase().includes(kucuk) ||
-      (k.aksiyonNo || '').toLowerCase().includes(kucuk) ||
-      (k.denetimMaddeNo || '').toLowerCase().includes(kucuk) ||
-      (k.maddeKonusu || '').toLowerCase().includes(kucuk)
+      (k.aksiyonNo || '').toLowerCase().includes(kucuk)
     );
   }
 
@@ -108,9 +106,6 @@ function uygunsuzlukGuncelle(id, veriler) {
   const guncellenen = uygunsuzlukGuncelleRepo(id, {
     konuId: veriler.konuId || '',
     konuAdi: (veriler.konuAdi || '').trim(),
-    denetimMaddeNo: String(veriler.denetimMaddeNo || '').trim(),
-    maddeKonusu: (veriler.maddeKonusu || '').trim(),
-    tamamlanmaYuzdesi: csgbYuzdeNormallestir(veriler.tamamlanmaYuzdesi),
     baslik: veriler.baslik.trim(),
     aciklama: veriler.aciklama.trim(),
     bolum: veriler.bolum.trim(),
@@ -138,7 +133,6 @@ function uygunsuzlukGuncelle(id, veriler) {
     fotoSonrasi3: veriler.fotoSonrasi3 || '',
     fotoOncesi4: veriler.fotoOncesi4 || '',
     fotoSonrasi4: veriler.fotoSonrasi4 || '',
-    kanitlar: Array.isArray(veriler.kanitlar) ? veriler.kanitlar.filter(k => k && k.ref) : [],
     durum: veriler.durum || 'Açık',
     kapanisTarihi: veriler.kapanisTarihi || '',
     kanitAciklamasi: (veriler.kanitAciklamasi || '').trim()
@@ -269,137 +263,6 @@ function uygunsuzlukKonuBulYaDaOlustur(ad) {
   const konu = uygunsuzlukKonuOlustur({ ad: temiz });
   uygunsuzlukKonuEkleRepo(konu);
   return konu;
-}
-
-// ---- ÇSGB Denetimleri ----
-
-function _gunFarki(hedefIso, bugunStr) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(hedefIso || '')) return null;
-  const [y1, a1, g1] = hedefIso.split('-').map(Number);
-  const [y2, a2, g2] = bugunStr.split('-').map(Number);
-  return Math.round((Date.UTC(y1, a1 - 1, g1) - Date.UTC(y2, a2 - 1, g2)) / 86400000);
-}
-
-// Her denetimi, bağlı konusundaki maddelerin (uygunsuzluk kayıtlarının)
-// sayılarıyla zenginleştirir. En yeni denetim en üstte.
-function csgbDenetimleriniGetir() {
-  const kayitlar = uygunsuzlukTumunuGetir().map(_uygunsuzlukZenginlestir);
-  const konular = uygunsuzlukKonulariTumunuGetir();
-  const bugun = bugunIso();
-  return csgbDenetimleriTumunuGetir().map(d => {
-    const konu = konular.find(k => k.id === d.konuId);
-    const maddeler = kayitlar.filter(k => d.konuId && k.konuId === d.konuId);
-    const kapali = maddeler.filter(k => k.durum === 'Kapalı').length;
-    const iptal = maddeler.filter(k => k.durum === 'İptal').length;
-    const onayBekleyen = maddeler.filter(k => k.durum === 'Onay Bekliyor').length;
-    const gecikmis = maddeler.filter(k => k.durumGoruntu === 'Gecikmiş').length;
-    const hesaplanan = maddeler.length - iptal;
-    const toplantilar = csgbToplantilariniGetir(d.id);
-    const sonToplanti = toplantilar[toplantilar.length - 1];
-    return Object.assign({}, d, {
-      toplantiSayisi: toplantilar.length,
-      sonToplantiTarihi: sonToplanti ? sonToplanti.tarih : '',
-      sonrakiToplantiTarihi: sonToplanti ? sonToplanti.sonrakiToplantiTarihi : '',
-      konuAdi: konu ? konu.ad : '',
-      konuVarMi: !!konu,
-      maddeSayisi: maddeler.length,
-      kapaliSayisi: kapali,
-      acikSayisi: maddeler.length - kapali - iptal,
-      onayBekleyenSayisi: onayBekleyen,
-      gecikmisSayisi: gecikmis,
-      ilerlemeYuzde: hesaplanan > 0 ? Math.round((kapali / hesaplanan) * 100) : 0,
-      kalanGun: d.durum === 'Kapandı' ? null : _gunFarki(d.sonGidermeTarihi, bugun)
-    });
-  }).sort((a, b) => (b.raporTarihi || b.denetimTarihi || '').localeCompare(a.raporTarihi || a.denetimTarihi || ''));
-}
-
-// Yeni denetim ya da güncelleme. konuId verilmezse yeniKonuAdi ile yeni bir
-// uygunsuzluk konusu açılır (aynı adda konu varsa o kullanılır).
-function csgbDenetimKaydet(veriler, duzenlenenId) {
-  if (!veriler.raporTarihi && !veriler.denetimTarihi) return { basarili: false, hata: 'Rapor tarihi ya da denetim tarihi girin.' };
-  let konuId = veriler.konuId || '';
-  if (!konuId) {
-    const konu = uygunsuzlukKonuBulYaDaOlustur(veriler.yeniKonuAdi);
-    if (!konu) return { basarili: false, hata: 'Bağlanacak konuyu seçin ya da yeni konu adı yazın.' };
-    konuId = konu.id;
-  }
-  const baskaDenetim = csgbDenetimleriTumunuGetir().find(d => d.konuId === konuId && d.id !== duzenlenenId);
-  if (baskaDenetim) return { basarili: false, hata: 'Bu konu zaten başka bir ÇSGB denetimine bağlı. Her denetim için ayrı konu kullanın.' };
-
-  const mevcut = duzenlenenId ? csgbDenetimleriTumunuGetir().find(d => d.id === duzenlenenId) : null;
-  const sonGiderme = veriler.sonGidermeTarihi || csgbSonGidermeTarihiHesapla(veriler.tebligTarihi, veriler.verilenSureGun);
-  const denetim = csgbDenetimOlustur(Object.assign({}, mevcut || {}, veriler, { konuId, sonGidermeTarihi: sonGiderme }));
-  csgbDenetimKaydetRepo(denetim);
-  return { basarili: true, denetim };
-}
-
-function csgbDenetimGetir(id) {
-  return csgbDenetimleriniGetir().find(d => d.id === id) || null;
-}
-
-function csgbToplantilariniGetir(denetimId) {
-  return csgbToplantilariTumunuGetir()
-    .filter(t => t.denetimId === denetimId)
-    .sort((a, b) => (a.tarih || '').localeCompare(b.tarih || ''));
-}
-
-// Denetimin maddeleri, rapordaki madde numarasına göre sıralı. Her maddeye
-// tüm toplantılardaki notları tarih sırasıyla eklenir (toplantiNotlari:
-// [{tarih, not}]) -- raporda madde tek satır, notlar alt alta görünür.
-function csgbMaddeleriniGetir(denetimId) {
-  const denetim = csgbDenetimleriTumunuGetir().find(d => d.id === denetimId);
-  if (!denetim || !denetim.konuId) return [];
-  const toplantilar = csgbToplantilariniGetir(denetimId);
-  return uygunsuzlukTumunuGetir()
-    .filter(k => k.konuId === denetim.konuId)
-    .map(_uygunsuzlukZenginlestir)
-    .map(k => Object.assign({}, k, {
-      toplantiNotlari: toplantilar
-        .filter(t => (t.maddeNotlari[k.id] || '').trim())
-        .map(t => ({ tarih: t.tarih, not: t.maddeNotlari[k.id].trim() }))
-    }))
-    .sort((a, b) => csgbMaddeNoKarsilastir(a.denetimMaddeNo, b.denetimMaddeNo) || (a.olusturmaTarihi || '').localeCompare(b.olusturmaTarihi || ''));
-}
-
-// Toplantıyı kaydeder; durumGuncellemeleri ({kayitId: yeniDurum}) verilen
-// maddelerin durumu da uygunsuzluk kaydında güncellenir (Kapalı'ya geçen
-// maddenin kapanış tarihi toplantı tarihi olur).
-function csgbToplantiKaydet(veriler, durumGuncellemeleri) {
-  if (!veriler.denetimId) return { basarili: false, hata: 'Denetim bulunamadı.' };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(veriler.tarih || '')) return { basarili: false, hata: 'Toplantı tarihi zorunludur.' };
-  const mevcut = veriler.id ? csgbToplantilariTumunuGetir().find(t => t.id === veriler.id) : null;
-  const maddeNotlari = {};
-  Object.entries(veriler.maddeNotlari || {}).forEach(([id, not]) => { if ((not || '').trim()) maddeNotlari[id] = not.trim(); });
-  const toplanti = csgbToplantiOlustur(Object.assign({}, mevcut || {}, veriler, { maddeNotlari }));
-  csgbToplantiKaydetRepo(toplanti);
-
-  Object.entries(durumGuncellemeleri || {}).forEach(([kayitId, yeniDurum]) => {
-    const kayit = uygunsuzlukIdIleGetirRepo(kayitId);
-    if (!kayit || kayit.durum === yeniDurum || !UYGUNSUZLUK_DURUMLARI.includes(yeniDurum)) return;
-    const degisiklik = { durum: yeniDurum };
-    if (yeniDurum === 'Kapalı') {
-      degisiklik.kapanisTarihi = kayit.kapanisTarihi || toplanti.tarih;
-      if (kayit.onayDurumu === 'Onay Bekliyor') degisiklik.onayDurumu = 'Onaylandı';
-    } else if (kayit.durum === 'Kapalı') {
-      degisiklik.kapanisTarihi = '';
-    }
-    uygunsuzlukGuncelleRepo(kayitId, degisiklik);
-  });
-  return { basarili: true, toplanti };
-}
-
-function csgbToplantiSil(id) {
-  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
-  csgbToplantiSilRepo(id);
-  return { basarili: true };
-}
-
-// Sadece denetim kartını siler; konu ve içindeki maddeler (uygunsuzluk
-// kayıtları) olduğu gibi kalır.
-function csgbDenetimSil(id) {
-  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
-  csgbDenetimSilRepo(id);
-  return { basarili: true };
 }
 
 function uygunsuzlukOzetiHesapla(filtreler) {

@@ -43,7 +43,8 @@
     <div class="sekme-cubugu">
       <button type="button" id="sekmeKayitlar">Kayıtlar</button>
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
-      <button type="button" id="sekmeCsgb" class="sekme-seciliDegil">ÇSGB Denetimi</button>
+      <!-- ÇSGB Denetimi ayrı bir sayfadır, verisi bu sayfanın kayıtlarından ayrıdır (bkz. csgb.html). -->
+      <button type="button" class="sekme-seciliDegil" onclick="location.href='csgb.html'">ÇSGB Denetimi</button>
     </div>
 
     <div id="bolum-kayitlar">
@@ -114,124 +115,6 @@
 
     <div id="bolum-ozet" style="display:none;">
       <div id="ozetKutusu"></div>
-    </div>
-
-    <!-- ÇSGB (Bakanlık iş müfettişi) denetim takibi. Denetimin maddeleri,
-         bağlandığı konudaki normal uygunsuzluk kayıtlarıdır (bkz. service.js
-         csgbDenetimleriniGetir). -->
-    <div id="bolum-csgb" style="display:none;">
-      <div class="arac-cubugu">
-        <p style="margin:0; font-size:13px; color:var(--metin-soluk); max-width:640px;">
-          Her denetim bir uygunsuzluk konusuna bağlanır. Müfettişin yazdığı maddeler o konuda
-          normal uygunsuzluk kaydı olarak girilir; ilerleme, gecikme ve son giderme tarihine kalan gün burada izlenir.
-        </p>
-        <button type="button" class="birincil" id="csgbYeniBtn" style="width:auto;">+ Yeni ÇSGB Denetimi</button>
-      </div>
-      <div id="csgbKutusu"></div>
-    </div>
-  </div>
-
-  <div class="modal-katman" id="csgbKatmani">
-    <div class="modal-kutu" style="max-width:600px;">
-      <h3 id="csgbModalBaslik">Yeni ÇSGB Denetimi</h3>
-      <div class="form-satir-ikili">
-        <div>
-          <label for="csgbRaporNo">Rapor No</label>
-          <input type="text" id="csgbRaporNo" placeholder="ör. 9871-PRG-7/11097-PRG-7">
-        </div>
-        <div>
-          <label for="csgbRaporTarihi">Rapor Tarihi</label>
-          <input type="date" id="csgbRaporTarihi">
-        </div>
-      </div>
-      <div class="form-satir-ikili">
-        <div>
-          <label for="csgbDenetimTarihi">Denetim Tarihi</label>
-          <input type="date" id="csgbDenetimTarihi">
-        </div>
-        <div>
-          <label for="csgbDenetimTuru">Denetim Türü</label>
-          <select id="csgbDenetimTuru"></select>
-        </div>
-      </div>
-      <label for="csgbKonu">Maddelerin Tutulacağı Uygunsuzluk Konusu</label>
-      <select id="csgbKonu"></select>
-      <input type="text" id="csgbYeniKonuAdi" placeholder="Yeni konu adı, ör. ÇSGB Denetimi 2026" style="display:none; margin-top:6px;">
-      <label for="csgbMufettisler">Müfettiş(ler)</label>
-      <input type="text" id="csgbMufettisler" placeholder="Ad Soyad, virgülle ayırın">
-      <div class="form-satir-ikili">
-        <div>
-          <label for="csgbTebligTarihi">Tebliğ Tarihi</label>
-          <input type="date" id="csgbTebligTarihi">
-        </div>
-        <div>
-          <label for="csgbVerilenSure">Verilen Süre (gün)</label>
-          <input type="number" id="csgbVerilenSure" min="0">
-        </div>
-      </div>
-      <label for="csgbSonGiderme">Son Giderme Tarihi <span style="color:var(--metin-soluk); font-weight:400;">(tebliğ + süreden otomatik hesaplanır, elle değiştirilebilir)</span></label>
-      <input type="date" id="csgbSonGiderme">
-      <div class="form-satir-ikili">
-        <div>
-          <label for="csgbBildirimTarihi">Bakanlığa Bildirim Tarihi</label>
-          <input type="date" id="csgbBildirimTarihi">
-        </div>
-        <div>
-          <label for="csgbDurum">Durum</label>
-          <select id="csgbDurum"></select>
-        </div>
-      </div>
-      <label for="csgbNotlar">Notlar</label>
-      <textarea id="csgbNotlar" rows="3"></textarea>
-      <div class="hata-mesaji" id="csgbHata" style="color:var(--hata); font-size:12px;"></div>
-      <div class="modal-eylemler">
-        <button type="button" class="ikincil" id="csgbIptalBtn">İptal</button>
-        <button type="button" class="birincil" id="csgbKaydetBtn">Kaydet</button>
-      </div>
-      <button type="button" class="tablo-buton" id="csgbKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
-    </div>
-  </div>
-
-  <!-- ÇSGB giderme takip toplantısı: her madde için o toplantının notu ve
-       maddenin güncel durumu. Notlar toplantı tarihiyle saklanır; madde
-       listesinde/raporda tüm toplantıların notları tek hücrede alt alta. -->
-  <div class="modal-katman" id="csgbToplantiKatmani">
-    <div class="modal-kutu" style="max-width:980px;">
-      <h3 id="csgbToplantiBaslik">Takip Toplantısı</h3>
-      <div class="form-satir-ikili">
-        <div>
-          <label for="csgbTopTarih">Toplantı Tarihi</label>
-          <input type="date" id="csgbTopTarih">
-        </div>
-        <div>
-          <label for="csgbTopSonraki">Sonraki Toplantı Tarihi</label>
-          <input type="date" id="csgbTopSonraki">
-        </div>
-      </div>
-      <label for="csgbTopYer">Yer</label>
-      <input type="text" id="csgbTopYer">
-      <label for="csgbTopKatilimcilar">Katılımcılar <span style="color:var(--metin-soluk); font-weight:400;">(her satıra bir kişi: Ad Soyad - Görevi)</span></label>
-      <textarea id="csgbTopKatilimcilar" rows="3"></textarea>
-      <label for="csgbTopGenel">Genel Notlar</label>
-      <textarea id="csgbTopGenel" rows="2"></textarea>
-
-      <div class="form-bolum-baslik">Madde Bazında Notlar ve Durum</div>
-      <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin:0 0 8px;">
-        <input type="checkbox" id="csgbTopKapalilariGoster" style="width:auto; margin:0;"> Tamamlanan maddeleri de göster
-      </label>
-      <div class="tablo-scroll" style="max-height:52vh; overflow:auto;">
-        <table class="veri-tablosu" style="table-layout:fixed; min-width:900px;">
-          <colgroup><col style="width:60px;"><col style="width:300px;"><col style="width:380px;"><col style="width:150px;"></colgroup>
-          <thead><tr><th>No</th><th>Uygunsuzluk</th><th>Bu Toplantının Notu</th><th>Durum</th></tr></thead>
-          <tbody id="csgbTopMaddeGovde"></tbody>
-        </table>
-      </div>
-      <div class="hata-mesaji" id="csgbTopHata" style="color:var(--hata); font-size:12px;"></div>
-      <div class="modal-eylemler">
-        <button type="button" class="ikincil" id="csgbTopIptalBtn">İptal</button>
-        <button type="button" class="birincil" id="csgbTopKaydetBtn">Kaydet</button>
-      </div>
-      <button type="button" class="tablo-buton" id="csgbTopKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -386,22 +269,6 @@
       <h3 id="modalBaslik">Yeni Uygunsuzluk Kaydı</h3>
       <form id="kayitForm" novalidate>
 
-        <!-- Sadece ÇSGB Denetimi kaynaklı kayıtlarda görünür (bkz. ui.js _csgbMaddeAlanlariniGuncelle). -->
-        <div class="form-satir-ikili" id="csgbMaddeAlanlari" style="display:none;">
-          <div>
-            <label for="denetimMaddeNo">Rapordaki Madde No <span style="color:var(--metin-soluk); font-weight:400;">(ör. 5, 29.b, 31.c)</span></label>
-            <input type="text" id="denetimMaddeNo">
-          </div>
-          <div>
-            <label for="maddeKonusu">Uygunsuzluk Konusu <span style="color:var(--metin-soluk); font-weight:400;">(kısa)</span></label>
-            <input type="text" id="maddeKonusu" placeholder="ör. Kaçak akım rölesi">
-          </div>
-          <div>
-            <label for="tamamlanmaYuzdesi">Tamamlanma Yüzdesi <span style="color:var(--metin-soluk); font-weight:400;">(Tamamlandı = %100)</span></label>
-            <select id="tamamlanmaYuzdesi"></select>
-          </div>
-        </div>
-
         <label for="baslik">Uygunsuzluk Tanımı</label>
         <textarea id="baslik"></textarea>
         <div class="alan-hatasi" id="baslikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
@@ -537,17 +404,6 @@
           </div>
         </div>
 
-        <!-- Birden fazla kanıt (fotoğraf veya PDF) -- bkz. ui.js _usKanitlariCiz.
-             ÇSGB takip raporunda maddenin altında listelenir. -->
-        <div class="form-bolum-baslik">Kanıtlar</div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-          <button type="button" class="ikincil" id="kanitDosyaSecBtn">📎 Dosya Ekle (PDF / Fotoğraf)</button>
-          <button type="button" class="ikincil" id="kanitFotoCekBtn">📷 Fotoğraf Çek</button>
-        </div>
-        <input type="file" id="kanitDosya" accept="application/pdf,image/*" multiple style="display:none;">
-        <input type="file" id="kanitFotoCekDosya" accept="image/*" capture="environment" style="display:none;">
-        <div id="kanitListesi" style="margin-bottom:14px;"></div>
-
         <div class="form-bolum-baslik">Ek Bilgiler</div>
         <div class="form-satir-ikili">
           <div>
@@ -610,16 +466,14 @@
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="../../core/eposta.js"></script>
-  <script src="../../core/belge-yukle.js"></script>
   <!-- Bildirim Formu PDF'inin sonundaki konum krokisi için (bkz. cikti.js) -->
   <script src="../harita/repository.js"></script>
-  <script src="model.js?v=2"></script>
+  <script src="model.js"></script>
   <script src="validation.js"></script>
-  <script src="repository.js?v=3"></script>
-  <script src="service.js?v=3"></script>
-  <script src="ui.js?v=10"></script>
+  <script src="repository.js?v=2"></script>
+  <script src="service.js?v=2"></script>
+  <script src="ui.js?v=9"></script>
   <script src="cikti.js?v=9"></script>
-  <script src="csgb.js?v=1"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
 

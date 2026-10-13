@@ -137,10 +137,6 @@ function uygunsuzlukSayfasiniBaslat() {
   _usTarihleriOnar();
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeOzet').addEventListener('click', () => gorunumDegistir('ozet'));
-  document.getElementById('sekmeCsgb').addEventListener('click', () => gorunumDegistir('csgb'));
-  document.getElementById('kaynakTuru').addEventListener('change', _csgbMaddeAlanlariniGuncelle);
-  _usKanitAlaniniHazirla();
-  csgbSekmesiniBaslat();
 
   document.getElementById('yeniKayitBtn').addEventListener('click', () => kayitModalAc());
   document.getElementById('modalKapatBtn').addEventListener('click', kayitModalKapat);
@@ -283,57 +279,26 @@ function uygunsuzlukSayfasiniBaslat() {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
       const konuSecili = uygunsuzlukKonulariniGetir().find(k => k.id === _secilenKonuId);
-      const csgbKonusuMu = !!konuSecili && csgbDenetimleriTumunuGetir().some(d => d.konuId === konuSecili.id);
       satirlar.forEach(satir => {
-        if (csgbKonusuMu && !satir.kaynakTuru) satir.kaynakTuru = 'ÇSGB Denetimi';
         satir.termin = excelTarihiNormallestir(satir.termin);
         satir.bildirimTarihi = excelTarihiNormallestir(satir.bildirimTarihi);
         satir.kapanisTarihi = excelTarihiNormallestir(satir.kapanisTarihi);
         if (konuSecili) { satir.konuId = konuSecili.id; satir.konuAdi = konuSecili.ad; }
-        if (satir.denetimMaddeNo !== undefined && satir.denetimMaddeNo !== null) satir.denetimMaddeNo = String(satir.denetimMaddeNo).trim();
-        // ÇSGB dışa aktarımı "Tamamlandı" yazar; içeride karşılığı "Kapalı".
-        if (String(satir.durum || '').trim().toLocaleLowerCase('tr') === 'tamamlandı') satir.durum = 'Kapalı';
       });
-
-      // ÇSGB denetim konusunda: aynı Madde No'lu kayıt zaten varsa yeni kayıt
-      // açılmaz, Excel'de DOLU olan alanlarla güncellenir (dışa aktar → düzenle
-      // → içe aktar). Diğer satırlar normal şekilde eklenir.
-      const degisiklikler = {};
-      let eklenecekler = satirlar;
-      if (csgbKonusuMu) {
-        const mevcutlar = uygunsuzlukTumunuGetir().filter(k => k.konuId === konuSecili.id && k.denetimMaddeNo);
-        const GUNCELLENEBILIR = ['maddeKonusu', 'tamamlanmaYuzdesi','baslik', 'aciklama', 'bolum', 'lokasyon', 'riskSeviyesi', 'sorumlu', 'termin', 'durum', 'kapanisTarihi', 'kanitAciklamasi', 'duzelticiFaaliyet', 'yasalDayanak'];
-        eklenecekler = satirlar.filter(satir => {
-          const no = (satir.denetimMaddeNo || '').toLocaleLowerCase('tr');
-          const mevcut = no && mevcutlar.find(k => k.denetimMaddeNo.toLocaleLowerCase('tr') === no);
-          if (!mevcut) return true;
-          const d = {};
-          GUNCELLENEBILIR.forEach(a => { const v = satir[a]; if (v !== undefined && v !== null && String(v).trim() !== '') d[a] = String(v).trim(); });
-          if (d.durum && !UYGUNSUZLUK_DURUMLARI.includes(d.durum)) delete d.durum;
-          if (Object.keys(d).length) degisiklikler[mevcut.id] = d;
-          return false;
-        });
-      }
-
       // Satır satır uygunsuzlukEkle yerine TEK bir bulut yazımı (uygunsuzlukTopluEkle): kayıtlar buluta gerçekten
       // yazılana kadar beklenir ve sonuç (başarılı/başarısız) kullanıcıya bildirilir.
       const iceAktarBtn = document.getElementById('iceAktarBtn');
       const eskiMetin = iceAktarBtn.textContent;
       iceAktarBtn.disabled = true; iceAktarBtn.textContent = 'Kaydediliyor...';
-      let sonuc, guncellemeSonucu = { basarili: true };
-      try {
-        guncellemeSonucu = await uygunsuzlukTopluGuncelleRepo(degisiklikler);
-        sonuc = await uygunsuzlukTopluEkle(eklenecekler);
-      }
+      let sonuc;
+      try { sonuc = await uygunsuzlukTopluEkle(satirlar); }
       finally { iceAktarBtn.disabled = false; iceAktarBtn.textContent = eskiMetin; }
       let mesaj = excelIceAktarOzetMesaji(sonuc);
-      const guncellenenSayi = Object.keys(degisiklikler).length;
-      if (guncellenenSayi) mesaj += `\n${guncellenenSayi} mevcut madde (aynı Madde No) güncellendi` + (guncellemeSonucu.basarili ? '.' : ' — ANCAK buluta yazılamadı!');
       if (sonuc.bulutBasarili === false) mesaj += '\n\nUYARI: Kayıtlar buluta YAZILAMADI (belge boyutu sınırı aşılmış olabilir). Sayfayı yenilerseniz kaybolurlar; Excel dosyasını daha az satırla bölerek aktarın.';
       alert(mesaj);
       _konuSecimDoldur();
       _usBolumFiltreDoldur();
-      _usGorunumuYenile();
+      kayitlariCiz(document.getElementById('aramaKutusu').value);
     });
   });
 
@@ -370,15 +335,9 @@ const UYGUNSUZLUK_IMPORT_KOLONLARI = [
   { anahtar: 'sorumlu', baslik: 'Sorumlu' },
   { anahtar: 'termin', baslik: 'Termin' },
   { anahtar: 'bildirimTarihi', baslik: 'Bildirim Tarihi' },
-  { anahtar: 'durum', baslik: 'Durum', esanlamlar: ['Tamamlanma Durumu'] },
-  { anahtar: 'kapanisTarihi', baslik: 'Kapanış Tarihi', esanlamlar: ['Tamamlanma Tarihi'] },
-  { anahtar: 'kanitAciklamasi', baslik: 'Kapanış Açıklaması' },
-  // ÇSGB denetim maddeleri için (diğer kayıtlarda boş bırakılabilir).
-  { anahtar: 'denetimMaddeNo', baslik: 'Madde No', esanlamlar: ['Denetim Madde No', 'Rapor Madde No', 'Uygunsuzluk No'] },
-  { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu', esanlamlar: ['Kısa Konu'] },
-  { anahtar: 'tamamlanmaYuzdesi', baslik: 'Tamamlanma Yüzdesi', esanlamlar: ['Tamamlanma %', 'Yüzde', 'İlerleme'] },
-  { anahtar: 'duzelticiFaaliyet', baslik: 'Faaliyet Önerisi', esanlamlar: ['Gerekli Tedbir', 'Alınması Gerekli Tedbir'] },
-  { anahtar: 'yasalDayanak', baslik: 'Yasal Dayanak', esanlamlar: ['Mevzuat', 'Mevzuat Dayanağı'] }
+  { anahtar: 'durum', baslik: 'Durum' },
+  { anahtar: 'kapanisTarihi', baslik: 'Kapanış Tarihi' },
+  { anahtar: 'kanitAciklamasi', baslik: 'Kapanış Açıklaması' }
 ];
 
 // Ekrandaki Kayıtlar tablosuyla aynı sütun sırası (bkz. index.html thead);
@@ -621,12 +580,11 @@ function gorunumDegistir(gorunum) {
   _usGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
   document.getElementById('sekmeOzet').classList.toggle('sekme-seciliDegil', gorunum !== 'ozet');
-  document.getElementById('sekmeCsgb').classList.toggle('sekme-seciliDegil', gorunum !== 'csgb');
   document.getElementById('bolum-kayitlar').style.display = gorunum === 'kayitlar' ? '' : 'none';
   document.getElementById('bolum-ozet').style.display = gorunum === 'ozet' ? '' : 'none';
-  document.getElementById('bolum-csgb').style.display = gorunum === 'csgb' ? '' : 'none';
 
-  _usGorunumuYenile();
+  if (gorunum === 'kayitlar') kayitlariCiz(document.getElementById('aramaKutusu').value);
+  else ozetiCiz();
 }
 
 // Saha Dijital Haritası köprüsü — _konumAlaniCiz'daki linklerle aynı URL
@@ -1231,88 +1189,14 @@ function ozetiCiz() {
 let _modalKonuId = '';
 let _modalKonuAdi = '';
 
-// ---- Kanıtlar (birden fazla fotoğraf / PDF) ----
-let _usKanitlar = [];
-
-function _usKanitlariCiz() {
-  const kutu = document.getElementById('kanitListesi');
-  if (!_usKanitlar.length) {
-    kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Henüz kanıt eklenmedi.</div>';
-    return;
-  }
-  kutu.innerHTML = _usKanitlar.map((k, i) => `
-    <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--kenarlik);">
-      ${k.tur === 'foto'
-        ? `<img data-foto-ref="${_usKacir(k.ref)}" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik);">`
-        : '<span style="font-size:26px; width:48px; text-align:center;">📄</span>'}
-      <div style="flex:1; min-width:0; font-size:12px;">
-        <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_usKacir(k.ad)}">${_usKacir(k.ad)}</div>
-        <div style="color:var(--metin-soluk);">${gunAyYil((k.tarih || '').slice(0, 10))}</div>
-      </div>
-      <a href="#" data-kanit-ac="${i}" style="font-size:12px;">Aç</a>
-      <button type="button" class="tablo-buton sil" data-kanit-sil="${i}">Kaldır</button>
-    </div>`).join('');
-  fotoReferanslariCoz(kutu);
-  kutu.querySelectorAll('[data-kanit-ac]').forEach(a => a.addEventListener('click', e => {
-    e.preventDefault();
-    belgeDosyasiniAc(_usKanitlar[Number(a.getAttribute('data-kanit-ac'))].ref);
-  }));
-  kutu.querySelectorAll('[data-kanit-sil]').forEach(b => b.addEventListener('click', () => {
-    _usKanitlar.splice(Number(b.getAttribute('data-kanit-sil')), 1);
-    _usKanitlariCiz();
-  }));
-}
-
-async function _usKanitDosyalariEkle(dosyalar) {
-  const firma = aktifFirmaGetir();
-  const hatalar = [];
-  for (const dosya of dosyalar) {
-    try {
-      const ref = await belgeDosyasiIsle(dosya, firma ? firma.slug : '');
-      _usKanitlar.push({ id: rastgeleId(), ad: dosya.name || 'Kanıt', tur: dosya.type === 'application/pdf' ? 'pdf' : 'foto', ref, tarih: new Date().toISOString() });
-    } catch (hata) {
-      hatalar.push(`${dosya.name}: ${hata.message || hata}`);
-    }
-  }
-  _usKanitlariCiz();
-  if (hatalar.length) alert('Bazı kanıtlar eklenemedi:\n' + hatalar.join('\n'));
-}
-
-function _usKanitAlaniniHazirla() {
-  document.getElementById('kanitDosyaSecBtn').addEventListener('click', () => document.getElementById('kanitDosya').click());
-  document.getElementById('kanitFotoCekBtn').addEventListener('click', () => document.getElementById('kanitFotoCekDosya').click());
-  ['kanitDosya', 'kanitFotoCekDosya'].forEach(id => document.getElementById(id).addEventListener('change', async e => {
-    const dosyalar = Array.from(e.target.files || []);
-    e.target.value = '';
-    if (!dosyalar.length) return;
-    document.getElementById('kanitListesi').insertAdjacentHTML('afterbegin', '<div style="font-size:12px; color:var(--metin-soluk);">Yükleniyor...</div>');
-    await _usKanitDosyalariEkle(dosyalar);
-  }));
-}
-
-// ÇSGB madde no / kısa konu alanları sadece kaynak "ÇSGB Denetimi" iken
-// (ya da kayıtta zaten değer varken) görünür.
-function _csgbMaddeAlanlariniGuncelle() {
-  const goster = document.getElementById('kaynakTuru').value === 'ÇSGB Denetimi' ||
-    !!document.getElementById('denetimMaddeNo').value || !!document.getElementById('maddeKonusu').value;
-  document.getElementById('csgbMaddeAlanlari').style.display = goster ? '' : 'none';
-}
-
-// varsayilanlar (sadece yeni kayıtta): ÇSGB sekmesinden "+ Madde Ekle" ile
-// açılınca konu, kaynak, termin ve bildirim tarihi denetimden gelir.
-function kayitModalAc(kayit, varsayilanlar) {
+function kayitModalAc(kayit) {
   _duzenlenenKayitId = kayit ? kayit.id : null;
   document.getElementById('modalBaslik').textContent = kayit ? (kayit.aksiyonNo + ' Kaydını Düzenle') : 'Yeni Uygunsuzluk Kaydı';
-  const v = (!kayit && varsayilanlar) || {};
 
   // Düzenlemede kaydın kendi konusu korunur; yeni kayıtta o an seçili konuya atanır.
   if (kayit) {
     _modalKonuId = kayit.konuId || '';
     _modalKonuAdi = kayit.konuAdi || '';
-  } else if (v.konuId) {
-    const konu = uygunsuzlukKonulariniGetir().find(k => k.id === v.konuId);
-    _modalKonuId = konu ? konu.id : '';
-    _modalKonuAdi = konu ? konu.ad : '';
   } else {
     const secili = uygunsuzlukKonulariniGetir().find(k => k.id === _secilenKonuId);
     _modalKonuId = secili ? secili.id : '';
@@ -1323,14 +1207,7 @@ function kayitModalAc(kayit, varsayilanlar) {
   document.getElementById('aciklama').value = kayit ? kayit.aciklama : '';
   document.getElementById('bolum').value = kayit ? kayit.bolum : '';
   document.getElementById('lokasyon').value = kayit ? kayit.lokasyon : '';
-  const seciliKaynak = kayit ? kayit.kaynakTuru : (v.kaynakTuru || '');
-  document.getElementById('kaynakTuru').innerHTML = KAYNAK_TURLERI.map(t => `<option ${seciliKaynak === t ? 'selected' : ''}>${t}</option>`).join('');
-  document.getElementById('denetimMaddeNo').value = kayit ? (kayit.denetimMaddeNo || '') : '';
-  document.getElementById('maddeKonusu').value = kayit ? (kayit.maddeKonusu || '') : '';
-  const yuzde = kayit ? csgbYuzdeNormallestir(kayit.tamamlanmaYuzdesi) : 0;
-  document.getElementById('tamamlanmaYuzdesi').innerHTML = Array.from(new Set(CSGB_YUZDE_SECENEKLERI.concat([yuzde]))).sort((a, b) => a - b)
-    .map(y => `<option value="${y}" ${y === yuzde ? 'selected' : ''}>%${y}</option>`).join('');
-  _csgbMaddeAlanlariniGuncelle();
+  document.getElementById('kaynakTuru').innerHTML = KAYNAK_TURLERI.map(t => `<option ${kayit && kayit.kaynakTuru === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('riskSeviyesi').innerHTML = RISK_SEVIYELERI.map(r => `<option ${kayit && kayit.riskSeviyesi === r ? 'selected' : ''}>${r}</option>`).join('');
 
   document.getElementById('kokNeden').value = kayit ? kayit.kokNeden : '';
@@ -1341,8 +1218,8 @@ function kayitModalAc(kayit, varsayilanlar) {
   document.getElementById('ilgiliKime').value = kayit ? (kayit.ilgiliKime || '') : '';
   _ucBilgiSecimCiz(kayit ? (kayit.ilgiliBilgi || '') : '');
   document.getElementById('atayan').value = kayit ? kayit.atayan : '';
-  document.getElementById('bildirimTarihi').value = kayit ? kayit.bildirimTarihi : (v.bildirimTarihi || bugunIso());
-  document.getElementById('termin').value = kayit ? kayit.termin : (v.termin || '');
+  document.getElementById('bildirimTarihi').value = kayit ? kayit.bildirimTarihi : bugunIso();
+  document.getElementById('termin').value = kayit ? kayit.termin : '';
   document.getElementById('onayGerekliMi').checked = kayit ? kayit.onayGerekliMi !== false : true;
 
   document.getElementById('maliyet').value = kayit ? kayit.maliyet : '';
@@ -1365,9 +1242,6 @@ function kayitModalAc(kayit, varsayilanlar) {
     _usFotoOnizlemeCiz(`fotoOncesi${n}Onizleme`, _usEkFoto['oncesi' + n], () => { _usEkFoto['oncesi' + n] = ''; _usFotoOnizlemeCiz(`fotoOncesi${n}Onizleme`, '', null); });
     _usFotoOnizlemeCiz(`fotoSonrasi${n}Onizleme`, _usEkFoto['sonrasi' + n], () => { _usEkFoto['sonrasi' + n] = ''; _usFotoOnizlemeCiz(`fotoSonrasi${n}Onizleme`, '', null); });
   });
-
-  _usKanitlar = kayit && Array.isArray(kayit.kanitlar) ? kayit.kanitlar.slice() : [];
-  _usKanitlariCiz();
 
   _konumAlaniCiz(kayit);
 
@@ -1422,9 +1296,6 @@ function formGonderildi(e) {
   const veriler = {
     konuId: _modalKonuId,
     konuAdi: _modalKonuAdi,
-    denetimMaddeNo: document.getElementById('denetimMaddeNo').value,
-    maddeKonusu: document.getElementById('maddeKonusu').value,
-    tamamlanmaYuzdesi: document.getElementById('durum').value === 'Kapalı' ? 100 : document.getElementById('tamamlanmaYuzdesi').value,
     baslik: document.getElementById('baslik').value,
     aciklama: document.getElementById('aciklama').value,
     bolum: document.getElementById('bolum').value,
@@ -1452,7 +1323,6 @@ function formGonderildi(e) {
     fotoSonrasi3: _usEkFoto.sonrasi3,
     fotoOncesi4: _usEkFoto.oncesi4,
     fotoSonrasi4: _usEkFoto.sonrasi4,
-    kanitlar: _usKanitlar.slice(),
     durum: document.getElementById('durum').value,
     kapanisTarihi: document.getElementById('kapanisTarihi').value,
     kanitAciklamasi: document.getElementById('kanitAciklamasi').value
@@ -1475,12 +1345,5 @@ function formGonderildi(e) {
 
   _bekleyenHaritaKonum = null;
   kayitModalKapat();
-  _usGorunumuYenile();
-}
-
-// Etkin sekmeyi (kayıtlar / özet / ÇSGB) yeniden çizer.
-function _usGorunumuYenile() {
-  if (_usGorunum === 'csgb') csgbCiz();
-  else if (_usGorunum === 'ozet') ozetiCiz();
-  else kayitlariCiz(document.getElementById('aramaKutusu').value);
+  kayitlariCiz(document.getElementById('aramaKutusu').value);
 }

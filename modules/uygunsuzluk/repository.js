@@ -31,15 +31,6 @@ function uygunsuzlukTopluEkleRepo(kayitlar) {
   return yazVeSonucuGetir(_uygunsuzlukAnahtari(), liste);
 }
 
-// Çok sayıda kaydı TEK bulut yazımıyla günceller (ÇSGB Excel içe aktarımında
-// aynı madde no'lu mevcut kayıtlar). degisiklikler: { <id>: {alan: deger} }.
-function uygunsuzlukTopluGuncelleRepo(degisiklikler) {
-  const idler = Object.keys(degisiklikler || {});
-  if (!idler.length) return Promise.resolve({ basarili: true });
-  const liste = uygunsuzlukTumunuGetir().map(k => degisiklikler[k.id] ? Object.assign({}, k, degisiklikler[k.id]) : k);
-  return yazVeSonucuGetir(_uygunsuzlukAnahtari(), liste);
-}
-
 function uygunsuzlukGuncelleRepo(id, veriler) {
   const liste = uygunsuzlukTumunuGetir();
   const index = liste.findIndex(k => k.id === id);
@@ -101,52 +92,6 @@ function uygunsuzlukKonuGuncelleRepo(id, veriler) {
   return liste[index];
 }
 
-// ---- ÇSGB Denetimleri ----
-
-function _csgbDenetimAnahtari() {
-  return tenantAnahtar('uygunsuzluk_csgb_denetimleri');
-}
-
-function csgbDenetimleriTumunuGetir() {
-  return oku(_csgbDenetimAnahtari(), []);
-}
-
-function csgbDenetimKaydetRepo(denetim) {
-  const liste = csgbDenetimleriTumunuGetir();
-  const index = liste.findIndex(d => d.id === denetim.id);
-  if (index === -1) liste.push(denetim);
-  else liste[index] = denetim;
-  yaz(_csgbDenetimAnahtari(), liste);
-  return denetim;
-}
-
-function csgbDenetimSilRepo(id) {
-  yaz(_csgbDenetimAnahtari(), csgbDenetimleriTumunuGetir().filter(d => d.id !== id));
-  const toplantilar = csgbToplantilariTumunuGetir();
-  if (toplantilar.some(t => t.denetimId === id)) yaz(_csgbToplantiAnahtari(), toplantilar.filter(t => t.denetimId !== id));
-}
-
-function _csgbToplantiAnahtari() {
-  return tenantAnahtar('uygunsuzluk_csgb_toplantilari');
-}
-
-function csgbToplantilariTumunuGetir() {
-  return oku(_csgbToplantiAnahtari(), []);
-}
-
-function csgbToplantiKaydetRepo(toplanti) {
-  const liste = csgbToplantilariTumunuGetir();
-  const index = liste.findIndex(t => t.id === toplanti.id);
-  if (index === -1) liste.push(toplanti);
-  else liste[index] = toplanti;
-  yaz(_csgbToplantiAnahtari(), liste);
-  return toplanti;
-}
-
-function csgbToplantiSilRepo(id) {
-  yaz(_csgbToplantiAnahtari(), csgbToplantilariTumunuGetir().filter(t => t.id !== id));
-}
-
 // Konuyu ve konuya bağlı TÜM uygunsuzluk kayıtlarını siler (kullanıcı isteği). İki liste de tek seferde
 // yazılır; silinen kayıt sayısını döner.
 function uygunsuzlukKonuyuVeKayitlariniSilRepo(konuId) {
@@ -155,7 +100,5 @@ function uygunsuzlukKonuyuVeKayitlariniSilRepo(konuId) {
   const silinen = kayitlar.length - kalan.length;
   _uygunsuzlukKaydet(kalan);
   _uygunsuzlukKonulariKaydet(uygunsuzlukKonulariTumunuGetir().filter(k => k.id !== konuId));
-  // Konusu silinen ÇSGB denetim kartı da kalmasın (maddeleri zaten silindi).
-  csgbDenetimleriTumunuGetir().filter(d => d.konuId === konuId).forEach(d => csgbDenetimSilRepo(d.id));
   return silinen;
 }

@@ -3,11 +3,7 @@
 const UYGUNSUZLUK_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Kapalı', 'İptal'];
 const ONAY_DURUMLARI = ['Onay Gerekmiyor', 'Onay Bekliyor', 'Onaylandı', 'Reddedildi'];
 const RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Çok Yüksek'];
-const KAYNAK_TURLERI = ['Saha Denetimi', 'İş Kazası', 'Ramak Kala', 'Yasal Şart', 'Risk Değerlendirme', 'İSG Kurul', 'JSA (İş Güvenliği Analizi)', 'ÇSGB Denetimi', 'Manuel Bildirim'];
-
-// ÇSGB (Bakanlık iş müfettişi) denetim takibi -- bkz. csgbDenetimOlustur.
-const CSGB_DENETIM_TURLERI = ['Programlı Teftiş', 'Şikâyet / İhbar', 'İş Kazası İncelemesi', 'Proje / Kampanya Denetimi', 'SEVESO / BEKRA Denetimi', 'Kontrol (Takip) Denetimi', 'Diğer'];
-const CSGB_DENETIM_DURUMLARI = ['Giderme Sürecinde', 'Bakanlığa Bildirildi', 'Kapandı'];
+const KAYNAK_TURLERI = ['Saha Denetimi', 'İş Kazası', 'Ramak Kala', 'Yasal Şart', 'Risk Değerlendirme', 'İSG Kurul', 'JSA (İş Güvenliği Analizi)', 'Manuel Bildirim'];
 
 // Eski isg platformundaki ("İlgili Yasal Şartlar" çoklu seçim listesi) ile
 // birebir aynı liste — kayıtlar birden fazla mevzuata birden bağlanabilir.
@@ -145,81 +141,6 @@ function uygunsuzlukKonuOlustur(veriler) {
   };
 }
 
-// ÇSGB Denetimi: müfettiş denetiminin künyesi. Denetimde yazılan maddeler ayrı
-// bir varlık DEĞİL -- normal uygunsuzluk kayıtlarıdır ve denetimin bağlı olduğu
-// konuda (konuId) tutulur; ilerleme/kalan gün o konunun kayıtlarından hesaplanır.
-function csgbDenetimOlustur(veriler) {
-  return {
-    id: veriler.id || rastgeleId(),
-    konuId: veriler.konuId || '',
-    denetimTarihi: veriler.denetimTarihi || '',
-    denetimTuru: veriler.denetimTuru || CSGB_DENETIM_TURLERI[0],
-    mufettisler: (veriler.mufettisler || '').trim(),
-    raporNo: (veriler.raporNo || '').trim(),
-    raporTarihi: veriler.raporTarihi || '',
-    tebligTarihi: veriler.tebligTarihi || '',
-    verilenSureGun: veriler.verilenSureGun !== undefined && veriler.verilenSureGun !== '' ? Number(veriler.verilenSureGun) || 0 : '',
-    sonGidermeTarihi: veriler.sonGidermeTarihi || '',
-    bildirimTarihi: veriler.bildirimTarihi || '',
-    durum: CSGB_DENETIM_DURUMLARI.includes(veriler.durum) ? veriler.durum : CSGB_DENETIM_DURUMLARI[0],
-    notlar: (veriler.notlar || '').trim(),
-    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
-  };
-}
-
-// Denetimin maddelerini gidermek için dönemsel takip toplantısı.
-// maddeNotlari: { <uygunsuzluk kayıt id>: 'o toplantıda konuşulan/yapılan' }.
-function csgbToplantiOlustur(veriler) {
-  return {
-    id: veriler.id || rastgeleId(),
-    denetimId: veriler.denetimId || '',
-    tarih: veriler.tarih || bugunIso(),
-    yer: (veriler.yer || '').trim(),
-    katilimcilar: (veriler.katilimcilar || '').trim(),
-    genelNotlar: (veriler.genelNotlar || '').trim(),
-    maddeNotlari: veriler.maddeNotlari && typeof veriler.maddeNotlari === 'object' ? veriler.maddeNotlari : {},
-    sonrakiToplantiTarihi: veriler.sonrakiToplantiTarihi || '',
-    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
-  };
-}
-
-// Rapordaki madde numaralarını (1, 2, 5, 5.a, 5b, 29.b, 31.c) doğal sırayla
-// karşılaştırır: önce baştaki sayı, sonra kalan harf/ek.
-function csgbMaddeNoKarsilastir(a, b) {
-  const ayir = s => {
-    const m = String(s || '').trim().match(/^(\d+)\s*[.\-)]?\s*(.*)$/);
-    return m ? [Number(m[1]), m[2].toLocaleLowerCase('tr')] : [Infinity, String(s || '').toLocaleLowerCase('tr')];
-  };
-  const [an, ae] = ayir(a);
-  const [bn, be] = ayir(b);
-  return an !== bn ? an - bn : ae.localeCompare(be, 'tr');
-}
-
-// Madde tamamlanma yüzdesi seçenekleri (ÇSGB takibi).
-const CSGB_YUZDE_SECENEKLERI = [0, 25, 50, 75, 100];
-
-// "50", "%50", 50, 0.5 (Excel yüzde hücresi) -> 50; boş/geçersiz -> 0.
-function csgbYuzdeNormallestir(deger) {
-  if (deger === undefined || deger === null || String(deger).trim() === '') return 0;
-  let n = Number(String(deger).replace('%', '').replace(',', '.').trim());
-  if (!Number.isFinite(n)) return 0;
-  if (n > 0 && n <= 1 && !String(deger).includes('%')) n = n * 100;
-  return Math.max(0, Math.min(100, Math.round(n)));
-}
-
-// Kapalı (tamamlanan) madde her zaman %100 sayılır.
-function csgbMaddeYuzdesi(kayit) {
-  return kayit.durum === 'Kapalı' ? 100 : csgbYuzdeNormallestir(kayit.tamamlanmaYuzdesi);
-}
-
-// Tebliğ tarihine verilen gün eklenerek son giderme tarihi (YYYY-MM-DD).
-function csgbSonGidermeTarihiHesapla(tebligTarihi, gun) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(tebligTarihi || '') || !(Number(gun) > 0)) return '';
-  const [y, a, g] = tebligTarihi.split('-').map(Number);
-  const t = new Date(y, a - 1, g + Number(gun));
-  return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
-}
-
 function uygunsuzlukKaydiOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
@@ -227,12 +148,6 @@ function uygunsuzlukKaydiOlustur(veriler) {
 
     konuId: veriler.konuId || '',
     konuAdi: (veriler.konuAdi || '').trim(),
-
-    // ÇSGB denetim maddeleri için: rapordaki madde numarası (ör. "31.c") ve
-    // maddenin kısa konusu. Diğer kayıtlarda boş kalır.
-    denetimMaddeNo: String(veriler.denetimMaddeNo || '').trim(),
-    maddeKonusu: (veriler.maddeKonusu || '').trim(),
-    tamamlanmaYuzdesi: csgbYuzdeNormallestir(veriler.tamamlanmaYuzdesi),
 
     baslik: (veriler.baslik || '').trim(),
     aciklama: (veriler.aciklama || '').trim(),
@@ -276,10 +191,6 @@ function uygunsuzlukKaydiOlustur(veriler) {
     fotoSonrasi3: veriler.fotoSonrasi3 || '',
     fotoOncesi4: veriler.fotoOncesi4 || '',
     fotoSonrasi4: veriler.fotoSonrasi4 || '',
-
-    // Birden fazla kanıt: [{ id, ad, tur: 'foto'|'pdf', ref: 'fotoref:..', tarih }]
-    // (bkz. core/belge-yukle.js belgeDosyasiIsle).
-    kanitlar: Array.isArray(veriler.kanitlar) ? veriler.kanitlar.filter(k => k && k.ref) : [],
 
     durum: veriler.durum || 'Açık',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),

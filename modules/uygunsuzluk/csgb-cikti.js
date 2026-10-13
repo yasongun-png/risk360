@@ -1,530 +1,91 @@
-// ÇSGB Denetimi sekmesi: Bakanlık (iş müfettişi) denetim raporundaki
-// maddelerin giderilmesinin takibi. İSG Kurulu ile Uygunsuzluk'un karışımı:
-//  - Denetim kartı (rapor no/tarihi, tebliğ, süre, son giderme tarihi).
-//  - Maddeler = denetimin bağlı olduğu konudaki normal uygunsuzluk kayıtları
-//    (rapordaki numarasıyla birebir: 1, 2, 5.a, 5.b ... her biri ayrı kayıt).
-//  - Dönemsel takip toplantıları: her toplantıda madde bazında not + durum.
-//    Notlar toplantı tarihiyle saklanır; listede/raporda madde tek satırdır
-//    ve tüm toplantı notları o satırda tarih sırasıyla alt alta görünür.
-//  - Çıktılar: Takip Raporu (Word, yatay), Toplantı Tutanağı (Word), Excel.
+// ÇSGB Denetimi çıktıları: Excel, Takip Raporu (Word / tıklanabilir PDF),
+// Toplantı Tutanağı (Word), Toplantı Sunumu (PPTX).
 
-// ÇSGB madde şablonu: rapordaki sırayla. Başlıklar UYGUNSUZLUK_IMPORT_KOLONLARI
-// ile eşleşir (içe aktarım o listeyle yapılır); Dışa Aktar çıktısı da aynı
-// başlıkları kullandığı için düzenlenip geri içe aktarılabilir.
-const CSGB_SABLON_KOLONLARI = [
-  { anahtar: 'denetimMaddeNo', baslik: 'Madde No' },
-  { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu' },
-  { anahtar: 'baslik', baslik: 'Uygunsuzluk Tanımı' },
-  { anahtar: 'duzelticiFaaliyet', baslik: 'Faaliyet Önerisi' },
-  { anahtar: 'yasalDayanak', baslik: 'Yasal Dayanak' },
-  { anahtar: 'bolum', baslik: 'Bölüm' },
-  { anahtar: 'sorumlu', baslik: 'Sorumlu' },
-  { anahtar: 'termin', baslik: 'Termin' },
-  { anahtar: 'riskSeviyesi', baslik: 'Risk Seviyesi' },
-  { anahtar: 'durum', baslik: 'Durum' },
-  { anahtar: 'kapanisTarihi', baslik: 'Kapanış Tarihi' },
-  { anahtar: 'kanitAciklamasi', baslik: 'Kapanış Açıklaması' }
-];
-
-let _csgbAcikDenetimId = null;
-let _csgbDuzenlenenId = null;
-let _csgbToplantiId = null;
-let _csgbMaddeFiltre = 'hepsi';
-let _csgbAcikMetinler = new Set();
-// Toplantı penceresinde girilen ama henüz kaydedilmemiş değerler
-// ("tamamlananları da göster" ile liste yeniden çizilince kaybolmasın).
-let _csgbTopTaslakNot = {};
-let _csgbTopTaslakDurum = {};
-
-// Ekranda/raporda "Kapalı" yerine "Tamamlandı" (Kurul'daki gibi).
-function csgbDurumEtiketi(durumGoruntu) {
-  return durumGoruntu === 'Kapalı' ? 'Tamamlandı' : (durumGoruntu || '-');
-}
-
-function _csgbKalanGunRozeti(d) {
-  if (d.durum === 'Kapandı') return '<span class="genel-rozet rozet-kapali">Kapandı</span>';
-  if (d.kalanGun === null || d.kalanGun === undefined) return '<span style="font-size:12px; color:var(--metin-soluk);">Son giderme tarihi girilmedi</span>';
-  if (d.kalanGun < 0) return `<span class="durum-rozet durum-gecmis">${-d.kalanGun} gün geçti</span>`;
-  if (d.kalanGun <= 15) return `<span class="durum-rozet durum-yaklasiyor">${d.kalanGun} gün kaldı</span>`;
-  return `<span class="durum-rozet durum-gecerli">${d.kalanGun} gün kaldı</span>`;
-}
-
-function _csgbBaslik(d) {
-  return d.konuAdi || ('ÇSGB Denetimi ' + gunAyYil(d.raporTarihi || d.denetimTarihi));
-}
-
-function csgbSekmesiniBaslat() {
-  document.getElementById('csgbYeniBtn').addEventListener('click', () => csgbDenetimModalAc(null));
-  document.getElementById('csgbKapatBtn').addEventListener('click', csgbDenetimModalKapat);
-  document.getElementById('csgbIptalBtn').addEventListener('click', csgbDenetimModalKapat);
-  document.getElementById('csgbKaydetBtn').addEventListener('click', _csgbDenetimKaydetTiklandi);
-  document.getElementById('csgbKonu').addEventListener('change', e => {
-    document.getElementById('csgbYeniKonuAdi').style.display = e.target.value === '__yeni' ? '' : 'none';
-  });
-  const sonGidermeyiHesapla = () => {
-    const hesap = csgbSonGidermeTarihiHesapla(document.getElementById('csgbTebligTarihi').value, document.getElementById('csgbVerilenSure').value);
-    if (hesap) document.getElementById('csgbSonGiderme').value = hesap;
-  };
-  document.getElementById('csgbTebligTarihi').addEventListener('change', sonGidermeyiHesapla);
-  document.getElementById('csgbVerilenSure').addEventListener('input', sonGidermeyiHesapla);
-
-  document.getElementById('csgbTopKapatBtn').addEventListener('click', csgbToplantiModalKapat);
-  document.getElementById('csgbTopIptalBtn').addEventListener('click', csgbToplantiModalKapat);
-  document.getElementById('csgbTopKaydetBtn').addEventListener('click', _csgbToplantiKaydetTiklandi);
-  document.getElementById('csgbTopKapalilariGoster').addEventListener('change', () => { _csgbTopTaslagiTopla(); _csgbTopMaddeleriCiz(); });
-}
-
-function csgbCiz() {
-  const kutu = document.getElementById('csgbKutusu');
-  if (_csgbAcikDenetimId && csgbDenetimGetir(_csgbAcikDenetimId)) _csgbDetayCiz(kutu);
-  else { _csgbAcikDenetimId = null; _csgbListeCiz(kutu); }
-}
-
-// ==================== DENETİM LİSTESİ ====================
-
-function _csgbListeCiz(kutu) {
-  document.getElementById('csgbYeniBtn').style.display = '';
-  const denetimler = csgbDenetimleriniGetir();
-  if (!denetimler.length) {
-    kutu.innerHTML = '<div class="bos-durum gorunur">Henüz ÇSGB denetimi eklenmedi. "+ Yeni ÇSGB Denetimi" ile başlayın.</div>';
-    return;
-  }
-  kutu.innerHTML = `<div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(340px,1fr));">${denetimler.map(d => `
-    <div class="kart" style="display:flex; flex-direction:column; gap:8px;">
-      <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-        <div>
-          <div style="font-weight:700; font-size:15px;">${_usKacir(_csgbBaslik(d))}</div>
-          <div style="font-size:12px; color:var(--metin-soluk);">${_usKacir(d.denetimTuru)}${d.raporNo ? ' · Rapor No: ' + _usKacir(d.raporNo) : ''}</div>
-        </div>
-        <span class="genel-rozet">${_usKacir(d.durum)}</span>
-      </div>
-      <div style="font-size:12px; line-height:1.6;">
-        ${d.raporTarihi ? 'Rapor Tarihi: <b>' + gunAyYil(d.raporTarihi) + '</b><br>' : ''}
-        ${d.sonGidermeTarihi ? 'Son Giderme: <b>' + gunAyYil(d.sonGidermeTarihi) + '</b> ' : ''}${_csgbKalanGunRozeti(d)}
-        ${d.mufettisler ? '<br>Müfettiş: ' + _usKacir(d.mufettisler) : ''}
-      </div>
-      <div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px;"><span>${d.kapaliSayisi} / ${d.maddeSayisi - (d.maddeSayisi - d.kapaliSayisi - d.acikSayisi)} madde tamamlandı</span><b>%${d.ilerlemeYuzde}</b></div>
-        <div style="height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${d.ilerlemeYuzde}%; background:#16a34a;"></div></div>
-      </div>
-      <div style="font-size:12px; color:var(--metin-soluk);">
-        Açık: <b>${d.acikSayisi}</b> · Gecikmiş: <b style="color:${d.gecikmisSayisi ? '#b91c1c' : 'inherit'};">${d.gecikmisSayisi}</b> · Toplantı: <b>${d.toplantiSayisi}</b>${d.sonrakiToplantiTarihi ? ' · Sonraki toplantı: <b>' + gunAyYil(d.sonrakiToplantiTarihi) + '</b>' : ''}
-      </div>
-      ${d.konuVarMi ? '' : '<div style="font-size:12px; color:#b91c1c;">Bağlı konu silinmiş; "Düzenle" ile yeni konu bağlayın.</div>'}
-      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:auto;">
-        <button type="button" class="birincil" style="width:auto;" data-csgb-ac="${d.id}">Aç</button>
-        <button type="button" class="ikincil" data-csgb-duzenle="${d.id}">Düzenle</button>
-        <button type="button" class="ikincil" style="color:#b91c1c;" data-csgb-sil="${d.id}">Sil</button>
-      </div>
-    </div>`).join('')}</div>`;
-
-  kutu.querySelectorAll('[data-csgb-ac]').forEach(b => b.addEventListener('click', () => { _csgbAcikDenetimId = b.getAttribute('data-csgb-ac'); _csgbMaddeFiltre = 'hepsi'; csgbCiz(); }));
-  kutu.querySelectorAll('[data-csgb-duzenle]').forEach(b => b.addEventListener('click', () => csgbDenetimModalAc(b.getAttribute('data-csgb-duzenle'))));
-  kutu.querySelectorAll('[data-csgb-sil]').forEach(b => b.addEventListener('click', () => _csgbDenetimSilTiklandi(b.getAttribute('data-csgb-sil'))));
-}
-
-async function _csgbDenetimSilTiklandi(id) {
-  const d = csgbDenetimGetir(id);
-  if (!d) return;
-  if (!(await onayModali(`"${_csgbBaslik(d)}" denetim kartı ve ${d.toplantiSayisi} takip toplantısı silinecek. Maddeler (uygunsuzluk kayıtları) "${d.konuAdi}" konusunda kalır. Emin misiniz?`, 'Sil'))) return;
-  const sonuc = csgbDenetimSil(id);
-  if (!sonuc.basarili) { alert(sonuc.hata); return; }
-  if (_csgbAcikDenetimId === id) _csgbAcikDenetimId = null;
-  csgbCiz();
-}
-
-// ==================== DENETİM FORMU ====================
-
-function csgbDenetimModalAc(id) {
-  _csgbDuzenlenenId = id;
-  const d = id ? csgbDenetimleriTumunuGetir().find(x => x.id === id) : null;
-  document.getElementById('csgbModalBaslik').textContent = d ? 'ÇSGB Denetimini Düzenle' : 'Yeni ÇSGB Denetimi';
-  document.getElementById('csgbDenetimTuru').innerHTML = CSGB_DENETIM_TURLERI.map(t => `<option ${d && d.denetimTuru === t ? 'selected' : ''}>${t}</option>`).join('');
-  document.getElementById('csgbDurum').innerHTML = CSGB_DENETIM_DURUMLARI.map(t => `<option ${d && d.durum === t ? 'selected' : ''}>${t}</option>`).join('');
-
-  // Başka bir denetime bağlı olmayan konular seçilebilir (bu denetimin kendi konusu hariç).
-  const baglilar = new Set(csgbDenetimleriTumunuGetir().filter(x => x.id !== id).map(x => x.konuId));
-  const konular = uygunsuzlukKonulariniGetir().filter(k => !baglilar.has(k.id));
-  document.getElementById('csgbKonu').innerHTML = '<option value="__yeni">+ Yeni konu oluştur</option>' +
-    konular.map(k => `<option value="${k.id}" ${d && d.konuId === k.id ? 'selected' : ''}>${_usKacir(k.ad)} (${k.kayitSayisi} kayıt)</option>`).join('');
-  if (!d || !konular.some(k => k.id === d.konuId)) document.getElementById('csgbKonu').value = '__yeni';
-  document.getElementById('csgbYeniKonuAdi').style.display = document.getElementById('csgbKonu').value === '__yeni' ? '' : 'none';
-  document.getElementById('csgbYeniKonuAdi').value = '';
-
-  document.getElementById('csgbRaporNo').value = d ? d.raporNo : '';
-  document.getElementById('csgbRaporTarihi').value = d ? d.raporTarihi : '';
-  document.getElementById('csgbDenetimTarihi').value = d ? d.denetimTarihi : '';
-  document.getElementById('csgbMufettisler').value = d ? d.mufettisler : '';
-  document.getElementById('csgbTebligTarihi').value = d ? d.tebligTarihi : '';
-  document.getElementById('csgbVerilenSure').value = d && d.verilenSureGun !== '' ? d.verilenSureGun : '';
-  document.getElementById('csgbSonGiderme').value = d ? d.sonGidermeTarihi : '';
-  document.getElementById('csgbBildirimTarihi').value = d ? d.bildirimTarihi : '';
-  document.getElementById('csgbNotlar').value = d ? d.notlar : '';
-  document.getElementById('csgbHata').textContent = '';
-  document.getElementById('csgbKatmani').classList.add('acik');
-}
-
-function csgbDenetimModalKapat() {
-  document.getElementById('csgbKatmani').classList.remove('acik');
-  _csgbDuzenlenenId = null;
-}
-
-function _csgbDenetimKaydetTiklandi() {
-  const konuSecim = document.getElementById('csgbKonu').value;
-  const veriler = {
-    konuId: konuSecim === '__yeni' ? '' : konuSecim,
-    yeniKonuAdi: document.getElementById('csgbYeniKonuAdi').value,
-    raporNo: document.getElementById('csgbRaporNo').value,
-    raporTarihi: document.getElementById('csgbRaporTarihi').value,
-    denetimTarihi: document.getElementById('csgbDenetimTarihi').value,
-    denetimTuru: document.getElementById('csgbDenetimTuru').value,
-    mufettisler: document.getElementById('csgbMufettisler').value,
-    tebligTarihi: document.getElementById('csgbTebligTarihi').value,
-    verilenSureGun: document.getElementById('csgbVerilenSure').value,
-    sonGidermeTarihi: document.getElementById('csgbSonGiderme').value,
-    bildirimTarihi: document.getElementById('csgbBildirimTarihi').value,
-    durum: document.getElementById('csgbDurum').value,
-    notlar: document.getElementById('csgbNotlar').value
-  };
-  const sonuc = csgbDenetimKaydet(veriler, _csgbDuzenlenenId);
-  if (!sonuc.basarili) { document.getElementById('csgbHata').textContent = sonuc.hata; return; }
-  csgbDenetimModalKapat();
-  _konuSecimDoldur();
-  _csgbAcikDenetimId = sonuc.denetim.id;
-  csgbCiz();
-}
-
-// ==================== DENETİM DETAYI ====================
-
-function _csgbMetinHucresi(k) {
-  const acik = _csgbAcikMetinler.has(k.id);
-  const ek = [];
-  if (k.aciklama) ek.push(`<div style="margin-top:6px;">${_usKacir(k.aciklama)}</div>`);
-  if (k.duzelticiFaaliyet) ek.push(`<div style="margin-top:6px;"><b>Gerekli tedbir:</b> ${_usKacir(k.duzelticiFaaliyet)}</div>`);
-  if (k.yasalDayanak) ek.push(`<div style="margin-top:6px; color:var(--metin-soluk);"><b>Mevzuat:</b> ${_usKacir(k.yasalDayanak)}</div>`);
-  return `
-    <div class="${acik ? '' : 'us-tanim-hucre'}" style="white-space:pre-wrap;">${_usKacir(k.baslik)}</div>
-    ${acik ? ek.join('') : ''}
-    <a href="#" data-csgb-metin="${k.id}" style="font-size:11.5px;">${acik ? '▲ Kısalt' : '▼ Tam metin' + (ek.length ? ' / tedbir / mevzuat' : '')}</a>`;
-}
-
-function _csgbNotlarHucresi(k) {
-  if (!k.toplantiNotlari.length) return '<span style="color:var(--metin-soluk);">-</span>';
-  return k.toplantiNotlari.map(n => `<div style="margin-bottom:5px;"><b>${gunAyYil(n.tarih)}:</b> ${_usKacir(n.not)}</div>`).join('');
-}
-
-function _csgbKanitHucresi(k) {
-  const liste = Array.isArray(k.kanitlar) ? k.kanitlar : [];
-  if (!liste.length) return '<span style="color:var(--metin-soluk);">-</span>';
-  return liste.map((x, i) => `<a href="#" data-csgb-kanit="${k.id}|${i}" title="${_usKacir(x.ad)}" style="display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${x.tur === 'foto' ? '🖼️' : '📄'} ${_usKacir(x.ad)}</a>`).join('');
-}
-
-function _csgbDetayCiz(kutu) {
-  document.getElementById('csgbYeniBtn').style.display = 'none';
-  const d = csgbDenetimGetir(_csgbAcikDenetimId);
-  const tumMaddeler = csgbMaddeleriniGetir(d.id);
-  const arama = (document.getElementById('csgbMaddeArama') || {}).value || '';
-  let maddeler = tumMaddeler;
-  if (_csgbMaddeFiltre === 'acik') maddeler = maddeler.filter(k => k.durum !== 'Kapalı' && k.durum !== 'İptal');
-  else if (_csgbMaddeFiltre === 'tamamlanan') maddeler = maddeler.filter(k => k.durum === 'Kapalı');
-  else if (_csgbMaddeFiltre === 'gecikmis') maddeler = maddeler.filter(k => k.durumGoruntu === 'Gecikmiş');
-  if (arama.trim()) {
-    const a = arama.trim().toLocaleLowerCase('tr');
-    maddeler = maddeler.filter(k => [k.denetimMaddeNo, k.maddeKonusu, k.baslik, k.sorumlu].some(x => String(x || '').toLocaleLowerCase('tr').includes(a)));
-  }
-  const toplantilar = csgbToplantilariniGetir(d.id);
-  const kart = (etiket, deger) => `<div class="istatistik-kutu"><span>${etiket}</span><b>${deger}</b></div>`;
-
-  kutu.innerHTML = `
-    <a href="#" id="csgbGeriLink" class="geri-link">← Tüm ÇSGB Denetimleri</a>
-    <div class="kart" style="margin:10px 0 14px;">
-      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0 0 4px;">${_usKacir(_csgbBaslik(d))}</h3>
-          <div style="font-size:12.5px; line-height:1.7;">
-            ${_usKacir(d.denetimTuru)}${d.raporNo ? ' · Rapor No: <b>' + _usKacir(d.raporNo) + '</b>' : ''}${d.raporTarihi ? ' · Rapor Tarihi: <b>' + gunAyYil(d.raporTarihi) + '</b>' : ''}${d.denetimTarihi ? ' · Denetim: ' + gunAyYil(d.denetimTarihi) : ''}<br>
-            ${d.tebligTarihi ? 'Tebliğ: ' + gunAyYil(d.tebligTarihi) + ' · ' : ''}${d.verilenSureGun ? 'Süre: ' + d.verilenSureGun + ' gün · ' : ''}${d.sonGidermeTarihi ? 'Son Giderme: <b>' + gunAyYil(d.sonGidermeTarihi) + '</b> ' : ''}${_csgbKalanGunRozeti(d)}
-            ${d.mufettisler ? '<br>Müfettiş: ' + _usKacir(d.mufettisler) : ''}${d.bildirimTarihi ? ' · Bakanlığa bildirim: ' + gunAyYil(d.bildirimTarihi) : ''}
-            ${d.notlar ? '<br><span style="color:var(--metin-soluk);">' + _usKacir(d.notlar) + '</span>' : ''}
-          </div>
-        </div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start;">
-          <button type="button" class="ikincil" id="csgbDenetimDuzenleBtn">Denetimi Düzenle</button>
-          <button type="button" class="ikincil" id="csgbRaporWordBtn">📄 Takip Raporu (Word)</button>
-          <button type="button" class="ikincil" id="csgbRaporPdfBtn" title="Tablodaki maddeye tıklayınca PDF içinde tam metnine gider">📕 Takip Raporu (PDF)</button>
-          <button type="button" class="ikincil" id="csgbPptxBtn" title="Son takip toplantısının (toplantı yoksa sıradaki toplantının) sunumu: genel durum, açık maddeler, tamamlananlar">📊 Toplantı Sunumu (PPTX)</button>
-          <button type="button" class="ikincil" id="csgbExcelBtn">Dışa Aktar (Excel)</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="istatistik-grid">
-      ${kart('Toplam Madde', tumMaddeler.length)}
-      ${kart('Tamamlanan', d.kapaliSayisi)}
-      ${kart('Açık', d.acikSayisi)}
-      ${kart('Gecikmiş', d.gecikmisSayisi)}
-      ${kart('İlerleme', '%' + d.ilerlemeYuzde)}
-      ${kart('Toplantı', toplantilar.length)}
-    </div>
-
-    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin:18px 0 8px;">
-      <h3 style="margin:0; font-size:15px;">Takip Toplantıları</h3>
-      <button type="button" class="birincil" style="width:auto;" id="csgbYeniToplantiBtn">+ Takip Toplantısı</button>
-    </div>
-    <div class="tablo-scroll">
-      <table class="veri-tablosu">
-        <thead><tr><th>İşlemler</th><th>Tarih</th><th>Yer</th><th>Katılımcı</th><th>Not Girilen Madde</th><th>Sonraki Toplantı</th></tr></thead>
-        <tbody>${toplantilar.length ? toplantilar.slice().reverse().map(t => `
-          <tr>
-            <td style="white-space:nowrap;">
-              <button type="button" class="tablo-buton" data-csgb-top-duzenle="${t.id}">Düzenle</button>
-              <button type="button" class="tablo-buton" data-csgb-top-word="${t.id}">Tutanak (Word)</button>
-              <button type="button" class="tablo-buton" data-csgb-top-pptx="${t.id}">Sunum (PPTX)</button>
-              <button type="button" class="tablo-buton sil" data-csgb-top-sil="${t.id}">Sil</button>
-            </td>
-            <td>${gunAyYil(t.tarih)}</td>
-            <td>${_usKacir(t.yer) || '-'}</td>
-            <td>${t.katilimcilar ? t.katilimcilar.split('\n').filter(s => s.trim()).length : 0}</td>
-            <td>${Object.keys(t.maddeNotlari || {}).length}</td>
-            <td>${gunAyYil(t.sonrakiToplantiTarihi) || '-'}</td>
-          </tr>`).join('') : '<tr><td colspan="6">Henüz takip toplantısı yapılmadı.</td></tr>'}</tbody>
-      </table>
-    </div>
-
-    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin:22px 0 8px;">
-      <h3 style="margin:0; font-size:15px;">Denetim Maddeleri</h3>
-      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="csgbMaddeArama" class="arama-kutusu" placeholder="No, konu, metin, sorumlu..." value="${_usKacir(arama)}" style="width:220px; margin:0;">
-        <select id="csgbMaddeFiltre" style="width:auto; margin:0;">
-          <option value="hepsi">Tüm Maddeler</option>
-          <option value="acik">Açık Olanlar</option>
-          <option value="gecikmis">Gecikmiş</option>
-          <option value="tamamlanan">Tamamlananlar</option>
-        </select>
-        <button type="button" class="ikincil" id="csgbExcelAktarBtn" title="Excel'deki maddeleri bu denetime aktarır (Madde No, Uygunsuzluk Konusu, Uygunsuzluk Tanımı, Faaliyet Önerisi, Yasal Dayanak, Sorumlu, Termin...)">İçe Aktar (Excel)</button>
-        <button type="button" class="ikincil" id="csgbSablonBtn">Şablon</button>
-        <button type="button" class="birincil" style="width:auto;" id="csgbMaddeEkleBtn">+ Madde Ekle</button>
-      </div>
-    </div>
-    <div class="tablo-scroll">
-      <table class="veri-tablosu" style="table-layout:fixed; min-width:1290px;">
-        <colgroup><col style="width:90px;"><col style="width:60px;"><col style="width:150px;"><col style="width:330px;"><col style="width:270px;"><col style="width:150px;"><col style="width:85px;"><col style="width:120px;"><col style="width:100px;"></colgroup>
-        <thead><tr><th>İşlemler</th><th>No</th><th>Uygunsuzluk Konusu</th><th>Uygunsuzluk</th><th>Toplantı Notları</th><th>Kanıtlar</th><th>Termin</th><th>Sorumlu</th><th>Durum</th></tr></thead>
-        <tbody>${maddeler.length ? maddeler.map(k => `
-          <tr>
-            <td><button type="button" class="tablo-buton" data-csgb-madde-duzenle="${k.id}">Düzenle</button></td>
-            <td><b>${_usKacir(k.denetimMaddeNo) || '-'}</b></td>
-            <td>${_usKacir(k.maddeKonusu) || '-'}</td>
-            <td style="font-size:12.5px;">${_csgbMetinHucresi(k)}</td>
-            <td style="font-size:12px;">${_csgbNotlarHucresi(k)}</td>
-            <td>${_csgbKanitHucresi(k)}</td>
-            <td>${gunAyYil(k.termin) || '-'}</td>
-            <td>${_usKacir(k.sorumlu) || '-'}</td>
-            <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.durumGoruntu)}">${_usKacir(csgbDurumEtiketi(k.durumGoruntu))}</span>${k.kapanisTarihi && k.durum === 'Kapalı' ? '<div style="font-size:11px; color:var(--metin-soluk); margin-top:3px;">' + gunAyYil(k.kapanisTarihi) + '</div>' : ''}</td>
-          </tr>`).join('') : `<tr><td colspan="9">${tumMaddeler.length ? 'Filtreye uyan madde yok.' : 'Henüz madde girilmedi. "+ Madde Ekle" ya da "İçe Aktar (Excel)" ile rapordaki maddeleri girin.'}</td></tr>`}</tbody>
-      </table>
-    </div>
-  `;
-
-  document.getElementById('csgbMaddeFiltre').value = _csgbMaddeFiltre;
-  document.getElementById('csgbGeriLink').addEventListener('click', e => { e.preventDefault(); _csgbAcikDenetimId = null; csgbCiz(); });
-  document.getElementById('csgbDenetimDuzenleBtn').addEventListener('click', () => csgbDenetimModalAc(d.id));
-  document.getElementById('csgbYeniToplantiBtn').addEventListener('click', () => csgbToplantiModalAc(null));
-  document.getElementById('csgbMaddeEkleBtn').addEventListener('click', () => {
-    if (!d.konuVarMi) { alert('Bu denetimin bağlı olduğu konu silinmiş. Önce "Denetimi Düzenle" ile konu bağlayın.'); return; }
-    kayitModalAc(null, {
-      konuId: d.konuId,
-      kaynakTuru: 'ÇSGB Denetimi',
-      termin: d.sonGidermeTarihi,
-      bildirimTarihi: d.tebligTarihi || d.raporTarihi || d.denetimTarihi
-    });
-  });
-  document.getElementById('csgbMaddeFiltre').addEventListener('change', e => { _csgbMaddeFiltre = e.target.value; csgbCiz(); });
-  document.getElementById('csgbMaddeArama').addEventListener('input', () => {
-    csgbCiz();
-    const girdi = document.getElementById('csgbMaddeArama');
-    girdi.focus();
-    girdi.setSelectionRange(girdi.value.length, girdi.value.length);
-  });
-  document.getElementById('csgbSablonBtn').addEventListener('click', () => excelSablonIndir(CSGB_SABLON_KOLONLARI, 'csgb_madde_sablonu.xlsx'));
-  document.getElementById('csgbRaporPdfBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('csgbRaporPdfBtn');
-    btn.disabled = true; btn.textContent = 'PDF hazırlanıyor...';
-    try { await csgbTakipRaporuPdfOlustur(d.id); }
-    catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
-    finally { btn.disabled = false; btn.textContent = '📕 Takip Raporu (PDF)'; }
-  });
-  document.getElementById('csgbPptxBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('csgbPptxBtn');
-    const son = toplantilar[toplantilar.length - 1];
-    btn.disabled = true; btn.textContent = 'Sunum hazırlanıyor...';
-    try { await csgbToplantiPptxOlustur(d.id, son ? son.id : null); }
-    catch (hata) { console.error(hata); alert('Sunum üretilemedi: ' + (hata.message || hata)); }
-    finally { btn.disabled = false; btn.textContent = '📊 Toplantı Sunumu (PPTX)'; }
-  });
-  document.getElementById('csgbExcelAktarBtn').addEventListener('click', () => {
-    if (!d.konuVarMi) { alert('Bu denetimin bağlı olduğu konu silinmiş. Önce "Denetimi Düzenle" ile konu bağlayın.'); return; }
-    // Mevcut içe aktarım akışı seçili konuya yazar: önce denetimin konusunu seç.
-    _secilenKonuId = d.konuId;
-    _konuSecimDoldur();
-    document.getElementById('konuSecim').value = d.konuId;
-    _secilenKonuId = d.konuId;
-    _usBolumFiltreDoldur();
-    document.getElementById('iceAktarDosya').click();
-  });
-  document.getElementById('csgbExcelBtn').addEventListener('click', () => csgbExcelDisaAktar(d.id));
-  document.getElementById('csgbRaporWordBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('csgbRaporWordBtn');
-    const tamMetin = await onayModali('Raporun sonuna maddelerin tam metni (gerekli tedbir, mevzuat) ve kanıt fotoğrafları "Ek" olarak eklensin mi? Hayır derseniz sadece kısa takip tablosu üretilir.', 'Evet, ekle');
-    btn.disabled = true; btn.textContent = 'Hazırlanıyor...';
-    try { await csgbTakipRaporuWordOlustur(d.id, tamMetin); }
-    catch (hata) { console.error(hata); alert('Rapor üretilemedi: ' + (hata.message || hata)); }
-    finally { btn.disabled = false; btn.textContent = '📄 Takip Raporu (Word)'; }
-  });
-
-  kutu.querySelectorAll('[data-csgb-metin]').forEach(a => a.addEventListener('click', e => {
-    e.preventDefault();
-    const id = a.getAttribute('data-csgb-metin');
-    if (_csgbAcikMetinler.has(id)) _csgbAcikMetinler.delete(id); else _csgbAcikMetinler.add(id);
-    csgbCiz();
-  }));
-  kutu.querySelectorAll('[data-csgb-kanit]').forEach(a => a.addEventListener('click', e => {
-    e.preventDefault();
-    const [kayitId, i] = a.getAttribute('data-csgb-kanit').split('|');
-    const kayit = uygunsuzlukIdIleGetirRepo(kayitId);
-    const kanit = kayit && kayit.kanitlar ? kayit.kanitlar[Number(i)] : null;
-    if (kanit) belgeDosyasiniAc(kanit.ref);
-  }));
-  kutu.querySelectorAll('[data-csgb-madde-duzenle]').forEach(b => b.addEventListener('click', () => kayitModalAc(uygunsuzlukIdIleGetirRepo(b.getAttribute('data-csgb-madde-duzenle')))));
-  kutu.querySelectorAll('[data-csgb-top-duzenle]').forEach(b => b.addEventListener('click', () => csgbToplantiModalAc(b.getAttribute('data-csgb-top-duzenle'))));
-  kutu.querySelectorAll('[data-csgb-top-word]').forEach(b => b.addEventListener('click', async () => {
-    try { await csgbToplantiTutanagiWordOlustur(b.getAttribute('data-csgb-top-word')); }
-    catch (hata) { console.error(hata); alert('Tutanak üretilemedi: ' + (hata.message || hata)); }
-  }));
-  kutu.querySelectorAll('[data-csgb-top-pptx]').forEach(b => b.addEventListener('click', async () => {
-    try { await csgbToplantiPptxOlustur(d.id, b.getAttribute('data-csgb-top-pptx')); }
-    catch (hata) { console.error(hata); alert('Sunum üretilemedi: ' + (hata.message || hata)); }
-  }));
-  kutu.querySelectorAll('[data-csgb-top-sil]').forEach(b => b.addEventListener('click', async () => {
-    if (!(await onayModali('Bu takip toplantısı ve içindeki madde notları silinecek (maddelerin durumları değişmez). Emin misiniz?', 'Sil'))) return;
-    const sonuc = csgbToplantiSil(b.getAttribute('data-csgb-top-sil'));
-    if (!sonuc.basarili) { alert(sonuc.hata); return; }
-    csgbCiz();
-  }));
-}
-
-// ==================== TAKİP TOPLANTISI ====================
-
-function csgbToplantiModalAc(toplantiId) {
-  const d = csgbDenetimGetir(_csgbAcikDenetimId);
-  if (!d) return;
-  _csgbToplantiId = toplantiId;
-  const t = toplantiId ? csgbToplantilariTumunuGetir().find(x => x.id === toplantiId) : null;
-  // Yeni toplantıda katılımcılar/yer bir önceki toplantıdan kopyalanır.
-  const onceki = csgbToplantilariniGetir(d.id).slice(-1)[0];
-  document.getElementById('csgbToplantiBaslik').textContent = (t ? 'Takip Toplantısını Düzenle — ' : 'Yeni Takip Toplantısı — ') + _csgbBaslik(d);
-  document.getElementById('csgbTopTarih').value = t ? t.tarih : bugunIso();
-  document.getElementById('csgbTopSonraki').value = t ? t.sonrakiToplantiTarihi : '';
-  document.getElementById('csgbTopYer').value = t ? t.yer : (onceki ? onceki.yer : '');
-  document.getElementById('csgbTopKatilimcilar').value = t ? t.katilimcilar : (onceki ? onceki.katilimcilar : '');
-  document.getElementById('csgbTopGenel').value = t ? t.genelNotlar : '';
-  document.getElementById('csgbTopKapalilariGoster').checked = false;
-  document.getElementById('csgbTopHata').textContent = '';
-  _csgbTopTaslakNot = Object.assign({}, t ? t.maddeNotlari : {});
-  _csgbTopTaslakDurum = {};
-  _csgbTopMaddeleriCiz();
-  document.getElementById('csgbToplantiKatmani').classList.add('acik');
-}
-
-function csgbToplantiModalKapat() {
-  document.getElementById('csgbToplantiKatmani').classList.remove('acik');
-  _csgbToplantiId = null;
-}
-
-function _csgbTopTaslagiTopla() {
-  document.querySelectorAll('#csgbTopMaddeGovde [data-top-not]').forEach(el => { _csgbTopTaslakNot[el.getAttribute('data-top-not')] = el.value; });
-  document.querySelectorAll('#csgbTopMaddeGovde [data-top-durum]').forEach(el => { _csgbTopTaslakDurum[el.getAttribute('data-top-durum')] = el.value; });
-}
-
-function _csgbTopMaddeleriCiz() {
-  const kapalilar = document.getElementById('csgbTopKapalilariGoster').checked;
-  const maddeler = csgbMaddeleriniGetir(_csgbAcikDenetimId).filter(k =>
-    kapalilar || (k.durum !== 'Kapalı' && k.durum !== 'İptal') || (_csgbTopTaslakNot[k.id] || '').trim());
-  const govde = document.getElementById('csgbTopMaddeGovde');
-  if (!maddeler.length) {
-    govde.innerHTML = '<tr><td colspan="4">Gösterilecek madde yok.</td></tr>';
-    return;
-  }
-  govde.innerHTML = maddeler.map(k => {
-    const durum = _csgbTopTaslakDurum[k.id] || k.durum;
-    const oncekiNotlar = k.toplantiNotlari.filter(n => n.tarih !== document.getElementById('csgbTopTarih').value);
-    return `
-    <tr>
-      <td><b>${_usKacir(k.denetimMaddeNo) || '-'}</b></td>
-      <td style="font-size:12px;">
-        ${k.maddeKonusu ? '<b>' + _usKacir(k.maddeKonusu) + '</b><br>' : ''}
-        <div class="us-tanim-hucre" title="${_usKacir(k.baslik)}">${_usKacir(k.baslik)}</div>
-        <div style="color:var(--metin-soluk); margin-top:3px;">Sorumlu: ${_usKacir(k.sorumlu) || '-'} · Termin: ${gunAyYil(k.termin) || '-'}</div>
-        ${oncekiNotlar.length ? `<details style="margin-top:3px;"><summary style="cursor:pointer; color:var(--metin-soluk);">Önceki notlar (${oncekiNotlar.length})</summary>${oncekiNotlar.map(n => `<div><b>${gunAyYil(n.tarih)}:</b> ${_usKacir(n.not)}</div>`).join('')}</details>` : ''}
-      </td>
-      <td><textarea data-top-not="${k.id}" rows="3" style="margin:0; font-size:12.5px;" placeholder="Görüşülen / yapılan çalışma...">${_usKacir(_csgbTopTaslakNot[k.id] || '')}</textarea></td>
-      <td><select data-top-durum="${k.id}" style="margin:0;">${UYGUNSUZLUK_DURUMLARI.map(s => `<option value="${s}" ${s === durum ? 'selected' : ''}>${csgbDurumEtiketi(s)}</option>`).join('')}</select></td>
-    </tr>`;
-  }).join('');
-}
-
-function _csgbToplantiKaydetTiklandi() {
-  _csgbTopTaslagiTopla();
-  const durumGuncellemeleri = {};
-  document.querySelectorAll('#csgbTopMaddeGovde [data-top-durum]').forEach(el => {
-    const kayit = uygunsuzlukIdIleGetirRepo(el.getAttribute('data-top-durum'));
-    if (kayit && kayit.durum !== el.value) durumGuncellemeleri[kayit.id] = el.value;
-  });
-  const sonuc = csgbToplantiKaydet({
-    id: _csgbToplantiId || undefined,
-    denetimId: _csgbAcikDenetimId,
-    tarih: document.getElementById('csgbTopTarih').value,
-    sonrakiToplantiTarihi: document.getElementById('csgbTopSonraki').value,
-    yer: document.getElementById('csgbTopYer').value,
-    katilimcilar: document.getElementById('csgbTopKatilimcilar').value,
-    genelNotlar: document.getElementById('csgbTopGenel').value,
-    maddeNotlari: _csgbTopTaslakNot
-  }, durumGuncellemeleri);
-  if (!sonuc.basarili) { document.getElementById('csgbTopHata').textContent = sonuc.hata; return; }
-  csgbToplantiModalKapat();
-  csgbCiz();
+function _csgbKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
 // ==================== EXCEL ====================
+// İçe aktarım şablonu ve dışa aktarım aynı başlıkları kullanır: dışa aktarılan
+// dosya düzenlenip geri içe aktarılabilir (aynı Madde No güncellenir).
+// "Toplantı Notları" ve "Kanıtlar" sütunları sadece bilgi içindir, içe
+// aktarımda yok sayılır.
+const CSGB_EXCEL_KOLONLARI = [
+  { anahtar: 'denetimMaddeNo', baslik: 'Madde No', esanlamlar: ['Uygunsuzluk No', 'No', 'Rapor Madde No'] },
+  { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu', esanlamlar: ['Konu', 'Kısa Konu'] },
+  { anahtar: 'baslik', baslik: 'Uygunsuzluk Tanımı', esanlamlar: ['Uygunsuzluk', 'Tespit', 'Uygunsuzluk Metni'] },
+  { anahtar: 'duzelticiFaaliyet', baslik: 'Gerekli Tedbir', esanlamlar: ['Faaliyet Önerisi', 'Alınması Gerekli Tedbir', 'Ek Açıklama'] },
+  { anahtar: 'yasalDayanak', baslik: 'Mevzuat', esanlamlar: ['Yasal Dayanak', 'Mevzuat Dayanağı'] },
+  { anahtar: 'bolum', baslik: 'Bölüm', esanlamlar: ['Tesis / Birim'] },
+  { anahtar: 'sorumlu', baslik: 'Sorumlu' },
+  { anahtar: 'termin', baslik: 'Termin' },
+  { anahtar: 'durum', baslik: 'Tamamlanma Durumu', esanlamlar: ['Durum'] },
+  { anahtar: 'tamamlanmaYuzdesi', baslik: 'Tamamlanma Yüzdesi', esanlamlar: ['Tamamlanma %', 'Yüzde', 'İlerleme'] },
+  { anahtar: 'kapanisTarihi', baslik: 'Tamamlanma Tarihi', esanlamlar: ['Kapanış Tarihi'] },
+  { anahtar: 'kanitAciklamasi', baslik: 'Kapanış Açıklaması' }
+];
 
 function csgbExcelDisaAktar(denetimId) {
   const d = csgbDenetimGetir(denetimId);
-  const satirlar = csgbMaddeleriniGetir(denetimId).map(k => ({
-    denetimMaddeNo: k.denetimMaddeNo,
-    maddeKonusu: k.maddeKonusu,
-    baslik: k.baslik,
-    duzelticiFaaliyet: k.duzelticiFaaliyet,
-    yasalDayanak: k.yasalDayanak,
+  const satirlar = csgbMaddeleriniGetir(denetimId).map(k => Object.assign({}, k, {
     toplantiNotlari: k.toplantiNotlari.map(n => gunAyYil(n.tarih) + ': ' + n.not).join('\n'),
     kanitlar: (k.kanitlar || []).map(x => x.ad).join(', '),
     termin: gunAyYil(k.termin),
-    sorumlu: k.sorumlu,
-    durum: csgbDurumEtiketi(k.durumGoruntu),
+    durum: csgbDurumEtiketi(k.durum),
+    tamamlanmaYuzdesi: '%' + k.yuzde,
     kapanisTarihi: gunAyYil(k.kapanisTarihi)
   }));
-  excelDisaAktar(satirlar, [
-    { anahtar: 'denetimMaddeNo', baslik: 'Madde No' },
-    { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu' },
-    { anahtar: 'baslik', baslik: 'Uygunsuzluk Tanımı' },
-    { anahtar: 'duzelticiFaaliyet', baslik: 'Faaliyet Önerisi' },
-    { anahtar: 'yasalDayanak', baslik: 'Yasal Dayanak' },
-    { anahtar: 'toplantiNotlari', baslik: 'Toplantı Notları' },
-    { anahtar: 'kanitlar', baslik: 'Kanıtlar' },
-    { anahtar: 'termin', baslik: 'Termin' },
-    { anahtar: 'sorumlu', baslik: 'Sorumlu' },
-    { anahtar: 'durum', baslik: 'Tamamlanma Durumu' },
-    { anahtar: 'kapanisTarihi', baslik: 'Tamamlanma Tarihi' }
-  ], 'CSGB_Takip_' + (d ? (d.raporTarihi || d.denetimTarihi || '') : '') + '.xlsx');
+  const kolonlar = CSGB_EXCEL_KOLONLARI.slice(0, 5).concat(
+    [{ anahtar: 'toplantiNotlari', baslik: 'Toplantı Notları' }, { anahtar: 'kanitlar', baslik: 'Kanıtlar' }],
+    CSGB_EXCEL_KOLONLARI.slice(5)
+  );
+  excelDisaAktar(satirlar, kolonlar, 'CSGB_Takip_' + (d ? (d.raporTarihi || d.denetimTarihi || '') : '') + '.xlsx');
+}
+
+// ==================== FOTOĞRAF YARDIMCILARI ====================
+// (uygunsuzluk/cikti.js'teki _ucWordFotoVerisi / fotoSigdirNesnesi ile aynı
+// mantık; bu sayfa o dosyayı yüklemediği için kendi kopyası.)
+
+// Fotoğrafı kutuyu dolduracak şekilde ortadan kırpıp JPEG baytlarına çevirir (Word için).
+async function _csgbWordFotoVerisi(url, genPx, yukPx) {
+  if (!url) return null;
+  try {
+    const blob = await (await fetch(url)).blob();
+    const img = await new Promise((coz, red) => { const i = new Image(); i.onload = () => coz(i); i.onerror = red; i.src = URL.createObjectURL(blob); });
+    const hedefOran = genPx / yukPx;
+    let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+    if (sw / sh > hedefOran) { sw = sh * hedefOran; sx = (img.naturalWidth - sw) / 2; }
+    else { sh = sw / hedefOran; sy = (img.naturalHeight - sh) / 2; }
+    const canvas = document.createElement('canvas');
+    canvas.width = genPx * 2; canvas.height = yukPx * 2;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    const jpeg = await new Promise(coz => canvas.toBlob(coz, 'image/jpeg', 0.8));
+    return new Uint8Array(await jpeg.arrayBuffer());
+  } catch (e) {
+    console.error('ÇSGB fotoğrafı Word raporuna eklenemedi:', e);
+    return null;
+  }
+}
+
+const _csgbFotoOlcu = new Map();
+async function _csgbFotoOlculeriniHazirla(urller, ...digerleri) {
+  const liste = [].concat(urller || [], digerleri).filter(u => u && !_csgbFotoOlcu.has(u));
+  await Promise.all(liste.map(u => new Promise(coz => {
+    const im = new Image();
+    im.onload = () => { _csgbFotoOlcu.set(u, { w: im.naturalWidth, h: im.naturalHeight }); coz(); };
+    im.onerror = () => { _csgbFotoOlcu.set(u, null); coz(); };
+    im.src = u;
+  })));
+}
+
+// x,y,w,h kutusuna oranı bozmadan, ortalanmış PPTX addImage seçenekleri.
+function _csgbFotoSigdir(url, x, y, w, h) {
+  const kaynak = /^https?:\/\//i.test(url) ? { path: url } : { data: url };
+  const o = _csgbFotoOlcu.get(url);
+  if (!o || !o.w || !o.h) return Object.assign(kaynak, { x, y, w, h, sizing: { type: 'contain', w, h } });
+  const oran = Math.min(w / o.w, h / o.h);
+  const iw = o.w * oran, ih = o.h * oran;
+  return Object.assign(kaynak, { x: x + (w - iw) / 2, y: y + (h - ih) / 2, w: iw, h: ih });
 }
 
 // ==================== WORD ÇIKTILARI ====================
@@ -609,6 +170,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
     w.hucre(w.paragraflar(k.sorumlu || '-', { size: 15 }), SUTUN[6]),
     w.hucre([
       new docx.Paragraph({ children: [w.metin(csgbDurumEtiketi(k.durumGoruntu), { bold: true, size: 15, color: k.durum === 'Kapalı' ? '15803D' : (k.durumGoruntu === 'Gecikmiş' ? 'B91C1C' : '111827') })] }),
+      new docx.Paragraph({ children: [w.metin('%' + k.yuzde, { size: 15, color: '374151' })] }),
       ...(k.durum === 'Kapalı' && k.kapanisTarihi ? [new docx.Paragraph({ children: [w.metin(gunAyYil(k.kapanisTarihi), { size: 14, color: '64748B' })] })] : [])
     ], SUTUN[7])
   ] });
@@ -660,7 +222,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
         const fotolar = [];
         for (const x of kanitlar.filter(x => x.tur === 'foto')) {
           const url = await fotoBuyukCoz(x.ref);
-          const veri = url ? await _csgbZamanSinirli(_ucWordFotoVerisi(url, FOTO_GEN, FOTO_YUK), 10000) : null;
+          const veri = url ? await _csgbZamanSinirli(_csgbWordFotoVerisi(url, FOTO_GEN, FOTO_YUK), 10000) : null;
           if (veri) fotolar.push(new docx.ImageRun({ data: veri, transformation: { width: FOTO_GEN, height: FOTO_YUK } }));
         }
         for (let i = 0; i < fotolar.length; i += 4) {
@@ -692,7 +254,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(bugunIso());
   const toplantilar = csgbToplantilariniGetir(denetimId);
-  const K = _usKacir;
+  const K = _csgbKacir;
   const kisalt = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
   const W = 1123, H = 794, PAD = 32, ALT = 40;
   const DURUM_RENK = { 'Tamamlandı': '#15803d', 'Gecikmiş': '#b91c1c', 'Açık': '#b45309', 'Devam Ediyor': '#1d4ed8', 'Onay Bekliyor': '#7c3aed', 'İptal': '#64748b' };
@@ -764,7 +326,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
         <td>${(k.kanitlar || []).length ? (k.kanitlar.length + ' kanıt') : '-'}</td>
         <td>${gunAyYil(k.termin) || '-'}</td>
         <td>${K(k.sorumlu || '-')}</td>
-        <td style="font-weight:bold; color:${DURUM_RENK[durum] || '#111827'};">${K(durum)}${k.durum === 'Kapalı' && k.kapanisTarihi ? `<div style="font-weight:normal; color:#64748b;">${gunAyYil(k.kapanisTarihi)}</div>` : ''}</td>`;
+        <td style="font-weight:bold; color:${DURUM_RENK[durum] || '#111827'};">${K(durum)}<div style="font-weight:normal; color:#374151;">%${k.yuzde}</div><div style="height:5px; background:#e5e7eb; border-radius:3px; margin-top:2px;"><div style="height:5px; width:${k.yuzde}%; background:#16a34a; border-radius:3px;"></div></div>${k.durum === 'Kapalı' && k.kapanisTarihi ? `<div style="font-weight:normal; color:#64748b;">${gunAyYil(k.kapanisTarihi)}</div>` : ''}</td>`;
       govde.appendChild(tr);
       if (tasti(ic) && govde.children.length > 1) {
         govde.removeChild(tr);
@@ -873,7 +435,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     const ilkFoto = (k.kanitlar || []).find(x => x.tur === 'foto');
     fotolar[k.id] = await fotoBuyukCoz(ilkFoto ? ilkFoto.ref : (k.fotoSonrasi || k.fotoOncesi || ''));
   }));
-  await fotoOlculeriniHazirla(Object.values(fotolar), logoUrl);
+  await _csgbFotoOlculeriniHazirla(Object.values(fotolar), logoUrl);
 
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
@@ -904,17 +466,17 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   kapak.background = { color: R.birincilKoyu };
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
-  if (logoUrl) kapak.addImage(fotoSigdirNesnesi(logoUrl, SW / 2 - 0.75, 0.7, 1.5, 1.5));
+  if (logoUrl) kapak.addImage(_csgbFotoSigdir(logoUrl, SW / 2 - 0.75, 0.7, 1.5, 1.5));
   kapak.addText('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTISI', { x: 0.8, y: 2.45, w: SW - 1.6, h: 1.3, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', fit: 'shrink' });
   kapak.addText(firmaAdi, { x: 1, y: 3.85, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
-  kapak.addText(`${_csgbBaslik(d)}${d.raporNo ? '  ·  Rapor No: ' + d.raporNo : ''}`, { x: 1, y: 4.5, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
+  kapak.addText(`${csgbDenetimBasligi(d)}${d.raporNo ? '  ·  Rapor No: ' + d.raporNo : ''}`, { x: 1, y: 4.5, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
   kapak.addText(`Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
 
   // Genel durum
   const oz = pptx.addSlide({ masterName: MASTER });
   oz.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
   oz.addText('GENEL DURUM', { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
-  oz.addText(_csgbBaslik(d), { x: M, y: 0.68, w: 12.2, h: 0.6, fontSize: 22, bold: true, color: R.baslik, fit: 'shrink' });
+  oz.addText(csgbDenetimBasligi(d), { x: M, y: 0.68, w: 12.2, h: 0.6, fontSize: 22, bold: true, color: R.baslik, fit: 'shrink' });
   const kutular = [['Toplam Madde', maddeler.length, R.baslik], ['Tamamlanan', d.kapaliSayisi, '15803D'], ['Açık', d.acikSayisi, 'B45309'], ['Gecikmiş', d.gecikmisSayisi, 'B91C1C'], ['İlerleme', '%' + d.ilerlemeYuzde, R.birincil]];
   const kG = (SW - 2 * M - 0.3 * 4) / 5;
   kutular.forEach(([etiket, deger, renk], i) => {
@@ -940,8 +502,9 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   gundem.forEach((k, i) => {
     const foto = fotolar[k.id];
     const metinGen = foto ? 8.3 : SW - 2 * M;
-    const durum = csgbDurumEtiketi(k.durumGoruntu);
-    const renk = DURUM_RENK[durum] || { fg: R.soluk, bg: R.cizgi };
+    const durumAdi = csgbDurumEtiketi(k.durumGoruntu);
+    const renk = DURUM_RENK[durumAdi] || { fg: R.soluk, bg: R.cizgi };
+    const durum = durumAdi + '  %' + k.yuzde;
     const sl = pptx.addSlide({ masterName: MASTER });
     sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: R.birincil } });
     sl.addText(`MADDE ${k.denetimMaddeNo || '-'}  ·  ${i + 1} / ${gundem.length}`, { x: M, y: 0.42, w: 9, h: 0.28, fontSize: 11, bold: true, color: R.birincil, charSpacing: 1 });
@@ -972,7 +535,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     if (foto) {
       const x = M + metinGen + 0.3, b = SW - M - x;
       sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: 1.34, w: b + 0.12, h: 5.6, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-      sl.addImage(fotoSigdirNesnesi(foto, x, 1.4, b, 5.48));
+      sl.addImage(_csgbFotoSigdir(foto, x, 1.4, b, 5.48));
     }
   });
 
@@ -1007,16 +570,18 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const gorusulenler = maddeler.filter(k => (t.maddeNotlari[k.id] || '').trim());
   const SUTUN = [7, 18, 41, 12, 12, 10].map(y => Math.round(SAYFA_GEN * y / 100));
 
-  const katilimcilar = (t.katilimcilar || '').split('\n').map(s => s.trim()).filter(Boolean);
-  const KG = [8, 62, 30].map(y => Math.round(SAYFA_GEN * y / 100));
+  const katilimcilar = csgbKatilimcilariNormallestir(t.katilimcilar);
+  const KG = [7, 35, 33, 25].map(y => Math.round(SAYFA_GEN * y / 100));
+  const bosSatirlar = [{ adSoyad: '', gorev: '' }, { adSoyad: '', gorev: '' }, { adSoyad: '', gorev: '' }];
   const katilimTablosu = new docx.Table({
     width: { size: SAYFA_GEN, type: docx.WidthType.DXA }, columnWidths: KG, layout: docx.TableLayoutType.FIXED,
     rows: [
-      new docx.TableRow({ tableHeader: true, children: ['Sıra', 'Ad Soyad - Görevi', 'İmza'].map((b, i) => w.baslikHucre(b, KG[i])) }),
-      ...(katilimcilar.length ? katilimcilar : ['', '', '']).map((k, i) => new docx.TableRow({ height: { value: w.mm(10), rule: docx.HeightRule.ATLEAST }, cantSplit: true, children: [
+      new docx.TableRow({ tableHeader: true, children: ['Sıra', 'Ad Soyad', 'Görevi', 'İmza'].map((b, i) => w.baslikHucre(b, KG[i])) }),
+      ...(katilimcilar.length ? katilimcilar : bosSatirlar).map((k, i) => new docx.TableRow({ height: { value: w.mm(12), rule: docx.HeightRule.ATLEAST }, cantSplit: true, children: [
         w.hucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [w.metin(i + 1, { size: 17 })] }), KG[0], { verticalAlign: docx.VerticalAlign.CENTER }),
-        w.hucre(new docx.Paragraph({ children: [w.metin(k, { size: 17 })] }), KG[1], { verticalAlign: docx.VerticalAlign.CENTER }),
-        w.hucre(new docx.Paragraph(''), KG[2])
+        w.hucre(new docx.Paragraph({ children: [w.metin(k.adSoyad, { size: 17 })] }), KG[1], { verticalAlign: docx.VerticalAlign.CENTER }),
+        w.hucre(new docx.Paragraph({ children: [w.metin(k.gorev, { size: 17 })] }), KG[2], { verticalAlign: docx.VerticalAlign.CENTER }),
+        w.hucre(new docx.Paragraph(''), KG[3])
       ] }))
     ]
   });
@@ -1042,7 +607,7 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTI TUTANAĞI', { bold: true, size: 24 })] }),
     w.bilgiTablosu([
       ['Toplantı Tarihi', gunAyYil(t.tarih)], ['Yer', t.yer || '-'],
-      ['Denetim', d ? _csgbBaslik(d) : '-'], ['Rapor No / Tarihi', d ? `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}` : '-'],
+      ['Denetim', d ? csgbDenetimBasligi(d) : '-'], ['Rapor No / Tarihi', d ? `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}` : '-'],
       ['Son Giderme Tarihi', d ? (gunAyYil(d.sonGidermeTarihi) || '-') : '-'], ['Sonraki Toplantı', gunAyYil(t.sonrakiToplantiTarihi) || '-'],
       ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-'], ['', '']
     ], SAYFA_GEN),
