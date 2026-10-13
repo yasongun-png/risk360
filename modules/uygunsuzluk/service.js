@@ -232,6 +232,16 @@ function uygunsuzlukKonuEkle(ad) {
   return { basarili: true, konu };
 }
 
+// Kullanıcı isteği: konuyu komple silebilme — konu ve içindeki tüm uygunsuzluk kayıtları kalıcı olarak
+// silinir (UI iki aşamalı onay ister, bkz. ui.js konuSilBtn).
+function uygunsuzlukKonuSil(konuId) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const konu = uygunsuzlukKonulariTumunuGetir().find(k => k.id === konuId);
+  if (!konu) return { basarili: false, hata: 'Konu bulunamadı.' };
+  const silinenKayitSayisi = uygunsuzlukKonuyuVeKayitlariniSilRepo(konuId);
+  return { basarili: true, silinenKayitSayisi };
+}
+
 function uygunsuzlukKonuYenidenAdlandir(id, yeniAd) {
   const temiz = (yeniAd || '').trim();
   if (!temiz) return { basarili: false, hata: 'Konu adı boş olamaz.' };

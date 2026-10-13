@@ -91,3 +91,14 @@ function uygunsuzlukKonuGuncelleRepo(id, veriler) {
   _uygunsuzlukKonulariKaydet(liste);
   return liste[index];
 }
+
+// Konuyu ve konuya bağlı TÜM uygunsuzluk kayıtlarını siler (kullanıcı isteği). İki liste de tek seferde
+// yazılır; silinen kayıt sayısını döner.
+function uygunsuzlukKonuyuVeKayitlariniSilRepo(konuId) {
+  const kayitlar = uygunsuzlukTumunuGetir();
+  const kalan = kayitlar.filter(k => k.konuId !== konuId);
+  const silinen = kayitlar.length - kalan.length;
+  _uygunsuzlukKaydet(kalan);
+  _uygunsuzlukKonulariKaydet(uygunsuzlukKonulariTumunuGetir().filter(k => k.id !== konuId));
+  return silinen;
+}

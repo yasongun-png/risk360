@@ -160,6 +160,25 @@ function uygunsuzlukSayfasiniBaslat() {
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
 
+  // Kullanıcı isteği: konuyu komple silebilme — "emin misin, dikkat" uyarısı ve konu adını yazarak son onay.
+  document.getElementById('konuSilBtn').addEventListener('click', async () => {
+    if (!_secilenKonuId) { alert('Önce silinecek konuyu seçin ("Tüm Konular" silinemez).'); return; }
+    const konu = uygunsuzlukKonulariniGetir().find(k => k.id === _secilenKonuId);
+    if (!konu) return;
+    const uyari = `DİKKAT! "${konu.ad}" konusu ve içindeki ${konu.kayitSayisi} uygunsuzluk kaydı (fotoğraflar ve kapanış bilgileri dahil) KALICI olarak silinecek. Bu işlem GERİ ALINAMAZ. Emin misiniz?`;
+    if (!(await onayModali(uyari, 'Evet, Sil'))) return;
+    const yazilan = await metinIstemModali(`Son onay: silmek için konunun adını aynen yazın — ${konu.ad}`, '', '');
+    if (yazilan === null) return;
+    if (yazilan.trim() !== konu.ad.trim()) { alert('Yazdığınız ad eşleşmedi, silme işlemi iptal edildi.'); return; }
+    const sonuc = uygunsuzlukKonuSil(konu.id);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    _secilenKonuId = '';
+    _konuSecimDoldur();
+    _usBolumFiltreDoldur();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+    alert(`"${konu.ad}" konusu ve ${sonuc.silinenKayitSayisi} uygunsuzluk kaydı silindi.`);
+  });
+
   document.getElementById('sablonIndirBtn').addEventListener('click', () => {
     excelSablonIndir(UYGUNSUZLUK_IMPORT_KOLONLARI, 'uygunsuzluk_sablonu.xlsx');
   });

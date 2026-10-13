@@ -52,6 +52,7 @@
           <select id="konuSecim" style="width:auto; min-width:220px; margin:0;"></select>
           <button type="button" class="ikincil" id="konuYeniBtn">+ Yeni Konu</button>
           <button type="button" class="ikincil" id="konuYenidenAdlandirBtn">Konuyu Yeniden Adlandır</button>
+          <button type="button" class="ikincil" id="konuSilBtn" style="color:#b91c1c; border-color:#fca5a5;" title="Seçili konuyu ve içindeki tüm uygunsuzlukları kalıcı olarak siler">🗑 Konuyu Sil</button>
         </div>
         <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;">Seçili konu değişince tablo, dışa aktarım ve raporlar sadece o konuya göre çalışır.</p>
       </div>
@@ -467,9 +468,9 @@
   <script src="../harita/repository.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
-  <script src="repository.js"></script>
-  <script src="service.js"></script>
-  <script src="ui.js?v=6"></script>
+  <script src="repository.js?v=2"></script>
+  <script src="service.js?v=2"></script>
+  <script src="ui.js?v=7"></script>
   <script src="cikti.js?v=9"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
