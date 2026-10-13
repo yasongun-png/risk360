@@ -224,6 +224,71 @@ async function csgbEskiSurumKayitlariniTasi(denetimId) {
   return { basarili: true, tasinan: bulunan.kayitlar.length };
 }
 
+// ---- Uygunsuzluk'tan taşınıp mükerrer olan maddeleri silme ----
+// Taşıma, Excel'le ÇSGB sayfasına zaten girilmiş maddelerin yanına
+// Uygunsuzluk'taki eski kayıtları da ekledi; her madde iki kez göründü.
+// Kullanıcı isteği: "geri taşıma, Uygunsuzluk'tan gelenleri sil".
+// Uygunsuzluk'tan gelenler, ayrı ÇSGB sayfası yayına girmeden (8629fc9,
+// 2026-10-13 17:00:25 TSİ) oluşturulmuştur -- o anda ÇSGB madde deposu yoktu.
+// Sadece aynı denetimde aynı Madde No'lu, sonradan girilmiş bir eşi olanlar
+// silinir; eşi olmayan madde kalır.
+const _CSGB_AYRI_SAYFA_BASLANGICI = Date.parse('2026-10-13T14:00:25Z');
+
+function _csgbMaddeOlusturmaZamani(m) {
+  const t = Date.parse(m.olusturmaTarihi || '');
+  if (Number.isFinite(t)) return t;
+  const idZamani = parseInt(String(m.id || '').slice(0, 8), 36);
+  return Number.isFinite(idZamani) ? idZamani : NaN;
+}
+
+function _csgbUygunsuzluktanGelenMi(m) {
+  return _csgbMaddeOlusturmaZamani(m) < _CSGB_AYRI_SAYFA_BASLANGICI;
+}
+
+// { silinecekler: [madde], kalanEsi: {silinenId: kalanId}, esiOlmayan: sayı }
+function csgbUygunsuzluktanGelenMukerrerleriBul() {
+  const gruplar = {};
+  const tum = csgbMaddeleriTumunuGetir();
+  tum.forEach(m => {
+    const no = String(m.denetimMaddeNo || '').trim().toLocaleLowerCase('tr');
+    if (no) (gruplar[m.denetimId + '|' + no] = gruplar[m.denetimId + '|' + no] || []).push(m);
+  });
+  const silinecekler = [];
+  const kalanEsi = {};
+  Object.values(gruplar).forEach(g => {
+    const yeniler = g.filter(m => !_csgbUygunsuzluktanGelenMi(m));
+    if (!yeniler.length) return;
+    g.filter(_csgbUygunsuzluktanGelenMi).forEach(m => { silinecekler.push(m); kalanEsi[m.id] = yeniler[0].id; });
+  });
+  const esiOlmayan = tum.filter(m => _csgbUygunsuzluktanGelenMi(m) && !kalanEsi[m.id]).length;
+  return { silinecekler, kalanEsi, esiOlmayan };
+}
+
+// Silinen kopyalara yazılmış toplantı notları (varsa) eşine aktarılır.
+async function csgbUygunsuzluktanGelenMukerrerleriSil() {
+  const { silinecekler, kalanEsi } = csgbUygunsuzluktanGelenMukerrerleriBul();
+  if (!silinecekler.length) return { basarili: true, silinen: 0 };
+  const yazim = await csgbMaddeleriYazRepo(csgbMaddeleriTumunuGetir().filter(m => !kalanEsi[m.id]));
+  if (!yazim.basarili) return { basarili: false, hata: 'Maddeler buluta yazılamadı, hiçbir şey silinmedi.' };
+
+  let toplantiDegisti = false;
+  const toplantilar = csgbToplantilariTumunuGetir().map(t => {
+    const notlar = Object.assign({}, t.maddeNotlari || {});
+    Object.keys(notlar).forEach(id => {
+      const hedef = kalanEsi[id];
+      if (!hedef) return;
+      const eklenecek = (notlar[id] || '').trim();
+      const mevcut = (notlar[hedef] || '').trim();
+      if (eklenecek && mevcut !== eklenecek) notlar[hedef] = mevcut ? mevcut + '\n' + eklenecek : eklenecek;
+      delete notlar[id];
+      toplantiDegisti = true;
+    });
+    return Object.assign({}, t, { maddeNotlari: notlar });
+  });
+  if (toplantiDegisti) await yazVeSonucuGetir(_csgbToplantiAnahtari(), toplantilar);
+  return { basarili: true, silinen: silinecekler.length };
+}
+
 function csgbToplantiSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   csgbToplantiSilRepo(id);
