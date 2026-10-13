@@ -88,6 +88,20 @@ function csgbSayfasiniBaslat() {
   const ac = new URLSearchParams(location.search).get('ac');
   if (ac && csgbDenetimleriTumunuGetir().some(d => d.id === ac)) _csgbAcikDenetimId = ac;
   csgbCiz();
+  _csgbEskiSurumTasimasiniSor();
+}
+
+// İlk sürümde Uygunsuzluk kayıtlarına yazılmış maddeleri bu sayfaya taşır (bkz. csgb-service.js).
+async function _csgbEskiSurumTasimasiniSor() {
+  for (const x of csgbEskiSurumKayitlariniBul()) {
+    const ad = x.konu ? x.konu.ad : csgbDenetimBasligi(x.denetim);
+    const mesaj = `"${ad}" denetiminin ${x.kayitlar.length} maddesi önceki sürümde Uygunsuzluk kayıtlarına ("${ad}" konusu) yazılmış. ` +
+      `Bu maddeler (numaraları, toplantı notları ve kanıtlarıyla) ÇSGB Denetimi sayfasına taşınsın ve Uygunsuzluk'tan kaldırılsın mı?`;
+    if (!(await onayModali(mesaj, 'Evet, Taşı'))) continue;
+    const sonuc = await csgbEskiSurumKayitlariniTasi(x.denetim.id);
+    alert(sonuc.basarili ? `${sonuc.tasinan} madde ÇSGB Denetimi sayfasına taşındı.` : sonuc.hata);
+    csgbCiz();
+  }
 }
 
 function csgbCiz() {

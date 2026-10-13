@@ -157,6 +157,73 @@ async function csgbToplantiKaydet(veriler, maddeGuncellemeleri) {
   return { basarili: true, toplanti };
 }
 
+// ---- İlk sürümden taşıma (tek seferlik) ----
+// İlk sürümde (2026-10-13, kısa süre yayında kaldı) denetim maddeleri normal
+// uygunsuzluk kayıtları olarak, denetimin konuId'siyle bağlı bir uygunsuzluk
+// konusunda tutuluyordu. Kullanıcı "aynı tabloyu kullanmayacağız" dediği için
+// bu kayıtlar ÇSGB madde deposuna AYNI id'lerle taşınır (toplantı notları
+// madde id'sine bağlı olduğundan kopmaz), uygunsuzluk tarafından silinir.
+
+function _csgbUygunsuzlukAnahtarlari() {
+  return { kayit: tenantAnahtar('uygunsuzluk_kayitlari'), konu: tenantAnahtar('uygunsuzluk_konulari') };
+}
+
+function csgbEskiSurumKayitlariniBul() {
+  const a = _csgbUygunsuzlukAnahtarlari();
+  const kayitlar = oku(a.kayit, []);
+  const konular = oku(a.konu, []);
+  return csgbDenetimleriTumunuGetir()
+    .filter(d => d.konuId)
+    .map(d => ({
+      denetim: d,
+      konu: konular.find(k => k.id === d.konuId) || null,
+      kayitlar: kayitlar.filter(k => k.konuId === d.konuId)
+    }))
+    .filter(x => x.konu || x.kayitlar.length);
+}
+
+async function csgbEskiSurumKayitlariniTasi(denetimId) {
+  const bulunan = csgbEskiSurumKayitlariniBul().find(x => x.denetim.id === denetimId);
+  if (!bulunan) return { basarili: false, hata: 'Taşınacak kayıt bulunamadı.' };
+  const a = _csgbUygunsuzlukAnahtarlari();
+  const idler = new Set(bulunan.kayitlar.map(k => k.id));
+
+  const maddeler = csgbMaddeleriTumunuGetir().filter(m => !idler.has(m.id));
+  bulunan.kayitlar.forEach(k => maddeler.push(csgbMaddeOlustur({
+    id: k.id,
+    denetimId,
+    denetimMaddeNo: k.denetimMaddeNo,
+    maddeKonusu: k.maddeKonusu,
+    baslik: k.baslik,
+    aciklama: k.aciklama,
+    duzelticiFaaliyet: k.duzelticiFaaliyet,
+    yasalDayanak: k.yasalDayanak,
+    bolum: k.bolum,
+    sorumlu: k.sorumlu,
+    termin: k.termin,
+    // Uygunsuzluk'taki 'Onay Bekliyor' durumu ÇSGB'de yok.
+    durum: k.durum === 'Onay Bekliyor' ? 'Devam Ediyor' : k.durum,
+    tamamlanmaYuzdesi: k.tamamlanmaYuzdesi,
+    kapanisTarihi: k.kapanisTarihi,
+    kanitAciklamasi: k.kanitAciklamasi,
+    kanitlar: k.kanitlar,
+    olusturmaTarihi: k.olusturmaTarihi
+  })));
+  // Önce ÇSGB tarafına yazılır; ancak başarılıysa uygunsuzluktan silinir (veri kaybı olmasın).
+  const yazim = await csgbMaddeleriYazRepo(maddeler);
+  if (!yazim.basarili) return { basarili: false, hata: 'Maddeler buluta yazılamadı, hiçbir şey silinmedi.' };
+
+  const uygKalan = oku(a.kayit, []).filter(k => !idler.has(k.id));
+  await yazVeSonucuGetir(a.kayit, uygKalan);
+  if (bulunan.konu) await yazVeSonucuGetir(a.konu, oku(a.konu, []).filter(k => k.id !== bulunan.konu.id));
+
+  const denetim = Object.assign({}, bulunan.denetim);
+  if (!denetim.ad && bulunan.konu) denetim.ad = bulunan.konu.ad;
+  delete denetim.konuId;
+  csgbDenetimKaydetRepo(csgbDenetimOlustur(denetim));
+  return { basarili: true, tasinan: bulunan.kayitlar.length };
+}
+
 function csgbToplantiSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   csgbToplantiSilRepo(id);
