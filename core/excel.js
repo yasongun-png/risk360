@@ -117,6 +117,8 @@ function excelToplulIceAktarSonucOzetle(satirlar, ekleFn) {
 // veya zaten YYYY-MM-DD) form input'larının beklediği YYYY-MM-DD'ye çevirir.
 function excelTarihiNormallestir(deger) {
   if (deger === '' || deger == null) return '';
+  const donusen = typeof tarihiIsoyaCevir === 'function' ? tarihiIsoyaCevir(deger) : null;
+  if (donusen) return donusen;
   if (deger instanceof Date && !isNaN(deger)) {
     return `${deger.getFullYear()}-${String(deger.getMonth() + 1).padStart(2, '0')}-${String(deger.getDate()).padStart(2, '0')}`;
   }

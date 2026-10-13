@@ -391,7 +391,22 @@ function slugOlustur(metin) {
 // "YYYY-MM-DD" (input[type=date] / ISO) tarihini uygulamanın standart ekran/
 // rapor biçimi olan "GG.AA.YYYY"e çevirir. Uyumsuz veya boş girdide olduğu
 // gibi geri döner (serbest metin alanları bozulmasın diye).
+// Excel'den gelen tarihler bazen Date nesnesi ya da JS'in Date.toString() metni olarak kaydedilir
+// ("Thu Jul 03 2025 23:59:04 GMT+0300 (Türkiye Standart Saati)"). Bunları 'YYYY-MM-DD'ye çevirir; tanınmazsa null.
+// Excel seri numarasından gelen değerler tarih/saat dilimi farkı yüzünden gece yarısından birkaç saniye önceye
+// düşebildiğinden (23:59:04), 5 dakika eklenerek en yakın güne yuvarlanır.
+function tarihiIsoyaCevir(deger) {
+  let d = null;
+  if (deger instanceof Date) d = deger;
+  else if (typeof deger === 'string' && /^[A-Za-z]{3} [A-Za-z]{3} \d{1,2} \d{4} \d{2}:\d{2}:\d{2} GMT/.test(deger.trim())) d = new Date(deger.trim());
+  if (!d || isNaN(d)) return null;
+  const y = new Date(d.getTime() + 5 * 60 * 1000);
+  return `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+}
+
 function gunAyYil(isoTarih) {
+  const donusen = tarihiIsoyaCevir(isoTarih);
+  if (donusen) isoTarih = donusen;
   const eslesme = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(isoTarih || ''));
   if (!eslesme) return isoTarih || '';
   return `${eslesme[3]}.${eslesme[2]}.${eslesme[1]}`;

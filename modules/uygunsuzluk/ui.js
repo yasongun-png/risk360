@@ -117,7 +117,24 @@ function usRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+// Daha önce Excel'den içe aktarılmış ve tarihi "Thu Jul 03 2025 23:59:04 GMT+0300 (...)" gibi bozuk metin olarak
+// kaydedilmiş kayıtları 'YYYY-MM-DD'ye çevirir (bir kerelik onarım; değişiklik yoksa yazma yapılmaz).
+function _usTarihleriOnar() {
+  if (typeof tarihiIsoyaCevir !== 'function') return;
+  const kayitlar = uygunsuzlukTumunuGetir();
+  let degisti = 0;
+  kayitlar.forEach(k => {
+    Object.keys(k).forEach(alan => {
+      if (typeof k[alan] !== 'string') return;
+      const iso = tarihiIsoyaCevir(k[alan]);
+      if (iso) { k[alan] = iso; degisti++; }
+    });
+  });
+  if (degisti) _uygunsuzlukKaydet(kayitlar);
+}
+
 function uygunsuzlukSayfasiniBaslat() {
+  _usTarihleriOnar();
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeOzet').addEventListener('click', () => gorunumDegistir('ozet'));
 
