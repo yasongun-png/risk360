@@ -302,7 +302,7 @@ function uygunsuzlukSayfasiniBaslat() {
       let eklenecekler = satirlar;
       if (csgbKonusuMu) {
         const mevcutlar = uygunsuzlukTumunuGetir().filter(k => k.konuId === konuSecili.id && k.denetimMaddeNo);
-        const GUNCELLENEBILIR = ['maddeKonusu', 'baslik', 'aciklama', 'bolum', 'lokasyon', 'riskSeviyesi', 'sorumlu', 'termin', 'durum', 'kapanisTarihi', 'kanitAciklamasi', 'duzelticiFaaliyet', 'yasalDayanak'];
+        const GUNCELLENEBILIR = ['maddeKonusu', 'tamamlanmaYuzdesi','baslik', 'aciklama', 'bolum', 'lokasyon', 'riskSeviyesi', 'sorumlu', 'termin', 'durum', 'kapanisTarihi', 'kanitAciklamasi', 'duzelticiFaaliyet', 'yasalDayanak'];
         eklenecekler = satirlar.filter(satir => {
           const no = (satir.denetimMaddeNo || '').toLocaleLowerCase('tr');
           const mevcut = no && mevcutlar.find(k => k.denetimMaddeNo.toLocaleLowerCase('tr') === no);
@@ -376,6 +376,7 @@ const UYGUNSUZLUK_IMPORT_KOLONLARI = [
   // ÇSGB denetim maddeleri için (diğer kayıtlarda boş bırakılabilir).
   { anahtar: 'denetimMaddeNo', baslik: 'Madde No', esanlamlar: ['Denetim Madde No', 'Rapor Madde No', 'Uygunsuzluk No'] },
   { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu', esanlamlar: ['Kısa Konu'] },
+  { anahtar: 'tamamlanmaYuzdesi', baslik: 'Tamamlanma Yüzdesi', esanlamlar: ['Tamamlanma %', 'Yüzde', 'İlerleme'] },
   { anahtar: 'duzelticiFaaliyet', baslik: 'Faaliyet Önerisi', esanlamlar: ['Gerekli Tedbir', 'Alınması Gerekli Tedbir'] },
   { anahtar: 'yasalDayanak', baslik: 'Yasal Dayanak', esanlamlar: ['Mevzuat', 'Mevzuat Dayanağı'] }
 ];
@@ -1326,6 +1327,9 @@ function kayitModalAc(kayit, varsayilanlar) {
   document.getElementById('kaynakTuru').innerHTML = KAYNAK_TURLERI.map(t => `<option ${seciliKaynak === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('denetimMaddeNo').value = kayit ? (kayit.denetimMaddeNo || '') : '';
   document.getElementById('maddeKonusu').value = kayit ? (kayit.maddeKonusu || '') : '';
+  const yuzde = kayit ? csgbYuzdeNormallestir(kayit.tamamlanmaYuzdesi) : 0;
+  document.getElementById('tamamlanmaYuzdesi').innerHTML = Array.from(new Set(CSGB_YUZDE_SECENEKLERI.concat([yuzde]))).sort((a, b) => a - b)
+    .map(y => `<option value="${y}" ${y === yuzde ? 'selected' : ''}>%${y}</option>`).join('');
   _csgbMaddeAlanlariniGuncelle();
   document.getElementById('riskSeviyesi').innerHTML = RISK_SEVIYELERI.map(r => `<option ${kayit && kayit.riskSeviyesi === r ? 'selected' : ''}>${r}</option>`).join('');
 
@@ -1420,6 +1424,7 @@ function formGonderildi(e) {
     konuAdi: _modalKonuAdi,
     denetimMaddeNo: document.getElementById('denetimMaddeNo').value,
     maddeKonusu: document.getElementById('maddeKonusu').value,
+    tamamlanmaYuzdesi: document.getElementById('durum').value === 'Kapalı' ? 100 : document.getElementById('tamamlanmaYuzdesi').value,
     baslik: document.getElementById('baslik').value,
     aciklama: document.getElementById('aciklama').value,
     bolum: document.getElementById('bolum').value,
