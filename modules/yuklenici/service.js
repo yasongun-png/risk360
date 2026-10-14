@@ -173,6 +173,7 @@ function yukleniciKisilerTopluEkle(kayitlarListesi) {
   const sonucListe = mevcut.slice();
   let eklenenSayisi = 0;
   let guncellenenSayisi = 0;
+  const iz = yukleniciIzBilgisi();
 
   gecerliler.forEach(v => {
     const anahtar = anahtarUret(v.firmaId, v.adSoyad);
@@ -195,12 +196,15 @@ function yukleniciKisilerTopluEkle(kayitlarListesi) {
         // pasif/ilkGiris sadece kaynak dosyada AÇIKÇA belirtilmişse (true/false,
         // undefined değil) güncellenir — belirtilmemişse mevcut değer korunur.
         pasif: v.pasif !== undefined ? v.pasif : varOlan.pasif,
-        ilkGiris: v.ilkGiris !== undefined ? v.ilkGiris : varOlan.ilkGiris
+        ilkGiris: v.ilkGiris !== undefined ? v.ilkGiris : varOlan.ilkGiris,
+        guncellemeTarihi: iz.zaman,
+        guncelleyen: iz.kim
       });
       guncellenenSayisi++;
     } else {
       sonNo += 1;
       const yeniKisi = kisiOlustur(Object.assign({}, v, { personelNo: 'YP' + String(sonNo).padStart(4, '0') }));
+      yeniKisi.olusturan = iz.kim;
       sonucListe.push(yeniKisi);
       indeksHaritasi[anahtar] = sonucListe.length - 1;
       eklenenSayisi++;

@@ -5,6 +5,24 @@ function _yukleniciKisiAnahtari() { return tenantAnahtar('yuklenici_kisileri'); 
 function _yukleniciAracAnahtari() { return tenantAnahtar('yuklenici_araclari'); }
 function _yukleniciZiyaretciAnahtari() { return tenantAnahtar('yuklenici_ziyaretciler'); }
 
+// Dashboard'daki "Yüklenici — Son Güncellemeler" için kim/ne zaman izi
+// (kullanıcı isteği). Ekleme: olusturan (olusturmaTarihi modelde zaten var);
+// güncelleme: guncellemeTarihi + guncelleyen.
+function yukleniciIzBilgisi() {
+  const k = typeof oturumdakiKullanici === 'function' ? oturumdakiKullanici() : null;
+  return { zaman: new Date().toISOString(), kim: k ? (k.adSoyad || k.kullaniciAdi || '') : '' };
+}
+
+function _yukleniciEklemeIzi(kayit) {
+  if (!kayit.olusturan) kayit.olusturan = yukleniciIzBilgisi().kim;
+  return kayit;
+}
+
+function _yukleniciGuncellemeIzi(veriler) {
+  const iz = yukleniciIzBilgisi();
+  return Object.assign({}, veriler, { guncellemeTarihi: iz.zaman, guncelleyen: iz.kim });
+}
+
 function yukleniciFirmalariTumunuGetir() {
   return oku(_yukleniciFirmaAnahtari(), []);
 }
@@ -15,7 +33,7 @@ function _yukleniciFirmalariKaydet(liste) {
 
 function yukleniciFirmaEkleRepo(firma) {
   const liste = yukleniciFirmalariTumunuGetir();
-  liste.push(firma);
+  liste.push(_yukleniciEklemeIzi(firma));
   _yukleniciFirmalariKaydet(liste);
   return firma;
 }
@@ -24,7 +42,7 @@ function yukleniciFirmaGuncelleRepo(id, veriler) {
   const liste = yukleniciFirmalariTumunuGetir();
   const index = liste.findIndex(f => f.id === id);
   if (index === -1) return null;
-  liste[index] = Object.assign({}, liste[index], veriler);
+  liste[index] = Object.assign({}, liste[index], _yukleniciGuncellemeIzi(veriler));
   _yukleniciFirmalariKaydet(liste);
   return liste[index];
 }
@@ -48,7 +66,7 @@ function _yukleniciKisileriKaydet(liste) {
 
 function yukleniciKisiEkleRepo(kisi) {
   const liste = yukleniciKisileriTumunuGetir();
-  liste.push(kisi);
+  liste.push(_yukleniciEklemeIzi(kisi));
   _yukleniciKisileriKaydet(liste);
   return kisi;
 }
@@ -57,7 +75,7 @@ function yukleniciKisiGuncelleRepo(id, veriler) {
   const liste = yukleniciKisileriTumunuGetir();
   const index = liste.findIndex(k => k.id === id);
   if (index === -1) return null;
-  liste[index] = Object.assign({}, liste[index], veriler);
+  liste[index] = Object.assign({}, liste[index], _yukleniciGuncellemeIzi(veriler));
   _yukleniciKisileriKaydet(liste);
   return liste[index];
 }
@@ -80,7 +98,7 @@ function _yukleniciAraclariKaydet(liste) {
 
 function yukleniciAracEkleRepo(arac) {
   const liste = yukleniciAraclariTumunuGetir();
-  liste.push(arac);
+  liste.push(_yukleniciEklemeIzi(arac));
   _yukleniciAraclariKaydet(liste);
   return arac;
 }
@@ -89,7 +107,7 @@ function yukleniciAracGuncelleRepo(id, veriler) {
   const liste = yukleniciAraclariTumunuGetir();
   const index = liste.findIndex(a => a.id === id);
   if (index === -1) return null;
-  liste[index] = Object.assign({}, liste[index], veriler);
+  liste[index] = Object.assign({}, liste[index], _yukleniciGuncellemeIzi(veriler));
   _yukleniciAraclariKaydet(liste);
   return liste[index];
 }
@@ -112,7 +130,7 @@ function _yukleniciZiyaretcileriKaydet(liste) {
 
 function yukleniciZiyaretciEkleRepo(ziyaretci) {
   const liste = yukleniciZiyaretcileriTumunuGetir();
-  liste.push(ziyaretci);
+  liste.push(_yukleniciEklemeIzi(ziyaretci));
   _yukleniciZiyaretcileriKaydet(liste);
   return ziyaretci;
 }
