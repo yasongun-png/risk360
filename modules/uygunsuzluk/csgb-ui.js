@@ -667,7 +667,10 @@ function csgbToplantiModalAc(toplantiId) {
   document.getElementById('csgbTopYer').value = t ? t.yer : (onceki ? onceki.yer : '');
   // Yeni toplantı denetimin sabit katılımcı listesiyle (yoksa bir önceki toplantının listesiyle) dolu açılır.
   const sabitListe = csgbKatilimcilariNormallestir(d.katilimcilar);
-  _csgbKatilimcilariCiz(csgbKatilimcilariNormallestir(t ? t.katilimcilar : (sabitListe.length ? sabitListe : (onceki ? onceki.katilimcilar : []))));
+  // Katılımcısı hiç girilmemiş eski bir toplantı düzenlenirken de sabit liste gelir.
+  const toplantiListesi = t ? csgbKatilimcilariNormallestir(t.katilimcilar) : [];
+  _csgbKatilimcilariCiz(toplantiListesi.length ? toplantiListesi
+    : csgbKatilimcilariNormallestir(sabitListe.length ? sabitListe : (!t && onceki ? onceki.katilimcilar : [])));
   document.getElementById('csgbTopGenel').value = t ? t.genelNotlar : '';
   document.getElementById('csgbTopKapalilariGoster').checked = false;
   document.getElementById('csgbTopHata').textContent = '';
