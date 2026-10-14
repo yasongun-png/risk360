@@ -278,10 +278,11 @@
       <div class="tablo-scroll" style="max-height:52vh; overflow:auto;">
         <table class="veri-tablosu" style="table-layout:fixed; min-width:900px;">
           <colgroup><col style="width:60px;"><col style="width:300px;"><col style="width:380px;"><col style="width:150px;"></colgroup>
-          <thead><tr><th>No</th><th>Uygunsuzluk</th><th>Bu Toplantının Notu</th><th>Durum / % / Termin</th></tr></thead>
+          <thead><tr><th>No</th><th>Uygunsuzluk / Sorumlu</th><th>Bu Toplantının Notu</th><th>Durum / % / Termin</th></tr></thead>
           <tbody id="csgbTopMaddeGovde"></tbody>
         </table>
       </div>
+      <datalist id="csgbBolumListesi"></datalist>
       <div id="csgbTopHata" style="color:var(--hata); font-size:12px;"></div>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="csgbTopIptalBtn">İptal</button>
@@ -310,7 +311,7 @@
   <script src="csgb-repository.js?v=1"></script>
   <script src="csgb-service.js?v=9"></script>
   <script src="csgb-cikti.js?v=7"></script>
-  <script src="csgb-ui.js?v=11"></script>
+  <script src="csgb-ui.js?v=12"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
 
