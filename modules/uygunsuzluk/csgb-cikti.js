@@ -748,7 +748,12 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const w = _csgbWordAraclari();
   const SAYFA_GEN = w.mm(210 - 30);
   const maddeler = csgbMaddeleriniGetir(t.denetimId);
-  const gorusulenler = maddeler.filter(k => (t.maddeNotlari[k.id] || '').trim());
+  // 1. toplantıda sadece görüşülen (notu olan) maddeler; 2. toplantıdan
+  // itibaren notu olmasa da tamamlanmamış TÜM maddeler + görüşülen
+  // tamamlanmışlar (kullanıcı isteği). Sıra rapordaki madde numarasıyla.
+  const notuVar = k => !!(t.maddeNotlari[k.id] || '').trim();
+  const tumAciklar = csgbToplantiNo(t) >= 2;
+  const gorusulenler = maddeler.filter(k => notuVar(k) || (tumAciklar && k.durum !== 'Kapalı' && k.durum !== 'İptal'));
   const SUTUN = [7, 18, 41, 12, 12, 10].map(y => Math.round(SAYFA_GEN * y / 100));
 
   const katilimcilar = csgbKatilimcilariNormallestir(t.katilimcilar);
@@ -793,11 +798,11 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
       ...(gorusulenler.length ? gorusulenler.map(k => new docx.TableRow({ cantSplit: true, children: [
         w.hucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [w.metin(k.denetimMaddeNo || '-', { bold: true, size: 16 })] }), SUTUN[0]),
         w.hucre(w.paragraflar(k.maddeKonusu || (k.baslik || '').slice(0, 80), { size: 15 }), SUTUN[1]),
-        w.hucre(w.paragraflar(t.maddeNotlari[k.id]), SUTUN[2]),
+        w.hucre(notuVar(k) ? w.paragraflar(t.maddeNotlari[k.id]) : [new docx.Paragraph({ children: [w.metin('Bu toplantıda görüşülmedi.', { size: 15, italics: true, color: '64748B' })] })], SUTUN[2]),
         w.hucre(w.paragraflar(k.sorumlu || '-', { size: 15 }), SUTUN[3]),
         w.hucre(new docx.Paragraph({ children: [w.metin(gunAyYil(k.termin) || '-', { size: 15 })] }), SUTUN[4]),
         w.hucre(new docx.Paragraph({ children: [w.metin(csgbDurumEtiketi(k.durumGoruntu), { bold: true, size: 15 })] }), SUTUN[5])
-      ] })) : [new docx.TableRow({ children: [w.hucre(new docx.Paragraph({ children: [w.metin('Bu toplantıda madde notu girilmedi.', { size: 16 })] }), SAYFA_GEN, { columnSpan: 6 })] })])
+      ] })) : [new docx.TableRow({ children: [w.hucre(new docx.Paragraph({ children: [w.metin(tumAciklar ? 'Açık madde yok, bu toplantıda madde notu da girilmedi.' : 'Bu toplantıda madde notu girilmedi.', { size: 16 })] }), SAYFA_GEN, { columnSpan: 6 })] })])
     ]
   });
 
@@ -812,7 +817,7 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
       ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-'], ['', '']
     ], SAYFA_GEN),
     ...(t.genelNotlar ? [altBaslik('Genel Notlar'), ...w.paragraflar(t.genelNotlar, { size: 18 })] : []),
-    altBaslik(`Görüşülen Maddeler (${gorusulenler.length})`),
+    altBaslik(tumAciklar ? `Açık Maddeler ve Görüşülenler (${gorusulenler.length})` : `Görüşülen Maddeler (${gorusulenler.length})`),
     maddeTablosu,
     altBaslik('Katılımcılar'),
     katilimTablosu
