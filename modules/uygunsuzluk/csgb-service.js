@@ -386,6 +386,14 @@ async function csgbUygunsuzluktanGelenMukerrerleriSil() {
   return { basarili: true, silinen: silinecekler.length };
 }
 
+// Toplantı numarası: denetim içinde tarih sırasına göre 1, 2, 3... (saklanmaz,
+// hesaplanır; araya geçmiş tarihli toplantı girilirse numaralar kendiliğinden düzelir).
+function csgbToplantiNo(toplanti) {
+  if (!toplanti) return 0;
+  const sira = csgbToplantilariniGetir(toplanti.denetimId).findIndex(t => t.id === toplanti.id);
+  return sira === -1 ? 0 : sira + 1;
+}
+
 function csgbToplantiSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   csgbToplantiSilRepo(id);

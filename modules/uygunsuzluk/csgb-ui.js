@@ -324,8 +324,8 @@ function _csgbDetayCiz(kutu) {
     </div>
     <div class="tablo-scroll">
       <table class="veri-tablosu">
-        <thead><tr><th>İşlemler</th><th>Tarih</th><th>Yer</th><th>Katılımcı</th><th>Not Girilen Madde</th><th>Sonraki Toplantı</th></tr></thead>
-        <tbody>${toplantilar.length ? toplantilar.slice().reverse().map(t => `
+        <thead><tr><th>İşlemler</th><th>No</th><th>Tarih</th><th>Yer</th><th>Katılımcı</th><th>Not Girilen Madde</th><th>Sonraki Toplantı</th></tr></thead>
+        <tbody>${toplantilar.length ? toplantilar.map((t, i) => Object.assign({}, t, { _no: i + 1 })).reverse().map(t => `
           <tr>
             <td style="white-space:nowrap;">
               <button type="button" class="tablo-buton" data-csgb-top-duzenle="${t.id}">Düzenle</button>
@@ -333,12 +333,13 @@ function _csgbDetayCiz(kutu) {
               <button type="button" class="tablo-buton" data-csgb-top-pptx="${t.id}">Sunum (PPTX)</button>
               <button type="button" class="tablo-buton sil" data-csgb-top-sil="${t.id}">Sil</button>
             </td>
+            <td><b>${t._no}. Toplantı</b></td>
             <td>${gunAyYil(t.tarih)}</td>
             <td>${K(t.yer) || '-'}</td>
             <td>${csgbKatilimcilariNormallestir(t.katilimcilar).length}</td>
             <td>${Object.keys(t.maddeNotlari || {}).length}</td>
             <td>${gunAyYil(t.sonrakiToplantiTarihi) || '-'}</td>
-          </tr>`).join('') : '<tr><td colspan="6">Henüz takip toplantısı yapılmadı.</td></tr>'}</tbody>
+          </tr>`).join('') : '<tr><td colspan="7">Henüz takip toplantısı yapılmadı.</td></tr>'}</tbody>
       </table>
     </div>
 
@@ -666,7 +667,8 @@ function csgbToplantiModalAc(toplantiId) {
   const t = toplantiId ? csgbToplantilariTumunuGetir().find(x => x.id === toplantiId) : null;
   // Yeni toplantıda katılımcılar/yer bir önceki toplantıdan kopyalanır.
   const onceki = csgbToplantilariniGetir(d.id).slice(-1)[0];
-  document.getElementById('csgbToplantiBaslik').textContent = (t ? 'Takip Toplantısını Düzenle — ' : 'Yeni Takip Toplantısı — ') + d.baslikGoruntu;
+  const no = t ? csgbToplantiNo(t) : csgbToplantilariniGetir(d.id).length + 1;
+  document.getElementById('csgbToplantiBaslik').textContent = (t ? `${no}. Takip Toplantısını Düzenle — ` : `${no}. Takip Toplantısı (yeni) — `) + d.baslikGoruntu;
   document.getElementById('csgbTopTarih').value = t ? t.tarih : bugunIso();
   document.getElementById('csgbTopSonraki').value = t ? t.sonrakiToplantiTarihi : '';
   document.getElementById('csgbTopYer').value = t ? t.yer : (onceki ? onceki.yer : '');

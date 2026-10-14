@@ -184,7 +184,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
 
   const toplantilar = csgbToplantilariniGetir(denetimId);
   const ozetMetni = `Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}` +
-    (toplantilar.length ? ` (${toplantilar.map(t => gunAyYil(t.tarih)).join(', ')})` : '');
+    (toplantilar.length ? ` (${toplantilar.map((t, i) => (i + 1) + '. ' + gunAyYil(t.tarih)).join(', ')})` : '');
 
   // Firma adı Word/PDF çıktılarına yazılmaz (kullanıcı isteği).
   const ilkBolum = [
@@ -418,6 +418,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   const d = csgbDenetimGetir(denetimId);
   if (!d) return;
   const t = toplantiId ? csgbToplantilariTumunuGetir().find(x => x.id === toplantiId) : null;
+  const toplantiNo = t ? csgbToplantiNo(t) : 0;
   const maddeler = csgbMaddeleriniGetir(denetimId);
   if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
   const gundem = maddeler.filter(k => (k.durum !== 'Kapalı' && k.durum !== 'İptal') || (t && (t.maddeNotlari[k.id] || '').trim()));
@@ -453,7 +454,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     objects: [
       { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
       { text: { text: firmaAdi, options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
-      { text: { text: 'ÇSGB Denetimi Takip Toplantısı  ·  ' + toplantiTarihi, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
+      { text: { text: (toplantiNo ? toplantiNo + '. ' : '') + 'ÇSGB Denetimi Takip Toplantısı  ·  ' + toplantiTarihi, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
     ],
     slideNumber: { x: SW - 0.7, y: SH - 0.4, w: 0.4, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle' }
   });
@@ -467,7 +468,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   kapak.addText('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTISI', { x: 0.8, y: 2.45, w: SW - 1.6, h: 1.3, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', fit: 'shrink' });
   kapak.addText(firmaAdi, { x: 1, y: 3.85, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
   kapak.addText(`${csgbDenetimBasligi(d)}${d.raporNo ? '  ·  Rapor No: ' + d.raporNo : ''}`, { x: 1, y: 4.5, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
-  kapak.addText(`Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
+  kapak.addText(`${toplantiNo ? toplantiNo + '. Takip Toplantısı  ·  ' : 'Sıradaki Takip Toplantısı  ·  '}Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
 
   // Genel durum
   const oz = pptx.addSlide({ masterName: MASTER });
@@ -551,7 +552,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     ])], { x: M, y: 1.4, w: SW - 2 * M, colW: [0.9, 7.6, 2.4, SW - 2 * M - 10.9], fontSize: 12, color: R.baslik, fill: { color: 'FFFFFF' }, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
   }
 
-  await pptx.writeFile({ fileName: `CSGB_Takip_Toplantisi_${toplantiTarihi.replace(/\./g, '-')}.pptx` });
+  await pptx.writeFile({ fileName: `CSGB_${toplantiNo || 'Siradaki'}_Takip_Toplantisi_${toplantiTarihi.replace(/\./g, '-')}.pptx` });
 }
 
 // Toplantı tutanağı: dikey A4. Bilgiler, katılımcılar (imza sütunlu),
@@ -600,11 +601,12 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const altBaslik = s => new docx.Paragraph({ keepNext: true, spacing: { before: w.mm(5), after: w.mm(2) }, children: [w.metin(s, { bold: true, size: 20 })] });
   const children = [
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTI TUTANAĞI', { bold: true, size: 24 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin(`Toplantı No: ${csgbToplantiNo(t)}`, { bold: true, size: 20 })] }),
     w.bilgiTablosu([
-      ['Toplantı Tarihi', gunAyYil(t.tarih)], ['Yer', t.yer || '-'],
+      ['Toplantı No', String(csgbToplantiNo(t))], ['Toplantı Tarihi', gunAyYil(t.tarih)],
+      ['Yer', t.yer || '-'], ['Sonraki Toplantı', gunAyYil(t.sonrakiToplantiTarihi) || '-'],
       ['Denetim', d ? csgbDenetimBasligi(d) : '-'], ['Rapor No / Tarihi', d ? `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}` : '-'],
-      ['Son Giderme Tarihi', d ? (gunAyYil(d.sonGidermeTarihi) || '-') : '-'], ['Sonraki Toplantı', gunAyYil(t.sonrakiToplantiTarihi) || '-'],
-      ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-'], ['', '']
+      ['Son Giderme Tarihi', d ? (gunAyYil(d.sonGidermeTarihi) || '-') : '-'], ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-']
     ], SAYFA_GEN),
     ...(t.genelNotlar ? [altBaslik('Genel Notlar'), ...w.paragraflar(t.genelNotlar, { size: 18 })] : []),
     altBaslik(`Görüşülen Maddeler (${gorusulenler.length})`),
@@ -616,5 +618,5 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const sayfa = { margin: { top: w.mm(15), right: w.mm(15), bottom: w.mm(15), left: w.mm(15), footer: w.mm(6) } };
   const doc = new docx.Document({ styles: { default: { document: { run: { font: 'Arial', size: 16 } } } }, sections: [{ properties: { page: sayfa }, footers: { default: w.altBilgi }, children }] });
   const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `CSGB_Takip_Toplantisi_${gunAyYil(t.tarih).replace(/\./g, '-')}.docx`);
+  saveAs(blob, `CSGB_${csgbToplantiNo(t)}_Takip_Toplantisi_${gunAyYil(t.tarih).replace(/\./g, '-')}.docx`);
 }
