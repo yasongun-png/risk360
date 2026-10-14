@@ -42,6 +42,188 @@ function csgbExcelDisaAktar(denetimId) {
   excelDisaAktar(satirlar, kolonlar, 'CSGB_Takip_' + (d ? (d.raporTarihi || d.denetimTarihi || '') : '') + '.xlsx');
 }
 
+// ==================== TAKİP RAPORU (EXCEL, biçimli) ====================
+// Kullanıcı isteği: takip raporu Excel formatında da olsun. "Dışa Aktar
+// (Excel)" ham veridir (geri içe aktarılabilir); bu ise rapor görünümlü:
+// başlık, denetim bilgileri, özet, biçimli madde tablosu (kaydırmalı metin,
+// filtre, dondurulmuş başlık, durum renkleri) ve Toplantılar sayfası. SheetJS
+// ücretsiz sürümü hücre biçimi yazamadığı için xlsx XML'i elle üretilir ve
+// JSZip ile paketlenir.
+
+function _csgbJsZipHazirla() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise((coz, red) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => window.JSZip ? coz(window.JSZip) : red(new Error('JSZip yüklenemedi.'));
+    s.onerror = () => red(new Error('Excel kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).'));
+    document.head.appendChild(s);
+  });
+}
+
+function _csgbXmlKacir(v) {
+  return String(v ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+}
+
+// Stil numaraları (styles.xml cellXfs sırası).
+const _CSGB_XS = { normal: 0, baslik: 1, bilgiEtiket: 2, bilgiDeger: 3, ozet: 4, tabloBaslik: 5, hucre: 6, hucreKalin: 7, hucreOrta: 8, tamam: 9, gecikmis: 10, acik: 11, devam: 12, altBaslik: 13 };
+
+function _csgbXlsxStilleri() {
+  const kenar = '<border><left style="thin"><color rgb="FF94A3B8"/></left><right style="thin"><color rgb="FF94A3B8"/></right><top style="thin"><color rgb="FF94A3B8"/></top><bottom style="thin"><color rgb="FF94A3B8"/></bottom><diagonal/></border>';
+  const xf = (font, fill, border, hiza) => `<xf numFmtId="0" fontId="${font}" fillId="${fill}" borderId="${border}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment ${hiza}/></xf>`;
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="8">' +
+      '<font><sz val="10"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="15"/><color rgb="FF0F172A"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="10"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FF15803D"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FFB91C1C"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FFB45309"/><name val="Arial"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FF0F766E"/><name val="Arial"/></font>' +
+    '</fonts>' +
+    '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF134E4A"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFCCFBF1"/></patternFill></fill>' +
+    '</fills>' +
+    `<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${kenar}</borders>` +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="14">' +
+      xf(0, 0, 0, 'vertical="top"') +                                   // normal
+      xf(1, 0, 0, 'vertical="center"') +                                // baslik
+      xf(2, 2, 1, 'vertical="center" wrapText="1"') +                   // bilgiEtiket
+      xf(0, 0, 1, 'vertical="center" wrapText="1"') +                   // bilgiDeger
+      xf(2, 4, 1, 'vertical="center" wrapText="1"') +                   // ozet
+      xf(3, 3, 1, 'horizontal="center" vertical="center" wrapText="1"') + // tabloBaslik
+      xf(0, 0, 1, 'vertical="top" wrapText="1"') +                      // hucre
+      xf(2, 0, 1, 'vertical="top" wrapText="1"') +                      // hucreKalin
+      xf(2, 0, 1, 'horizontal="center" vertical="top" wrapText="1"') +  // hucreOrta
+      xf(4, 0, 1, 'vertical="top" wrapText="1"') +                      // tamam
+      xf(5, 0, 1, 'vertical="top" wrapText="1"') +                      // gecikmis
+      xf(6, 0, 1, 'vertical="top" wrapText="1"') +                      // acik
+      xf(7, 0, 1, 'vertical="top" wrapText="1"') +                      // devam
+      xf(2, 0, 0, 'vertical="center"') +                                // altBaslik
+    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+}
+
+function _csgbKolonHarfi(n) { let s = ''; n++; while (n) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+
+// satirlar: [{ hucreler: [{ v, s }], yukseklik? }]; birlesik: ['A1:L1', ...]
+function _csgbSayfaXml(satirlar, { genislikler, birlesik = [], dondur = 0, filtre = '', yatay = false }) {
+  const rows = satirlar.map((r, i) => {
+    const no = i + 1;
+    const hucreler = (r.hucreler || []).map((h, j) => {
+      if (h == null) return '';
+      const ref = _csgbKolonHarfi(j) + no;
+      const deger = h.v ?? '';
+      if (typeof deger === 'number') return `<c r="${ref}" s="${h.s || 0}"><v>${deger}</v></c>`;
+      return `<c r="${ref}" s="${h.s || 0}" t="inlineStr"><is><t xml:space="preserve">${_csgbXmlKacir(deger)}</t></is></c>`;
+    }).join('');
+    return `<row r="${no}"${r.yukseklik ? ` ht="${r.yukseklik}" customHeight="1"` : ''}>${hucreler}</row>`;
+  }).join('');
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    `<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>` +
+    `<sheetViews><sheetView workbookViewId="0">${dondur ? `<pane ySplit="${dondur}" topLeftCell="A${dondur + 1}" activePane="bottomLeft" state="frozen"/>` : ''}</sheetView></sheetViews>` +
+    `<cols>${genislikler.map((w, j) => `<col min="${j + 1}" max="${j + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` +
+    `<sheetData>${rows}</sheetData>` +
+    (filtre ? `<autoFilter ref="${filtre}"/>` : '') +
+    (birlesik.length ? `<mergeCells count="${birlesik.length}">${birlesik.map(b => `<mergeCell ref="${b}"/>`).join('')}</mergeCells>` : '') +
+    `<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>` +
+    `<pageSetup paperSize="9" orientation="${yatay ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>` +
+    '</worksheet>';
+}
+
+async function csgbTakipRaporuExcelOlustur(denetimId) {
+  const d = csgbDenetimGetir(denetimId);
+  const maddeler = csgbMaddeleriniGetir(denetimId);
+  if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
+  const JSZip = await _csgbJsZipHazirla();
+  const toplantilar = csgbToplantilariniGetir(denetimId);
+  const bugun = gunAyYil(bugunIso());
+  const X = _CSGB_XS;
+  const h = (v, s) => ({ v, s });
+  const SUTUN_SAYISI = 12;
+  const sonKolon = _csgbKolonHarfi(SUTUN_SAYISI - 1);
+
+  // ---- Takip Raporu sayfası ----
+  const satirlar = [];
+  const birlesik = [`A1:${sonKolon}1`];
+  satirlar.push({ hucreler: [h('ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU', X.baslik)], yukseklik: 26 });
+  satirlar.push({ hucreler: [] });
+  // Bilgi tablosu: 2 çift / satır -> A:B etiket, C:E değer, F:G etiket, H:L değer
+  const bilgi = _csgbDenetimBilgileri(d);
+  for (let i = 0; i < bilgi.length; i += 2) {
+    const r = satirlar.length + 1;
+    const [a, b] = [bilgi[i], bilgi[i + 1] || ['', '']];
+    const hucreler = new Array(SUTUN_SAYISI).fill(null).map(() => h('', X.bilgiDeger));
+    hucreler[0] = h(a[0], X.bilgiEtiket); hucreler[1] = h('', X.bilgiEtiket); hucreler[2] = h(a[1], X.bilgiDeger);
+    hucreler[5] = h(b[0], X.bilgiEtiket); hucreler[6] = h('', X.bilgiEtiket); hucreler[7] = h(b[1], X.bilgiDeger);
+    satirlar.push({ hucreler, yukseklik: 18 });
+    birlesik.push(`A${r}:B${r}`, `C${r}:E${r}`, `F${r}:G${r}`, `H${r}:${sonKolon}${r}`);
+  }
+  satirlar.push({ hucreler: [] });
+  const ozetR = satirlar.length + 1;
+  const ozet = `Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}` +
+    (toplantilar.length ? ` (${toplantilar.map((t, i) => (i + 1) + '. ' + gunAyYil(t.tarih)).join(', ')})` : '');
+  satirlar.push({ hucreler: new Array(SUTUN_SAYISI).fill(null).map((_, j) => h(j === 0 ? ozet : '', X.ozet)), yukseklik: 20 });
+  birlesik.push(`A${ozetR}:${sonKolon}${ozetR}`);
+  satirlar.push({ hucreler: [] });
+
+  const BASLIKLAR = ['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Gerekli Tedbir', 'Mevzuat', 'Toplantı Notları', 'Kanıtlar', 'Bölüm', 'Sorumlu', 'Termin', 'Durum', 'Tamamlanma'];
+  const baslikR = satirlar.length + 1;
+  satirlar.push({ hucreler: BASLIKLAR.map(b => h(b, X.tabloBaslik)), yukseklik: 22 });
+  const durumStili = k => k.durum === 'Kapalı' ? X.tamam : (k.durumGoruntu === 'Gecikmiş' ? X.gecikmis : (k.durum === 'Devam Ediyor' ? X.devam : X.acik));
+  maddeler.forEach(k => {
+    satirlar.push({ hucreler: [
+      h(k.denetimMaddeNo || '-', X.hucreOrta),
+      h(k.maddeKonusu || '-', X.hucreKalin),
+      h(k.baslik, X.hucre),
+      h(k.duzelticiFaaliyet || '', X.hucre),
+      h(k.yasalDayanak || '', X.hucre),
+      h(k.toplantiNotlari.map(n => `${gunAyYil(n.tarih)}: ${n.not}`).join('\n') || '-', X.hucre),
+      h((k.kanitlar || []).map(x => x.ad).join('\n') || '-', X.hucre),
+      h(k.bolum || '', X.hucre),
+      h(k.sorumlu || '-', X.hucre),
+      h(gunAyYil(k.termin) || '-', X.hucre),
+      h(csgbDurumEtiketi(k.durumGoruntu), durumStili(k)),
+      h(`%${k.yuzde}` + (k.durum === 'Kapalı' && k.kapanisTarihi ? `\n${gunAyYil(k.kapanisTarihi)}` : ''), X.hucre)
+    ] });
+  });
+  const sonR = satirlar.length;
+  satirlar.push({ hucreler: [] });
+  satirlar.push({ hucreler: [h('Rapor Tarihi: ' + bugun, X.normal)] });
+
+  const sayfa1 = _csgbSayfaXml(satirlar, {
+    genislikler: [8, 24, 55, 45, 32, 42, 22, 18, 22, 12, 13, 13],
+    birlesik, dondur: baslikR, filtre: `A${baslikR}:${sonKolon}${sonR}`, yatay: true
+  });
+
+  // ---- Toplantılar sayfası ----
+  const t2 = [{ hucreler: [h('TAKİP TOPLANTILARI', X.baslik)], yukseklik: 24 }, { hucreler: [] },
+    { hucreler: ['No', 'Tarih', 'Yer', 'Katılımcılar', 'Not Girilen Madde', 'Sonraki Toplantı', 'Genel Notlar'].map(b => h(b, X.tabloBaslik)), yukseklik: 22 }];
+  toplantilar.forEach((t, i) => t2.push({ hucreler: [
+    h(i + 1, X.hucreOrta), h(gunAyYil(t.tarih), X.hucre), h(t.yer || '-', X.hucre),
+    h(csgbKatilimcilariNormallestir(t.katilimcilar).map(k => k.adSoyad + (k.gorev ? ` (${k.gorev})` : '')).join('\n') || '-', X.hucre),
+    h(Object.keys(t.maddeNotlari || {}).length, X.hucreOrta), h(gunAyYil(t.sonrakiToplantiTarihi) || '-', X.hucre), h(t.genelNotlar || '', X.hucre)
+  ] }));
+  if (!toplantilar.length) t2.push({ hucreler: [h('Henüz takip toplantısı yapılmadı.', X.normal)] });
+  const sayfa2 = _csgbSayfaXml(t2, { genislikler: [6, 12, 26, 40, 14, 15, 50], birlesik: ['A1:G1'], dondur: 3, yatay: true });
+
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  zip.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Takip Raporu" sheetId="1" r:id="rId1"/><sheet name="Toplantılar" sheetId="2" r:id="rId2"/></sheets>' +
+    `<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Takip Raporu'!$A$${baslikR}:$${sonKolon}$${sonR}</definedName><definedName name="_xlnm.Print_Titles" localSheetId="0">'Takip Raporu'!$${baslikR}:$${baslikR}</definedName></definedNames></workbook>`);
+  zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  zip.file('xl/worksheets/sheet1.xml', sayfa1);
+  zip.file('xl/worksheets/sheet2.xml', sayfa2);
+  zip.file('xl/styles.xml', _csgbXlsxStilleri());
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `CSGB_Aksiyon_Plani_Takip_Raporu_${bugun.replace(/\./g, '-')}.xlsx`);
+}
+
 // ==================== FOTOĞRAF YARDIMCILARI ====================
 // (uygunsuzluk/cikti.js'teki _ucWordFotoVerisi / fotoSigdirNesnesi ile aynı
 // mantık; bu sayfa o dosyayı yüklemediği için kendi kopyası.)

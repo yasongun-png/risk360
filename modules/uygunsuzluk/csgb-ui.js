@@ -304,6 +304,7 @@ function _csgbDetayCiz(kutu) {
           <button type="button" class="ikincil" id="csgbDenetimDuzenleBtn">Denetimi Düzenle</button>
           <button type="button" class="ikincil" id="csgbRaporWordBtn">📄 Takip Raporu (Word)</button>
           <button type="button" class="ikincil" id="csgbRaporPdfBtn" title="Tablodaki maddeye tıklayınca PDF içinde tam metnine gider">📕 Takip Raporu (PDF)</button>
+          <button type="button" class="ikincil" id="csgbRaporExcelBtn" title="Biçimli rapor: denetim bilgileri, özet, madde tablosu ve toplantılar sayfası">📗 Takip Raporu (Excel)</button>
           <button type="button" class="ikincil" id="csgbPptxBtn" title="Son takip toplantısının (toplantı yoksa sıradaki toplantının) sunumu: genel durum, açık maddeler, tamamlananlar">📊 Toplantı Sunumu (PPTX)</button>
         </div>
       </div>
@@ -408,6 +409,7 @@ function _csgbDetayCiz(kutu) {
     await csgbTakipRaporuWordOlustur(d.id, tamMetin);
   });
   _csgbButonIsle('csgbRaporPdfBtn', 'PDF hazırlanıyor...', () => csgbTakipRaporuPdfOlustur(d.id));
+  _csgbButonIsle('csgbRaporExcelBtn', 'Excel hazırlanıyor...', () => csgbTakipRaporuExcelOlustur(d.id));
   _csgbButonIsle('csgbPptxBtn', 'Sunum hazırlanıyor...', () => {
     const son = toplantilar[toplantilar.length - 1];
     return csgbToplantiPptxOlustur(d.id, son ? son.id : null);
