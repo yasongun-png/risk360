@@ -75,6 +75,32 @@ function csgbDenetimKaydet(veriler, duzenlenenId) {
   return { basarili: true, denetim };
 }
 
+function csgbDenetimKatilimcilariniKaydet(denetimId, liste) {
+  const d = csgbDenetimleriTumunuGetir().find(x => x.id === denetimId);
+  if (!d) return { basarili: false, hata: 'Denetim bulunamadı.' };
+  csgbDenetimKaydetRepo(csgbDenetimOlustur(Object.assign({}, d, { katilimcilar: liste })));
+  return { basarili: true };
+}
+
+// İSG Kurulu modülünün en son katılımcı/imza listesi olan toplantısından
+// katılımcıları okur (kurul_toplantilari + kurul_imzalari; firma verisi bu
+// sayfada zaten yüklü). Görev: kuruldaki görevi, yoksa unvanı.
+function csgbKurulKatilimcilariniGetir() {
+  const toplantilar = oku(tenantAnahtar('kurul_toplantilari'), []);
+  const imzalar = oku(tenantAnahtar('kurul_imzalari'), []);
+  const sirali = toplantilar.slice().sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+  for (const t of sirali) {
+    const satirlar = imzalar.filter(i => i.toplantiId === t.id && (i.adSoyad || '').trim());
+    if (!satirlar.length) continue;
+    satirlar.sort((a, b) => (Number(a.siraNo) || 0) - (Number(b.siraNo) || 0));
+    return {
+      toplantiTarihi: t.tarih || '',
+      liste: satirlar.map(i => ({ adSoyad: i.adSoyad, gorev: i.kuruldakiGorev || i.unvan || '', eposta: i.eposta || '' }))
+    };
+  }
+  return { toplantiTarihi: '', liste: [] };
+}
+
 function csgbDenetimSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   csgbDenetimSilRepo(id);

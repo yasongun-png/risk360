@@ -86,6 +86,9 @@ function csgbDenetimOlustur(veriler) {
     bildirimTarihi: veriler.bildirimTarihi || '',
     durum: CSGB_DENETIM_DURUMLARI.includes(veriler.durum) ? veriler.durum : CSGB_DENETIM_DURUMLARI[0],
     notlar: (veriler.notlar || '').trim(),
+    // Takip toplantılarının sabit katılımcı listesi (bir kez girilir, her yeni
+    // toplantı bununla dolu açılır) -- bkz. csgbKatilimcilariNormallestir.
+    katilimcilar: csgbKatilimcilariNormallestir(veriler.katilimcilar),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
   };
 }

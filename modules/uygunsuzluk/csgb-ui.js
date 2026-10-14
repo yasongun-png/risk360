@@ -48,21 +48,15 @@ function csgbSayfasiniBaslat() {
   document.getElementById('csgbTopIptalBtn').addEventListener('click', csgbToplantiModalKapat);
   document.getElementById('csgbTopKaydetBtn').addEventListener('click', _csgbToplantiKaydetTiklandi);
   document.getElementById('csgbTopKapalilariGoster').addEventListener('change', () => { _csgbTopTaslagiTopla(); _csgbTopMaddeleriCiz(); });
-  document.getElementById('csgbTopKatilimciEkleBtn').addEventListener('click', () => {
-    _csgbKatilimcilariCiz(_csgbKatilimcilariTopla(true).concat([{ adSoyad: '', gorev: '', eposta: '' }]));
-    const girdiler = document.querySelectorAll('#csgbTopKatilimciGovde [data-kat-ad]');
-    girdiler[girdiler.length - 1].focus();
-  });
-  // Outlook alıcı listesini yapıştır: aynı e-postalı / aynı adlı kişi tekrar eklenmez.
-  document.getElementById('csgbTopKatilimciYapistirBtn').addEventListener('click', async () => {
-    const metin = await metinIstemModali('Outlook\'tan kopyaladığınız alıcı listesini yapıştırın (ör. Ad Soyad <ad@firma.com>; ...):', '', '');
-    if (metin === null || !metin.trim()) return;
-    const mevcut = _csgbKatilimcilariTopla();
-    const anahtar = k => (k.eposta || k.adSoyad).toLocaleLowerCase('tr');
-    const varolan = new Set(mevcut.map(anahtar));
-    const yeniler = csgbKatilimciMetniCoz(metin).filter(k => !varolan.has(anahtar(k)) && varolan.add(anahtar(k)));
-    _csgbKatilimcilariCiz(mevcut.concat(yeniler));
-    alert(`${yeniler.length} katılımcı eklendi. Görevlerini tabloya yazabilirsiniz.`);
+  _csgbKatilimciButonlariniBagla('csgbTopKatilimciGovde', 'csgbTopKatilimci');
+  _csgbKatilimciButonlariniBagla('katListeGovde', 'katListe');
+  document.getElementById('katListeKapatBtn').addEventListener('click', csgbKatilimciListesiKapat);
+  document.getElementById('katListeIptalBtn').addEventListener('click', csgbKatilimciListesiKapat);
+  document.getElementById('katListeKaydetBtn').addEventListener('click', () => {
+    const sonuc = csgbDenetimKatilimcilariniKaydet(_csgbAcikDenetimId, _csgbKatilimcilariTopla(false, 'katListeGovde'));
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    csgbKatilimciListesiKapat();
+    csgbCiz();
   });
 
   document.getElementById('mdKapatBtn').addEventListener('click', csgbMaddeModalKapat);
@@ -318,7 +312,10 @@ function _csgbDetayCiz(kutu) {
 
     <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin:18px 0 8px;">
       <h3 style="margin:0; font-size:15px;">Takip Toplantıları</h3>
-      <button type="button" class="birincil" style="width:auto;" id="csgbYeniToplantiBtn">+ Takip Toplantısı</button>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="ikincil" id="csgbKatilimciListesiBtn" title="Her yeni takip toplantısı bu listeyle dolu açılır">👥 Katılımcı Listesi (${csgbKatilimcilariNormallestir(d.katilimcilar).length} kişi)</button>
+        <button type="button" class="birincil" style="width:auto;" id="csgbYeniToplantiBtn">+ Takip Toplantısı</button>
+      </div>
     </div>
     <div class="tablo-scroll">
       <table class="veri-tablosu">
@@ -384,6 +381,7 @@ function _csgbDetayCiz(kutu) {
   document.getElementById('csgbGeriLink').addEventListener('click', e => { e.preventDefault(); _csgbAcikDenetimId = null; csgbCiz(); });
   document.getElementById('csgbDenetimDuzenleBtn').addEventListener('click', () => csgbDenetimModalAc(d.id));
   document.getElementById('csgbYeniToplantiBtn').addEventListener('click', () => csgbToplantiModalAc(null));
+  document.getElementById('csgbKatilimciListesiBtn').addEventListener('click', csgbKatilimciListesiAc);
   document.getElementById('csgbMaddeEkleBtn').addEventListener('click', () => csgbMaddeModalAc(null));
   document.getElementById('csgbMaddeFiltre').addEventListener('change', e => { _csgbMaddeFiltre = e.target.value; csgbCiz(); });
   document.getElementById('csgbMaddeArama').addEventListener('input', e => {
@@ -667,7 +665,9 @@ function csgbToplantiModalAc(toplantiId) {
   document.getElementById('csgbTopTarih').value = t ? t.tarih : bugunIso();
   document.getElementById('csgbTopSonraki').value = t ? t.sonrakiToplantiTarihi : '';
   document.getElementById('csgbTopYer').value = t ? t.yer : (onceki ? onceki.yer : '');
-  _csgbKatilimcilariCiz(csgbKatilimcilariNormallestir(t ? t.katilimcilar : (onceki ? onceki.katilimcilar : [])));
+  // Yeni toplantı denetimin sabit katılımcı listesiyle (yoksa bir önceki toplantının listesiyle) dolu açılır.
+  const sabitListe = csgbKatilimcilariNormallestir(d.katilimcilar);
+  _csgbKatilimcilariCiz(csgbKatilimcilariNormallestir(t ? t.katilimcilar : (sabitListe.length ? sabitListe : (onceki ? onceki.katilimcilar : []))));
   document.getElementById('csgbTopGenel').value = t ? t.genelNotlar : '';
   document.getElementById('csgbTopKapalilariGoster').checked = false;
   document.getElementById('csgbTopHata').textContent = '';
@@ -678,9 +678,51 @@ function csgbToplantiModalAc(toplantiId) {
   document.getElementById('csgbToplantiKatmani').classList.add('acik');
 }
 
+// Katılımcı tablosu iki yerde kullanılır: denetimin sabit listesi (katListeGovde)
+// ve tek toplantının listesi (csgbTopKatilimciGovde). Butonlar: <onek>EkleBtn,
+// <onek>YapistirBtn (Outlook), <onek>KurulBtn (İSG Kurulu'ndan al).
+function _csgbKatilimciButonlariniBagla(govdeId, onek) {
+  const birlestir = (yeniler, kaynakAdi) => {
+    const mevcut = _csgbKatilimcilariTopla(false, govdeId);
+    const anahtar = k => (k.eposta || k.adSoyad).toLocaleLowerCase('tr');
+    const varolan = new Set(mevcut.map(anahtar));
+    const eklenecek = yeniler.filter(k => !varolan.has(anahtar(k)) && varolan.add(anahtar(k)));
+    _csgbKatilimcilariCiz(mevcut.concat(eklenecek), govdeId);
+    alert(`${kaynakAdi}: ${eklenecek.length} katılımcı eklendi` + (yeniler.length > eklenecek.length ? ` (${yeniler.length - eklenecek.length} kişi zaten listedeydi).` : '.'));
+  };
+  document.getElementById(onek + 'EkleBtn').addEventListener('click', () => {
+    _csgbKatilimcilariCiz(_csgbKatilimcilariTopla(true, govdeId).concat([{ adSoyad: '', gorev: '', eposta: '' }]), govdeId);
+    const girdiler = document.querySelectorAll(`#${govdeId} [data-kat-ad]`);
+    girdiler[girdiler.length - 1].focus();
+  });
+  // Outlook alıcı listesini yapıştır: aynı e-postalı / aynı adlı kişi tekrar eklenmez.
+  document.getElementById(onek + 'YapistirBtn').addEventListener('click', async () => {
+    const metin = await metinIstemModali('Outlook\'tan kopyaladığınız alıcı listesini yapıştırın (ör. Ad Soyad <ad@firma.com>; ...):', '', '');
+    if (metin === null || !metin.trim()) return;
+    birlestir(csgbKatilimciMetniCoz(metin), 'Outlook');
+  });
+  document.getElementById(onek + 'KurulBtn').addEventListener('click', () => {
+    const { toplantiTarihi, liste } = csgbKurulKatilimcilariniGetir();
+    if (!liste.length) { alert('İSG Kurulu modülünde katılımcı / imza listesi girilmiş bir toplantı bulunamadı.'); return; }
+    birlestir(liste, `İSG Kurulu (${gunAyYil(toplantiTarihi) || 'son toplantı'})`);
+  });
+}
+
+function csgbKatilimciListesiAc() {
+  const d = csgbDenetimGetir(_csgbAcikDenetimId);
+  if (!d) return;
+  _csgbKatilimcilariCiz(csgbKatilimcilariNormallestir(d.katilimcilar), 'katListeGovde');
+  document.getElementById('katListeKatmani').classList.add('acik');
+}
+
+function csgbKatilimciListesiKapat() {
+  document.getElementById('katListeKatmani').classList.remove('acik');
+}
+
 // Katılımcı tablosu: her satır Ad Soyad + Görevi (imza tutanakta ıslak imza için boş sütun).
-function _csgbKatilimcilariCiz(liste) {
-  const govde = document.getElementById('csgbTopKatilimciGovde');
+function _csgbKatilimcilariCiz(liste, govdeId) {
+  govdeId = govdeId || 'csgbTopKatilimciGovde';
+  const govde = document.getElementById(govdeId);
   const satirlar = liste.length ? liste : [{ adSoyad: '', gorev: '', eposta: '' }];
   govde.innerHTML = satirlar.map((k, i) => `
     <tr>
@@ -691,15 +733,15 @@ function _csgbKatilimcilariCiz(liste) {
       <td><button type="button" class="tablo-buton sil" data-kat-sil="${i}" title="Satırı sil">✕</button></td>
     </tr>`).join('');
   govde.querySelectorAll('[data-kat-sil]').forEach(b => b.addEventListener('click', () => {
-    const mevcut = _csgbKatilimcilariTopla(true);
+    const mevcut = _csgbKatilimcilariTopla(true, govdeId);
     mevcut.splice(Number(b.getAttribute('data-kat-sil')), 1);
-    _csgbKatilimcilariCiz(mevcut);
+    _csgbKatilimcilariCiz(mevcut, govdeId);
   }));
 }
 
 // bosDahil: satır silme/ekleme sırasında henüz doldurulmamış satırlar kaybolmasın.
-function _csgbKatilimcilariTopla(bosDahil) {
-  const liste = Array.from(document.querySelectorAll('#csgbTopKatilimciGovde tr')).map(tr => ({
+function _csgbKatilimcilariTopla(bosDahil, govdeId) {
+  const liste = Array.from(document.querySelectorAll(`#${govdeId || 'csgbTopKatilimciGovde'} tr`)).map(tr => ({
     adSoyad: tr.querySelector('[data-kat-ad]').value.trim(),
     gorev: tr.querySelector('[data-kat-gorev]').value.trim(),
     eposta: tr.querySelector('[data-kat-eposta]').value.trim()
@@ -782,6 +824,11 @@ async function _csgbToplantiKaydetTiklandi() {
     }, guncellemeler);
   } finally { btn.disabled = false; }
   if (!sonuc.basarili) { document.getElementById('csgbTopHata').textContent = sonuc.hata; return; }
+  // Denetimin sabit listesi henüz yoksa bu toplantının katılımcıları liste olur (bir daha seçilmesin).
+  const d = csgbDenetimleriTumunuGetir().find(x => x.id === _csgbAcikDenetimId);
+  if (d && !csgbKatilimcilariNormallestir(d.katilimcilar).length && sonuc.toplanti.katilimcilar.length) {
+    csgbDenetimKatilimcilariniKaydet(d.id, sonuc.toplanti.katilimcilar);
+  }
   csgbToplantiModalKapat();
   csgbCiz();
 }
