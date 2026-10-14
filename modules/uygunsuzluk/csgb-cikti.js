@@ -570,16 +570,35 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const katilimcilar = csgbKatilimcilariNormallestir(t.katilimcilar);
   const KG = [7, 35, 33, 25].map(y => Math.round(SAYFA_GEN * y / 100));
   const bosSatirlar = [{ adSoyad: '', gorev: '' }, { adSoyad: '', gorev: '' }, { adSoyad: '', gorev: '' }];
+  const katilimSatirlari = katilimcilar.length ? katilimcilar : bosSatirlar;
+  // Kullanıcı isteği: imza listesi bir sayfaya sığsın. Satırlar sıkı (8 mm, ince
+  // kenar boşluğu) ve son satır hariç hepsi "sonrakiyle birlikte tut" -- Word
+  // tabloyu bölmez, sığmazsa bütün olarak sonraki sayfaya alır.
+  const katHucre = (metin, gen, son, ortali) => new docx.TableCell({
+    width: { size: gen, type: docx.WidthType.DXA },
+    margins: { top: 20, bottom: 20, left: 70, right: 70 },
+    verticalAlign: docx.VerticalAlign.CENTER,
+    borders: { top: { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' }, bottom: { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' }, left: { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' }, right: { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' } },
+    children: [new docx.Paragraph({ keepNext: !son, keepLines: true, alignment: ortali ? docx.AlignmentType.CENTER : undefined, children: [w.metin(metin, { size: 16 })] })]
+  });
   const katilimTablosu = new docx.Table({
     width: { size: SAYFA_GEN, type: docx.WidthType.DXA }, columnWidths: KG, layout: docx.TableLayoutType.FIXED,
     rows: [
-      new docx.TableRow({ tableHeader: true, children: ['Sıra', 'Ad Soyad', 'Görevi', 'İmza'].map((b, i) => w.baslikHucre(b, KG[i])) }),
-      ...(katilimcilar.length ? katilimcilar : bosSatirlar).map((k, i) => new docx.TableRow({ height: { value: w.mm(12), rule: docx.HeightRule.ATLEAST }, cantSplit: true, children: [
-        w.hucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [w.metin(i + 1, { size: 17 })] }), KG[0], { verticalAlign: docx.VerticalAlign.CENTER }),
-        w.hucre(new docx.Paragraph({ children: [w.metin(k.adSoyad, { size: 17 })] }), KG[1], { verticalAlign: docx.VerticalAlign.CENTER }),
-        w.hucre(new docx.Paragraph({ children: [w.metin(k.gorev, { size: 17 })] }), KG[2], { verticalAlign: docx.VerticalAlign.CENTER }),
-        w.hucre(new docx.Paragraph(''), KG[3])
-      ] }))
+      new docx.TableRow({ tableHeader: true, cantSplit: true, children: ['Sıra', 'Ad Soyad', 'Görevi', 'İmza'].map((b, i) => new docx.TableCell({
+        width: { size: KG[i], type: docx.WidthType.DXA },
+        margins: { top: 30, bottom: 30, left: 70, right: 70 },
+        shading: { fill: 'E5E7EB', color: 'auto', type: docx.ShadingType.CLEAR },
+        children: [new docx.Paragraph({ keepNext: true, alignment: docx.AlignmentType.CENTER, children: [w.metin(b.toLocaleUpperCase('tr'), { bold: true, size: 15 })] })]
+      })) }),
+      ...katilimSatirlari.map((k, i) => {
+        const son = i === katilimSatirlari.length - 1;
+        return new docx.TableRow({ height: { value: w.mm(8), rule: docx.HeightRule.ATLEAST }, cantSplit: true, children: [
+          katHucre(i + 1, KG[0], son, true),
+          katHucre(k.adSoyad, KG[1], son),
+          katHucre(k.gorev, KG[2], son),
+          katHucre('', KG[3], son)
+        ] });
+      })
     ]
   });
 
