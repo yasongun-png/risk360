@@ -107,6 +107,20 @@ async function _csgbEskiSurumTasimasiniSor() {
     alert(sonuc.basarili ? `${sonuc.tasinan} madde ÇSGB Denetimi sayfasına taşındı.` : sonuc.hata);
     csgbCiz();
   }
+  await _csgbUygunsuzluktanGelenMukerrerleriSor();
+}
+
+// Uygunsuzluk'tan taşınan ve ÇSGB'de eşi olan maddeleri silmeyi önerir (bkz. csgb-service.js).
+async function _csgbUygunsuzluktanGelenMukerrerleriSor() {
+  const { silinecekler, esiOlmayan } = csgbUygunsuzluktanGelenMukerrerleriBul();
+  if (!silinecekler.length) return;
+  const mesaj = `${silinecekler.length} madde iki kez görünüyor: Uygunsuzluk'tan taşınan kopya ve ÇSGB sayfasında girilen madde. ` +
+    `Uygunsuzluk'tan gelen ${silinecekler.length} kopya silinsin mi? ÇSGB'de girilen maddeler aynen kalır.` +
+    (esiOlmayan ? ` (Uygunsuzluk'tan gelen ama ÇSGB'de eşi olmayan ${esiOlmayan} madde silinmez.)` : '');
+  if (!(await onayModali(mesaj, 'Evet, Sil'))) return;
+  const sonuc = await csgbUygunsuzluktanGelenMukerrerleriSil();
+  alert(sonuc.basarili ? `Uygunsuzluk'tan gelen ${sonuc.silinen} kopya silindi.` : sonuc.hata);
+  csgbCiz();
 }
 
 function csgbCiz() {
