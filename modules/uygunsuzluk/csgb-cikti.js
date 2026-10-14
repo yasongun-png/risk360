@@ -606,7 +606,8 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
       ['Toplantı No', String(csgbToplantiNo(t))], ['Toplantı Tarihi', gunAyYil(t.tarih)],
       ['Yer', t.yer || '-'], ['Sonraki Toplantı', gunAyYil(t.sonrakiToplantiTarihi) || '-'],
       ['Denetim', d ? csgbDenetimBasligi(d) : '-'], ['Rapor No / Tarihi', d ? `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}` : '-'],
-      ['Son Giderme Tarihi', d ? (gunAyYil(d.sonGidermeTarihi) || '-') : '-'], ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-']
+      // Son giderme tarihi tutanakta gösterilmez (kullanıcı isteği).
+      ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-'], ['', '']
     ], SAYFA_GEN),
     ...(t.genelNotlar ? [altBaslik('Genel Notlar'), ...w.paragraflar(t.genelNotlar, { size: 18 })] : []),
     altBaslik(`Görüşülen Maddeler (${gorusulenler.length})`),
