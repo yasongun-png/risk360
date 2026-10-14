@@ -243,12 +243,12 @@ function _csgbMetinHucresi(k) {
   const acik = _csgbAcikMetinler.has(k.id);
   const ek = [];
   if (k.aciklama) ek.push(`<div style="margin-top:6px; white-space:pre-wrap;">${K(k.aciklama)}</div>`);
-  if (k.duzelticiFaaliyet) ek.push(`<div style="margin-top:6px; white-space:pre-wrap;"><b>Gerekli tedbir:</b> ${K(k.duzelticiFaaliyet)}</div>`);
+  if (k.duzelticiFaaliyet) ek.push(`<div style="margin-top:6px; white-space:pre-wrap;"><b>Tavsiye edilen önlemler:</b> ${K(k.duzelticiFaaliyet)}</div>`);
   if (k.yasalDayanak) ek.push(`<div style="margin-top:6px; color:var(--metin-soluk);"><b>Mevzuat:</b> ${K(k.yasalDayanak)}</div>`);
   return `
     <div class="${acik ? '' : 'csgb-kisalt'}" style="white-space:pre-wrap;">${K(k.baslik)}</div>
     ${acik ? ek.join('') : ''}
-    <a href="#" data-csgb-metin="${k.id}" style="font-size:11.5px;">${acik ? '▲ Kısalt' : '▼ Tam metin' + (ek.length ? ' / tedbir / mevzuat' : '')}</a>`;
+    <a href="#" data-csgb-metin="${k.id}" style="font-size:11.5px;">${acik ? '▲ Kısalt' : '▼ Tam metin' + (ek.length ? ' / önlemler / mevzuat' : '')}</a>`;
 }
 
 function _csgbNotlarHucresi(k) {
@@ -405,7 +405,7 @@ function _csgbDetayCiz(kutu) {
   document.getElementById('csgbIceAktarBtn').addEventListener('click', () => document.getElementById('csgbIceAktarDosya').click());
   document.getElementById('csgbDisaAktarBtn').addEventListener('click', () => csgbExcelDisaAktar(d.id));
   _csgbButonIsle('csgbRaporWordBtn', 'Hazırlanıyor...', async () => {
-    const tamMetin = await onayModali('Raporun sonuna maddelerin tam metni (gerekli tedbir, mevzuat) ve kanıt fotoğrafları "Ek" olarak eklensin mi? Hayır derseniz sadece kısa takip tablosu üretilir.', 'Evet, ekle');
+    const tamMetin = await onayModali('Raporun sonuna maddelerin tam metni (tavsiye edilen önlemler, mevzuat) ve kanıt fotoğrafları "Ek" olarak eklensin mi? Hayır derseniz sadece kısa takip tablosu üretilir.', 'Evet, ekle');
     await csgbTakipRaporuWordOlustur(d.id, tamMetin);
   });
   _csgbButonIsle('csgbRaporPdfBtn', 'PDF hazırlanıyor...', () => csgbTakipRaporuPdfOlustur(d.id));

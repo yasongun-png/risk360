@@ -14,7 +14,7 @@ const CSGB_EXCEL_KOLONLARI = [
   { anahtar: 'denetimMaddeNo', baslik: 'Madde No', esanlamlar: ['Uygunsuzluk No', 'No', 'Rapor Madde No'] },
   { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu', esanlamlar: ['Konu', 'Kısa Konu'] },
   { anahtar: 'baslik', baslik: 'Uygunsuzluk Tanımı', esanlamlar: ['Uygunsuzluk', 'Tespit', 'Uygunsuzluk Metni'] },
-  { anahtar: 'duzelticiFaaliyet', baslik: 'Gerekli Tedbir', esanlamlar: ['Faaliyet Önerisi', 'Alınması Gerekli Tedbir', 'Ek Açıklama'] },
+  { anahtar: 'duzelticiFaaliyet', baslik: 'Tavsiye Edilen Önlemler', esanlamlar: ['Gerekli Tedbir', 'Faaliyet Önerisi', 'Alınması Gerekli Tedbir', 'Ek Açıklama'] },
   { anahtar: 'yasalDayanak', baslik: 'Mevzuat', esanlamlar: ['Yasal Dayanak', 'Mevzuat Dayanağı'] },
   { anahtar: 'bolum', baslik: 'Bölüm', esanlamlar: ['Tesis / Birim'] },
   { anahtar: 'sorumlu', baslik: 'Sorumlu' },
@@ -171,7 +171,7 @@ async function csgbTakipRaporuExcelOlustur(denetimId) {
   birlesik.push(`A${ozetR}:${sonKolon}${ozetR}`);
   satirlar.push({ hucreler: [] });
 
-  const BASLIKLAR = ['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Gerekli Tedbir', 'Mevzuat', 'Toplantı Notları', 'Kanıtlar', 'Bölüm', 'Sorumlu', 'Termin', 'Durum', 'Tamamlanma'];
+  const BASLIKLAR = ['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Tavsiye Edilen Önlemler', 'Mevzuat', 'Toplantı Notları', 'Kanıtlar', 'Bölüm', 'Sorumlu', 'Termin', 'Durum', 'Tamamlanma'];
   const baslikR = satirlar.length + 1;
   satirlar.push({ hucreler: BASLIKLAR.map(b => h(b, X.tabloBaslik)), yukseklik: 22 });
   const durumStili = k => k.durum === 'Kapalı' ? X.tamam : (k.durumGoruntu === 'Gecikmiş' ? X.gecikmis : (k.durum === 'Devam Ediyor' ? X.devam : X.acik));
@@ -326,7 +326,7 @@ function _csgbDenetimBilgileri(d) {
 }
 
 // Takip raporu: yatay A4. Ana tablo kısa tutulur (No, Konu, Tespit, Toplantı
-// Notları, Kanıt, Termin, Sorumlu, Durum); uzun metinler (gerekli tedbir,
+// Notları, Kanıt, Termin, Sorumlu, Durum); uzun metinler (tavsiye edilen önlemler,
 // mevzuat) ve kanıt fotoğrafları istenirse "Ek" bölümünde madde madde verilir.
 async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
   const d = csgbDenetimGetir(denetimId);
@@ -393,7 +393,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
       ] }));
       ek.push(...w.paragraflar(k.baslik, { bold: true, size: 18 }));
       if (k.aciklama) ek.push(...w.paragraflar(k.aciklama, { size: 17 }));
-      if (k.duzelticiFaaliyet) ek.push(new docx.Paragraph({ spacing: { before: 60 }, children: [w.metin('Gerekli tedbir: ', { bold: true, size: 17 }), w.metin(k.duzelticiFaaliyet, { size: 17 })] }));
+      if (k.duzelticiFaaliyet) ek.push(new docx.Paragraph({ spacing: { before: 60 }, children: [w.metin('Tavsiye edilen önlemler: ', { bold: true, size: 17 }), w.metin(k.duzelticiFaaliyet, { size: 17 })] }));
       if (k.yasalDayanak) ek.push(new docx.Paragraph({ spacing: { before: 60 }, children: [w.metin('Mevzuat: ', { bold: true, size: 17 }), w.metin(k.yasalDayanak, { size: 17, color: '374151' })] }));
       if (k.kanitAciklamasi) ek.push(new docx.Paragraph({ spacing: { before: 60 }, children: [w.metin('Kapanış açıklaması: ', { bold: true, size: 17 }), w.metin(k.kanitAciklamasi, { size: 17 })] }));
       const kanitlar = k.kanitlar || [];
@@ -488,7 +488,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
       <div style="font-size:19px; font-weight:bold; border-bottom:2px solid #111827; padding-bottom:4px; margin-bottom:8px;">ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU</div>
       <table class="cp-bilgi">${_csgbDenetimBilgileri(d).reduce((a, c, i, arr) => i % 2 ? a : a + `<tr><td>${K(c[0])}</td><td>${K(c[1])}</td><td>${K((arr[i + 1] || ['', ''])[0])}</td><td>${K((arr[i + 1] || ['', ''])[1])}</td></tr>`, '')}</table>
       <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}</div>
-      <div style="font-size:10.5px; color:#1d4ed8; margin-bottom:6px;">Maddenin satırına tıklayarak tam metnine (gerekli tedbir, mevzuat, tüm toplantı notları ve kanıtlar) gidebilirsiniz.</div>
+      <div style="font-size:10.5px; color:#1d4ed8; margin-bottom:6px;">Maddenin satırına tıklayarak tam metnine (tavsiye edilen önlemler, mevzuat, tüm toplantı notları ve kanıtlar) gidebilirsiniz.</div>
       ${tabloBasi()}`;
     let govde = ic.querySelector('.cp-tablo tbody');
     const satirKonum = {}; // maddeId -> sayfa index (ana tablo)
@@ -546,7 +546,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
         <div style="color:#374151; margin-top:2px;">Sorumlu: ${K(k.sorumlu || '-')} · Termin: ${gunAyYil(k.termin) || '-'}${k.kapanisTarihi && k.durum === 'Kapalı' ? ' · Tamamlanma: ' + gunAyYil(k.kapanisTarihi) : ''}</div>`);
       ekKonum[k.id] = sayfalar.indexOf(bas.closest('.cp-sayfa'));
       if (k.aciklama) ekle(`<div style="white-space:pre-wrap;">${K(k.aciklama)}</div>`);
-      if (k.duzelticiFaaliyet) ekle(`<b>Gerekli tedbir:</b> <span style="white-space:pre-wrap;">${K(k.duzelticiFaaliyet)}</span>`);
+      if (k.duzelticiFaaliyet) ekle(`<b>Tavsiye edilen önlemler:</b> <span style="white-space:pre-wrap;">${K(k.duzelticiFaaliyet)}</span>`);
       if (k.yasalDayanak) ekle(`<b>Mevzuat:</b> <span style="color:#374151;">${K(k.yasalDayanak)}</span>`);
       if (k.toplantiNotlari.length) ekle(`<b>Toplantı notları:</b>${k.toplantiNotlari.map(n => `<div style="margin-left:10px;"><b>${csgbNotTarihi(n.tarih)}:</b> <span style="white-space:pre-wrap;">${K(n.not)}</span></div>`).join('')}`);
       if (k.kanitAciklamasi) ekle(`<b>Kapanış açıklaması:</b> ${K(k.kanitAciklamasi)}`);
