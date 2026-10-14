@@ -311,7 +311,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
       <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}</div>
       <div style="font-size:10.5px; color:#1d4ed8; margin-bottom:6px;">Maddenin satırına tıklayarak tam metnine (gerekli tedbir, mevzuat, tüm toplantı notları ve kanıtlar) gidebilirsiniz.</div>
       ${tabloBasi()}`;
-    let govde = ic.querySelector('tbody');
+    let govde = ic.querySelector('.cp-tablo tbody');
     const satirKonum = {}; // maddeId -> sayfa index (ana tablo)
     maddeler.forEach(k => {
       const durum = csgbDurumEtiketi(k.durumGoruntu);
@@ -332,7 +332,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
         govde.removeChild(tr);
         ic = yeniSayfa();
         ic.innerHTML = tabloBasi();
-        govde = ic.querySelector('tbody');
+        govde = ic.querySelector('.cp-tablo tbody');
         govde.appendChild(tr);
       }
       satirKonum[k.id] = sayfalar.length - 1;
