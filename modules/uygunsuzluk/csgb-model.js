@@ -94,12 +94,21 @@ function csgbDenetimOlustur(veriler) {
 // denetimMaddeNo = Uygunsuzluk No, maddeKonusu = kısa konu, baslik = tam
 // uygunsuzluk metni (tespit), duzelticiFaaliyet = gerekli tedbir,
 // yasalDayanak = mevzuat.
+// "24-1" -> "24", "31.c-2" -> "31.c"; parça numarası değilse ''.
+function csgbAnaMaddeNoCikar(no) {
+  const m = String(no ?? '').trim().match(/^(.*\S)\s*-\s*\d+$/);
+  return m ? m[1] : '';
+}
+
 function csgbMaddeOlustur(veriler) {
   const durum = CSGB_MADDE_DURUMLARI.includes(veriler.durum) ? veriler.durum : csgbDurumNormallestir(veriler.durum);
+  veriler = Object.assign({}, veriler, { anaMaddeNo: veriler.anaMaddeNo || csgbAnaMaddeNoCikar(veriler.denetimMaddeNo) });
   return {
     id: veriler.id || rastgeleId(),
     denetimId: veriler.denetimId || '',
     denetimMaddeNo: String(veriler.denetimMaddeNo ?? '').trim(),
+    // Bölümlere ayrılmış maddelerde rapordaki asıl numara (ör. 36.b-2 -> "36.b").
+    anaMaddeNo: String(veriler.anaMaddeNo ?? '').trim(),
     maddeKonusu: (veriler.maddeKonusu || '').trim(),
     baslik: (veriler.baslik || '').trim(),
     aciklama: (veriler.aciklama || '').trim(),
@@ -141,6 +150,22 @@ function csgbKatilimciMetniCoz(metin) {
     if (/^[^\s@]+@[^\s@]+$/.test(parca)) return { adSoyad: '', gorev: '', eposta: parca };
     return { adSoyad: parca, gorev: '', eposta: '' };
   });
+}
+
+// Madde metnindeki yer listesinden bölüm önerisi çıkarır: parantez içinde
+// virgülle ayrılmış en az iki yer varsa onlar ("vb./vd." atılır).
+// ör. "...kapıları(Can üretim tesisi, malzeme ambarı, su tasfiye ünitesi vb.)..."
+function csgbBolumOnerileriCikar(metin) {
+  const gruplar = String(metin || '').match(/\(([^()]*,[^()]*)\)/g) || [];
+  for (const g of gruplar) {
+    const parcalar = g.slice(1, -1).split(',')
+      .map(s => s.replace(/\b(vb|vd|v\.b|v\.d)\.?\s*$/i, '').trim())
+      .filter(s => s && s.length <= 80);
+    // "2 nolu, 3 nolu", "1,5 katı", "senaryo-3, 5 ve 6" gibi yer olmayan listeler atlanır.
+    const yerDegil = parcalar.some(s => /^\d/.test(s) || /\bnolu\b|\bkatı\b|senaryo/i.test(s) || s.length < 3);
+    if (parcalar.length >= 2 && !yerDegil) return parcalar.map(s => s.charAt(0).toLocaleUpperCase('tr') + s.slice(1));
+  }
+  return [];
 }
 
 // maddeNotlari: { <madde id>: 'o toplantıda konuşulan/yapılan' }.

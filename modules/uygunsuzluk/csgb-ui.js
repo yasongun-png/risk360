@@ -69,6 +69,11 @@ function csgbSayfasiniBaslat() {
   document.getElementById('mdIptalBtn').addEventListener('click', csgbMaddeModalKapat);
   document.getElementById('mdKaydetBtn').addEventListener('click', _csgbMaddeKaydetTiklandi);
   document.getElementById('mdSilBtn').addEventListener('click', _csgbMaddeSilTiklandi);
+  document.getElementById('mdBolBtn').addEventListener('click', () => { if (_csgbDuzenlenenMaddeId) csgbBolModalAc(_csgbDuzenlenenMaddeId); });
+  document.getElementById('bolKapatBtn').addEventListener('click', csgbBolModalKapat);
+  document.getElementById('bolIptalBtn').addEventListener('click', csgbBolModalKapat);
+  document.getElementById('bolKaydetBtn').addEventListener('click', _csgbBolKaydetTiklandi);
+  document.getElementById('bolSatirEkleBtn').addEventListener('click', () => _csgbBolSatirlariCiz(_csgbBolSatirlariTopla().concat([{ bolum: '', sorumlu: '', termin: '' }])));
   document.getElementById('mdDurum').addEventListener('change', e => {
     if (e.target.value === 'Kapalı') document.getElementById('mdYuzde').value = '100';
   });
@@ -515,6 +520,7 @@ function csgbMaddeModalAc(maddeId) {
   document.getElementById('mdKapanisTarihi').value = m ? m.kapanisTarihi : '';
   document.getElementById('mdKapanisAciklamasi').value = m ? m.kanitAciklamasi : '';
   document.getElementById('mdSilBtn').style.display = m ? '' : 'none';
+  document.getElementById('mdBolBtn').style.display = m ? '' : 'none';
   _csgbKanitlar = m && Array.isArray(m.kanitlar) ? m.kanitlar.slice() : [];
   _csgbKanitlariCiz();
   document.getElementById('mdHata').textContent = '';
@@ -557,6 +563,79 @@ async function _csgbMaddeSilTiklandi() {
   if (!sonuc.basarili) { alert(sonuc.hata); return; }
   csgbMaddeModalKapat();
   csgbCiz();
+}
+
+// ==================== BÖLÜMLERE AYIR ====================
+
+let _csgbBolMaddeId = null;
+
+function _csgbBolNumaralari(madde, adet) {
+  const ana = madde.anaMaddeNo || madde.denetimMaddeNo || '';
+  return Array.from({ length: adet }, (_, i) => madde.anaMaddeNo && i === 0 ? madde.denetimMaddeNo : (ana ? `${ana}-${i + 1}` : String(i + 1)));
+}
+
+function _csgbBolSatirlariCiz(satirlar) {
+  const madde = csgbMaddeGetirRepo(_csgbBolMaddeId);
+  const K = _csgbKacir;
+  const nolar = _csgbBolNumaralari(madde, satirlar.length);
+  document.getElementById('bolGovde').innerHTML = satirlar.map((s, i) => `
+    <tr>
+      <td><b>${K(madde.anaMaddeNo && i > 0 ? '(yeni)' : nolar[i])}</b></td>
+      <td><input type="text" data-bol-bolum value="${K(s.bolum)}" placeholder="ör. Kireçtaşı üretim kumanda odası" style="margin:0;"></td>
+      <td><input type="text" data-bol-sorumlu value="${K(s.sorumlu)}" placeholder="Sorumlu" style="margin:0;"></td>
+      <td><input type="date" data-bol-termin value="${K(s.termin)}" style="margin:0;"></td>
+      <td><button type="button" class="tablo-buton sil" data-bol-sil="${i}">✕</button></td>
+    </tr>`).join('');
+  document.querySelectorAll('#bolGovde [data-bol-sil]').forEach(b => b.addEventListener('click', () => {
+    const liste = _csgbBolSatirlariTopla();
+    liste.splice(Number(b.getAttribute('data-bol-sil')), 1);
+    _csgbBolSatirlariCiz(liste.length ? liste : [{ bolum: '', sorumlu: '', termin: '' }]);
+  }));
+}
+
+function _csgbBolSatirlariTopla() {
+  return Array.from(document.querySelectorAll('#bolGovde tr')).map(tr => ({
+    bolum: tr.querySelector('[data-bol-bolum]').value.trim(),
+    sorumlu: tr.querySelector('[data-bol-sorumlu]').value.trim(),
+    termin: tr.querySelector('[data-bol-termin]').value
+  }));
+}
+
+function csgbBolModalAc(maddeId) {
+  const madde = csgbMaddeGetirRepo(maddeId);
+  if (!madde) return;
+  _csgbBolMaddeId = maddeId;
+  const onceden = !!madde.anaMaddeNo;
+  document.getElementById('bolBaslik').textContent = `Madde ${madde.denetimMaddeNo || ''} — Bölümlere Ayır`;
+  document.getElementById('bolAciklama').textContent = onceden
+    ? 'Bu madde zaten bir parça. Eklediğiniz yeni bölümler aynı ana maddenin sıradaki parçaları olarak açılır (ilk satır bu maddenin kendisidir).'
+    : 'Her satır ayrı takip edilen bir madde olur. İlk satır bu maddenin kendisidir (notları ve kanıtları onda kalır); diğerleri metin, tedbir ve mevzuat kopyalanarak açılır. Öneriler madde metnindeki yer listesinden geldi; düzenleyebilirsiniz.';
+  const oneriler = onceden ? [] : csgbBolumOnerileriCikar(madde.baslik);
+  const ilk = { bolum: madde.bolum || '', sorumlu: madde.sorumlu || '', termin: madde.termin || '' };
+  const satirlar = oneriler.length
+    ? oneriler.map((b, i) => ({ bolum: b, sorumlu: i === 0 ? madde.sorumlu || '' : '', termin: madde.termin || '' }))
+    : [ilk, { bolum: '', sorumlu: '', termin: madde.termin || '' }];
+  _csgbBolSatirlariCiz(satirlar);
+  document.getElementById('bolHata').textContent = '';
+  document.getElementById('bolKatmani').classList.add('acik');
+}
+
+function csgbBolModalKapat() {
+  document.getElementById('bolKatmani').classList.remove('acik');
+  _csgbBolMaddeId = null;
+}
+
+async function _csgbBolKaydetTiklandi() {
+  const madde = csgbMaddeGetirRepo(_csgbBolMaddeId);
+  if (!madde) return;
+  const satirlar = _csgbBolSatirlariTopla();
+  // Zaten parça olan maddede ilk satır maddenin kendisidir: sadece güncellenir, yeniler eklenir.
+  const sonuc = await csgbMaddeyiBol(_csgbBolMaddeId, satirlar);
+  if (!sonuc.basarili) { document.getElementById('bolHata').textContent = sonuc.hata; return; }
+  csgbBolModalKapat();
+  csgbMaddeModalKapat();
+  csgbCiz();
+  alert(`Madde ${sonuc.parcaSayisi} bölüme ayrıldı. Her parçayı "Düzenle" ile ayrı takip edebilirsiniz.`);
 }
 
 // ==================== TAKİP TOPLANTISI ====================

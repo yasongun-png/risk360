@@ -96,6 +96,55 @@ function csgbMaddeKaydet(veriler, duzenlenenId) {
   return { basarili: true, madde };
 }
 
+// Birden fazla bölümü kapsayan maddeyi bölüm bazında ayrı takip edilen
+// parçalara ayırır (kullanıcı isteği: "acil çıkış kapıları farklı bölümlerde,
+// kireçtaşı ayrı, 1 nolu ambar ayrı"). parcalar: [{ bolum, sorumlu, termin }].
+// İlk parça asıl maddenin kendisidir (id, toplantı notları ve kanıtları
+// korunur); diğerleri metin/tedbir/mevzuat kopyalanarak yeni madde olur.
+// Numara: <rapordaki no>-1, -2 ... Tek bulut yazımı.
+async function csgbMaddeyiBol(maddeId, parcalar) {
+  const liste = csgbMaddeleriTumunuGetir();
+  const index = liste.findIndex(m => m.id === maddeId);
+  if (index === -1) return { basarili: false, hata: 'Madde bulunamadı.' };
+  const gecerli = (parcalar || []).filter(p => (p.bolum || '').trim());
+  if (gecerli.length < 2) return { basarili: false, hata: 'En az iki bölüm girin.' };
+
+  const asil = liste[index];
+  const anaNo = asil.anaMaddeNo || asil.denetimMaddeNo || '';
+  // Daha önce bölünmüşse kardeş parçaların numaraları dolu: yeni parçalar sona eklenir.
+  const kardesNolar = liste.filter(m => m.denetimId === asil.denetimId && m.anaMaddeNo && m.anaMaddeNo === anaNo).map(m => m.denetimMaddeNo);
+  let sira = 0;
+  const sonrakiNo = () => {
+    let no;
+    do { sira++; no = anaNo ? `${anaNo}-${sira}` : String(sira); } while (kardesNolar.includes(no));
+    kardesNolar.push(no);
+    return no;
+  };
+  const kisaKonu = (asil.maddeKonusu || '').split(' — ')[0];
+  const parcaKonusu = bolum => (kisaKonu ? kisaKonu + ' — ' : '') + bolum.trim();
+
+  gecerli.forEach((p, i) => {
+    const ortak = {
+      anaMaddeNo: anaNo,
+      bolum: p.bolum.trim(),
+      maddeKonusu: parcaKonusu(p.bolum),
+      sorumlu: (p.sorumlu || '').trim() || (i === 0 ? asil.sorumlu : ''),
+      termin: p.termin || asil.termin
+    };
+    if (i === 0) {
+      // İlk satır maddenin kendisi: bölünmemişse "-1" numarasını alır, zaten parçaysa numarası korunur.
+      liste[index] = csgbMaddeOlustur(Object.assign({}, asil, ortak, { denetimMaddeNo: asil.anaMaddeNo ? asil.denetimMaddeNo : sonrakiNo() }));
+    } else {
+      liste.push(csgbMaddeOlustur(Object.assign({}, asil, ortak, {
+        id: undefined, denetimMaddeNo: sonrakiNo(), durum: 'Açık', tamamlanmaYuzdesi: 0,
+        kapanisTarihi: '', kanitAciklamasi: '', kanitlar: [], olusturmaTarihi: undefined
+      })));
+    }
+  });
+  const sonuc = await csgbMaddeleriYazRepo(liste);
+  return { basarili: sonuc.basarili, hata: sonuc.basarili ? '' : 'Buluta yazılamadı.', parcaSayisi: gecerli.length };
+}
+
 function csgbMaddeSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   csgbMaddeSilRepo(id);
@@ -106,6 +155,7 @@ function csgbMaddeSil(id) {
 // alanlarla güncellenir, yoksa yeni madde eklenir. Tek bulut yazımı.
 async function csgbMaddeleriIceAktar(denetimId, satirlar) {
   const liste = csgbMaddeleriTumunuGetir();
+  const ayniNo = (a, b) => !!a && String(a).toLocaleLowerCase('tr') === String(b).toLocaleLowerCase('tr');
   const hatalar = [];
   let eklenen = 0, guncellenen = 0;
   const ALANLAR = ['maddeKonusu', 'baslik', 'aciklama', 'duzelticiFaaliyet', 'yasalDayanak', 'bolum', 'sorumlu', 'termin', 'durum', 'tamamlanmaYuzdesi', 'kapanisTarihi', 'kanitAciklamasi'];
@@ -114,14 +164,34 @@ async function csgbMaddeleriIceAktar(denetimId, satirlar) {
     ALANLAR.forEach(a => { const v = satir[a]; if (v !== undefined && v !== null && String(v).trim() !== '') dolu[a] = typeof v === 'string' ? v.trim() : v; });
     if (dolu.durum !== undefined) dolu.durum = csgbDurumNormallestir(dolu.durum);
     const no = String(satir.denetimMaddeNo ?? '').trim();
-    const mevcutIndex = no ? liste.findIndex(m => m.denetimId === denetimId && String(m.denetimMaddeNo || '').toLocaleLowerCase('tr') === no.toLocaleLowerCase('tr')) : -1;
+    const ayni = x => String(x || '').toLocaleLowerCase('tr') === no.toLocaleLowerCase('tr');
+    let mevcutIndex = no ? liste.findIndex(m => m.denetimId === denetimId && ayni(m.denetimMaddeNo)) : -1;
+    // Excel'de "24-1, 24-2" gibi parçalar varsa ve uygulamada henüz bölünmemiş
+    // "24" maddesi duruyorsa: "24" yeni kopya açılmadan ilk parçaya dönüşür
+    // (id, toplantı notları ve kanıtları korunur); diğer parçalar eklenir.
+    const anaNo = csgbAnaMaddeNoCikar(no);
+    if (mevcutIndex === -1 && anaNo) {
+      mevcutIndex = liste.findIndex(m => m.denetimId === denetimId &&
+        String(m.denetimMaddeNo || '').toLocaleLowerCase('tr') === anaNo.toLocaleLowerCase('tr'));
+      if (mevcutIndex !== -1) dolu.denetimMaddeNo = no;
+    }
     if (mevcutIndex !== -1) {
       if (!Object.keys(dolu).length) return;
       const birlesik = Object.assign({}, liste[mevcutIndex], dolu);
+      if (dolu.denetimMaddeNo) {
+        birlesik.anaMaddeNo = anaNo;
+        if (dolu.maddeKonusu === undefined && dolu.bolum && birlesik.maddeKonusu) birlesik.maddeKonusu = birlesik.maddeKonusu.split(' — ')[0] + ' — ' + dolu.bolum;
+      }
       if (birlesik.durum === 'Kapalı' && !birlesik.kapanisTarihi) birlesik.kapanisTarihi = bugunIso();
       liste[mevcutIndex] = csgbMaddeOlustur(birlesik);
       guncellenen++;
       return;
+    }
+    // Parça satırında (24-2) sadece numara/bölüm/sorumlu yazılmışsa metinler ana maddeden (24 / 24-1) alınır.
+    if (anaNo) {
+      const kaynak = liste.find(m => m.denetimId === denetimId && (ayniNo(m.denetimMaddeNo, anaNo) || ayniNo(m.anaMaddeNo, anaNo)));
+      if (kaynak) ['baslik', 'aciklama', 'duzelticiFaaliyet', 'yasalDayanak', 'termin'].forEach(a => { if (dolu[a] === undefined && kaynak[a]) dolu[a] = kaynak[a]; });
+      if (kaynak && dolu.maddeKonusu === undefined && kaynak.maddeKonusu) dolu.maddeKonusu = kaynak.maddeKonusu.split(' — ')[0] + (dolu.bolum ? ' — ' + dolu.bolum : '');
     }
     if (!dolu.baslik) { hatalar.push(`Satır ${i + 2}: Uygunsuzluk Tanımı boş.`); return; }
     liste.push(csgbMaddeOlustur(Object.assign({}, dolu, { denetimId, denetimMaddeNo: no })));

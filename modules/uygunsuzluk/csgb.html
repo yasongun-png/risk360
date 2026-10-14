@@ -170,10 +170,31 @@
       <div id="mdHata" style="color:var(--hata); font-size:12px;"></div>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="mdSilBtn" style="color:#b91c1c; margin-right:auto;">Maddeyi Sil</button>
+        <button type="button" class="ikincil" id="mdBolBtn" title="Birden fazla bölümü kapsayan maddeyi bölüm bazında ayrı takip edilen parçalara ayırır (24-1, 24-2...)">✂ Bölümlere Ayır</button>
         <button type="button" class="ikincil" id="mdIptalBtn">İptal</button>
         <button type="button" class="birincil" id="mdKaydetBtn">Kaydet</button>
       </div>
       <button type="button" class="tablo-buton" id="mdKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MADDEYİ BÖLÜMLERE AYIR: her satır ayrı takip edilecek bir parça (24-1, 24-2...). -->
+  <div class="modal-katman" id="bolKatmani" style="z-index:60;">
+    <div class="modal-kutu" style="max-width:760px;">
+      <h3 id="bolBaslik">Maddeyi Bölümlere Ayır</h3>
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin-top:-6px;" id="bolAciklama"></p>
+      <table class="veri-tablosu" style="table-layout:fixed;">
+        <colgroup><col style="width:80px;"><col><col style="width:200px;"><col style="width:150px;"><col style="width:44px;"></colgroup>
+        <thead><tr><th>No</th><th>Bölüm / Yer</th><th>Sorumlu</th><th>Termin</th><th></th></tr></thead>
+        <tbody id="bolGovde"></tbody>
+      </table>
+      <button type="button" class="ikincil" id="bolSatirEkleBtn" style="margin-top:6px;">+ Bölüm Ekle</button>
+      <div id="bolHata" style="color:var(--hata); font-size:12px; margin-top:6px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="bolIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="bolKaydetBtn">Ayır</button>
+      </div>
+      <button type="button" class="tablo-buton" id="bolKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
 
@@ -245,11 +266,11 @@
   <script src="../../core/excel.js?v=2"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="../../core/belge-yukle.js"></script>
-  <script src="csgb-model.js?v=1"></script>
+  <script src="csgb-model.js?v=2"></script>
   <script src="csgb-repository.js?v=1"></script>
-  <script src="csgb-service.js?v=2"></script>
+  <script src="csgb-service.js?v=3"></script>
   <script src="csgb-cikti.js?v=1"></script>
-  <script src="csgb-ui.js?v=2"></script>
+  <script src="csgb-ui.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
 
