@@ -68,10 +68,6 @@
       </div>
     </div>
 
-    <!-- Yüklenici modülündeki son hareketler (yeni personel, firma, araç,
-         ziyaretçi, güncelleme) -- en yeni en üstte. Bkz. _yukleniciSonGuncellemeleriCiz. -->
-    <div id="yukleniciSonGuncellemeler" style="display:none; margin-bottom:16px;"></div>
-
     <div class="modul-grid" id="modulGrid"></div>
   </div>
 
@@ -277,84 +273,6 @@
       ciz();
     }
 
-    // ---- Yüklenici — Son Güncellemeler (kullanıcı isteği: "yüklenici
-    // modülünde son yapılan güncellemeler dashboard'da görünsün, yeni
-    // personel girişi vb.; tarih saat sırasına göre en yeni en üstte").
-    // Kaynak: yuklenici_* kayıtlarındaki olusturmaTarihi/olusturan ve
-    // guncellemeTarihi/guncelleyen (bkz. modules/yuklenici/repository.js).
-    let _ysgTumunuGoster = false;
-
-    function _yukleniciHareketleriniGetir() {
-      const liste = [];
-      const ekle = (zaman, ikon, tur, metin, kim) => { if (zaman && !isNaN(Date.parse(zaman))) liste.push({ zaman, ikon, tur, metin, kim: kim || '' }); };
-      const parca = (...x) => x.filter(Boolean).join(' — ');
-      oku(tenantAnahtar('yuklenici_kisileri'), []).forEach(k => {
-        const metin = parca(k.adSoyad, k.firmaAdi) + (k.gorev ? ` (${k.gorev})` : '');
-        ekle(k.olusturmaTarihi, '👷', 'Yeni personel girişi', metin, k.olusturan);
-        ekle(k.guncellemeTarihi, '✏️', 'Personel güncellendi', metin, k.guncelleyen);
-      });
-      oku(tenantAnahtar('yuklenici_firmalari'), []).forEach(f => {
-        ekle(f.olusturmaTarihi, '🏢', 'Yeni yüklenici firma', f.firmaAdi, f.olusturan);
-        ekle(f.guncellemeTarihi, '✏️', 'Firma güncellendi', f.firmaAdi, f.guncelleyen);
-      });
-      oku(tenantAnahtar('yuklenici_araclari'), []).forEach(a => {
-        const metin = parca(a.kimlik ? `${a.tur || 'Araç'}: ${a.kimlik}` : (a.tur || 'Araç'), a.firmaAdi);
-        ekle(a.olusturmaTarihi, '🚚', 'Yeni araç / ekipman', metin, a.olusturan);
-        ekle(a.guncellemeTarihi, '✏️', 'Araç / ekipman güncellendi', metin, a.guncelleyen);
-      });
-      oku(tenantAnahtar('yuklenici_ziyaretciler'), []).forEach(z => {
-        ekle(z.olusturmaTarihi, '🪪', 'Ziyaretçi kaydı', parca(z.adSoyad, z.firma) + (z.ziyaretEdilen ? ` → ${z.ziyaretEdilen}` : ''), z.olusturan);
-      });
-      liste.sort((a, b) => Date.parse(b.zaman) - Date.parse(a.zaman));
-
-      // Excel ile toplu eklemeler (aynı dakika + aynı tür + aynı kişi, 4'ten
-      // fazla) listeyi doldurmasın diye tek satırda toplanır.
-      const sonuc = [];
-      for (let i = 0; i < liste.length;) {
-        const h = liste[i];
-        const dakika = h.zaman.slice(0, 16);
-        let j = i;
-        while (j < liste.length && liste[j].tur === h.tur && liste[j].kim === h.kim && liste[j].zaman.slice(0, 16) === dakika) j++;
-        if (j - i > 4) {
-          sonuc.push(Object.assign({}, h, { tur: h.tur + ` (toplu: ${j - i} kayıt)`, metin: liste.slice(i, i + 3).map(x => x.metin.split(' — ')[0]).join(', ') + ' …' }));
-        } else {
-          sonuc.push(...liste.slice(i, j));
-        }
-        i = j;
-      }
-      return sonuc;
-    }
-
-    function _yukleniciSonGuncellemeleriCiz() {
-      const kutu = document.getElementById('yukleniciSonGuncellemeler');
-      const hareketler = _yukleniciHareketleriniGetir();
-      if (!hareketler.length) { kutu.style.display = 'none'; return; }
-      const gosterilecek = hareketler.slice(0, _ysgTumunuGoster ? 50 : 8);
-      const zamanMetni = z => new Date(z).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      kutu.style.display = '';
-      kutu.innerHTML = `
-        <div style="padding:14px 16px; background:var(--kart-bg,#fff); border:1px solid var(--kenarlik,#e5e7eb); border-radius:12px; box-shadow:var(--golge);">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
-            <strong style="font-size:14px;">🏗️ Yüklenici — Son Güncellemeler</strong>
-            <a href="modules/yuklenici/index.html" style="font-size:12px;">Yüklenici modülüne git →</a>
-          </div>
-          <div style="display:flex; flex-direction:column;">
-            ${gosterilecek.map(h => `
-              <a href="modules/yuklenici/index.html" style="display:flex; gap:10px; align-items:flex-start; padding:7px 4px; border-top:1px solid var(--kenarlik,#e5e7eb); text-decoration:none; color:inherit;">
-                <span style="font-size:16px; line-height:1.2;">${h.ikon}</span>
-                <span style="flex:1; min-width:0; font-size:13px;">
-                  <b>${_dbKacir(h.tur)}:</b> ${_dbKacir(h.metin)}
-                  ${h.kim ? `<span style="color:var(--metin-soluk,#6b7280);"> · ${_dbKacir(h.kim)}</span>` : ''}
-                </span>
-                <span style="font-size:12px; color:var(--metin-soluk,#6b7280); white-space:nowrap;">${zamanMetni(h.zaman)}</span>
-              </a>`).join('')}
-          </div>
-          ${hareketler.length > 8 ? `<button type="button" id="ysgDahaFazlaBtn" class="tablo-buton" style="margin-top:6px;">${_ysgTumunuGoster ? 'Daha az göster' : `Daha fazla göster (${Math.min(hareketler.length, 50) - 8})`}</button>` : ''}
-        </div>`;
-      const btn = document.getElementById('ysgDahaFazlaBtn');
-      if (btn) btn.addEventListener('click', () => { _ysgTumunuGoster = !_ysgTumunuGoster; _yukleniciSonGuncellemeleriCiz(); });
-    }
-
     function sdModalAc() {
       document.getElementById('sdMevcutSifre').value = '';
       document.getElementById('sdYeniSifre').value = '';
@@ -454,14 +372,6 @@
           `;
           grid.appendChild(kart);
         });
-
-        // Modül verileri dashboard'da normalde yüklenmez; Yüklenici son
-        // güncellemeleri için aktif firmanın verisi burada yüklenir.
-        if (kullaniciModuleErisebilirMi(kullanici) && typeof bulutFirmaHazirOlduğunda === 'function') {
-          bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
-            try { _yukleniciSonGuncellemeleriCiz(); } catch (e) { console.error('Yüklenici son güncellemeler çizilemedi:', e); }
-          });
-        }
       }
       });
     }

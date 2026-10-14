@@ -40,6 +40,16 @@
     </div>
 
     <div id="bolum-dashboard">
+      <!-- Son Güncellemeler: en yeni en üstte, 7 satır görünür, eskiler kutu
+           içinde kaydırılarak görülür (bkz. ui.js _ykSonGuncellemeleriCiz). -->
+      <div id="ykSonGuncellemeler" style="display:none; margin-bottom:16px; padding:12px 14px; background:var(--kart-bg,#fff); border:1px solid var(--kenarlik,#e5e7eb); border-radius:12px; box-shadow:var(--golge);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+          <strong style="font-size:14px;">🕒 Son Güncellemeler</strong>
+          <span id="ykSonGuncellemeSayisi" style="font-size:12px; color:var(--metin-soluk,#6b7280);"></span>
+        </div>
+        <div id="ykSonGuncellemeListesi" style="overflow-y:auto;"></div>
+      </div>
+
       <div class="istatistik-grid">
         <div class="istatistik-kutu"><span>Toplam Personel</span><b id="dashToplamPersonel">0</b></div>
         <div class="istatistik-kutu"><span>Toplam Araç</span><b id="dashToplamArac">0</b></div>
@@ -462,7 +472,7 @@
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=3"></script>
-  <script src="ui.js?v=2"></script>
+  <script src="ui.js?v=3"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js"></script>
   <script>

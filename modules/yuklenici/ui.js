@@ -266,7 +266,81 @@ function detayliAramaCiz() {
 
 // ==================== DASHBOARD / AKSİYON MERKEZİ ====================
 
+// ---- Son Güncellemeler (kullanıcı isteği: yeni personel girişi vb. son
+// hareketler; tarih-saate göre en yeni en üstte; 7 tanesi görünsün, diğerlerine
+// kaydırarak geriye doğru bakılabilsin). Kaynak: kayıtlardaki
+// olusturmaTarihi/olusturan ve guncellemeTarihi/guncelleyen (bkz. repository.js).
+const YK_SON_GUNCELLEME_GORUNEN = 7;
+
+function _ykHareketleriniGetir() {
+  const liste = [];
+  const ekle = (zaman, ikon, tur, metin, kim) => { if (zaman && !isNaN(Date.parse(zaman))) liste.push({ zaman, ikon, tur, metin, kim: kim || '' }); };
+  const parca = (...x) => x.filter(Boolean).join(' — ');
+  yukleniciKisileriTumunuGetir().forEach(k => {
+    const metin = parca(k.adSoyad, k.firmaAdi) + (k.gorev ? ` (${k.gorev})` : '');
+    ekle(k.olusturmaTarihi, '👷', 'Yeni personel girişi', metin, k.olusturan);
+    ekle(k.guncellemeTarihi, '✏️', 'Personel güncellendi', metin, k.guncelleyen);
+  });
+  yukleniciFirmalariTumunuGetir().forEach(f => {
+    ekle(f.olusturmaTarihi, '🏢', 'Yeni yüklenici firma', f.firmaAdi, f.olusturan);
+    ekle(f.guncellemeTarihi, '✏️', 'Firma güncellendi', f.firmaAdi, f.guncelleyen);
+  });
+  yukleniciAraclariTumunuGetir().forEach(a => {
+    const metin = parca(a.kimlik ? `${a.tur || 'Araç'}: ${a.kimlik}` : (a.tur || 'Araç'), a.firmaAdi);
+    ekle(a.olusturmaTarihi, '🚚', 'Yeni araç / ekipman', metin, a.olusturan);
+    ekle(a.guncellemeTarihi, '✏️', 'Araç / ekipman güncellendi', metin, a.guncelleyen);
+  });
+  yukleniciZiyaretcileriTumunuGetir().forEach(z => {
+    ekle(z.olusturmaTarihi, '🪪', 'Ziyaretçi kaydı', parca(z.adSoyad, z.firma) + (z.ziyaretEdilen ? ` → ${z.ziyaretEdilen}` : ''), z.olusturan);
+  });
+  liste.sort((a, b) => Date.parse(b.zaman) - Date.parse(a.zaman));
+
+  // Excel ile toplu eklemeler (aynı dakika + aynı tür + aynı kişi, 4'ten
+  // fazla) listeyi doldurmasın diye tek satırda toplanır.
+  const sonuc = [];
+  for (let i = 0; i < liste.length;) {
+    const h = liste[i];
+    const dakika = h.zaman.slice(0, 16);
+    let j = i;
+    while (j < liste.length && liste[j].tur === h.tur && liste[j].kim === h.kim && liste[j].zaman.slice(0, 16) === dakika) j++;
+    if (j - i > 4) sonuc.push(Object.assign({}, h, { tur: h.tur + ` (toplu: ${j - i} kayıt)`, metin: liste.slice(i, i + 3).map(x => x.metin.split(' — ')[0]).join(', ') + ' …' }));
+    else sonuc.push(...liste.slice(i, j));
+    i = j;
+  }
+  return sonuc.slice(0, 300);
+}
+
+function _ykSonGuncellemeleriCiz() {
+  const kutu = document.getElementById('ykSonGuncellemeler');
+  if (!kutu) return;
+  const hareketler = _ykHareketleriniGetir();
+  if (!hareketler.length) { kutu.style.display = 'none'; return; }
+  const zamanMetni = z => new Date(z).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const listeEl = document.getElementById('ykSonGuncellemeListesi');
+  kutu.style.display = '';
+  document.getElementById('ykSonGuncellemeSayisi').textContent = hareketler.length > YK_SON_GUNCELLEME_GORUNEN
+    ? `${hareketler.length} hareket · eskiler için kaydırın` : `${hareketler.length} hareket`;
+  listeEl.innerHTML = hareketler.map(h => `
+    <div style="display:flex; gap:10px; align-items:flex-start; padding:7px 4px; border-top:1px solid var(--kenarlik,#e5e7eb);">
+      <span style="font-size:16px; line-height:1.2;">${h.ikon}</span>
+      <span style="flex:1; min-width:0; font-size:13px;">
+        <b>${_ykKacir(h.tur)}:</b> ${_ykKacir(h.metin)}${h.kim ? `<span style="color:var(--metin-soluk,#6b7280);"> · ${_ykKacir(h.kim)}</span>` : ''}
+      </span>
+      <span style="font-size:12px; color:var(--metin-soluk,#6b7280); white-space:nowrap;">${zamanMetni(h.zaman)}</span>
+    </div>`).join('');
+  // Kutu yüksekliği ilk 7 satıra göre ayarlanır; fazlası kutu içinde kaydırılır.
+  const satirlar = Array.from(listeEl.children);
+  listeEl.style.maxHeight = '';
+  if (satirlar.length > YK_SON_GUNCELLEME_GORUNEN) {
+    const ilk = satirlar[0].getBoundingClientRect().top;
+    const sinir = satirlar[YK_SON_GUNCELLEME_GORUNEN].getBoundingClientRect().top;
+    listeEl.style.maxHeight = (sinir > ilk ? Math.ceil(sinir - ilk) : 7 * 38) + 'px';
+  }
+  listeEl.scrollTop = 0;
+}
+
 function dashboardCiz() {
+  _ykSonGuncellemeleriCiz();
   const veri = yukleniciDashboardVerisiHesapla();
   document.getElementById('dashToplamPersonel').textContent = veri.toplamPersonel;
   document.getElementById('dashToplamArac').textContent = veri.toplamArac;
