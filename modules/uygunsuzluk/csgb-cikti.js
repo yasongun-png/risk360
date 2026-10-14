@@ -189,7 +189,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
   // Firma adı Word/PDF çıktılarına yazılmaz (kullanıcı isteği).
   const ilkBolum = [
     new docx.Paragraph({ spacing: { after: w.mm(3) }, border: { bottom: { style: docx.BorderStyle.SINGLE, size: 12, color: '111827', space: 4 } },
-      children: [w.metin('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP RAPORU', { bold: true, size: 28 })] }),
+      children: [w.metin('ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU', { bold: true, size: 28 })] }),
     w.bilgiTablosu(_csgbDenetimBilgileri(d), SAYFA_GEN),
     new docx.Paragraph({ spacing: { before: w.mm(3), after: w.mm(3) }, children: [w.metin(ozetMetni, { bold: true, size: 18 })] }),
     anaTablo,
@@ -303,7 +303,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
       <thead><tr>${['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Toplantı Notları', 'Kanıt', 'Termin', 'Sorumlu', 'Durum'].map(b => `<th>${b}</th>`).join('')}</tr></thead><tbody></tbody></table>`;
     let ic = yeniSayfa();
     ic.innerHTML = `
-      <div style="font-size:19px; font-weight:bold; border-bottom:2px solid #111827; padding-bottom:4px; margin-bottom:8px;">ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP RAPORU</div>
+      <div style="font-size:19px; font-weight:bold; border-bottom:2px solid #111827; padding-bottom:4px; margin-bottom:8px;">ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU</div>
       <table class="cp-bilgi">${_csgbDenetimBilgileri(d).reduce((a, c, i, arr) => i % 2 ? a : a + `<tr><td>${K(c[0])}</td><td>${K(c[1])}</td><td>${K((arr[i + 1] || ['', ''])[0])}</td><td>${K((arr[i + 1] || ['', ''])[1])}</td></tr>`, '')}</table>
       <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}</div>
       <div style="font-size:10.5px; color:#1d4ed8; margin-bottom:6px;">Maddenin satırına tıklayarak tam metnine (gerekli tedbir, mevzuat, tüm toplantı notları ve kanıtlar) gidebilirsiniz.</div>
@@ -382,7 +382,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
 
     // ---- Alt bilgi ----
     sayfalar.forEach((s, i) => {
-      s.querySelector('.cp-alt').innerHTML = `<span>ÇSGB Denetimi Takip Raporu · ${bugun}</span><span>Sayfa ${i + 1} / ${sayfalar.length}</span>`;
+      s.querySelector('.cp-alt').innerHTML = `<span>ÇSGB Denetimi Aksiyon Planı Takip Raporu · ${bugun}</span><span>Sayfa ${i + 1} / ${sayfalar.length}</span>`;
     });
 
     // ---- PDF ----
@@ -437,7 +437,8 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
 
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
-  const R = { bg: 'F1F5F9', baslik: '0F172A', soluk: '64748B', cizgi: 'E2E8F0', birincil: '1D4ED8', birincilKoyu: '15316B' };
+  // Renkler İSG Kurulu sunumundan (mavi) bilerek farklı: koyu petrol yeşili + kehribar (kullanıcı isteği).
+  const R = { bg: 'F1F5F9', baslik: '0F172A', soluk: '64748B', cizgi: 'E2E8F0', birincil: '0F766E', birincilKoyu: '134E4A', vurgu: 'F59E0B' };
   const DURUM_RENK = {
     'Açık': { fg: 'B45309', bg: 'FEF3C7' }, 'Devam Ediyor': { fg: '1D4ED8', bg: 'DBEAFE' },
     'Onay Bekliyor': { fg: '7C3AED', bg: 'EDE9FE' }, 'Tamamlandı': { fg: '15803D', bg: 'DCFCE7' },
@@ -454,7 +455,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     objects: [
       { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
       { text: { text: firmaAdi, options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
-      { text: { text: (toplantiNo ? toplantiNo + '. ' : '') + 'ÇSGB Denetimi Takip Toplantısı  ·  ' + toplantiTarihi, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
+      { text: { text: (toplantiNo ? toplantiNo + '. ' : '') + 'ÇSGB Denetimi Aksiyon Planı Takip Toplantısı  ·  ' + toplantiTarihi, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
     ],
     slideNumber: { x: SW - 0.7, y: SH - 0.4, w: 0.4, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle' }
   });
@@ -462,13 +463,14 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   // Kapak
   const kapak = pptx.addSlide();
   kapak.background = { color: R.birincilKoyu };
-  kapak.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
-  kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
+  kapak.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.vurgu } });
+  kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.vurgu } });
+  kapak.addShape(pptx.ShapeType.rect, { x: SW / 2 - 1.2, y: 3.78, w: 2.4, h: 0.05, fill: { color: R.vurgu } });
   if (logoUrl) kapak.addImage(_csgbFotoSigdir(logoUrl, SW / 2 - 0.75, 0.7, 1.5, 1.5));
-  kapak.addText('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTISI', { x: 0.8, y: 2.45, w: SW - 1.6, h: 1.3, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', fit: 'shrink' });
-  kapak.addText(firmaAdi, { x: 1, y: 3.85, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
-  kapak.addText(`${csgbDenetimBasligi(d)}${d.raporNo ? '  ·  Rapor No: ' + d.raporNo : ''}`, { x: 1, y: 4.5, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
-  kapak.addText(`${toplantiNo ? toplantiNo + '. Takip Toplantısı  ·  ' : 'Sıradaki Takip Toplantısı  ·  '}Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
+  kapak.addText('ÇSGB DENETİMİ AKSİYON PLANI TAKİP TOPLANTISI', { x: 0.8, y: 2.45, w: SW - 1.6, h: 1.3, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', fit: 'shrink' });
+  kapak.addText(firmaAdi, { x: 1, y: 3.92, w: SW - 2, fontSize: 19, color: 'CCFBF1', align: 'center', fontFace: 'Calibri' });
+  kapak.addText(`${csgbDenetimBasligi(d)}${d.raporNo ? '  ·  Rapor No: ' + d.raporNo : ''}`, { x: 1, y: 4.5, w: SW - 2, fontSize: 15, color: '99F6E4', align: 'center' });
+  kapak.addText(`${toplantiNo ? toplantiNo + '. Takip Toplantısı  ·  ' : 'Sıradaki Takip Toplantısı  ·  '}Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: 'FDE68A', align: 'center' });
 
   // Genel durum
   const oz = pptx.addSlide({ masterName: MASTER });
