@@ -15,6 +15,7 @@ let _csgbKanitlar = [];
 let _csgbTopTaslakNot = {};
 let _csgbTopTaslakDurum = {};
 let _csgbTopTaslakYuzde = {};
+let _csgbTopTaslakTermin = {};
 
 function _csgbRozetSinifi(durum) {
   return typeof slugOlustur === 'function' ? slugOlustur(durum || '') : '';
@@ -690,6 +691,7 @@ function csgbToplantiModalAc(toplantiId) {
   _csgbTopTaslakNot = Object.assign({}, t ? t.maddeNotlari : {});
   _csgbTopTaslakDurum = {};
   _csgbTopTaslakYuzde = {};
+  _csgbTopTaslakTermin = {};
   _csgbTopMaddeleriCiz();
   document.getElementById('csgbToplantiKatmani').classList.add('acik');
 }
@@ -774,6 +776,7 @@ function _csgbTopTaslagiTopla() {
   document.querySelectorAll('#csgbTopMaddeGovde [data-top-not]').forEach(el => { _csgbTopTaslakNot[el.getAttribute('data-top-not')] = el.value; });
   document.querySelectorAll('#csgbTopMaddeGovde [data-top-durum]').forEach(el => { _csgbTopTaslakDurum[el.getAttribute('data-top-durum')] = el.value; });
   document.querySelectorAll('#csgbTopMaddeGovde [data-top-yuzde]').forEach(el => { _csgbTopTaslakYuzde[el.getAttribute('data-top-yuzde')] = el.value; });
+  document.querySelectorAll('#csgbTopMaddeGovde [data-top-termin]').forEach(el => { _csgbTopTaslakTermin[el.getAttribute('data-top-termin')] = el.value; });
 }
 
 function _csgbTopMaddeleriCiz() {
@@ -797,13 +800,15 @@ function _csgbTopMaddeleriCiz() {
       <td style="font-size:12px;">
         ${k.maddeKonusu ? '<b>' + K(k.maddeKonusu) + '</b><br>' : ''}
         <div class="csgb-kisalt" title="${K(k.baslik)}">${K(k.baslik)}</div>
-        <div style="color:var(--metin-soluk); margin-top:3px;">Sorumlu: ${K(k.sorumlu) || '-'} · Termin: ${gunAyYil(k.termin) || '-'}</div>
+        <div style="color:var(--metin-soluk); margin-top:3px;">Sorumlu: ${K(k.sorumlu) || '-'}</div>
         ${oncekiNotlar.length ? `<details style="margin-top:3px;"><summary style="cursor:pointer; color:var(--metin-soluk);">Önceki notlar (${oncekiNotlar.length})</summary>${oncekiNotlar.map(n => `<div><b>${gunAyYil(n.tarih)}:</b> ${K(n.not)}</div>`).join('')}</details>` : ''}
       </td>
       <td><textarea data-top-not="${k.id}" rows="3" style="margin:0; font-size:12.5px;" placeholder="Görüşülen / yapılan çalışma...">${K(_csgbTopTaslakNot[k.id] || '')}</textarea></td>
       <td>
         <select data-top-durum="${k.id}" style="margin:0 0 6px;">${CSGB_MADDE_DURUMLARI.map(s => `<option value="${s}" ${s === durum ? 'selected' : ''}>${csgbDurumEtiketi(s)}</option>`).join('')}</select>
-        <select data-top-yuzde="${k.id}" style="margin:0;">${Array.from(new Set(CSGB_YUZDE_SECENEKLERI.concat([yuzde]))).sort((a, b) => a - b).map(y => `<option value="${y}" ${y === yuzde ? 'selected' : ''}>%${y}</option>`).join('')}</select>
+        <select data-top-yuzde="${k.id}" style="margin:0 0 6px;">${Array.from(new Set(CSGB_YUZDE_SECENEKLERI.concat([yuzde]))).sort((a, b) => a - b).map(y => `<option value="${y}" ${y === yuzde ? 'selected' : ''}>%${y}</option>`).join('')}</select>
+        <label style="font-size:11px; color:var(--metin-soluk); margin:0;">Termin</label>
+        <input type="date" data-top-termin="${k.id}" value="${K(_csgbTopTaslakTermin[k.id] ?? (k.termin || ''))}" style="margin:0;">
       </td>
     </tr>`;
   }).join('');
@@ -822,7 +827,11 @@ async function _csgbToplantiKaydetTiklandi() {
     if (!madde) return;
     const yuzdeEl = document.querySelector(`#csgbTopMaddeGovde [data-top-yuzde="${id}"]`);
     const yeniYuzde = el.value === 'Kapalı' ? 100 : Number(yuzdeEl ? yuzdeEl.value : csgbMaddeYuzdesi(madde));
-    if (madde.durum !== el.value || csgbMaddeYuzdesi(madde) !== yeniYuzde) guncellemeler[id] = { durum: el.value, tamamlanmaYuzdesi: yeniYuzde };
+    const terminEl = document.querySelector(`#csgbTopMaddeGovde [data-top-termin="${id}"]`);
+    const yeniTermin = terminEl ? terminEl.value : (madde.termin || '');
+    if (madde.durum !== el.value || csgbMaddeYuzdesi(madde) !== yeniYuzde || (madde.termin || '') !== yeniTermin) {
+      guncellemeler[id] = { durum: el.value, tamamlanmaYuzdesi: yeniYuzde, termin: yeniTermin };
+    }
   });
   const btn = document.getElementById('csgbTopKaydetBtn');
   btn.disabled = true;
