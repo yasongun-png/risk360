@@ -84,7 +84,8 @@ function csgbDenetimKatilimcilariniKaydet(denetimId, liste) {
 
 // İSG Kurulu modülünün en son katılımcı/imza listesi olan toplantısından
 // katılımcıları okur (kurul_toplantilari + kurul_imzalari; firma verisi bu
-// sayfada zaten yüklü). Görev: kuruldaki görevi, yoksa unvanı.
+// sayfada zaten yüklü). Sadece ad soyad ve görev alınır (kullanıcı isteği);
+// görev: kuruldaki görevi, yoksa unvanı.
 function csgbKurulKatilimcilariniGetir() {
   const toplantilar = oku(tenantAnahtar('kurul_toplantilari'), []);
   const imzalar = oku(tenantAnahtar('kurul_imzalari'), []);
@@ -95,7 +96,7 @@ function csgbKurulKatilimcilariniGetir() {
     satirlar.sort((a, b) => (Number(a.siraNo) || 0) - (Number(b.siraNo) || 0));
     return {
       toplantiTarihi: t.tarih || '',
-      liste: satirlar.map(i => ({ adSoyad: i.adSoyad, gorev: i.kuruldakiGorev || i.unvan || '', eposta: i.eposta || '' }))
+      liste: satirlar.map(i => ({ adSoyad: i.adSoyad, gorev: i.kuruldakiGorev || i.unvan || '', eposta: '' }))
     };
   }
   return { toplantiTarihi: '', liste: [] };
