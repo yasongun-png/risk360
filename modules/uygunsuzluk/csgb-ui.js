@@ -50,6 +50,8 @@ function csgbSayfasiniBaslat() {
   document.getElementById('csgbTopKaydetBtn').addEventListener('click', _csgbToplantiKaydetTiklandi);
   document.getElementById('csgbTopKapalilariGoster').addEventListener('change', () => { _csgbTopTaslagiTopla(); _csgbTopMaddeleriCiz(); });
   _csgbKatilimciButonlariniBagla('csgbTopKatilimciGovde', 'csgbTopKatilimci');
+  document.getElementById('csgbTopNotExcelBtn').addEventListener('click', () => document.getElementById('csgbTopNotExcelDosya').click());
+  document.getElementById('csgbTopNotExcelDosya').addEventListener('change', _csgbToplantiNotlariExceldenAl);
   document.getElementById('csgbTopKatilimciDegistirBtn').addEventListener('click', () => {
     document.getElementById('csgbTopKatilimciOzet').style.display = 'none';
     document.getElementById('csgbTopKatilimciDetay').style.display = '';
@@ -818,6 +820,41 @@ function _csgbTopMaddeleriCiz() {
   govde.querySelectorAll('[data-top-durum]').forEach(sel => sel.addEventListener('change', () => {
     if (sel.value === 'Kapalı') govde.querySelector(`[data-top-yuzde="${sel.getAttribute('data-top-durum')}"]`).value = '100';
   }));
+}
+
+// Excel'den toplantı notu: "Madde No" + "Toplantı Notu" sütunları. Sadece bu
+// toplantıda notu BOŞ olan maddeler doldurulur (yazılmış notlar korunur);
+// kaydetmeden önce pencerede görülüp düzeltilebilir.
+function _csgbToplantiNotlariExceldenAl(e) {
+  const dosya = e.target.files[0];
+  if (!dosya) return;
+  const kolonlar = [
+    { anahtar: 'denetimMaddeNo', baslik: 'Madde No', esanlamlar: ['Uygunsuzluk No', 'No'] },
+    { anahtar: 'not', baslik: 'Toplantı Notu', esanlamlar: ['Not', 'Bu Toplantının Notu', 'Görüşülen / Yapılan', 'Toplantı Notları'] }
+  ];
+  excelIceAktar(dosya, kolonlar, (satirlar, hataMesaji) => {
+    e.target.value = '';
+    if (hataMesaji) { alert(hataMesaji); return; }
+    _csgbTopTaslagiTopla();
+    const maddeler = csgbMaddeleriniGetir(_csgbAcikDenetimId);
+    const noIle = no => maddeler.find(m => String(m.denetimMaddeNo || '').toLocaleLowerCase('tr') === String(no ?? '').trim().toLocaleLowerCase('tr'));
+    let dolan = 0, atlanan = 0;
+    const eslesmeyen = [];
+    satirlar.forEach(s => {
+      const not = String(s.not ?? '').trim();
+      if (!not) return;
+      const m = noIle(s.denetimMaddeNo);
+      if (!m) { eslesmeyen.push(String(s.denetimMaddeNo ?? '?')); return; }
+      if ((_csgbTopTaslakNot[m.id] || '').trim()) { atlanan++; return; }
+      _csgbTopTaslakNot[m.id] = not;
+      dolan++;
+    });
+    _csgbTopMaddeleriCiz();
+    alert(`${dolan} maddenin notu dolduruldu.` +
+      (atlanan ? `\n${atlanan} madde zaten notu olduğu için atlandı.` : '') +
+      (eslesmeyen.length ? `\n${eslesmeyen.length} satırın Madde No'su bu denetimde yok: ${eslesmeyen.slice(0, 10).join(', ')}` : '') +
+      '\n\nKontrol edip "Kaydet"e basın.');
+  });
 }
 
 async function _csgbToplantiKaydetTiklandi() {
