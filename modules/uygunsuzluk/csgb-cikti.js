@@ -151,7 +151,6 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
   const maddeler = csgbMaddeleriniGetir(denetimId);
   if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
   const w = _csgbWordAraclari();
-  const firma = aktifFirmaGetir();
   const bugun = gunAyYil(bugunIso());
   const SAYFA_GEN = w.mm(297 - 20);
   const SUTUN = [5, 12, 27, 24, 9, 7, 9, 7].map(y => Math.round(SAYFA_GEN * y / 100));
@@ -187,8 +186,8 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
   const ozetMetni = `Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}` +
     (toplantilar.length ? ` (${toplantilar.map(t => gunAyYil(t.tarih)).join(', ')})` : '');
 
+  // Firma adı Word/PDF çıktılarına yazılmaz (kullanıcı isteği).
   const ilkBolum = [
-    new docx.Paragraph({ children: [w.metin(firma ? firma.ad : '', { bold: true, size: 20, color: '374151' })] }),
     new docx.Paragraph({ spacing: { after: w.mm(3) }, border: { bottom: { style: docx.BorderStyle.SINGLE, size: 12, color: '111827', space: 4 } },
       children: [w.metin('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP RAPORU', { bold: true, size: 28 })] }),
     w.bilgiTablosu(_csgbDenetimBilgileri(d), SAYFA_GEN),
@@ -251,7 +250,6 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
   const d = csgbDenetimGetir(denetimId);
   const maddeler = csgbMaddeleriniGetir(denetimId);
   if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
-  const firma = aktifFirmaGetir();
   const bugun = gunAyYil(bugunIso());
   const toplantilar = csgbToplantilariniGetir(denetimId);
   const K = _csgbKacir;
@@ -305,7 +303,6 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
       <thead><tr>${['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Toplantı Notları', 'Kanıt', 'Termin', 'Sorumlu', 'Durum'].map(b => `<th>${b}</th>`).join('')}</tr></thead><tbody></tbody></table>`;
     let ic = yeniSayfa();
     ic.innerHTML = `
-      <div style="font-size:13px; font-weight:bold; color:#374151;">${K(firma ? firma.ad : '')}</div>
       <div style="font-size:19px; font-weight:bold; border-bottom:2px solid #111827; padding-bottom:4px; margin-bottom:8px;">ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP RAPORU</div>
       <table class="cp-bilgi">${_csgbDenetimBilgileri(d).reduce((a, c, i, arr) => i % 2 ? a : a + `<tr><td>${K(c[0])}</td><td>${K(c[1])}</td><td>${K((arr[i + 1] || ['', ''])[0])}</td><td>${K((arr[i + 1] || ['', ''])[1])}</td></tr>`, '')}</table>
       <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}</div>
@@ -385,7 +382,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
 
     // ---- Alt bilgi ----
     sayfalar.forEach((s, i) => {
-      s.querySelector('.cp-alt').innerHTML = `<span>${K(firma ? firma.ad : '')} · ÇSGB Denetimi Takip Raporu · ${bugun}</span><span>Sayfa ${i + 1} / ${sayfalar.length}</span>`;
+      s.querySelector('.cp-alt').innerHTML = `<span>ÇSGB Denetimi Takip Raporu · ${bugun}</span><span>Sayfa ${i + 1} / ${sayfalar.length}</span>`;
     });
 
     // ---- PDF ----
@@ -564,7 +561,6 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   if (!t) return;
   const d = csgbDenetimGetir(t.denetimId);
   const w = _csgbWordAraclari();
-  const firma = aktifFirmaGetir();
   const SAYFA_GEN = w.mm(210 - 30);
   const maddeler = csgbMaddeleriniGetir(t.denetimId);
   const gorusulenler = maddeler.filter(k => (t.maddeNotlari[k.id] || '').trim());
@@ -603,7 +599,6 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
 
   const altBaslik = s => new docx.Paragraph({ keepNext: true, spacing: { before: w.mm(5), after: w.mm(2) }, children: [w.metin(s, { bold: true, size: 20 })] });
   const children = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [w.metin(firma ? firma.ad : '', { bold: true, size: 20, color: '374151' })] }),
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTI TUTANAĞI', { bold: true, size: 24 })] }),
     w.bilgiTablosu([
       ['Toplantı Tarihi', gunAyYil(t.tarih)], ['Yer', t.yer || '-'],
