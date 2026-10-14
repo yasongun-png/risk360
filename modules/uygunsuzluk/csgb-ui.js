@@ -253,7 +253,7 @@ function _csgbMetinHucresi(k) {
 
 function _csgbNotlarHucresi(k) {
   if (!k.toplantiNotlari.length) return '<span style="color:var(--metin-soluk);">-</span>';
-  return k.toplantiNotlari.map(n => `<div style="margin-bottom:5px;"><b>${gunAyYil(n.tarih)}:</b> ${_csgbKacir(n.not)}</div>`).join('');
+  return k.toplantiNotlari.map(n => `<div style="margin-bottom:5px;"><b>${csgbNotTarihi(n.tarih)}:</b> ${_csgbKacir(n.not)}</div>`).join('');
 }
 
 function _csgbKanitHucresi(k) {
@@ -815,7 +815,7 @@ function _csgbTopMaddeleriCiz() {
         <div class="csgb-kisalt" title="${K(k.baslik)}">${K(k.baslik)}</div>
         <label style="font-size:11px; color:var(--metin-soluk); margin:4px 0 0;">Sorumlu</label>
         <input type="text" data-top-sorumlu="${k.id}" list="csgbBolumListesi" value="${K(_csgbTopTaslakSorumlu[k.id] ?? (k.sorumlu || ''))}" placeholder="Bölüm seçin veya yazın" style="margin:0; padding:5px 8px; font-size:12px;">
-        ${oncekiNotlar.length ? `<details style="margin-top:3px;"><summary style="cursor:pointer; color:var(--metin-soluk);">Önceki notlar (${oncekiNotlar.length})</summary>${oncekiNotlar.map(n => `<div><b>${gunAyYil(n.tarih)}:</b> ${K(n.not)}</div>`).join('')}</details>` : ''}
+        ${oncekiNotlar.length ? `<details style="margin-top:3px;"><summary style="cursor:pointer; color:var(--metin-soluk);">Önceki notlar (${oncekiNotlar.length})</summary>${oncekiNotlar.map(n => `<div><b>${csgbNotTarihi(n.tarih)}:</b> ${K(n.not)}</div>`).join('')}</details>` : ''}
       </td>
       <td><textarea data-top-not="${k.id}" rows="3" style="margin:0; font-size:12.5px;" placeholder="Görüşülen / yapılan çalışma...">${K(_csgbTopTaslakNot[k.id] || '')}</textarea></td>
       <td>

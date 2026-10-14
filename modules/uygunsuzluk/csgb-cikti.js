@@ -28,7 +28,7 @@ const CSGB_EXCEL_KOLONLARI = [
 function csgbExcelDisaAktar(denetimId) {
   const d = csgbDenetimGetir(denetimId);
   const satirlar = csgbMaddeleriniGetir(denetimId).map(k => Object.assign({}, k, {
-    toplantiNotlari: k.toplantiNotlari.map(n => gunAyYil(n.tarih) + ': ' + n.not).join('\n'),
+    toplantiNotlari: k.toplantiNotlari.map(n => csgbNotTarihi(n.tarih) + ': ' + n.not).join('\n'),
     kanitlar: (k.kanitlar || []).map(x => x.ad).join(', '),
     termin: gunAyYil(k.termin),
     durum: csgbDurumEtiketi(k.durum),
@@ -182,7 +182,7 @@ async function csgbTakipRaporuExcelOlustur(denetimId) {
       h(k.baslik, X.hucre),
       h(k.duzelticiFaaliyet || '', X.hucre),
       h(k.yasalDayanak || '', X.hucre),
-      h(k.toplantiNotlari.map(n => `${gunAyYil(n.tarih)}: ${n.not}`).join('\n') || '-', X.hucre),
+      h(k.toplantiNotlari.map(n => `${csgbNotTarihi(n.tarih)}: ${n.not}`).join('\n') || '-', X.hucre),
       h((k.kanitlar || []).map(x => x.ad).join('\n') || '-', X.hucre),
       h(k.bolum || '', X.hucre),
       h(k.sorumlu || '-', X.hucre),
@@ -342,7 +342,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
     w.hucre(w.paragraflar(k.maddeKonusu || '-', { bold: true }), SUTUN[1]),
     w.hucre(w.paragraflar(k.baslik), SUTUN[2]),
     w.hucre(k.toplantiNotlari.length
-      ? k.toplantiNotlari.map(n => new docx.Paragraph({ spacing: { after: 50 }, children: [w.metin(gunAyYil(n.tarih) + ': ', { bold: true, size: 15 }), w.metin(n.not, { size: 15 })] }))
+      ? k.toplantiNotlari.map(n => new docx.Paragraph({ spacing: { after: 50 }, children: [w.metin(csgbNotTarihi(n.tarih) + ': ', { bold: true, size: 15 }), w.metin(n.not, { size: 15 })] }))
       : [new docx.Paragraph({ children: [w.metin('-', { size: 15 })] })], SUTUN[3]),
     w.hucre((k.kanitlar || []).length
       ? k.kanitlar.map(x => new docx.Paragraph({ children: [w.metin('• ' + x.ad, { size: 14 })] }))
@@ -501,7 +501,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
         <td style="font-weight:bold; text-align:center;">${K(k.denetimMaddeNo || '-')}</td>
         <td style="font-weight:bold;">${K(k.maddeKonusu || '-')}</td>
         <td>${K(kisalt(k.baslik, 330))}</td>
-        <td>${k.toplantiNotlari.length ? k.toplantiNotlari.map(n => `<div><b>${gunAyYil(n.tarih)}:</b> ${K(kisalt(n.not, 260))}</div>`).join('') : '-'}</td>
+        <td>${k.toplantiNotlari.length ? k.toplantiNotlari.map(n => `<div><b>${csgbNotTarihi(n.tarih)}:</b> ${K(kisalt(n.not, 260))}</div>`).join('') : '-'}</td>
         <td>${(k.kanitlar || []).length ? (k.kanitlar.length + ' kanıt') : '-'}</td>
         <td>${gunAyYil(k.termin) || '-'}</td>
         <td>${K(k.sorumlu || '-')}</td>
@@ -548,7 +548,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
       if (k.aciklama) ekle(`<div style="white-space:pre-wrap;">${K(k.aciklama)}</div>`);
       if (k.duzelticiFaaliyet) ekle(`<b>Gerekli tedbir:</b> <span style="white-space:pre-wrap;">${K(k.duzelticiFaaliyet)}</span>`);
       if (k.yasalDayanak) ekle(`<b>Mevzuat:</b> <span style="color:#374151;">${K(k.yasalDayanak)}</span>`);
-      if (k.toplantiNotlari.length) ekle(`<b>Toplantı notları:</b>${k.toplantiNotlari.map(n => `<div style="margin-left:10px;"><b>${gunAyYil(n.tarih)}:</b> <span style="white-space:pre-wrap;">${K(n.not)}</span></div>`).join('')}`);
+      if (k.toplantiNotlari.length) ekle(`<b>Toplantı notları:</b>${k.toplantiNotlari.map(n => `<div style="margin-left:10px;"><b>${csgbNotTarihi(n.tarih)}:</b> <span style="white-space:pre-wrap;">${K(n.not)}</span></div>`).join('')}`);
       if (k.kanitAciklamasi) ekle(`<b>Kapanış açıklaması:</b> ${K(k.kanitAciklamasi)}`);
       const kanitlar = k.kanitlar || [];
       if (kanitlar.length) {
@@ -710,7 +710,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     sl.addText('Toplantı Notları', { x: M, y: 4.0, w: metinGen, h: 0.32, fontSize: 12, bold: true, color: R.birincil });
     sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 4.32, w: metinGen, h: 2.55, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
     sl.addText(notlar.length
-      ? notlar.map(n => [{ text: gunAyYil(n.tarih) + ': ', options: { bold: true } }, { text: kisalt(n.not, 400), options: { breakLine: true } }]).flat()
+      ? notlar.map(n => [{ text: csgbNotTarihi(n.tarih) + ': ', options: { bold: true } }, { text: kisalt(n.not, 400), options: { breakLine: true } }]).flat()
       : [{ text: 'Henüz not girilmedi.', options: { color: R.soluk } }],
       { x: M + 0.2, y: 4.4, w: metinGen - 0.4, h: 2.4, fontSize: 12, color: R.baslik, valign: 'top', fit: 'shrink', paraSpaceAfter: 4 });
 

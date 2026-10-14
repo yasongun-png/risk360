@@ -17,6 +17,12 @@ function bugunIso() {
   return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
 }
 
+// Toplantı notlarının önündeki tarih: yılsız gün.ay (kullanıcı isteği: "13.10.2026 yerine sadece 13.10").
+function csgbNotTarihi(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? `${m[3]}.${m[2]}` : '';
+}
+
 function csgbDurumEtiketi(durum) {
   return durum === 'Kapalı' ? 'Tamamlandı' : (durum || '-');
 }
