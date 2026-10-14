@@ -619,7 +619,7 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
 
   const altBaslik = s => new docx.Paragraph({ keepNext: true, spacing: { before: w.mm(5), after: w.mm(2) }, children: [w.metin(s, { bold: true, size: 20 })] });
   const children = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin('ÇSGB DENETİMİ UYGUNSUZLUK GİDERME TAKİP TOPLANTI TUTANAĞI', { bold: true, size: 24 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin('ÇSGB DENETİMİ AKSİYON PLANI TAKİP TOPLANTISI TUTANAĞI', { bold: true, size: 24 })] }),
     w.bilgiTablosu([
       ['Toplantı No', String(csgbToplantiNo(t))], ['Toplantı Tarihi', gunAyYil(t.tarih)],
       ['Yer', t.yer || '-'], ['Sonraki Toplantı', gunAyYil(t.sonrakiToplantiTarihi) || '-'],
