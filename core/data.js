@@ -140,6 +140,80 @@ function _yaziEkBildirimKontrolEt(anahtar, yeniDeger) {
   }
 }
 
+// ---- İşlem kayıtları (denetim izi) ----
+// Kullanıcı isteği: "bütün modüllerde kim ne yaptıysa admin olarak görmek
+// istiyorum, son yapılan işlemlerden başlayarak". Tüm modül verisi yaz() /
+// yazVeSonucuGetir() / buyukVeriFirmayaYaz() üzerinden yazıldığı için iz TEK
+// yerden alınır: yazımdan önce eski ve yeni değer id bazında karşılaştırılır,
+// eklenen / güncellenen / silinen kayıtlar tek bir işlem kaydında özetlenir.
+// Her işlem Firestore'da 'islem_kayitlari' koleksiyonuna AYRI küçük bir belge
+// olarak eklenir (tek belgede biriktirilseydi ~1MB sınırına dayanırdı);
+// bulut kapalıysa localStorage'da son 1000 işlem tutulur. Ekran:
+// islem-kayitlari.html (sadece admin).
+const _ISLEM_KAYDI_ATLANAN_ANAHTARLAR = /^isg_(bildirimler|oturum|cihaz_id|firebase_config|aktif_firma|islem_kayitlari)/;
+
+function _islemKaydiEtiketi(kayit) {
+  if (!kayit || typeof kayit !== 'object') return '';
+  const no = kayit.denetimMaddeNo || kayit.aksiyonNo || kayit.kararNo || kayit.personelNo || kayit.firmaNo || kayit.aracNo || '';
+  const ad = _bildirimIcinKayitEtiketi(kayit) || kayit.firmaAdi || kayit.kimlik || kayit.maddeKonusu || kayit.kullaniciAdi || '';
+  const metin = [no, ad].filter(Boolean).join(' · ');
+  return metin.length > 90 ? metin.slice(0, 87) + '…' : metin;
+}
+
+function _islemKaydiOlustur(anahtar, yeniDeger) {
+  try {
+    if (_ISLEM_KAYDI_ATLANAN_ANAHTARLAR.test(anahtar)) return;
+    const eskiDeger = oku(anahtar, undefined);
+    let eklenen = [], guncellenen = [], silinen = [];
+    if (Array.isArray(yeniDeger)) {
+      const eski = Array.isArray(eskiDeger) ? eskiDeger : [];
+      const eskiHarita = new Map(eski.filter(k => k && k.id).map(k => [k.id, k]));
+      const yeniIdler = new Set();
+      yeniDeger.forEach(k => {
+        if (!k || !k.id) return;
+        yeniIdler.add(k.id);
+        const onceki = eskiHarita.get(k.id);
+        if (!onceki) eklenen.push(k);
+        else if (JSON.stringify(onceki) !== JSON.stringify(k)) guncellenen.push(k);
+      });
+      eskiHarita.forEach((k, id) => { if (!yeniIdler.has(id)) silinen.push(k); });
+      if (!eklenen.length && !guncellenen.length && !silinen.length) return;
+    } else {
+      if (JSON.stringify(eskiDeger) === JSON.stringify(yeniDeger)) return;
+      guncellenen = [yeniDeger && typeof yeniDeger === 'object' ? yeniDeger : {}];
+    }
+
+    const kullanici = typeof oturumdakiKullanici === 'function' ? oturumdakiKullanici() : null;
+    const govde = String(anahtar).replace(/^isg_/, '');
+    const firma = oku('isg_firmalar', []).find(f => govde === f.slug || govde.startsWith(f.slug + '_')) || null;
+    const etiketler = liste => liste.slice(0, 5).map(_islemKaydiEtiketi).filter(Boolean);
+    const kayit = {
+      zaman: new Date().toISOString(),
+      kullaniciId: kullanici ? kullanici.id : '',
+      kullaniciAdi: kullanici ? (kullanici.kullaniciAdi || '') : '',
+      adSoyad: kullanici ? (kullanici.adSoyad || '') : '(giriş yapılmadan)',
+      rol: kullanici ? (kullanici.rol || '') : '',
+      anahtar: String(anahtar),
+      firmaSlug: firma ? firma.slug : '',
+      firmaAdi: firma ? (firma.ad || '') : '',
+      sonek: firma ? (govde === firma.slug ? '' : govde.slice(firma.slug.length + 1)) : govde,
+      eklenen: eklenen.length, guncellenen: guncellenen.length, silinen: silinen.length,
+      eklenenEtiketler: etiketler(eklenen), guncellenenEtiketler: etiketler(guncellenen), silinenEtiketler: etiketler(silinen),
+      sayfa: (location.pathname || '').split('/').slice(-2).join('/')
+    };
+    if (_bulutAktif && _bulutDb) {
+      _bulutDb.collection('islem_kayitlari').add(kayit).catch(e => console.warn('İşlem kaydı yazılamadı:', e));
+    } else {
+      let yerel = [];
+      try { yerel = JSON.parse(localStorage.getItem('isg_islem_kayitlari_yerel') || '[]'); } catch (e) { yerel = []; }
+      yerel.push(kayit);
+      _yerelYazDene('isg_islem_kayitlari_yerel', JSON.stringify(yerel.slice(-1000)));
+    }
+  } catch (e) {
+    console.warn('İşlem kaydı oluşturulamadı:', e);
+  }
+}
+
 // tenantAnahtar()'ın ürettiği depolama anahtarı SONEKİ (ör. 'egitim_kayitlari',
 // 'is_izinleri'), dashboard.html'deki MODULLER dizisinin 'anahtar' alanıyla
 // (ör. 'egitim', 'is-izni') HEMEN HEMEN HİÇ birebir eşleşmez — her modül
@@ -262,6 +336,7 @@ function yaz(anahtar, deger) {
     return;
   }
   _yaziEkBildirimKontrolEt(anahtar, deger);
+  if (!_YEREL_SADECE_ANAHTARLAR.has(anahtar)) _islemKaydiOlustur(anahtar, deger);
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar)) {
     if (_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
       _yerelYazDene(anahtar, JSON.stringify(deger));
@@ -285,6 +360,7 @@ function yaz(anahtar, deger) {
 // taraf gerçek sonucu görüp kullanıcıyı uyarabilir.
 function yazVeSonucuGetir(anahtar, deger) {
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar) && !_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
+    _islemKaydiOlustur(anahtar, deger);
     _bulutOnbellek[anahtar] = deger;
     return _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' }))
       .then(() => ({ basarili: true }))
@@ -334,6 +410,7 @@ async function genelIpAdresiGetir() {
 // kapanmadan GERÇEKTEN tamamlandığından emin olunması gerekir.
 function kucukVeriYazVeSonucuGetir(anahtar, deger) {
   if (_bulutAktif && _KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
+    _islemKaydiOlustur(anahtar, deger);
     _yerelYazDene(anahtar, JSON.stringify(deger));
     return _bulutYaziSiraya(anahtar, () => _bulutDb.collection('kucuk_veri').doc(anahtar).set({ deger }))
       .then(() => ({ basarili: true }))
@@ -349,6 +426,7 @@ function kucukVeriYazVeSonucuGetir(anahtar, deger) {
 // firma etiketi çağıran tarafından açıkça verilir. localStorage'a hiç yazmaz.
 function buyukVeriFirmayaYaz(anahtar, deger, firmaSlug) {
   if (_bulutAktif) {
+    _islemKaydiOlustur(anahtar, deger);
     _bulutOnbellek[anahtar] = deger;
     _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: firmaSlug || '' }))
       .catch(e => console.error('Firestore yazma hatasi:', e));

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>İSG Platform - Yapılan İşlemler</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  table.ik-tablo { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--kart-bg); border-radius: 8px; overflow: hidden; box-shadow: var(--golge); }
+  table.ik-tablo th, table.ik-tablo td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--kenarlik); vertical-align: top; }
+  table.ik-tablo th { background: #f8fafc; font-weight: 600; white-space: nowrap; }
+  .ik-sarici { overflow-x: auto; }
+  .ik-filtre { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
+  .ik-filtre select, .ik-filtre input { width: auto; margin: 0; }
+  .ik-rozet { display: inline-block; border-radius: 9px; padding: 1px 8px; font-size: 11.5px; font-weight: 600; margin: 0 4px 3px 0; white-space: nowrap; }
+  .ik-ekle { background: #dcfce7; color: #15803d; }
+  .ik-guncelle { background: #dbeafe; color: #1d4ed8; }
+  .ik-sil { background: #fee2e2; color: #b91c1c; }
+  .ik-etiket { color: var(--metin-soluk); font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <span style="margin:0 8px; color:var(--metin-soluk);">·</span>
+    <a href="giris-kayitlari.html" class="geri-link">🕒 Giriş Kayıtları</a>
+    <h2 style="margin-top:14px;">Yapılan İşlemler</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-6px;">
+      Tüm modüllerde kimin hangi kaydı eklediği, güncellediği veya sildiği. En son yapılan işlem en üstte.
+      Bir kaydetmede birden fazla kayıt değiştiyse (ör. Excel aktarımı) tek satırda sayıları ve ilk birkaç kaydın adı gösterilir.
+    </p>
+
+    <div class="ik-filtre">
+      <input type="text" id="ikArama" class="arama-kutusu" placeholder="Kayıt adı, kullanıcı, modül ara..." style="min-width:240px;">
+      <select id="ikKullanici"><option value="">Tüm Kullanıcılar</option></select>
+      <select id="ikFirma"><option value="">Tüm Firmalar</option></select>
+      <select id="ikModul"><option value="">Tüm Modüller</option></select>
+      <select id="ikTur">
+        <option value="">Tüm İşlemler</option>
+        <option value="eklenen">Ekleme</option>
+        <option value="guncellenen">Güncelleme</option>
+        <option value="silinen">Silme</option>
+      </select>
+      <span id="ikSayac" style="font-size:12px; color:var(--metin-soluk);"></span>
+    </div>
+
+    <div class="ik-sarici">
+      <table class="ik-tablo">
+        <thead><tr><th>Tarih / Saat</th><th>Kullanıcı</th><th>Firma</th><th>Modül</th><th>İşlem</th><th>Kayıt(lar)</th></tr></thead>
+        <tbody id="ikGovde"></tbody>
+      </table>
+    </div>
+    <div class="bos-durum" id="ikBos">Henüz işlem kaydı yok. Kayıt tutma bu özellik eklendikten sonra yapılan işlemlerle başlar.</div>
+    <button type="button" class="ikincil" id="ikDahaFazlaBtn" style="margin-top:12px; display:none;">Daha eski işlemleri yükle</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js?v=4"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script>
+    function _ikKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    // Depolama anahtarı soneki -> okunur modül adı (bkz. dashboard.html
+    // _BILDIRIM_ANAHTAR_MODUL_ESLESME). Tabloda olmayan sonek olduğu gibi gösterilir.
+    const _IK_MODUL_ADLARI = [
+      [/^personel/, 'Personel'], [/^egitim|^sinav_/, 'Eğitim'], [/^yillik_/, 'Yıllık Plan'],
+      [/^risk_/, 'Risk Değerlendirmesi'], [/^kurul_/, 'İSG Kurulu'], [/^acil_durum/, 'Acil Durum'],
+      [/^kimyasal/, 'Kimyasal'], [/^periyodik_/, 'Periyodik Kontrol'], [/^kkd_|^malzeme_/, 'KKD Takibi'],
+      [/^olay_kaza/, 'Olay / Kaza'], [/^uygunsuzluk_csgb_/, 'ÇSGB Denetimi'], [/^uygunsuzluk/, 'Uygunsuzluk'],
+      [/^yuklenici_/, 'Yüklenici'], [/^stajyer/, 'Staj'], [/^saha_denetim/, 'Saha Denetim'], [/^is_izin/, 'İş İzinleri'],
+      [/^tespit_oneri/, 'Tespit ve Öneri'], [/^hizmet_sozlesme/, 'Hizmet Sözleşmeleri'], [/^harita_/, 'Saha Haritası'],
+      [/^jsa/, 'JSA'], [/^merkezi_aksiyon/, 'Merkezi Aksiyon'],
+      [/^kullanicilar$/, 'Kullanıcılar'], [/^firmalar$/, 'Firmalar']
+    ];
+    function _ikModulAdi(k) {
+      const sonek = k.sonek || '';
+      for (const [desen, ad] of _IK_MODUL_ADLARI) if (desen.test(sonek)) return ad;
+      return sonek || '-';
+    }
+
+    let _ikKayitlar = [];
+    let _ikSonBelge = null;
+    let _ikDahaVar = false;
+    const _IK_SAYFA = 300;
+
+    async function _ikYukle(devam) {
+      if (_bulutAktif && _bulutDb) {
+        let sorgu = _bulutDb.collection('islem_kayitlari').orderBy('zaman', 'desc').limit(_IK_SAYFA);
+        if (devam && _ikSonBelge) sorgu = sorgu.startAfter(_ikSonBelge);
+        const snap = await sorgu.get();
+        snap.forEach(d => _ikKayitlar.push(d.data()));
+        _ikSonBelge = snap.docs.length ? snap.docs[snap.docs.length - 1] : _ikSonBelge;
+        _ikDahaVar = snap.docs.length === _IK_SAYFA;
+      } else {
+        let yerel = [];
+        try { yerel = JSON.parse(localStorage.getItem('isg_islem_kayitlari_yerel') || '[]'); } catch (e) { yerel = []; }
+        _ikKayitlar = yerel.slice().sort((a, b) => (b.zaman || '').localeCompare(a.zaman || ''));
+        _ikDahaVar = false;
+      }
+    }
+
+    function _ikSecimDoldur(id, degerler) {
+      const sec = document.getElementById(id);
+      const onceki = sec.value;
+      const ilk = sec.options[0].outerHTML;
+      sec.innerHTML = ilk + degerler.map(([v, t]) => `<option value="${_ikKacir(v)}">${_ikKacir(t)}</option>`).join('');
+      if (degerler.some(([v]) => v === onceki)) sec.value = onceki;
+    }
+
+    function _ikFiltreleriDoldur() {
+      const benzersiz = (f) => Array.from(new Map(_ikKayitlar.map(f).filter(x => x[0])).entries()).sort((a, b) => a[1].localeCompare(b[1], 'tr'));
+      _ikSecimDoldur('ikKullanici', benzersiz(k => [k.kullaniciId || k.adSoyad, k.adSoyad || k.kullaniciAdi || '-']));
+      _ikSecimDoldur('ikFirma', benzersiz(k => [k.firmaSlug, k.firmaAdi || k.firmaSlug]));
+      _ikSecimDoldur('ikModul', benzersiz(k => [_ikModulAdi(k), _ikModulAdi(k)]));
+    }
+
+    function _ikCiz() {
+      const arama = document.getElementById('ikArama').value.trim().toLocaleLowerCase('tr');
+      const kul = document.getElementById('ikKullanici').value;
+      const firma = document.getElementById('ikFirma').value;
+      const modul = document.getElementById('ikModul').value;
+      const tur = document.getElementById('ikTur').value;
+      const liste = _ikKayitlar.filter(k => {
+        if (kul && (k.kullaniciId || k.adSoyad) !== kul) return false;
+        if (firma && k.firmaSlug !== firma) return false;
+        if (modul && _ikModulAdi(k) !== modul) return false;
+        if (tur && !(k[tur] > 0)) return false;
+        if (arama) {
+          const metin = [k.adSoyad, k.kullaniciAdi, k.firmaAdi, _ikModulAdi(k), ...(k.eklenenEtiketler || []), ...(k.guncellenenEtiketler || []), ...(k.silinenEtiketler || [])].join(' ').toLocaleLowerCase('tr');
+          if (!metin.includes(arama)) return false;
+        }
+        return true;
+      });
+      document.getElementById('ikSayac').textContent = `${liste.length} işlem` + (_ikDahaVar ? ' (daha eskileri için aşağıdan yükleyin)' : '');
+      document.getElementById('ikBos').classList.toggle('gorunur', !liste.length);
+      document.getElementById('ikDahaFazlaBtn').style.display = _ikDahaVar ? '' : 'none';
+      const rozetler = k => [
+        k.eklenen ? `<span class="ik-rozet ik-ekle">${k.eklenen} eklendi</span>` : '',
+        k.guncellenen ? `<span class="ik-rozet ik-guncelle">${k.guncellenen} güncellendi</span>` : '',
+        k.silinen ? `<span class="ik-rozet ik-sil">${k.silinen} silindi</span>` : ''
+      ].join('');
+      const etiketler = (dizi, sayi, onEk) => (dizi && dizi.length)
+        ? `<div><span class="ik-etiket">${onEk}:</span> ${_ikKacir(dizi.join(', '))}${sayi > dizi.length ? ` <span class="ik-etiket">ve ${sayi - dizi.length} kayıt daha</span>` : ''}</div>` : '';
+      document.getElementById('ikGovde').innerHTML = liste.map(k => `
+        <tr>
+          <td style="white-space:nowrap;">${new Date(k.zaman).toLocaleString('tr-TR')}</td>
+          <td>${_ikKacir(k.adSoyad || k.kullaniciAdi || '-')}${k.kullaniciAdi ? ` <span class="ik-etiket">(@${_ikKacir(k.kullaniciAdi)})</span>` : ''}</td>
+          <td>${_ikKacir(k.firmaAdi || '-')}</td>
+          <td>${_ikKacir(_ikModulAdi(k))}</td>
+          <td>${rozetler(k)}</td>
+          <td>${etiketler(k.eklenenEtiketler, k.eklenen, 'Eklenen')}${etiketler(k.guncellenenEtiketler, k.guncellenen, 'Güncellenen')}${etiketler(k.silinenEtiketler, k.silinen, 'Silinen')}</td>
+        </tr>`).join('');
+    }
+
+    const session = girisGerekliAdmin();
+
+    if (session) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + session.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+      ['ikKullanici', 'ikFirma', 'ikModul', 'ikTur'].forEach(id => document.getElementById(id).addEventListener('change', _ikCiz));
+      document.getElementById('ikArama').addEventListener('input', _ikCiz);
+      document.getElementById('ikDahaFazlaBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('ikDahaFazlaBtn');
+        btn.disabled = true; btn.textContent = 'Yükleniyor...';
+        try { await _ikYukle(true); _ikFiltreleriDoldur(); _ikCiz(); }
+        catch (e) { alert('İşlem kayıtları yüklenemedi: ' + (e.message || e)); }
+        finally { btn.disabled = false; btn.textContent = 'Daha eski işlemleri yükle'; }
+      });
+
+      bulutHazirOlduğunda(async () => {
+        try {
+          await _ikYukle(false);
+        } catch (e) {
+          console.error(e);
+          document.getElementById('ikBos').textContent = 'İşlem kayıtları okunamadı: ' + (e.message || e);
+        }
+        _ikFiltreleriDoldur();
+        _ikCiz();
+      });
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
+</body>
+</html>
