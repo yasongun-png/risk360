@@ -49,6 +49,10 @@ function csgbSayfasiniBaslat() {
   document.getElementById('csgbTopKaydetBtn').addEventListener('click', _csgbToplantiKaydetTiklandi);
   document.getElementById('csgbTopKapalilariGoster').addEventListener('change', () => { _csgbTopTaslagiTopla(); _csgbTopMaddeleriCiz(); });
   _csgbKatilimciButonlariniBagla('csgbTopKatilimciGovde', 'csgbTopKatilimci');
+  document.getElementById('csgbTopKatilimciDegistirBtn').addEventListener('click', () => {
+    document.getElementById('csgbTopKatilimciOzet').style.display = 'none';
+    document.getElementById('csgbTopKatilimciDetay').style.display = '';
+  });
   _csgbKatilimciButonlariniBagla('katListeGovde', 'katListe');
   document.getElementById('katListeKapatBtn').addEventListener('click', csgbKatilimciListesiKapat);
   document.getElementById('katListeIptalBtn').addEventListener('click', csgbKatilimciListesiKapat);
@@ -669,8 +673,17 @@ function csgbToplantiModalAc(toplantiId) {
   const sabitListe = csgbKatilimcilariNormallestir(d.katilimcilar);
   // Katılımcısı hiç girilmemiş eski bir toplantı düzenlenirken de sabit liste gelir.
   const toplantiListesi = t ? csgbKatilimcilariNormallestir(t.katilimcilar) : [];
-  _csgbKatilimcilariCiz(toplantiListesi.length ? toplantiListesi
-    : csgbKatilimcilariNormallestir(sabitListe.length ? sabitListe : (!t && onceki ? onceki.katilimcilar : [])));
+  const gosterilecek = toplantiListesi.length ? toplantiListesi
+    : csgbKatilimcilariNormallestir(sabitListe.length ? sabitListe : (!t && onceki ? onceki.katilimcilar : []));
+  _csgbKatilimcilariCiz(gosterilecek);
+  // Liste doluysa sadece özet gösterilir (kullanıcı isteği: "katılımcılar bu 12 kişi
+  // olacak ben değiştirmedikçe"); boşsa tablo açık gelir.
+  const ozetMetni = document.getElementById('csgbTopKatilimciOzetMetni');
+  ozetMetni.innerHTML = gosterilecek.length
+    ? `<b>${gosterilecek.length} kişi:</b> ${_csgbKacir(gosterilecek.map(k => k.adSoyad).filter(Boolean).join(', '))}`
+    : 'Katılımcı listesi boş.';
+  document.getElementById('csgbTopKatilimciOzet').style.display = gosterilecek.length ? 'flex' : 'none';
+  document.getElementById('csgbTopKatilimciDetay').style.display = gosterilecek.length ? 'none' : '';
   document.getElementById('csgbTopGenel').value = t ? t.genelNotlar : '';
   document.getElementById('csgbTopKapalilariGoster').checked = false;
   document.getElementById('csgbTopHata').textContent = '';

@@ -242,6 +242,13 @@
       <input type="text" id="csgbTopYer">
 
       <div class="form-bolum-baslik">Katılımcılar</div>
+      <!-- Varsayılan: denetimin katılımcı listesi özet olarak gösterilir, seçim
+           istenmez. Tablo sadece "Bu toplantı için değiştir" ile açılır. -->
+      <div id="csgbTopKatilimciOzet" style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid var(--kenarlik); border-radius:8px; margin-bottom:10px;">
+        <div id="csgbTopKatilimciOzetMetni" style="font-size:13px;"></div>
+        <button type="button" class="tablo-buton" id="csgbTopKatilimciDegistirBtn" style="white-space:nowrap;">Bu toplantı için değiştir</button>
+      </div>
+      <div id="csgbTopKatilimciDetay" style="display:none;">
       <table class="veri-tablosu" style="table-layout:fixed;">
         <colgroup><col style="width:44px;"><col><col><col><col style="width:50px;"></colgroup>
         <thead><tr><th>Sıra</th><th>Ad Soyad</th><th>Görevi</th><th>E-posta</th><th></th></tr></thead>
@@ -252,7 +259,8 @@
         <button type="button" class="ikincil" id="csgbTopKatilimciYapistirBtn">📋 Outlook'tan Yapıştır</button>
         <button type="button" class="ikincil" id="csgbTopKatilimciKurulBtn">🏛 İSG Kurulu'ndan Al</button>
       </div>
-      <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 10px;">İmzalar, Toplantı Tutanağı (Word) çıktısındaki İmza sütununa atılır.</p>
+      <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 10px;">Buradaki değişiklik sadece bu toplantı için geçerlidir; denetimin listesi değişmez. İmzalar, Toplantı Tutanağı (Word) çıktısındaki İmza sütununa atılır.</p>
+      </div>
 
       <label for="csgbTopGenel">Genel Notlar</label>
       <textarea id="csgbTopGenel" rows="2"></textarea>
@@ -296,7 +304,7 @@
   <script src="csgb-repository.js?v=1"></script>
   <script src="csgb-service.js?v=8"></script>
   <script src="csgb-cikti.js?v=1"></script>
-  <script src="csgb-ui.js?v=7"></script>
+  <script src="csgb-ui.js?v=8"></script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
 
