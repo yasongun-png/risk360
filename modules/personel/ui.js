@@ -16,9 +16,18 @@ const PRS_SIRALANABILIR_ALANLAR = {
   isveren: { tip: 'metin' },
   bolum: { tip: 'metin' },
   gorev: { tip: 'metin' },
-  iseGirisTarihi: { tip: 'metin' },
+  iseGirisTarihi: { tip: 'tarih' },
+  istenCikisTarihi: { tip: 'tarih' },
   kidemYil: { tip: 'sayi' }
 };
+
+// Kullanıcı isteği: "işten ayrılanları ayrılış tarihine göre sırala yukarıda
+// en son ayrılan olsun" — arşiv sekmesi açılınca varsayılan sıralama budur.
+function _prsTarihAnahtari(v) {
+  const s = String(v || '').trim();
+  const m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : s;
+}
 
 function _bolumFiltreDoldur() {
   const secim = document.getElementById('bolumFiltre');
@@ -39,6 +48,11 @@ function _prsSutunSiraliListe(liste) {
       const av = a[alan] == null ? -Infinity : Number(a[alan]);
       const bv = b[alan] == null ? -Infinity : Number(b[alan]);
       return (av - bv) * yon;
+    }
+    if (bilgi.tip === 'tarih') {
+      const at = _prsTarihAnahtari(a[alan]), bt = _prsTarihAnahtari(b[alan]);
+      if (!at !== !bt) return at ? -1 : 1; // tarihsizler her zaman en altta
+      return at.localeCompare(bt) * yon;
     }
     return String(a[alan] || '').localeCompare(String(b[alan] || ''), 'tr') * yon;
   });
@@ -317,6 +331,8 @@ function personelSayfasiniBaslat() {
 function sekmeDegistir(arsivMi) {
   _arsivGorunumu = arsivMi;
   _seciliPersonelIdleri.clear();
+  _prsSiralamaAlani = arsivMi ? 'istenCikisTarihi' : 'sicilNo';
+  _prsSiralamaYon = arsivMi ? 'desc' : 'asc';
   document.getElementById('sekmeAktif').classList.toggle('sekme-seciliDegil', arsivMi);
   document.getElementById('sekmeArsiv').classList.toggle('sekme-seciliDegil', !arsivMi);
   document.getElementById('yeniPersonelBtn').style.display = arsivMi ? 'none' : '';
