@@ -242,6 +242,10 @@ function kararOlustur(veriler) {
     // İlerleme/aksiyon notu — durumdan bağımsız, her toplantıda güncellenip
     // birikimli olarak tutulan serbest metin (ör. "Nisan: ... Mayıs: ...").
     aksiyonNotu: (veriler.aksiyonNotu || '').trim(),
+    // Toplantı bazlı notlar (kullanıcı isteği: ÇSGB takibindeki gibi, aksiyon
+    // ilerleme yerine her toplantının kendi notu): { <toplantiId>: 'not' }.
+    // Eski aksiyonNotu silinmez, "önceki not" olarak gösterilmeye devam eder.
+    toplantiNotlari: veriler.toplantiNotlari && typeof veriler.toplantiNotlari === 'object' ? veriler.toplantiNotlari : {},
     // Kapanan bir karar, kapandıktan sonraki ilk toplantıda "devreden / tamamlandı"
     // olarak bir kez gösterilir; gösterildikten sonra bu bayrak true olur ve
     // sonraki hiçbir toplantının devreden listesinde tekrar görünmez.

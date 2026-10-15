@@ -776,9 +776,18 @@ async function _wordOlayKarti(o) {
 // Kararlar için PDF'teki "decision-card" görünümünün Word karşılığı (bkz.
 // cikti.js _pdfKararKarti) — başlık, karar metni, 4 sütunlu meta ızgarası,
 // varsa aksiyon/oy/kapanış notları; fotoğraflar tablonun altına ayrı eklenir.
+// Kararın toplantı bazlı "Konuşulanlar" satırları (gg.aa: not), bu toplantıya kadar.
+const _kurulKonusulanlar = (k) => (k && !k.olayKaynakli && typeof kararNotSatirlari === 'function')
+  ? kararNotSatirlari(k, typeof _toplantiId !== 'undefined' ? _toplantiId : '')
+  : (k && k.aksiyonNotu ? [k.aksiyonNotu] : []);
+
 async function _wordKararKarti(k) {
   const notSatirlari = [];
-  if (k.aksiyonNotu) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Aksiyon', k.aksiyonNotu), { columnSpan: 4 })] }));
+  const konusulanlar = _kurulKonusulanlar(k);
+  if (konusulanlar.length) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre([
+    new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: 'Konuşulanlar', bold: true, size: KURUL_WORD_METIN_BOYUT, color: '111827' })] }),
+    ...konusulanlar.map(s => new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: s, size: KURUL_WORD_METIN_BOYUT })] }))
+  ], { columnSpan: 4 })] }));
   const oyDokumu = kararOyDokumMetni(k);
   if (k.oySonucu || oyDokumu) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Oy Sonucu', [[k.oy, k.oySonucu].filter(Boolean).join(' — '), oyDokumu && `(${oyDokumu})`].filter(Boolean).join('  ')), { columnSpan: 4 })] }));
   if (k.kanit || k.kapanisTarihi) notSatirlari.push(new docx.TableRow({ cantSplit: true, children: [_wordHucre(_wordEtiketDeger('Kapanış / Kanıt', [gunAyYil(k.kapanisTarihi), k.kanit].filter(Boolean).join(' / ')), { columnSpan: 4 })] }));
@@ -1269,7 +1278,11 @@ async function konuBasliklariWordOlustur(notFormu = false) {
       const { baslik: kBaslik, govde } = _kararBasligiVeMetni(k.kararMetni);
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. ${kBaslik}`, size: METIN_BOYUT })] }));
       if (govde) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: govde, size: METIN_BOYUT })] }));
-      if (k.aksiyonNotu) children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Aksiyon: ${k.aksiyonNotu}`, size: METIN_BOYUT })] }));
+      const konusulanlar = _kurulKonusulanlar(k);
+      if (konusulanlar.length) {
+        children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: 'Konuşulanlar:', bold: true, size: METIN_BOYUT })] }));
+        konusulanlar.forEach(s => children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: s, size: METIN_BOYUT })] })));
+      }
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Sorumlu: ${k.sorumlu || '-'}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Durum: ${k.durumGoruntu || k.durum || '-'}`, size: METIN_BOYUT })] }));
       children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Termin: ${gunAyYil(k.termin) || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
@@ -1477,7 +1490,7 @@ function _pdfKararKarti(k) {
         <div><b>Öncelik</b><span>${_ciktiKacir(k.oncelik)}</span></div>
         <div><b>Durum</b><span>${_ciktiKacir(k.durumGoruntu || k.durum)}</span></div>
       </div>
-      ${k.aksiyonNotu ? `<div class="decision-action"><b>Aksiyon</b><span>${_ciktiKacir(k.aksiyonNotu)}</span></div>` : ''}
+      ${_kurulKonusulanlar(k).length ? `<div class="decision-action"><b>Konuşulanlar</b><span>${_kurulKonusulanlar(k).map(_ciktiKacir).join('<br>')}</span></div>` : ''}
       ${(k.oySonucu || kararOyDokumMetni(k)) ? `<div class="decision-action"><b>Oy Sonucu</b><span>${_ciktiKacir([[k.oy, k.oySonucu].filter(Boolean).join(' — '), kararOyDokumMetni(k) && `(${kararOyDokumMetni(k)})`].filter(Boolean).join('  '))}</span></div>` : ''}
       ${(k.kanit || k.kapanisTarihi) ? `<div class="decision-action"><b>Kapanış / Kanıt</b><span>${_ciktiKacir([gunAyYil(k.kapanisTarihi), k.kanit].filter(Boolean).join(' / '))}</span></div>` : ''}
       ${fotograflar.length ? `<div class="decision-photo">${fotograflar.map(f => `<span style="display:inline-block; margin:0 4mm 2mm 0; text-align:center;"><img src="${f.url}"><br><small>${_ciktiKacir(f.etiket)}</small></span>`).join('')}</div>` : ''}
@@ -2167,9 +2180,12 @@ async function pptxOlustur() {
     if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
 
     const sl2 = yeniSlayt();
-    kartBasligi(sl2, `${baslikOnEki}  ·  ${sira} / ${toplam}  ·  ${k.kararNo}`, 'Aksiyon İlerleme Notu');
+    kartBasligi(sl2, `${baslikOnEki}  ·  ${sira} / ${toplam}  ·  ${k.kararNo}`, 'Konuşulanlar');
     sl2.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: SW - 2 * M, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-    sl2.addText(k.aksiyonNotu || 'Aksiyon ilerleme notu girilmemiştir.', { x: M + 0.3, y: 1.6, w: SW - 2 * M - 0.6, h: 4.9, fontSize: 15, color: R.baslik, valign: 'top' });
+    const konusulanlar = _kurulKonusulanlar(k);
+    sl2.addText(konusulanlar.length
+      ? konusulanlar.map(s => { const i = s.indexOf(': '); return [{ text: i > 0 ? s.slice(0, i + 2) : '', options: { bold: true } }, { text: i > 0 ? s.slice(i + 2) : s, options: { breakLine: true } }]; }).flat()
+      : 'Henüz konuşulan girilmemiştir.', { x: M + 0.3, y: 1.6, w: SW - 2 * M - 0.6, h: 4.9, fontSize: 15, color: R.baslik, valign: 'top', fit: 'shrink', paraSpaceAfter: 6 });
   };
 
   // Kararın TÜM fotoğrafları (öncesi/sonrası/en fazla 3 ek — bkz.
@@ -2623,4 +2639,123 @@ function ciktiButonlariniBagla() {
     }
   });
   document.getElementById('btnFormAyarlari').addEventListener('click', () => formAyarlariModalAc('kurul', 'İSG Kurulu'));
+}
+
+// ==================== AKSİYON PLANI (Word / Excel) ====================
+// Kullanıcı isteği: "bir kurul tutanağı olacak, bir de aksiyon planı olacak" —
+// tutanaktan ayrı, ÇSGB takip raporu benzeri çıktı: bu toplantı itibarıyla açık
+// kararlar (+ son toplantıdan beri kapananlar), her kararda toplantı toplantı
+// "Konuşulanlar" (gg.aa: not). Kapsam: service.js kurulAksiyonPlaniKararlari.
+
+function _kurulAksiyonPlaniVerisi(toplantiId) {
+  const toplanti = toplantiIdIleGetirRepo(toplantiId);
+  const kararlar = kurulAksiyonPlaniKararlari(toplantiId).map(k => Object.assign({}, k, {
+    durumMetni: k.durumGoruntu === 'Gecikmiş' ? 'Gecikmiş' : kararDurumGoster(k.durum),
+    konusulanlar: kararNotSatirlari(k, toplantiId)
+  }));
+  const kapali = kararlar.filter(k => kararKapaliMi(k.durum)).length;
+  const gecikmis = kararlar.filter(k => k.durumMetni === 'Gecikmiş').length;
+  return {
+    toplanti, kararlar,
+    bilgiler: [
+      ['Toplantı No', (toplanti && toplanti.toplantiNo) || '-'], ['Toplantı Tarihi', gunAyYil(toplanti && toplanti.tarih) || '-'],
+      ['Dönem', (toplanti && (toplanti.donem || '')) || '-'], ['Hazırlanma Tarihi', gunAyYil(new Date().toISOString().slice(0, 10))]
+    ],
+    ozet: `Toplam ${kararlar.length} karar · Açık ${kararlar.length - kapali} · Tamamlanan ${kapali} · Gecikmiş ${gecikmis}`
+  };
+}
+
+async function kurulAksiyonPlaniWordOlustur(toplantiId) {
+  const v = _kurulAksiyonPlaniVerisi(toplantiId);
+  if (!v.kararlar.length) { alert('Bu toplantı itibarıyla aksiyon planına girecek karar yok.'); return; }
+  const mm = x => Math.round(x * 56.7);
+  const SAYFA_GEN = mm(297 - 20);
+  const kenar = { style: docx.BorderStyle.SINGLE, size: 4, color: '94A3B8' };
+  const kenarlar = { top: kenar, bottom: kenar, left: kenar, right: kenar };
+  const metin = (t, o = {}) => new docx.TextRun(Object.assign({ text: String(t ?? ''), font: 'Arial', size: 16, color: '111827' }, o));
+  const hucre = (cocuklar, gen, opts = {}) => new docx.TableCell(Object.assign({ width: { size: gen, type: docx.WidthType.DXA }, margins: { top: 50, bottom: 50, left: 70, right: 70 }, borders: kenarlar, children: Array.isArray(cocuklar) ? cocuklar : [cocuklar] }, opts));
+  const paragraflar = (deger, o = {}) => String(deger ?? '').split('\n').map(s => new docx.Paragraph({ spacing: { after: 30 }, children: [metin(s, o)] }));
+  const SUTUN = [8, 13, 27, 27, 10, 7, 8].map(y => Math.round(SAYFA_GEN * y / 100));
+  const BASLIKLAR = ['Karar No', 'Konu', 'Karar', 'Konuşulanlar', 'Sorumlu', 'Termin', 'Durum'];
+  const durumRenk = d => d === 'Tamamlandı' ? '15803D' : (d === 'Gecikmiş' ? 'B91C1C' : (d === 'Devam Ediyor' ? '0F766E' : 'B45309'));
+  const tablo = new docx.Table({
+    width: { size: SAYFA_GEN, type: docx.WidthType.DXA }, columnWidths: SUTUN, layout: docx.TableLayoutType.FIXED,
+    rows: [
+      new docx.TableRow({ tableHeader: true, children: BASLIKLAR.map((b, i) => hucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin(b.toLocaleUpperCase('tr'), { bold: true, size: 15, color: 'FFFFFF' })] }), SUTUN[i], { shading: { fill: '134E4A', color: 'auto', type: docx.ShadingType.CLEAR }, verticalAlign: docx.VerticalAlign.CENTER })) }),
+      ...v.kararlar.map(k => new docx.TableRow({ cantSplit: true, children: [
+        hucre(new docx.Paragraph({ children: [metin(k.kararNo || '-', { bold: true })] }), SUTUN[0]),
+        hucre(paragraflar(k.kaynakGundem || '-', { bold: true }), SUTUN[1]),
+        hucre(paragraflar(k.kararMetni || '-'), SUTUN[2]),
+        hucre(k.konusulanlar.length ? k.konusulanlar.map(s => { const i = s.indexOf(': '); return new docx.Paragraph({ spacing: { after: 40 }, children: i > 0 ? [metin(s.slice(0, i + 2), { bold: true, size: 15 }), metin(s.slice(i + 2), { size: 15 })] : [metin(s, { size: 15 })] }); }) : [new docx.Paragraph({ children: [metin('-', { size: 15 })] })], SUTUN[3]),
+        hucre(paragraflar(k.sorumlu || '-', { size: 15 }), SUTUN[4]),
+        hucre(new docx.Paragraph({ children: [metin(gunAyYil(k.termin) || '-', { size: 15 })] }), SUTUN[5]),
+        hucre([new docx.Paragraph({ children: [metin(k.durumMetni, { bold: true, size: 15, color: durumRenk(k.durumMetni) })] }),
+          ...(kararKapaliMi(k.durum) && k.kapanisTarihi ? [new docx.Paragraph({ children: [metin(gunAyYil(k.kapanisTarihi), { size: 14, color: '64748B' })] })] : [])], SUTUN[6])
+      ] }))
+    ]
+  });
+  const bG = [0.17, 0.33, 0.17, 0.33].map(o => Math.round(SAYFA_GEN * o));
+  const bilgiSatirlari = [];
+  for (let i = 0; i < v.bilgiler.length; i += 2) {
+    const [a, b] = [v.bilgiler[i], v.bilgiler[i + 1] || ['', '']];
+    bilgiSatirlari.push(new docx.TableRow({ children: [
+      hucre(new docx.Paragraph({ children: [metin(a[0], { bold: true, size: 17 })] }), bG[0], { shading: { fill: 'F3F4F6', color: 'auto', type: docx.ShadingType.CLEAR } }),
+      hucre(new docx.Paragraph({ children: [metin(a[1], { size: 17 })] }), bG[1]),
+      hucre(new docx.Paragraph({ children: [metin(b[0], { bold: true, size: 17 })] }), bG[2], { shading: { fill: 'F3F4F6', color: 'auto', type: docx.ShadingType.CLEAR } }),
+      hucre(new docx.Paragraph({ children: [metin(b[1], { size: 17 })] }), bG[3])
+    ] }));
+  }
+  const altBilgi = new docx.Footer({ children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ children: ['İSG Kurulu Aksiyon Planı · Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '646464', font: 'Arial' })] })] });
+  const doc = new docx.Document({
+    styles: { default: { document: { run: { font: 'Arial', size: 16 } } } },
+    sections: [{
+      properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: { top: mm(10), right: mm(10), bottom: mm(12), left: mm(10), footer: mm(4) } } },
+      footers: { default: altBilgi },
+      children: [
+        new docx.Paragraph({ spacing: { after: mm(3) }, border: { bottom: { style: docx.BorderStyle.SINGLE, size: 12, color: '111827', space: 4 } }, children: [metin('İSG KURULU AKSİYON PLANI', { bold: true, size: 28 })] }),
+        new docx.Table({ width: { size: SAYFA_GEN, type: docx.WidthType.DXA }, columnWidths: bG, layout: docx.TableLayoutType.FIXED, rows: bilgiSatirlari }),
+        new docx.Paragraph({ spacing: { before: mm(3), after: mm(3) }, children: [metin(v.ozet, { bold: true, size: 18 })] }),
+        tablo
+      ]
+    }]
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  saveAs(blob, `Kurul_Aksiyon_Plani_${String((v.toplanti && v.toplanti.toplantiNo) || gunAyYil(v.toplanti && v.toplanti.tarih) || '').replace(/[^\w.-]+/g, '_')}.docx`);
+}
+
+async function kurulAksiyonPlaniExcelOlustur(toplantiId) {
+  const v = _kurulAksiyonPlaniVerisi(toplantiId);
+  if (!v.kararlar.length) { alert('Bu toplantı itibarıyla aksiyon planına girecek karar yok.'); return; }
+  const X = XLSX_STIL;
+  const h = (val, s) => ({ v: val, s });
+  const SUTUN_SAYISI = 8;
+  const sonKolon = xlsxKolonHarfi(SUTUN_SAYISI - 1);
+  const satirlar = [{ hucreler: [h('İSG KURULU AKSİYON PLANI', X.baslik)], yukseklik: 26 }, { hucreler: [] }];
+  const birlesik = [`A1:${sonKolon}1`];
+  for (let i = 0; i < v.bilgiler.length; i += 2) {
+    const r = satirlar.length + 1;
+    const [a, b] = [v.bilgiler[i], v.bilgiler[i + 1] || ['', '']];
+    const hucreler = new Array(SUTUN_SAYISI).fill(null).map(() => h('', X.bilgiDeger));
+    hucreler[0] = h(a[0], X.bilgiEtiket); hucreler[1] = h(a[1], X.bilgiDeger);
+    hucreler[4] = h(b[0], X.bilgiEtiket); hucreler[5] = h(b[1], X.bilgiDeger);
+    satirlar.push({ hucreler, yukseklik: 18 });
+    birlesik.push(`B${r}:D${r}`, `F${r}:${sonKolon}${r}`);
+  }
+  satirlar.push({ hucreler: [] });
+  const ozetR = satirlar.length + 1;
+  satirlar.push({ hucreler: new Array(SUTUN_SAYISI).fill(null).map((_, j) => h(j === 0 ? v.ozet : '', X.ozet)), yukseklik: 20 });
+  birlesik.push(`A${ozetR}:${sonKolon}${ozetR}`);
+  satirlar.push({ hucreler: [] });
+  const baslikR = satirlar.length + 1;
+  satirlar.push({ hucreler: ['Karar No', 'Konu', 'Karar', 'Konuşulanlar', 'Sorumlu', 'Termin', 'Öncelik', 'Durum'].map(b => h(b, X.tabloBaslik)), yukseklik: 22 });
+  const durumStili = d => d === 'Tamamlandı' ? X.tamam : (d === 'Gecikmiş' ? X.gecikmis : (d === 'Devam Ediyor' ? X.devam : X.acik));
+  v.kararlar.forEach(k => satirlar.push({ hucreler: [
+    h(k.kararNo || '-', X.hucreKalin), h(k.kaynakGundem || '-', X.hucreKalin), h(k.kararMetni || '-', X.hucre),
+    h(k.konusulanlar.join('\n') || '-', X.hucre), h(k.sorumlu || '-', X.hucre), h(gunAyYil(k.termin) || '-', X.hucre),
+    h(k.oncelik || '-', X.hucre), h(k.durumMetni + (kararKapaliMi(k.durum) && k.kapanisTarihi ? '\n' + gunAyYil(k.kapanisTarihi) : ''), durumStili(k.durumMetni))
+  ] }));
+  const sonR = satirlar.length;
+  const xml = xlsxSayfaXml(satirlar, { genislikler: [12, 24, 55, 55, 22, 12, 11, 14], birlesik, dondur: baslikR, filtre: `A${baslikR}:${sonKolon}${sonR}`, yatay: true });
+  await xlsxKitapIndir(`Kurul_Aksiyon_Plani_${String((v.toplanti && v.toplanti.toplantiNo) || gunAyYil(v.toplanti && v.toplanti.tarih) || '').replace(/[^\w.-]+/g, '_')}.xlsx`,
+    [{ ad: 'Aksiyon Planı', xml, filtre: `A${baslikR}:${sonKolon}${sonR}`, baslikSatiri: baslikR }]);
 }

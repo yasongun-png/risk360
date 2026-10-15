@@ -386,13 +386,102 @@ function kararGuncelle(id, veriler) {
     devrederMi: veriler.devrederMi !== undefined ? !!veriler.devrederMi : (mevcut ? mevcut.devrederMi !== false : true),
     kapanisTarihi: kararKapaliMi(veriler.durum) ? (veriler.kapanisTarihi || _bugun()) : '',
     kanit: (veriler.kanit || '').trim(),
-    aksiyonNotu: (veriler.aksiyonNotu || '').trim(),
+    aksiyonNotu: veriler.aksiyonNotu !== undefined ? (veriler.aksiyonNotu || '').trim() : ((mevcut && mevcut.aksiyonNotu) || ''),
+    toplantiNotlari: veriler.toplantiNotlari !== undefined ? _kararNotlariTemizle(veriler.toplantiNotlari) : ((mevcut && mevcut.toplantiNotlari) || {}),
     fotoOncesi: veriler.fotoOncesi || '',
     fotoSonrasi: veriler.fotoSonrasi || '',
     fotografEk: (Array.isArray(veriler.fotografEk) ? veriler.fotografEk : []).slice(0, 3)
   });
   _denetimEkle('karar', id, 'guncelle', mevcut, guncellenen);
   return { basarili: true, karar: guncellenen };
+}
+
+// ---- Toplantı bazlı karar notları ----
+// Kullanıcı isteği: "ÇSGB'deki gibi toplantı bazında, İSG kurulunda da
+// toplantı notları yapalım, aksiyon ilerleme yerine". Not karar üzerinde
+// { toplantiId: 'not' } olarak tutulur; gösterimde toplantı tarihine göre
+// sıralanıp "gg.aa: not" biçiminde alt alta yazılır.
+
+function _kararNotlariTemizle(notlar) {
+  const temiz = {};
+  Object.entries(notlar || {}).forEach(([id, not]) => { if (String(not || '').trim()) temiz[id] = String(not).trim(); });
+  return temiz;
+}
+
+function _kurulNotTarihi(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? `${m[3]}.${m[2]}` : '';
+}
+
+// [{ toplantiId, tarih, toplantiNo, not, eski? }] -- tarih sırasıyla. sinirToplantiId
+// verilirse o toplantının tarihinden SONRAKİ toplantıların notları alınmaz
+// (eski bir toplantının çıktısında sonraki notlar görünmesin). Eski tek
+// parça aksiyonNotu varsa en başta "önceki not" olarak yer alır.
+function kararToplantiNotlariniGetir(karar, sinirToplantiId) {
+  if (!karar) return [];
+  const toplantilar = toplantiTumunuGetir();
+  const sinir = sinirToplantiId ? toplantilar.find(t => t.id === sinirToplantiId) : null;
+  const liste = Object.entries(karar.toplantiNotlari || {})
+    .filter(([, not]) => String(not || '').trim())
+    .map(([toplantiId, not]) => {
+      const t = toplantilar.find(x => x.id === toplantiId);
+      return { toplantiId, tarih: t ? (t.tarih || '') : '', toplantiNo: t ? (t.toplantiNo || '') : '', not: String(not).trim() };
+    })
+    .filter(n => !sinir || !sinir.tarih || !n.tarih || n.tarih <= sinir.tarih)
+    .sort((a, b) => (a.tarih || '').localeCompare(b.tarih || ''));
+  if ((karar.aksiyonNotu || '').trim()) liste.unshift({ toplantiId: '', tarih: '', toplantiNo: '', not: karar.aksiyonNotu.trim(), eski: true });
+  return liste;
+}
+
+// "13.10: not" satırları (eski not "Önceki not: ..." olarak).
+function kararNotSatirlari(karar, sinirToplantiId) {
+  return kararToplantiNotlariniGetir(karar, sinirToplantiId).map(n => (n.eski ? 'Önceki not' : (_kurulNotTarihi(n.tarih) || n.toplantiNo || 'Toplantı')) + ': ' + n.not);
+}
+
+// Toplantı penceresinden toplu not girişi: { kararId: 'not' } -- boş not o
+// toplantının notunu siler. Tek yazımla kaydedilir.
+function kurulToplantiNotlariniKaydet(toplantiId, notlar) {
+  const liste = kararTumunuGetir();
+  let degisen = 0;
+  const yeni = liste.map(k => {
+    if (!Object.prototype.hasOwnProperty.call(notlar, k.id)) return k;
+    const mevcutNot = (k.toplantiNotlari || {})[toplantiId] || '';
+    const yeniNot = String(notlar[k.id] || '').trim();
+    if (mevcutNot === yeniNot) return k;
+    degisen++;
+    const tn = Object.assign({}, k.toplantiNotlari || {});
+    if (yeniNot) tn[toplantiId] = yeniNot; else delete tn[toplantiId];
+    return Object.assign({}, k, { toplantiNotlari: tn });
+  });
+  if (degisen) _kararKaydet(yeni);
+  return { basarili: true, degisen };
+}
+
+// Aksiyon Planı kapsamı (bu toplantı itibarıyla): bu toplantıya kadar alınmış
+// ve hâlâ açık tüm kararlar + bir önceki toplantıdan bu yana kapananlar + bu
+// toplantıda konuşulanı olan kararlar. Karar numarasına göre (yıl, ay, sıra).
+function kurulAksiyonPlaniKararlari(toplantiId) {
+  const toplanti = toplantiIdIleGetirRepo(toplantiId);
+  if (!toplanti) return [];
+  const toplantilar = toplantiTumunuGetir();
+  const tarih = toplanti.tarih || '';
+  const oncekiTarih = toplantilar.map(t => t.tarih || '').filter(t => t && (!tarih || t < tarih)).sort().pop() || '';
+  const evTarihi = k => { const t = toplantilar.find(x => x.id === k.toplantiId); return t ? (t.tarih || '') : ''; };
+  const liste = kararTumunuGetir().map(_kararZenginlestir).filter(k => {
+    if (k.toplantiId !== toplantiId && tarih && evTarihi(k) && evTarihi(k) > tarih) return false;
+    if ((k.toplantiNotlari || {})[toplantiId]) return true;
+    if (!kararKapaliMi(k.durum)) return true;
+    const kapanis = k.kapanisTarihi || '';
+    return !!kapanis && (!oncekiTarih || kapanis > oncekiTarih) && (!tarih || kapanis <= tarih);
+  });
+  const anahtar = k => { const m = String(k.kararNo || '').match(/^(\d{1,2})\.(\d{4})\/(\d+)/); return m ? [Number(m[2]), Number(m[1]), Number(m[3])] : null; };
+  return liste.sort((a, b) => {
+    const ka = anahtar(a), kb = anahtar(b);
+    if (ka && kb) return (ka[0] - kb[0]) || (ka[1] - kb[1]) || (ka[2] - kb[2]);
+    if (ka) return -1;
+    if (kb) return 1;
+    return String(a.olusturmaTarihi || '').localeCompare(String(b.olusturmaTarihi || ''));
+  });
 }
 
 function kararSil(id) {

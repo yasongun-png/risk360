@@ -132,6 +132,19 @@ function toplantiDetaySayfasiniBaslat() {
   })();
 
   document.getElementById('yeniKararBtn').addEventListener('click', () => kararModalAc());
+  document.getElementById('kurulNotlarBtn').addEventListener('click', kurulNotModalAc);
+  document.getElementById('kurulNotKapatBtn').addEventListener('click', kurulNotModalKapat);
+  document.getElementById('kurulNotIptalBtn').addEventListener('click', kurulNotModalKapat);
+  document.getElementById('kurulNotKaydetBtn').addEventListener('click', _kurulNotKaydetTiklandi);
+  document.getElementById('kurulNotKapalilariGoster').addEventListener('change', () => { _kurulNotTaslagiTopla(); _kurulNotSatirlariniCiz(); });
+  const _ciktiButonu = (id, metin, fn) => document.getElementById(id).addEventListener('click', async () => {
+    const btn = document.getElementById(id); const eski = btn.textContent;
+    btn.disabled = true; btn.textContent = metin;
+    try { await fn(_toplantiId); } catch (hata) { console.error(hata); alert('Çıktı üretilemedi: ' + (hata.message || hata)); }
+    finally { btn.disabled = false; btn.textContent = eski; }
+  });
+  _ciktiButonu('aksiyonPlaniWordBtn', 'Hazırlanıyor...', kurulAksiyonPlaniWordOlustur);
+  _ciktiButonu('aksiyonPlaniExcelBtn', 'Hazırlanıyor...', kurulAksiyonPlaniExcelOlustur);
   document.getElementById('kararModalKapatBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararModalIptalBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararForm').addEventListener('submit', kararFormGonderildi);
@@ -470,7 +483,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
       <td>${_ktKacir(k.kararMetni)}</td>
-      <td>${_ktKacir(k.aksiyonNotu) || '-'}</td>
+      <td style="font-size:12.5px;">${_kurulNotHucresi(k)}</td>
       <td>${_ktKacir(k.sorumlu)}</td>
       <td>${gunAyYil(k.termin) || '-'}</td>
       <td>${_ktKacir(k.oncelik)}</td>
@@ -541,6 +554,72 @@ function kararIstatistikleriniCiz() {
       ${kart(ist.yil + ' Yılında Alınan Karar', ist.alinan)}${kart('Tamamlanan', ist.tamamlanan)}${kart('Açık (Devam Eden)', ist.acik)}${kart('Geciken', ist.geciken)}${kart('Tamamlanma Oranı', oran)}
     </div>
     <div class="tablo-scroll" style="margin-top:10px;"><table class="veri-tablosu"><thead><tr><th>Toplantı</th><th>Alınan Karar</th><th>Tamamlanan</th><th>Açık</th></tr></thead><tbody>${satirlar}</tbody></table></div>`;
+}
+
+// ---- Konuşulanlar (toplantı bazlı karar notları) ----
+
+// Tabloda "gg.aa: not" satırları; bu toplantıdan sonraki toplantıların notları gösterilmez.
+function _kurulNotHucresi(k) {
+  if (k.olayKaynakli) return _ktKacir(k.aksiyonNotu) || '-';
+  const notlar = kararToplantiNotlariniGetir(k, _toplantiId);
+  if (!notlar.length) return '<span style="color:var(--metin-soluk);">-</span>';
+  return notlar.map(n => `<div style="margin-bottom:4px;"><b>${n.eski ? 'Önceki not' : (_kurulNotTarihi(n.tarih) || _ktKacir(n.toplantiNo))}:</b> ${_ktKacir(n.not)}</div>`).join('');
+}
+
+let _kurulNotTaslak = {};
+
+function _kurulNotKararlari() {
+  const { devreden, yeni } = toplantiKararGruplariniGetir(_toplantiId);
+  const kapalilar = document.getElementById('kurulNotKapalilariGoster').checked;
+  return yeni.concat(devreden).filter(k => !k.olayKaynakli && k.id && kararIdIleGetirRepo(k.id))
+    .filter(k => kapalilar || !kararKapaliMi(k.durum) || (_kurulNotTaslak[k.id] || '').trim());
+}
+
+function kurulNotModalAc() {
+  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
+  document.getElementById('kurulNotBaslik').textContent = 'Bu Toplantıda Konuşulanlar' + (toplanti && toplanti.tarih ? ` — ${gunAyYil(toplanti.tarih)}` : '');
+  document.getElementById('kurulNotKapalilariGoster').checked = false;
+  _kurulNotTaslak = {};
+  kararTumunuGetir().forEach(k => { const n = (k.toplantiNotlari || {})[_toplantiId]; if (n) _kurulNotTaslak[k.id] = n; });
+  _kurulNotSatirlariniCiz();
+  document.getElementById('kurulNotKatmani').classList.add('acik');
+}
+
+function kurulNotModalKapat() {
+  document.getElementById('kurulNotKatmani').classList.remove('acik');
+}
+
+function _kurulNotTaslagiTopla() {
+  document.querySelectorAll('#kurulNotGovde [data-kurul-not]').forEach(el => { _kurulNotTaslak[el.getAttribute('data-kurul-not')] = el.value; });
+}
+
+function _kurulNotSatirlariniCiz() {
+  const govde = document.getElementById('kurulNotGovde');
+  const kararlar = _kurulNotKararlari();
+  if (!kararlar.length) { govde.innerHTML = '<tr><td colspan="3">Bu toplantıda gösterilecek karar yok.</td></tr>'; return; }
+  govde.innerHTML = kararlar.map(k => {
+    const onceki = kararToplantiNotlariniGetir(kararIdIleGetirRepo(k.id), _toplantiId).filter(n => n.toplantiId !== _toplantiId);
+    return `
+    <tr>
+      <td><b>${_ktKacir(k.kararNo)}</b><div style="font-size:11px; color:var(--metin-soluk);">${_ktKacir(kararDurumGoster(k.durum))}</div></td>
+      <td style="font-size:12px;">
+        ${k.kaynakGundem ? '<b>' + _ktKacir(k.kaynakGundem) + '</b><br>' : ''}${_ktKacir(k.kararMetni)}
+        <div style="color:var(--metin-soluk); margin-top:3px;">Sorumlu: ${_ktKacir(k.sorumlu) || '-'} · Termin: ${gunAyYil(k.termin) || '-'}</div>
+        ${onceki.length ? `<details style="margin-top:3px;"><summary style="cursor:pointer; color:var(--metin-soluk);">Önceki konuşulanlar (${onceki.length})</summary>${onceki.map(n => `<div><b>${n.eski ? 'Önceki not' : (_kurulNotTarihi(n.tarih) || _ktKacir(n.toplantiNo))}:</b> ${_ktKacir(n.not)}</div>`).join('')}</details>` : ''}
+      </td>
+      <td><textarea data-kurul-not="${k.id}" rows="3" style="margin:0; font-size:12.5px;" placeholder="Bu toplantıda konuşulan / yapılan çalışma...">${_ktKacir(_kurulNotTaslak[k.id] || '')}</textarea></td>
+    </tr>`;
+  }).join('');
+}
+
+function _kurulNotKaydetTiklandi() {
+  _kurulNotTaslagiTopla();
+  // Sadece listede görünen kararların notları yazılır (gizli kalanlara dokunulmaz).
+  const notlar = {};
+  document.querySelectorAll('#kurulNotGovde [data-kurul-not]').forEach(el => { notlar[el.getAttribute('data-kurul-not')] = el.value; });
+  kurulToplantiNotlariniKaydet(_toplantiId, notlar);
+  kurulNotModalKapat();
+  kararlariCiz();
 }
 
 function kararlariCiz() {
@@ -1054,7 +1133,14 @@ function kararModalAc(karar) {
   document.getElementById('kararDurum').innerHTML = KARAR_DURUMLARI.map(d => `<option ${karar && kararDurumGoster(karar.durum) === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('kararKapanisTarihi').value = karar ? karar.kapanisTarihi : '';
   document.getElementById('kararKanit').value = karar ? karar.kanit : '';
-  document.getElementById('kararAksiyonNotu').value = karar ? (karar.aksiyonNotu || '') : '';
+  // Konuşulanlar: önceki toplantıların notları salt okunur, bu toplantınınki düzenlenir.
+  const oncekiNotlar = karar ? kararToplantiNotlariniGetir(karar, _toplantiId).filter(n => n.toplantiId !== _toplantiId) : [];
+  document.getElementById('kararNotGecmisi').innerHTML = oncekiNotlar.length
+    ? `<div style="font-weight:600; margin-bottom:3px;">Önceki toplantılarda konuşulanlar</div>` + oncekiNotlar.map(n => `<div style="padding:3px 0; border-bottom:1px solid var(--kenarlik);"><b>${n.eski ? 'Önceki not' : (_kurulNotTarihi(n.tarih) || _ktKacir(n.toplantiNo))}:</b> ${_ktKacir(n.not)}</div>`).join('')
+    : '';
+  const buToplanti = toplantiIdIleGetirRepo(_toplantiId);
+  document.getElementById('kararToplantiNotuEtiket').textContent = 'Bu Toplantıda Konuşulanlar' + (buToplanti && buToplanti.tarih ? ` (${gunAyYil(buToplanti.tarih)})` : '');
+  document.getElementById('kararToplantiNotu').value = karar && karar.toplantiNotlari ? (karar.toplantiNotlari[_toplantiId] || '') : '';
   document.getElementById('kararOy').value = karar ? (karar.oy || '') : '';
   document.getElementById('kararOySonucu').value = karar ? (karar.oySonucu || '') : '';
   // Yeni kararda oylama dökümü, katılımcı sayısına göre "hepsi kabul etmiş"
@@ -1103,7 +1189,13 @@ function kararFormGonderildi(e) {
     durum: document.getElementById('kararDurum').value,
     kapanisTarihi: document.getElementById('kararKapanisTarihi').value,
     kanit: document.getElementById('kararKanit').value,
-    aksiyonNotu: document.getElementById('kararAksiyonNotu').value,
+    toplantiNotlari: (() => {
+      const mevcut = _duzenlenenKararId ? kararIdIleGetirRepo(_duzenlenenKararId) : null;
+      const tn = Object.assign({}, (mevcut && mevcut.toplantiNotlari) || {});
+      const not = document.getElementById('kararToplantiNotu').value.trim();
+      if (not) tn[_toplantiId] = not; else delete tn[_toplantiId];
+      return tn;
+    })(),
     oy: document.getElementById('kararOy').value,
     oySonucu: document.getElementById('kararOySonucu').value,
     oyKabul: document.getElementById('kararOyKabul').value,
