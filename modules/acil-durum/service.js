@@ -142,6 +142,39 @@ function ekipmanEkle(veriler) {
   return { basarili: true, ekipman: yeni };
 }
 
+// Kullanıcı isteği: "acil durum ekipmanlarına yangın tüpünü ekle ve oradan
+// yangın tüpü sekmesinde aldığım listeye kontrol yapabileyim" -- Yangın
+// Tüpü sekmesindeki her tüp için "Yangın Tüpü" türünde bir ekipman kaydı
+// açılır (Tüp No = Ekipman No); aylık kontrol ekipman tarafında yapılır.
+// Daha önce aktarılmış tüp (yanginTupuId veya aynı numara) tekrar eklenmez;
+// yalnızca bölüm/lokasyon/sorumlu bilgisi tüp kaydından tazelenir.
+function ekipmanaYanginTupleriniAktar() {
+  const ekipmanlar = ekipmanlariTumunuGetir();
+  const tupler = yanginTupleriTumunuGetir();
+  const noAnahtari = s => String(s || '').trim().toLocaleUpperCase('tr');
+  let eklenen = 0, guncellenen = 0;
+  tupler.forEach(t => {
+    const bagli = ekipmanlar.find(e => e.tur === 'Yangın Tüpü' &&
+      ((e.yanginTupuId && e.yanginTupuId === t.id) || (t.tupNo && noAnahtari(e.ekipmanNo) === noAnahtari(t.tupNo))));
+    const ad = ['Yangın Tüpü', t.tip, t.kapasite].filter(Boolean).join(' - ');
+    if (bagli) {
+      const yeniAlanlar = { yanginTupuId: t.id };
+      ['bolum', 'lokasyon', 'sorumlu'].forEach(k => { if (t[k] && t[k] !== bagli[k]) yeniAlanlar[k] = t[k]; });
+      if (Object.keys(yeniAlanlar).some(k => bagli[k] !== yeniAlanlar[k])) { Object.assign(bagli, yeniAlanlar); guncellenen++; }
+      return;
+    }
+    const onEk = _ekipmanOnekAl('Yangın Tüpü');
+    const ekipmanNo = (t.tupNo || '').trim() || sonrakiNoUret(onEk, ekipmanlar.filter(e => _ekipmanOnekAl(e.tur) === onEk), 'ekipmanNo');
+    ekipmanlar.push(ekipmanOlustur({
+      tur: 'Yangın Tüpü', ekipmanNo, ad, bolum: t.bolum, lokasyon: t.lokasyon, sorumlu: t.sorumlu,
+      yanginTupuId: t.id, haritaTesisId: t.haritaTesisId, haritaX: t.haritaX, haritaY: t.haritaY
+    }));
+    eklenen++;
+  });
+  if (eklenen || guncellenen) ekipmanlariTumunuKaydetRepo(ekipmanlar);
+  return { toplamTup: tupler.length, eklenen, guncellenen };
+}
+
 function ekipmanGuncelle(id, veriler) {
   const dogrulama = ekipmanDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };

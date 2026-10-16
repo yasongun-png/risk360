@@ -92,7 +92,10 @@ const YANGIN_DOLABI_TIPLERI = [
   '2. Tip - İç Alan, Tek Hortumlu, Yangın Tüplü, 1 inç',
   '3. Tip - Dış Alan Sahra Tipi, Tek Hortumlu, 2 inç'
 ];
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti'];
+// Kullanıcı isteği: "acil durum ekipmanlarına yangın tüpünü ekle" -- aylık
+// gözle kontrol (bölüm, lokasyon, barkod, kontrol formu) için ekipman türü;
+// yıllık bakım/hidrostatik test takibi ayrı "Yangın Tüpü" sekmesinde kalır.
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Yangın Tüpü', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -175,6 +178,19 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'lansMevcut', soru: 'Lans mevcut' },
     { id: 'lansSaglam', soru: 'Lans sağlam' },
     { id: 'lansCalisiyor', soru: 'Lans çalışır durumda' }
+  ],
+  // TS ISO 11602-2 aylık gözle kontrol kapsamı; yıllık bakım ve hidrostatik
+  // test yetkili servis işidir (bkz. Yangın Tüpü sekmesi, yanginTupuOlustur).
+  'Yangın Tüpü': [
+    { id: 'yerinde', soru: 'Tüp belirlenen yerinde, askısında/standında' },
+    { id: 'onundeEngelYok', soru: 'Önünde engel yok, kolay erişilebilir' },
+    { id: 'isaretleme', soru: 'Yangın tüpü işaret levhası görünür' },
+    { id: 'pimMuhur', soru: 'Emniyet pimi ve mühür yerinde, sağlam' },
+    { id: 'manometre', soru: 'Manometre ibresi yeşil (çalışma) bölgede' },
+    { id: 'govde', soru: 'Gövdede ezik, korozyon, hasar yok' },
+    { id: 'hortumNozul', soru: 'Hortum ve nozul sağlam, tıkalı/çatlak değil' },
+    { id: 'etiket', soru: 'Kullanım talimatı ve etiket okunaklı' },
+    { id: 'bakimTarihi', soru: 'Yıllık bakım etiketi mevcut ve tarihi geçmemiş' }
   ],
   'Göz Duşu': [
     { id: 'erisim', soru: 'Göz duşuna erişim engelsiz' },
@@ -692,6 +708,9 @@ function ekipmanOlustur(veriler) {
     fotoUrl: veriler.fotoUrl || '',
     fotoUrl2: veriler.fotoUrl2 || '',
     fotoUrl3: veriler.fotoUrl3 || '',
+    // "Yangın Tüpü" türündeki ekipman, Yangın Tüpü sekmesindeki hangi kayıttan
+    // alındı (bkz. service.js ekipmanaYanginTupleriniAktar).
+    yanginTupuId: veriler.yanginTupuId || '',
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
 
     // Saha Dijital Haritası köprüsü — bkz. modules/harita.

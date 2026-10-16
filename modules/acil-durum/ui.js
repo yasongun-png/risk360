@@ -407,6 +407,17 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // kaldırıldı, barkod tarama artık tek başına ekipman toolbar'ında.
   document.getElementById('ekipmanBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
   document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
+  // Kullanıcı isteği: Yangın Tüpü sekmesindeki listeyi Ekipman'a alıp
+  // aylık kontrolü buradan yapmak (bkz. service.js ekipmanaYanginTupleriniAktar).
+  document.getElementById('ekipmanYanginTupuAlBtn').addEventListener('click', () => {
+    const s = ekipmanaYanginTupleriniAktar();
+    if (!s.toplamTup) { alert('Yangın Tüpü sekmesinde kayıtlı tüp yok.'); return; }
+    alert(`Yangın Tüpü sekmesindeki ${s.toplamTup} tüpten ${s.eklenen} tanesi Ekipman listesine eklendi` +
+      (s.guncellenen ? `, ${s.guncellenen} tanesinin bölüm/lokasyon bilgisi güncellendi` : '') +
+      `.\nDaha önce eklenmiş tüpler tekrar eklenmez. Listede "Yangın Tüpü" türünü seçerek görebilirsiniz.`);
+    _ekipmanBolumSekmeleriCiz();
+    ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+  });
   document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
     excelIceAktar(dosya, EKIPMAN_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
