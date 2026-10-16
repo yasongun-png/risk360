@@ -179,19 +179,8 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'lansSaglam', soru: 'Lans sağlam' },
     { id: 'lansCalisiyor', soru: 'Lans çalışır durumda' }
   ],
-  // TS ISO 11602-2 aylık gözle kontrol kapsamı; yıllık bakım ve hidrostatik
-  // test yetkili servis işidir (bkz. Yangın Tüpü sekmesi, yanginTupuOlustur).
-  'Yangın Tüpü': [
-    { id: 'yerinde', soru: 'Tüp belirlenen yerinde, askısında/standında' },
-    { id: 'onundeEngelYok', soru: 'Önünde engel yok, kolay erişilebilir' },
-    { id: 'isaretleme', soru: 'Yangın tüpü işaret levhası görünür' },
-    { id: 'pimMuhur', soru: 'Emniyet pimi ve mühür yerinde, sağlam' },
-    { id: 'manometre', soru: 'Manometre ibresi yeşil (çalışma) bölgede' },
-    { id: 'govde', soru: 'Gövdede ezik, korozyon, hasar yok' },
-    { id: 'hortumNozul', soru: 'Hortum ve nozul sağlam, tıkalı/çatlak değil' },
-    { id: 'etiket', soru: 'Kullanım talimatı ve etiket okunaklı' },
-    { id: 'bakimTarihi', soru: 'Yıllık bakım etiketi mevcut ve tarihi geçmemiş' }
-  ],
+  // 'Yangın Tüpü' kriterleri aşağıda YANGIN_TUPU_KONTROL_SORULARI'ndan
+  // atanır (Yangın Tüpü sekmesiyle aynı liste, cevaplar iki tarafta ortak).
   'Göz Duşu': [
     { id: 'erisim', soru: 'Göz duşuna erişim engelsiz' },
     { id: 'akis', soru: 'Su akışı yeterli' },
@@ -408,6 +397,10 @@ const YANGIN_TUPU_KONTROL_SORULARI = [
   { id: 'yerIsaretleme', soru: 'Yangın tüpünün bulunduğu yer uygun şekilde işaretlenmiş mi?' },
   { id: 'ortamUygunlugu', soru: 'Tüpün bulunduğu ortam açısından uygun durumda mı?' }
 ];
+// Ekipman sekmesindeki "Yangın Tüpü" kontrolü bu listeyle yapılır, böylece
+// cevaplar Yangın Tüpü sekmesindeki kayda birebir yazılabilir (bkz.
+// service.js yanginTupuEkipmanEsitle).
+EKIPMAN_KONTROL_SORULARI['Yangın Tüpü'] = YANGIN_TUPU_KONTROL_SORULARI;
 
 // Md.11: Söndürme/Kurtarma/Koruma ekiplerinin her biri için tehlike sınıfına göre bu sayıya
 // kadar her çalışan grubunda en az 1 destek elemanı.

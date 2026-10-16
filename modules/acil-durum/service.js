@@ -143,36 +143,71 @@ function ekipmanEkle(veriler) {
 }
 
 // Kullanıcı isteği: "acil durum ekipmanlarına yangın tüpünü ekle ve oradan
-// yangın tüpü sekmesinde aldığım listeye kontrol yapabileyim" -- Yangın
-// Tüpü sekmesindeki her tüp için "Yangın Tüpü" türünde bir ekipman kaydı
-// açılır (Tüp No = Ekipman No); aylık kontrol ekipman tarafında yapılır.
-// Daha önce aktarılmış tüp (yanginTupuId veya aynı numara) tekrar eklenmez;
-// yalnızca bölüm/lokasyon/sorumlu bilgisi tüp kaydından tazelenir.
-function ekipmanaYanginTupleriniAktar() {
+// yangın tüpü sekmesinde aldığım listeye kontrol yapabileyim ... mevcut
+// yangın tüpü listesiyle bağlantısı yok" -- Ekipman'daki "Yangın Tüpü"
+// kayıtları Yangın Tüpü sekmesindeki listenin canlı yansımasıdır:
+//  - Tüp listesi ANA kaynaktır: her tüpün bir ekipman kaydı vardır (Tüp No =
+//    Ekipman No); no/tip/bölüm/lokasyon/sorumlu tüpten gelir.
+//  - Kontrol Ekipman tarafında yapılır (form, barkod formu); cevaplar
+//    (aynı YANGIN_TUPU_KONTROL_SORULARI) tüp kaydına geri yazılır, Yangın Tüpü
+//    sekmesindeki "⚠️ Kontrol Eksik" uyarısı da buna göre çıkar.
+//  - Tüp silinince bağlı ekipman da silinir (yanginTupuSil/Toplusil) -- burada
+//    otomatik silme YAPILMAZ ki liste henüz yüklenmemişken kayıt kaybolmasın.
+// Her iki sekmenin çiziminde çağrılır; değişiklik yoksa hiçbir şey yazmaz.
+function _ytNoAnahtari(s) { return String(s || '').trim().toLocaleUpperCase('tr'); }
+
+function _ytBagliEkipmaniBul(ekipmanlar, t) {
+  return ekipmanlar.find(e => e.tur === 'Yangın Tüpü' && e.yanginTupuId === t.id) ||
+    ekipmanlar.find(e => e.tur === 'Yangın Tüpü' && !e.yanginTupuId && t.tupNo && _ytNoAnahtari(e.ekipmanNo) === _ytNoAnahtari(t.tupNo));
+}
+
+function _ytCevapVarMi(c) { return Object.values(c || {}).some(Boolean); }
+
+function yanginTupuEkipmanEsitle() {
   const ekipmanlar = ekipmanlariTumunuGetir();
   const tupler = yanginTupleriTumunuGetir();
-  const noAnahtari = s => String(s || '').trim().toLocaleUpperCase('tr');
-  let eklenen = 0, guncellenen = 0;
+  let ekipmanDegisti = false, tupDegisti = false, eklenen = 0;
   tupler.forEach(t => {
-    const bagli = ekipmanlar.find(e => e.tur === 'Yangın Tüpü' &&
-      ((e.yanginTupuId && e.yanginTupuId === t.id) || (t.tupNo && noAnahtari(e.ekipmanNo) === noAnahtari(t.tupNo))));
-    const ad = ['Yangın Tüpü', t.tip, t.kapasite].filter(Boolean).join(' - ');
-    if (bagli) {
-      const yeniAlanlar = { yanginTupuId: t.id };
-      ['bolum', 'lokasyon', 'sorumlu'].forEach(k => { if (t[k] && t[k] !== bagli[k]) yeniAlanlar[k] = t[k]; });
-      if (Object.keys(yeniAlanlar).some(k => bagli[k] !== yeniAlanlar[k])) { Object.assign(bagli, yeniAlanlar); guncellenen++; }
+    const bagli = _ytBagliEkipmaniBul(ekipmanlar, t);
+    const kimlik = {
+      yanginTupuId: t.id,
+      ekipmanNo: t.tupNo || (bagli && bagli.ekipmanNo) || '',
+      ad: ['Yangın Tüpü', t.tip, t.kapasite].filter(Boolean).join(' - '),
+      bolum: t.bolum || '', lokasyon: t.lokasyon || '', sorumlu: t.sorumlu || ''
+    };
+    if (!bagli) {
+      ekipmanlar.push(ekipmanOlustur(Object.assign({ tur: 'Yangın Tüpü', kontrolCevaplari: t.kontrolCevaplari,
+        haritaTesisId: t.haritaTesisId, haritaX: t.haritaX, haritaY: t.haritaY }, kimlik)));
+      ekipmanDegisti = true; eklenen++;
       return;
     }
-    const onEk = _ekipmanOnekAl('Yangın Tüpü');
-    const ekipmanNo = (t.tupNo || '').trim() || sonrakiNoUret(onEk, ekipmanlar.filter(e => _ekipmanOnekAl(e.tur) === onEk), 'ekipmanNo');
-    ekipmanlar.push(ekipmanOlustur({
-      tur: 'Yangın Tüpü', ekipmanNo, ad, bolum: t.bolum, lokasyon: t.lokasyon, sorumlu: t.sorumlu,
-      yanginTupuId: t.id, haritaTesisId: t.haritaTesisId, haritaX: t.haritaX, haritaY: t.haritaY
-    }));
-    eklenen++;
+    Object.keys(kimlik).forEach(k => { if (bagli[k] !== kimlik[k]) { bagli[k] = kimlik[k]; ekipmanDegisti = true; } });
+    // Kontrol cevapları: ekipman tarafı (son kontrol) tüpe yazılır.
+    if (_ytCevapVarMi(bagli.kontrolCevaplari) && JSON.stringify(bagli.kontrolCevaplari) !== JSON.stringify(t.kontrolCevaplari || {})) {
+      t.kontrolCevaplari = Object.assign({}, bagli.kontrolCevaplari);
+      tupDegisti = true;
+    }
   });
-  if (eklenen || guncellenen) ekipmanlariTumunuKaydetRepo(ekipmanlar);
-  return { toplamTup: tupler.length, eklenen, guncellenen };
+  if (ekipmanDegisti) ekipmanlariTumunuKaydetRepo(ekipmanlar);
+  if (tupDegisti) yanginTupuListesiKaydetRepo(tupler);
+  return { eklenen, ekipmanDegisti, tupDegisti };
+}
+
+// Tüp formunda kontrol cevapları değiştirilirse bağlı ekipmana da yazılır
+// (yoksa bir sonraki eşitlemede ekipmandaki eski cevaplar tüpü ezerdi).
+function _ytEkipmanCevaplariniGuncelle(tupId, cevaplar) {
+  const ekipmanlar = ekipmanlariTumunuGetir();
+  const bagli = ekipmanlar.find(e => e.tur === 'Yangın Tüpü' && e.yanginTupuId === tupId);
+  if (!bagli || JSON.stringify(bagli.kontrolCevaplari || {}) === JSON.stringify(cevaplar || {})) return;
+  bagli.kontrolCevaplari = Object.assign({}, cevaplar);
+  ekipmanlariTumunuKaydetRepo(ekipmanlar);
+}
+
+function _ytBagliEkipmanlariSil(tupIdleri) {
+  const idSeti = new Set(tupIdleri);
+  const ekipmanlar = ekipmanlariTumunuGetir();
+  const kalan = ekipmanlar.filter(e => !(e.tur === 'Yangın Tüpü' && e.yanginTupuId && idSeti.has(e.yanginTupuId)));
+  if (kalan.length !== ekipmanlar.length) ekipmanlariTumunuKaydetRepo(kalan);
 }
 
 function ekipmanGuncelle(id, veriler) {
@@ -335,12 +370,14 @@ function yanginTupuGuncelle(id, veriler) {
     }, {}),
     notlar: (veriler.notlar || '').trim()
   });
+  if (guncellenen) _ytEkipmanCevaplariniGuncelle(id, guncellenen.kontrolCevaplari);
   return { basarili: true, tup: guncellenen };
 }
 
 function yanginTupuSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yanginTupuSilRepo(id);
+  _ytBagliEkipmanlariSil([id]);
   return { basarili: true };
 }
 
@@ -376,6 +413,9 @@ async function yanginTupuTopluIceAktar(satirlar) {
       (tupNo && (t.tupNo || '').trim().toLowerCase() === tupNo) ||
       (seri && (t.seriNumarasi || '').trim().toLowerCase() === seri)
     );
+    // Boş "Firma Barkodu" hücresi (ya da sütunu olmayan eski şablon) daha önce
+    // bağlanmış barkodu silmesin.
+    if (!satir.barkodDegeri) delete satir.barkodDegeri;
     if (mevcutIndex !== -1) {
       liste[mevcutIndex] = yanginTupuOlustur(Object.assign({}, liste[mevcutIndex], satir, { id: liste[mevcutIndex].id }));
     } else {
@@ -418,6 +458,7 @@ function yanginTupuToplusil(idler) {
   const tumu = yanginTupleriTumunuGetir();
   const kalanlar = tumu.filter(t => !idSeti.has(t.id));
   yanginTupuListesiKaydetRepo(kalanlar);
+  _ytBagliEkipmanlariSil(idler);
   return { basarili: true, silinen: tumu.length - kalanlar.length };
 }
 

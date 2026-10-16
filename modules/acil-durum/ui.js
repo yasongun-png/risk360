@@ -277,6 +277,11 @@ const YANGIN_TUPU_IMPORT_KOLONLARI = [
   { anahtar: 'bolum', baslik: 'Bölüm' },
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'seriNumarasi', baslik: 'Seri Numarası' },
+  // Kullanıcı isteği: "yangın tüplerinin üzerindeki firmanın yaptığı
+  // barkodları sana versem" -- firma QR/barkod içeriği Excel'den topluca
+  // bağlanabilsin (boş hücre mevcut bağlantıyı SİLMEZ, bkz. service.js
+  // yanginTupuTopluIceAktar).
+  { anahtar: 'barkodDegeri', baslik: 'Firma Barkodu', esanlamlar: ['Barkod', 'Barkod Değeri', 'QR', 'QR Kod', 'Firma QR'] },
   { anahtar: 'uretici', baslik: 'Üretici' },
   { anahtar: 'uretimTarihi', baslik: 'Üretim Tarihi' },
   { anahtar: 'doluTarihi', baslik: 'Dolum Tarihi' },
@@ -295,6 +300,7 @@ const YANGIN_TUPU_EXPORT_KOLONLARI = [
   { anahtar: 'kapasite', baslik: 'Kapasite' },
   { anahtar: 'lokasyon', baslik: 'Lokasyon' },
   { anahtar: 'seriNumarasi', baslik: 'Seri Numarası' },
+  { anahtar: 'barkodDegeri', baslik: 'Firma Barkodu' },
   { anahtar: 'uretici', baslik: 'Üretici' },
   { anahtar: 'doluTarihi', baslik: 'Dolum Tarihi' },
   { anahtar: 'sonrakiYillikBakim', baslik: 'Sonraki Yıllık Bakım' },
@@ -407,17 +413,6 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // kaldırıldı, barkod tarama artık tek başına ekipman toolbar'ında.
   document.getElementById('ekipmanBarkodTaraBtn').addEventListener('click', ekipmanBarkodTaramaBaslat);
   document.getElementById('ekipmanIceAktarBtn').addEventListener('click', () => document.getElementById('ekipmanIceAktarDosya').click());
-  // Kullanıcı isteği: Yangın Tüpü sekmesindeki listeyi Ekipman'a alıp
-  // aylık kontrolü buradan yapmak (bkz. service.js ekipmanaYanginTupleriniAktar).
-  document.getElementById('ekipmanYanginTupuAlBtn').addEventListener('click', () => {
-    const s = ekipmanaYanginTupleriniAktar();
-    if (!s.toplamTup) { alert('Yangın Tüpü sekmesinde kayıtlı tüp yok.'); return; }
-    alert(`Yangın Tüpü sekmesindeki ${s.toplamTup} tüpten ${s.eklenen} tanesi Ekipman listesine eklendi` +
-      (s.guncellenen ? `, ${s.guncellenen} tanesinin bölüm/lokasyon bilgisi güncellendi` : '') +
-      `.\nDaha önce eklenmiş tüpler tekrar eklenmez. Listede "Yangın Tüpü" türünü seçerek görebilirsiniz.`);
-    _ekipmanBolumSekmeleriCiz();
-    ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
-  });
   document.getElementById('ekipmanIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
     excelIceAktar(dosya, EKIPMAN_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
@@ -832,6 +827,7 @@ function _ekipmanFiltrelenmisListeGetir(aramaMetni) {
 }
 
 function ekipmanlariCiz(aramaMetni) {
+  try { yanginTupuEkipmanEsitle(); } catch (e) { console.error('Yangın tüpü eşitleme', e); }
   const govde = document.getElementById('ekipmanTabloGovde');
   const bosDurum = document.getElementById('ekipmanBosDurum');
   let liste = _ekipmanFiltrelenmisListeGetir(aramaMetni);
@@ -1026,10 +1022,12 @@ function ekipmanBarkodTaramaBaslat() {
   durum.classList.remove('gorunur');
   document.getElementById('ekipmanBarkodTaramaKatman').classList.add('acik');
 
-  _ekBarkodTarayici = new Html5Qrcode('ekipmanBarkodTaramaOkuyucu', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128], verbose: false });
+  // Yangın tüplerinde firmanın kendi QR etiketi de okutulabilsin diye QR
+  // formatı da açık (bkz. _ekBarkodOkundu, bağlı tüpün barkodDegeri).
+  _ekBarkodTarayici = new Html5Qrcode('ekipmanBarkodTaramaOkuyucu', { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.QR_CODE], verbose: false });
   _ekBarkodTarayici.start(
     { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 260, height: 120 } },
+    { fps: 10, qrbox: { width: 260, height: 200 } },
     _ekBarkodOkundu,
     () => {}
   ).catch(hata => {
@@ -1039,11 +1037,19 @@ function ekipmanBarkodTaramaBaslat() {
 }
 
 function _ekBarkodOkundu(kod) {
-  const ekipman = ekipmanlariTumunuGetir().find(e => (e.ekipmanNo || '').trim() === kod.trim() || e.id === kod.trim());
+  const tumEkipman = ekipmanlariTumunuGetir();
+  let ekipman = tumEkipman.find(e => (e.ekipmanNo || '').trim() === kod.trim() || e.id === kod.trim());
+  // Firmanın yangın tüpü etiketi (QR/barkod) okunduysa: Yangın Tüpü
+  // sekmesindeki eşleşen tüpün bağlı ekipman kaydı açılır.
+  if (!ekipman) {
+    const tup = _yanginTupuBarkodEslesenTupuBul(kod);
+    if (tup) ekipman = tumEkipman.find(e => e.tur === 'Yangın Tüpü' && e.yanginTupuId === tup.id);
+  }
   if (!ekipman) {
     const durum = document.getElementById('ekipmanBarkodTaramaDurum');
     if (durum) {
-      durum.textContent = `"${kod}" koduyla eşleşen ekipman bulunamadı, taramaya devam ediliyor…`;
+      durum.textContent = `"${kod}" koduyla eşleşen ekipman bulunamadı, taramaya devam ediliyor… ` +
+        '(Yangın tüpü etiketiyse: Yangın Tüpü sekmesinde bir kez okutup ilgili tüpe bağlayın ya da Excel\'de "Firma Barkodu" sütununa etiketteki numarayı yazın.)';
       durum.classList.add('gorunur');
     }
     return;
@@ -1158,17 +1164,41 @@ async function yanginTupuBarkodFotografSecildi(e) {
   }
 }
 
+// Kullanıcı isteği: "yangın tüplerinin tamamında bu şekilde barkodlar var,
+// bunları kullanmak istiyorum" — servis firmasının etiketindeki QR çoğu
+// zaman bir web adresidir (ör. ...ysc?ysc=00111634) ve etikette QR'ın
+// yanında aynı numara yazar. Okunan metinden şu adaylar çıkarılır: metnin
+// kendisi, adres parametre değerleri, son yol parçası ve 4+ haneli sayılar;
+// sayılar baştaki sıfırlar olmadan da karşılaştırılır. Böylece Excel'e
+// "Firma Barkodu" olarak yalnızca etiketteki numaranın yazılması yeterlidir.
+function _ytBarkodAdaylari(kod) {
+  const ham = String(kod || '').trim();
+  const adaylar = new Set([ham]);
+  try {
+    const u = new URL(ham);
+    u.searchParams.forEach(v => adaylar.add(v.trim()));
+    const yol = u.pathname.split('/').filter(Boolean);
+    if (yol.length) adaylar.add(decodeURIComponent(yol[yol.length - 1]));
+  } catch (e) { /* adres değil */ }
+  (ham.match(/\d{4,}/g) || []).forEach(s => adaylar.add(s));
+  return adaylar;
+}
+
+function _ytBarkodNormal(s) {
+  const t = String(s || '').trim().toLowerCase();
+  return /^\d+$/.test(t) ? t.replace(/^0+(?=\d)/, '') : t;
+}
+
 function _yanginTupuBarkodEslesenTupuBul(kod) {
-  const temizKod = kod.trim().toLowerCase();
-  return yanginTupleriTumunuGetir().find(t =>
-    (t.tupNo || '').trim().toLowerCase() === temizKod ||
-    (t.seriNumarasi || '').trim().toLowerCase() === temizKod ||
-    // Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı
-    // barkod sistemi var" — firmanın kendi QR'ı (barkodDegeri) Tüp No/Seri
-    // No'dan tamamen farklı bir değer (ör. URL) olabilir, bkz. model.js.
-    (t.barkodDegeri || '').trim().toLowerCase() === temizKod ||
-    t.id === kod.trim()
-  ) || null;
+  const adaylar = new Set(Array.from(_ytBarkodAdaylari(kod)).map(_ytBarkodNormal).filter(Boolean));
+  const tumKod = _ytBarkodNormal(kod);
+  const tupler = yanginTupleriTumunuGetir();
+  // Önce firma barkodu (tam metin ya da içindeki numara), sonra Tüp No / Seri No.
+  return tupler.find(t => t.barkodDegeri && (_ytBarkodNormal(t.barkodDegeri) === tumKod || adaylar.has(_ytBarkodNormal(t.barkodDegeri)))) ||
+    tupler.find(t => t.id === String(kod || '').trim() ||
+      (t.tupNo && adaylar.has(_ytBarkodNormal(t.tupNo))) ||
+      (t.seriNumarasi && adaylar.has(_ytBarkodNormal(t.seriNumarasi)))) ||
+    null;
 }
 
 // Kullanıcı isteği: "bu yangın tüpelerin üzerinde firmanın yaptığı barkod
@@ -1626,6 +1656,7 @@ function _yanginTupuTurOzetiHtml(liste) {
 }
 
 function yanginTupleriniCiz(aramaMetni) {
+  try { yanginTupuEkipmanEsitle(); } catch (e) { console.error('Yangın tüpü eşitleme', e); }
   const govde = document.getElementById('yanginTupuTabloGovde');
   const bosDurum = document.getElementById('yanginTupuBosDurum');
   const liste = yanginTupleriniGetir(aramaMetni);
