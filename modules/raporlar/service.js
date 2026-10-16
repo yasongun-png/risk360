@@ -1,15 +1,12 @@
 // Raporlar: platformdaki tüm modüllerin verisinden İSG performans özetini
 // (KPI kartları + basit grafikler) hesaplayan salt-okunur toplama katmanı.
-// Merkezi Aksiyon Takibi gibi kendi verisi yoktur, düzenleme kaynak modülde
-// yapılır. Aynı gerekçeyle (bkz. merkezi-aksiyon/service.js başlığı) diğer
+// Kendi verisi yoktur, düzenleme kaynak modülde yapılır. Diğer
 // modüllerin repository.js/service.js dosyaları YÜKLENMEZ — aynı isimli özel
 // yardımcı fonksiyonlar (ör. birçok modülün kendi bugunIso()'su) birlikte
 // yüklenince sessizce birbirinin üzerine yazabiliyor. Bunun yerine her
 // kaynağın tenant anahtarı burada doğrudan okunur; gereken küçük iş kuralları
 // (geçerlilik/durum hesaplama vb.) çakışmaması için kendi önekiyle (_rp) tekrar
-// yazılır. Tek istisna: merkezi-aksiyon/service.js — kendi iç adları zaten
-// "_ma" önekiyle izole, o yüzden merkeziAksiyonOzetiHesapla() doğrudan tekrar
-// kullanılır.
+// yazılır.
 
 function _rpBugun() { return new Date().toISOString().slice(0, 10); }
 
@@ -477,7 +474,6 @@ function raporGenelOzetiHesapla(firma) {
     isIzni: raporIsIzniOzeti(),
     malzemeTalep: raporMalzemeTalepOzeti(),
     acilDurum: raporAcilDurumYeterlilikOzeti(firma, personelEgitim.personelSayisi),
-    engelliKotasi: raporEngelliCalisanOzeti(),
-    merkeziAksiyon: merkeziAksiyonOzetiHesapla()
+    engelliKotasi: raporEngelliCalisanOzeti()
   };
 }

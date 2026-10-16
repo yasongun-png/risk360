@@ -63,7 +63,7 @@ function _rpDevirDaimAylikTablosu(aylikListe) {
 function raporlarSayfasiniCiz(ozet) {
   const pe = ozet.personelEgitim, dd = ozet.devirDaim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
-    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi, ma = ozet.merkeziAksiyon;
+    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi;
 
   document.getElementById('rpIcerik').innerHTML = `
     ${_rpBolumBasligi('Genel Bakış')}
@@ -76,7 +76,6 @@ function raporlarSayfasiniCiz(ozet) {
       ${_rpKart('Açık İş İzni', izin.acikSayisi)}
       ${_rpKart('Acil Durum Ekip Yeterliliği', ad.uygun ? 'Uygun' : ad.toplamEksik + ' Eksik', !ad.uygun)}
       ${_rpKart('Engelli Çalışan Kotası (%3)', eng.zorunlulukKapsaminda ? (eng.uygun ? 'Uygun' : eng.eksik + ' Eksik') : 'Kapsam Dışı', eng.zorunlulukKapsaminda && !eng.uygun)}
-      ${_rpKart('Toplam Açık Aksiyon', ma.toplamAcik)}
     </div>
 
     ${_rpBolumBasligi('Eğitim ve Personel')}
@@ -185,22 +184,13 @@ function raporlarSayfasiniCiz(ozet) {
       ${_rpKart('Eksik', eng.eksik, eng.zorunlulukKapsaminda && eng.eksik > 0)}
     </div>
 
-    ${_rpBolumBasligi('Merkezi Aksiyon Takibi')}
-    <div class="istatistik-grid">
-      ${_rpKart('Toplam Açık Aksiyon', ma.toplamAcik)}
-      ${_rpKart('Gecikmiş', ma.gecikmis, ma.gecikmis > 0)}
-      ${_rpKart('7 Gün İçinde Termini Dolacak', ma.yaklasiyor)}
-    </div>
-    <p style="font-size:12px; font-weight:700; color:var(--metin-soluk); margin:14px 0 4px;">Kaynak Modüle Göre Dağılım</p>
-    ${_rpYatayCubuklar(ma.kaynagaGore.map(([etiket, sayi]) => ({ etiket, sayi })))}
-    <p style="margin-top:10px;"><a class="geri-link" href="../merkezi-aksiyon/index.html">Tüm açık aksiyonları incele →</a></p>
   `;
 }
 
 function raporOzetiYazdir(ozet, firmaAdi) {
   const pe = ozet.personelEgitim, dd = ozet.devirDaim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
-    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi, ma = ozet.merkeziAksiyon;
+    mlz = ozet.malzemeTalep, ad = ozet.acilDurum, eng = ozet.engelliKotasi;
 
   const satir = (etiket, deger) => `<tr><td style="font-weight:700; width:280px;">${_raporKacir(etiket)}</td><td>${_raporKacir(deger)}</td></tr>`;
 
@@ -223,7 +213,6 @@ function raporOzetiYazdir(ozet, firmaAdi) {
       ${satir('Açık İSG Malzeme Talebi', mlz.acikSayisi)}
       ${satir('Acil Durum Ekip / İlkyardımcı Yeterliliği', (ad.uygun ? 'Uygun' : ad.toplamEksik + ' kişi eksik'))}
       ${satir('Engelli Çalışan Kotası (%3, İş Kanunu Md.30)', eng.zorunlulukKapsaminda ? (eng.engelliSayisi + ' / ' + eng.toplamCalisan + ' (%' + eng.oranYuzde + ') — ' + (eng.uygun ? 'Uygun' : eng.eksik + ' kişi eksik')) : 'Kapsam dışı (< 50 çalışan)')}
-      ${satir('Toplam Açık Aksiyon / Gecikmiş', ma.toplamAcik + ' / ' + ma.gecikmis)}
     </table>
   `;
   _raporYazdirmaAlaniniGoster(html);

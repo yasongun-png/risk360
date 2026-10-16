@@ -754,7 +754,11 @@ function fotoSikistir(dosya, maxKenar, kalite) {
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * olcek);
         canvas.height = Math.round(img.height * olcek);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const ctx = canvas.getContext('2d');
+        // JPEG şeffaflık taşımaz: şeffaf PNG'ler (levha görselleri vb.) siyah çıkmasın
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', kalite || 0.55));
       };
       img.src = okuyucu.result;
