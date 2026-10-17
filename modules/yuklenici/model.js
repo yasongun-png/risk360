@@ -275,7 +275,8 @@ const YUKLENICI_BELGE_TANIMLARI = [
   // şimdilik". bilgiAmacli: sadece formda girilir/saklanır; uygunluk, eksik
   // belge sayısı ve raporlardaki belge listeleri (yukleniciGecerliBelgeTanimlari)
   // bu tanımı HİÇ görmez.
-  { id: 'yuksekteCalisma', ad: 'Yüksekte Çalışma Eğitimi', tur: 'tarih-bilgi', girisEngelleyici: false, bilgiAmacli: true, bolum: 'ek' }
+  // Kullanıcı isteği: tarihli değil Var/Yok.
+  { id: 'yuksekteCalisma', ad: 'Yüksekte Çalışma Eğitimi', tur: 'var-yok', girisEngelleyici: false, bilgiAmacli: true, bolum: 'ek' }
 ];
 
 function yukleniciBelgeTanimiGetir(id) {
@@ -326,7 +327,7 @@ function yukleniciYilEkle(tarihStr, yil) {
 // effectiveExpDate ile birebir aynı kurallar.
 function yukleniciBelgeBitisTarihiHesapla(belgeTanimi, kayit, tehlikeSinifi) {
   if (!belgeTanimi || !kayit) return '';
-  if (belgeTanimi.tur === 'var-yok' || belgeTanimi.tur === 'tarih-bilgi') return '';
+  if (belgeTanimi.tur === 'var-yok') return '';
 
   if (belgeTanimi.tur === 'egitim') {
     if (kayit.exp) return kayit.exp;

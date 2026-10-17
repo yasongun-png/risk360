@@ -460,10 +460,6 @@ function _kisiBelgeSatiriHtml(belgeTanimi, kayit, tehlikeSinifi) {
         <option value="Var" ${varMi ? 'selected' : ''}>Var</option>
       </select>
     `;
-  } else if (belgeTanimi.tur === 'tarih-bilgi') {
-    alanlar = `
-      <input type="date" data-belge-alan="base" data-belge-id="${belgeTanimi.id}" value="${k.base || ''}" title="Eğitim tarihi" style="width:auto;">
-    `;
   } else if (belgeTanimi.tur === 'tarih-tek') {
     alanlar = `
       <input type="date" data-belge-alan="exp" data-belge-id="${belgeTanimi.id}" value="${k.exp || ''}" title="En son giriş yapabileceği tarih" style="width:auto;">
@@ -783,6 +779,8 @@ function _ykFirmaTehlikesiniUygula(firmaId, sec, notEl) {
     sec.disabled = true;
     if (notEl) notEl.textContent = 'Firmanın işyeri tehlike sınıfından geliyor.';
   } else {
+    // Değer önceki firmadan geldiyse (alan kilitliydi) taşınmasın, varsayılana dön.
+    if (sec.disabled) sec.value = 'az';
     sec.disabled = false;
     if (notEl) notEl.textContent = '';
   }
@@ -930,7 +928,21 @@ function topluKisiAc() {
       _yukleniciFirmaListesiCiz(firmaSec, terim ? firmalar.filter(f => _basligiNormallestir(f.firmaAdi).includes(terim)) : firmalar, seciliId);
     });
     const belgeleriCiz = () => _topluKisiBelgeleriCiz(i);
-    firmaSec.addEventListener('change', () => { if (_ykFirmaTehlikesiniUygula(firmaSec.value, q('tehlikeSinifi'), q('tehlikeKaynak'))) belgeleriCiz(); });
+    firmaSec.addEventListener('change', () => {
+      sutun.dataset.firmaElle = '1';
+      _topluKisiFirmaUygula(i, firmaSec.value);
+      // Kullanıcı isteği: "ilk forma seçtiğim firma diğerlerine de seçilsin,
+      // hangisinde seçersem fark etmeksizin" — elle firma seçilmemiş diğer
+      // sütunlara aynı firma yazılır (elle farklı firma seçilenler korunur).
+      kutu.querySelectorAll('[data-tk]').forEach(diger => {
+        if (diger === sutun || diger.dataset.firmaElle) return;
+        const j = Number(diger.getAttribute('data-tk'));
+        const arama = diger.querySelector('[data-tk-alan="firmaAra"]');
+        arama.value = '';
+        _yukleniciFirmaListesiCiz(diger.querySelector('[data-tk-alan="firmaId"]'), firmalar, firmaSec.value);
+        _topluKisiFirmaUygula(j, firmaSec.value);
+      });
+    });
     q('tehlikeSinifi').addEventListener('change', belgeleriCiz);
     q('personelTuru').addEventListener('change', belgeleriCiz);
     q('ilkGiris').addEventListener('change', () => _topluKisiCanliDurumGuncelle(i));
@@ -938,6 +950,16 @@ function topluKisiAc() {
   });
 
   document.getElementById('topluKisiKatman').classList.add('acik');
+}
+
+// Bir sütunun firması değişince: tehlike sınıfını firmadan al, gerekirse
+// belge geçerliliklerini yeniden çiz, firma hatasını temizle.
+function _topluKisiFirmaUygula(i, firmaId) {
+  const sutun = _topluKisiSutunu(i);
+  const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
+  if (_ykFirmaTehlikesiniUygula(firmaId, q('tehlikeSinifi'), q('tehlikeKaynak'))) _topluKisiBelgeleriCiz(i);
+  const hata = sutun.querySelector('[data-tk-hata="firmaId"]');
+  if (hata && firmaId) hata.textContent = '';
 }
 
 function topluKisiKapat() {
@@ -979,9 +1001,13 @@ function _topluKisiVerisiniOku(i) {
   };
 }
 
-// Firma ve ad soyad boşsa sütun "kullanılmamış" sayılır ve atlanır.
+// Kişiye ait hiçbir bilgi girilmemişse sütun "kullanılmamış" sayılır ve
+// atlanır. Firma tek başına sayılmaz: başka sütunda seçilen firma boş
+// sütunlara da otomatik yazıldığı için.
 function _topluKisiSutunuDoluMu(v) {
-  return !!(v.firmaId || (v.adSoyad || '').trim());
+  if ((v.adSoyad || '').trim() || (v.telefon || '').trim() || (v.notlar || '').trim()) return true;
+  return Object.values(v.belgeler || {}).some(b => b && Object.entries(b).some(([alan, deger]) =>
+    alan !== 'ay' && deger !== '' && deger != null && !(alan === 'deger' && deger === 'Yok')));
 }
 
 function topluKisiKaydet() {
