@@ -644,9 +644,13 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
 
 // Toplantı tutanağı: dikey A4. Bilgiler, katılımcılar (imza sütunlu),
 // genel notlar ve o toplantıda görüşülen maddeler.
-async function csgbToplantiTutanagiWordOlustur(toplantiId) {
+// oncekiNotlarla: her maddenin hücresinde bu toplantıdan ÖNCEKİ takip
+// toplantılarının notları da tarihleriyle (gri) gösterilir, bu toplantının
+// notu en altta (kullanıcı isteği: "daha önceki toplantı notlarını da göster").
+async function csgbToplantiTutanagiWordOlustur(toplantiId, oncekiNotlarla) {
   const t = csgbToplantilariTumunuGetir().find(x => x.id === toplantiId);
   if (!t) return;
+  const oncekiToplantilar = oncekiNotlarla ? csgbToplantilariniGetir(t.denetimId).slice(0, csgbToplantiNo(t) - 1) : [];
   const d = csgbDenetimGetir(t.denetimId);
   const w = _csgbWordAraclari();
   const SAYFA_GEN = w.mm(210 - 30);
@@ -658,6 +662,20 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const tumAciklar = csgbToplantiNo(t) >= 2;
   const gorusulenler = maddeler.filter(k => notuVar(k) || (tumAciklar && k.durum !== 'Kapalı' && k.durum !== 'İptal'));
   const SUTUN = [7, 18, 41, 12, 12, 10].map(y => Math.round(SAYFA_GEN * y / 100));
+  const buToplantiNotu = k => notuVar(k)
+    ? w.paragraflar(t.maddeNotlari[k.id])
+    : [new docx.Paragraph({ children: [w.metin('Bu toplantıda görüşülmedi.', { size: 15, italics: true, color: '64748B' })] })];
+  const notHucresi = k => {
+    const oncekiler = oncekiToplantilar
+      .filter(o => ((o.maddeNotlari || {})[k.id] || '').trim())
+      .map(o => new docx.Paragraph({ spacing: { after: 40 }, children: [
+        w.metin(csgbNotTarihi(o.tarih) + ': ', { bold: true, size: 14, color: '64748B' }),
+        w.metin(o.maddeNotlari[k.id].trim(), { size: 14, color: '64748B' })
+      ] }));
+    if (!oncekiler.length) return buToplantiNotu(k);
+    const buEtiket = new docx.Paragraph({ spacing: { before: 40 }, children: [w.metin(csgbNotTarihi(t.tarih) + ' (bu toplantı):', { bold: true, size: 15 })] });
+    return [...oncekiler, buEtiket, ...buToplantiNotu(k)];
+  };
 
   const katilimcilar = csgbKatilimcilariNormallestir(t.katilimcilar);
   const KG = [7, 35, 33, 25].map(y => Math.round(SAYFA_GEN * y / 100));
@@ -701,7 +719,7 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
       ...(gorusulenler.length ? gorusulenler.map(k => new docx.TableRow({ cantSplit: true, children: [
         w.hucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [w.metin(k.denetimMaddeNo || '-', { bold: true, size: 16 })] }), SUTUN[0]),
         w.hucre(w.paragraflar(k.maddeKonusu || (k.baslik || '').slice(0, 80), { size: 15 }), SUTUN[1]),
-        w.hucre(notuVar(k) ? w.paragraflar(t.maddeNotlari[k.id]) : [new docx.Paragraph({ children: [w.metin('Bu toplantıda görüşülmedi.', { size: 15, italics: true, color: '64748B' })] })], SUTUN[2]),
+        w.hucre(notHucresi(k), SUTUN[2]),
         w.hucre(w.paragraflar(k.sorumlu || '-', { size: 15 }), SUTUN[3]),
         w.hucre(new docx.Paragraph({ children: [w.metin(gunAyYil(k.termin) || '-', { size: 15 })] }), SUTUN[4]),
         w.hucre(new docx.Paragraph({ children: [w.metin(csgbDurumEtiketi(k.durumGoruntu), { bold: true, size: 15 })] }), SUTUN[5])
@@ -729,5 +747,5 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId) {
   const sayfa = { margin: { top: w.mm(15), right: w.mm(15), bottom: w.mm(15), left: w.mm(15), footer: w.mm(6) } };
   const doc = new docx.Document({ styles: { default: { document: { run: { font: 'Arial', size: 16 } } } }, sections: [{ properties: { page: sayfa }, footers: { default: w.altBilgi }, children }] });
   const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `CSGB_${csgbToplantiNo(t)}_Takip_Toplantisi_${gunAyYil(t.tarih).replace(/\./g, '-')}.docx`);
+  saveAs(blob, `CSGB_${csgbToplantiNo(t)}_Takip_Toplantisi_${gunAyYil(t.tarih).replace(/\./g, '-')}${oncekiNotlarla ? '_Onceki_Notlarla' : ''}.docx`);
 }

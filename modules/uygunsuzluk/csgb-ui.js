@@ -334,6 +334,7 @@ function _csgbDetayCiz(kutu) {
             <td style="white-space:nowrap;">
               <button type="button" class="tablo-buton" data-csgb-top-duzenle="${t.id}">Düzenle</button>
               <button type="button" class="tablo-buton" data-csgb-top-word="${t.id}">Tutanak (Word)</button>
+              ${t._no > 1 ? `<button type="button" class="tablo-buton" data-csgb-top-word-onceki="${t.id}" title="Her maddede önceki takip toplantılarının notları da tarihleriyle gösterilir">Tutanak + Önceki Notlar</button>` : ''}
               <button type="button" class="tablo-buton" data-csgb-top-pptx="${t.id}">Sunum (PPTX)</button>
               <button type="button" class="tablo-buton sil" data-csgb-top-sil="${t.id}">Sil</button>
             </td>
@@ -432,6 +433,10 @@ function _csgbDetayCiz(kutu) {
   kutu.querySelectorAll('[data-csgb-top-duzenle]').forEach(b => b.addEventListener('click', () => csgbToplantiModalAc(b.getAttribute('data-csgb-top-duzenle'))));
   kutu.querySelectorAll('[data-csgb-top-word]').forEach(b => b.addEventListener('click', async () => {
     try { await csgbToplantiTutanagiWordOlustur(b.getAttribute('data-csgb-top-word')); }
+    catch (hata) { console.error(hata); alert('Tutanak üretilemedi: ' + (hata.message || hata)); }
+  }));
+  kutu.querySelectorAll('[data-csgb-top-word-onceki]').forEach(b => b.addEventListener('click', async () => {
+    try { await csgbToplantiTutanagiWordOlustur(b.getAttribute('data-csgb-top-word-onceki'), true); }
     catch (hata) { console.error(hata); alert('Tutanak üretilemedi: ' + (hata.message || hata)); }
   }));
   kutu.querySelectorAll('[data-csgb-top-pptx]').forEach(b => b.addEventListener('click', async () => {
