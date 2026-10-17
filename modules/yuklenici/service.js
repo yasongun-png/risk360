@@ -289,7 +289,7 @@ function yukleniciFirmaSil(id) {
 // Kullanıcı isteği: personel formlarında "Mail için Eksiklikler" — kişinin
 // adı ve eksik/süresi dolmuş/yaklaşan belgeleri, maile yapıştırılacak düz
 // yazı olarak. Diploma/MYK gibi karşılıklı belgelerden biri uygunsa diğeri
-// eksik sayılmaz; İlk Giriş işaretliyse Firma Eğitimi listelenmez (verilecek).
+// eksik sayılmaz; Firma Eğitimi hiç listelenmez.
 function yukleniciKisiEksikBelgeleri(kisi) {
   const bugun = bugunIso();
   const belgeler = kisi.belgeler || {};
@@ -297,7 +297,8 @@ function yukleniciKisiEksikBelgeleri(kisi) {
   const uygunMu = b => yukleniciBelgeUygunMu(b, belgeler[b.id], kisi.tehlikeSinifi, bugun);
   const satirlar = [];
   tanimlar.forEach(b => {
-    if (kisi.ilkGiris && b.id === 'firmaEgitimi') return;
+    // Kullanıcı isteği: Firma Eğitimi'ni yüklenici değil biz veriyoruz — mailde istenmez.
+    if (b.id === 'firmaEgitimi') return;
     const kayit = belgeler[b.id] || {};
     if (uygunMu(b)) {
       const exp = yukleniciBelgeBitisTarihiHesapla(b, kayit, kisi.tehlikeSinifi);
