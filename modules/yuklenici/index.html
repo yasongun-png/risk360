@@ -37,6 +37,7 @@
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
       <button type="button" data-sekme="detayli-arama" class="sekme-seciliDegil">Detaylı Arama</button>
       <button type="button" class="birincil" id="hizliPersonelEkleBtn" style="margin-left:auto; width:auto; padding:9px 18px; font-size:13px; font-weight:600;">+ Personel Ekle</button>
+      <button type="button" class="ikincil" id="hizliTopluPersonelBtn" title="5 kişilik form yan yana açılır; istediğiniz kadarını doldurun" style="width:auto; padding:9px 14px; font-size:13px; font-weight:600;">+ Birden Fazla Personel</button>
     </div>
 
     <div id="bolum-dashboard">
@@ -139,6 +140,7 @@
           <button type="button" class="ikincil" id="kisiDetayliIceAktarBtn" title="SGK/Adli Sicil/KKD/Sağlık/Temel İSG/Geçici Görev/MYK/Firma Eğitimi dahil tüm belge bilgilerini tek dosyadan içe aktarır">Belgeleriyle Birlikte İçe Aktar</button>
           <input type="file" id="kisiDetayliIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="kisiDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="yeniTopluKisiBtn" title="5 kişilik form yan yana açılır; istediğiniz kadarını doldurun" style="width:auto;">+ Birden Fazla Personel</button>
           <button type="button" class="birincil" id="yeniKisiBtn" style="width:auto;">+ Personel Ekle</button>
         </div>
       </div>
@@ -411,7 +413,6 @@
   <div class="modal-katman" id="kisiModalKatman">
     <div class="modal-kutu" style="max-width:680px;">
       <h3 id="kisiModalBaslik">Yeni Yüklenici Personeli</h3>
-      <div id="kisiSekmeCubugu" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:-4px 36px 12px 0;"></div>
       <form id="kisiForm">
         <label for="kisiFirmaId">Firma</label>
         <input type="text" id="kisiFirmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
@@ -461,15 +462,30 @@
         <textarea id="kisiNotlar"></textarea>
 
         <div class="modal-eylemler">
-          <button type="button" class="ikincil" id="kisiModalIptalBtn" title="Bu formu kaydetmeden kapatır">Formu Kapat</button>
-          <button type="submit" class="ikincil" data-kaydet-kapat="1">Kaydet ve Kapat</button>
-          <button type="submit" class="birincil" title="Kaydeder, form açık kalır — diğer formlara geçmeye devam edebilirsiniz">Kaydet</button>
+          <button type="button" class="ikincil" id="kisiModalIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
         </div>
       </form>
-      <button type="button" class="tablo-buton" id="kisiModalKapatBtn" title="Pencereyi gizle — açık formlar kaybolmaz" style="position:absolute; top:20px; right:24px;">✕</button>
+      <button type="button" class="tablo-buton" id="kisiModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
     </div>
   </div>
-  <button type="button" class="birincil" id="kisiAcikFormlarBtn" style="display:none; position:fixed; right:20px; bottom:20px; width:auto; z-index:40; padding:10px 16px; box-shadow:0 6px 18px rgba(0,0,0,.25);"></button>
+
+  <!-- BİRDEN FAZLA PERSONEL (5 FORM YAN YANA) -->
+  <div class="modal-katman" id="topluKisiKatman">
+    <div class="modal-kutu" style="max-width:min(2060px, 98vw); width:98vw;">
+      <h3>Birden Fazla Personel Ekle</h3>
+      <p style="font-size:13px; color:var(--metin-soluk); margin:-6px 36px 12px 0;">İstediğiniz kadar formu doldurun; boş bıraktıklarınız kaydedilmez. Kaydedilen personeller listeden tek tek düzenlenebilir.</p>
+      <div style="overflow-x:auto;">
+        <div id="topluKisiSutunlar" style="display:grid; grid-template-columns:repeat(5, minmax(238px, 1fr)); gap:10px; align-items:start;"></div>
+      </div>
+      <div id="topluKisiGenelHata" style="color:var(--hata); font-size:13px; margin-top:10px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="topluKisiIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="topluKisiKaydetBtn">Kaydet</button>
+      </div>
+      <button type="button" class="tablo-buton" id="topluKisiKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>

@@ -73,6 +73,13 @@ function yukleniciSayfasiniBaslat() {
     gorunumDegistir('kisiler');
     kisiModalAc();
   });
+  // Kullanıcı isteği: "personel ekle butonu yanına birden fazla butonu koy,
+  // direk 5 kişilik açılsın istediğim kadar doldurabileyim".
+  document.getElementById('hizliTopluPersonelBtn').addEventListener('click', () => {
+    gorunumDegistir('kisiler');
+    topluKisiAc();
+  });
+  document.getElementById('yeniTopluKisiBtn').addEventListener('click', () => topluKisiAc());
 
   document.getElementById('yeniFirmaBtn').addEventListener('click', () => firmaModalAc());
   document.getElementById('firmaModalKapatBtn').addEventListener('click', firmaModalKapat);
@@ -82,11 +89,9 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('firmaEvrakEkleBtn').addEventListener('click', () => { _firmaEvrakTaslak.push(evrakOlustur({})); evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak); });
 
   document.getElementById('yeniKisiBtn').addEventListener('click', () => kisiModalAc());
-  // ✕ pencereyi gizler (açık formlar korunur), İptal sadece aktif formu kapatır.
-  document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalGizle);
-  document.getElementById('kisiModalIptalBtn').addEventListener('click', () => _kisiSekmeKapat(_kisiAktifSekmeId));
-  document.getElementById('kisiAcikFormlarBtn').addEventListener('click', kisiModalGoster);
-  document.getElementById('adSoyad').addEventListener('input', _kisiSekmeCubugunuCiz);
+  document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
+  document.getElementById('kisiModalIptalBtn').addEventListener('click', kisiModalKapat);
+  _topluKisiBaslat();
   document.getElementById('kisiFirmaId').addEventListener('change', () => { if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz(); });
   document.getElementById('kisiForm').addEventListener('submit', kisiFormGonderildi);
   document.getElementById('kisiAramaKutusu').addEventListener('input', e => kisileriCiz(e.target.value));
@@ -171,7 +176,7 @@ function yukleniciSayfasiniBaslat() {
 
   document.getElementById('detayliAramaKutusu').addEventListener('input', detayliAramaCiz);
   document.getElementById('detayliBelgeFiltre').addEventListener('change', detayliAramaCiz);
-  document.getElementById('detayliBelgeFiltre').innerHTML += YUKLENICI_BELGE_TANIMLARI.map(b => `<option>${_ykKacir(b.ad)}</option>`)
+  document.getElementById('detayliBelgeFiltre').innerHTML += YUKLENICI_BELGE_TANIMLARI.filter(b => !b.bilgiAmacli).map(b => `<option>${_ykKacir(b.ad)}</option>`)
     .concat(Object.values(YUKLENICI_ARAMA_ARAC_BELGE_ADLARI).map(ad => `<option>${_ykKacir(ad)}</option>`))
     .join('');
 
@@ -455,6 +460,10 @@ function _kisiBelgeSatiriHtml(belgeTanimi, kayit, tehlikeSinifi) {
         <option value="Var" ${varMi ? 'selected' : ''}>Var</option>
       </select>
     `;
+  } else if (belgeTanimi.tur === 'tarih-bilgi') {
+    alanlar = `
+      <input type="date" data-belge-alan="base" data-belge-id="${belgeTanimi.id}" value="${k.base || ''}" title="Eğitim tarihi" style="width:auto;">
+    `;
   } else if (belgeTanimi.tur === 'tarih-tek') {
     alanlar = `
       <input type="date" data-belge-alan="exp" data-belge-id="${belgeTanimi.id}" value="${k.exp || ''}" title="En son giriş yapabileceği tarih" style="width:auto;">
@@ -487,19 +496,31 @@ function _kisiBelgeSatiriHtml(belgeTanimi, kayit, tehlikeSinifi) {
 // YUKLENICI_BELGE_BOLUMLERI'ne göre alt başlıklarla gruplanır (hesaplamayı
 // etkilemez, sadece görünüm).
 function _kisiBelgeListesiniCiz() {
-  const kutu = document.getElementById('kisiBelgeListesi');
-  const tehlikeSinifi = document.getElementById('kisiTehlikeSinifi').value;
-  const personelTuru = document.getElementById('kisiPersonelTuru').value;
-  const tanimlar = yukleniciGecerliBelgeTanimlari(personelTuru);
+  _ykBelgeListesiCiz(
+    document.getElementById('kisiBelgeListesi'),
+    _kisiBelgeTaslak,
+    () => document.getElementById('kisiTehlikeSinifi').value,
+    document.getElementById('kisiPersonelTuru').value,
+    _kisiCanliDurumuGuncelle
+  );
+}
 
-  const bolumSirasi = ['zorunlu', 'firma', 'operator'];
+// Tek kişilik form ve "Birden Fazla Personel" sütunları için ortak belge
+// listesi. taslak: o kişinin belgeler nesnesi (girilen değerler buna yazılır);
+// tehlikeAl: o anki tehlike sınıfını döndürür; degisinceFn: her değişiklikten
+// sonra (canlı uygunluk durumu için) çağrılır.
+function _ykBelgeListesiCiz(kutu, taslak, tehlikeAl, personelTuru, degisinceFn) {
+  const tehlikeSinifi = tehlikeAl();
+  const tanimlar = yukleniciFormBelgeTanimlari(personelTuru);
+
+  const bolumSirasi = Object.keys(YUKLENICI_BELGE_BOLUMLERI);
   kutu.innerHTML = bolumSirasi
     .map(bolumId => {
       const buBolum = tanimlar.filter(b => b.bolum === bolumId);
       if (!buBolum.length) return '';
       return `
         <div style="font-size:12px; font-weight:600; color:var(--metin-soluk); text-transform:uppercase; letter-spacing:.03em; margin:14px 0 4px;">${YUKLENICI_BELGE_BOLUMLERI[bolumId]}</div>
-        ${buBolum.map(b => _kisiBelgeSatiriHtml(b, _kisiBelgeTaslak[b.id], tehlikeSinifi)).join('')}
+        ${buBolum.map(b => _kisiBelgeSatiriHtml(b, taslak[b.id], tehlikeSinifi)).join('')}
       `;
     })
     .join('');
@@ -517,8 +538,8 @@ function _kisiBelgeListesiniCiz() {
     el.addEventListener('input', () => {
       const id = el.getAttribute('data-belge-id');
       const alan = el.getAttribute('data-belge-alan');
-      if (!_kisiBelgeTaslak[id]) _kisiBelgeTaslak[id] = {};
-      _kisiBelgeTaslak[id][alan] = el.value;
+      if (!taslak[id]) taslak[id] = {};
+      taslak[id][alan] = el.value;
       // Sağlık/Temel İSG/Firma Eğitimi'nde formda DÜZENLENEBİLEN tek tarih
       // "base" (Veriliş) — "exp" (bitiş) formda hiç gösterilmez, sadece
       // base'den (ve Firma Eğitimi'nde ay'dan) hesaplanır. Eski Excel içe
@@ -530,21 +551,20 @@ function _kisiBelgeListesiniCiz() {
       // yeniden base (+ay) üzerinden hesaplansın.
       const belgeTanimi = yukleniciBelgeTanimiGetir(id);
       const tur = belgeTanimi.tur;
-      if ((alan === 'base' || alan === 'ay') && (tur === 'tarih-tehlike' || tur === 'egitim')) delete _kisiBelgeTaslak[id].exp;
+      if ((alan === 'base' || alan === 'ay') && (tur === 'tarih-tehlike' || tur === 'egitim')) delete taslak[id].exp;
 
       if (alan === 'base' && tur === 'tarih-tehlike') {
         const span = kutu.querySelector(`[data-belge-gecerlilik="${id}"]`);
         if (span) {
-          const tehlikeSinifi = document.getElementById('kisiTehlikeSinifi').value;
-          const hesapExp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, _kisiBelgeTaslak[id], tehlikeSinifi);
+          const hesapExp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, taslak[id], tehlikeAl());
           span.textContent = `Geçerlilik: ${hesapExp || '-'}`;
         }
       }
-      _kisiCanliDurumuGuncelle();
+      degisinceFn();
     });
   });
 
-  _kisiCanliDurumuGuncelle();
+  degisinceFn();
 }
 
 // Kaydetmeden önce, o an formda girilmiş veriyle canlı olarak "bu kişi şu an
@@ -554,28 +574,22 @@ function _kisiBelgeListesiniCiz() {
 function _kisiCanliDurumuGuncelle() {
   const kutu = document.getElementById('kisiCanliDurum');
   if (!kutu) return;
-
-  const gecici = {
-    tehlikeSinifi: document.getElementById('kisiTehlikeSinifi').value,
-    ilkGiris: document.getElementById('kisiIlkGiris').checked,
-    belgeler: _kisiBelgeTaslak
-  };
-
-  if (document.getElementById('kisiIlkGiris').checked) {
-    kutu.innerHTML = `<div class="genel-rozet rozet-yaklasiyor" style="font-size:13px; padding:8px 12px;">🎓 İlk Giriş işaretli — diğer belgelerden bağımsız olarak "Eğitim Verilecek" olarak işlenecek.</div>`;
-    return;
-  }
-
-  const kritik = yukleniciKisiKritikSebepHesapla(gecici, bugunIso());
-  if (!kritik) {
-    kutu.innerHTML = `<div class="genel-rozet rozet-uygun" style="font-size:13px; padding:8px 12px;">✓ Girişe Uygun — girilen belgelerde eksik/süresi geçmiş bir sorun yok.</div>`;
-  } else if (kritik.girisEngeli) {
-    kutu.innerHTML = `<div class="genel-rozet rozet-uygun-degil" style="font-size:13px; padding:8px 12px;">⛔ Girişe Kapalı — ${kritik.sebep}${kritik.sonTarih ? ` (${formatTarihGoster(kritik.sonTarih)})` : ''}</div>`;
-  } else {
-    kutu.innerHTML = `<div class="genel-rozet rozet-yaklasiyor" style="font-size:13px; padding:8px 12px;">⚠ Yakında Dolacak — ${kritik.sebep}${kritik.sonTarih ? ` (${formatTarihGoster(kritik.sonTarih)}, ${kritik.kalanGun} gün kaldı)` : ''}</div>`;
-  }
+  kutu.innerHTML = _ykCanliDurumHtml(document.getElementById('kisiTehlikeSinifi').value, document.getElementById('kisiIlkGiris').checked, _kisiBelgeTaslak);
 }
 
+function _ykCanliDurumHtml(tehlikeSinifi, ilkGiris, belgeler) {
+  if (ilkGiris) {
+    return `<div class="genel-rozet rozet-yaklasiyor" style="font-size:13px; padding:8px 12px;">🎓 İlk Giriş işaretli — diğer belgelerden bağımsız olarak "Eğitim Verilecek" olarak işlenecek.</div>`;
+  }
+  const kritik = yukleniciKisiKritikSebepHesapla({ tehlikeSinifi, ilkGiris, belgeler }, bugunIso());
+  if (!kritik) {
+    return `<div class="genel-rozet rozet-uygun" style="font-size:13px; padding:8px 12px;">✓ Girişe Uygun — girilen belgelerde eksik/süresi geçmiş bir sorun yok.</div>`;
+  }
+  if (kritik.girisEngeli) {
+    return `<div class="genel-rozet rozet-uygun-degil" style="font-size:13px; padding:8px 12px;">⛔ Girişe Kapalı — ${kritik.sebep}${kritik.sonTarih ? ` (${formatTarihGoster(kritik.sonTarih)})` : ''}</div>`;
+  }
+  return `<div class="genel-rozet rozet-yaklasiyor" style="font-size:13px; padding:8px 12px;">⚠ Yakında Dolacak — ${kritik.sebep}${kritik.sonTarih ? ` (${formatTarihGoster(kritik.sonTarih)}, ${kritik.kalanGun} gün kaldı)` : ''}</div>`;
+}
 function _gerekliEvrakCheckboxHtml(kutuId, seciliListe) {
   return EVRAK_TURLERI.map(t => `
     <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; margin-right:14px; margin-bottom:6px;">
@@ -758,204 +772,58 @@ function _yukleniciFirmaAramaBagla(aramaId, selectId, firmalar) {
   };
 }
 
-// Kullanıcı isteği: "aynı anda 5 personel girişi açık olabilsin ve hepsine
-// işlem yapabileyim" — personel formu sekmeli: her sekme kendi taslağını
-// tutar ({ id, kisiId, personelNo, firmaAra, firmaId, adSoyad, ..., belgeler }),
-// sekme değişirken formdaki değerler taslağa yazılır, diğer taslak forma
-// yüklenir. _duzenlenenKisiId / _kisiBelgeTaslak her zaman AKTİF sekmeyi
-// gösterir (belge alanları _kisiBelgeTaslak'a doğrudan yazdığından o
-// sekmenin belgeler nesnesine işler).
-const KISI_FORM_SEKME_SINIRI = 5;
-let _kisiSekmeler = [];
-let _kisiAktifSekmeId = null;
-
-function _kisiSekmeTaslagiOlustur(kisi) {
-  return {
-    id: rastgeleId(),
-    kisiId: kisi ? kisi.id : null,
-    personelNo: kisi ? kisi.personelNo : '',
-    firmaAra: '',
-    firmaId: kisi ? kisi.firmaId : '',
-    adSoyad: kisi ? kisi.adSoyad : '',
-    telefon: kisi ? kisi.telefon : '',
-    durum: kisi ? kisi.durum : '',
-    tehlikeSinifi: kisi ? kisi.tehlikeSinifi : 'az',
-    personelTuru: kisi ? kisi.personelTuru : 'teknik',
-    pasif: !!(kisi && kisi.pasif),
-    ilkGiris: !!(kisi && kisi.ilkGiris),
-    notlar: kisi ? (kisi.notlar || '') : '',
-    // Derin kopya: kaydedilmeden kapatılırsa repository'deki kayıt bozulmasın.
-    belgeler: kisi && kisi.belgeler ? JSON.parse(JSON.stringify(kisi.belgeler)) : yukleniciBosBelgeler()
-  };
-}
-
-function _kisiAktifSekme() { return _kisiSekmeler.find(s => s.id === _kisiAktifSekmeId) || null; }
-
-// Formdaki güncel değerleri aktif sekmenin taslağına yazar.
-function _kisiFormuSekmeyeYaz() {
-  const s = _kisiAktifSekme();
-  if (!s) return;
-  s.firmaAra = document.getElementById('kisiFirmaAra').value;
-  s.firmaId = document.getElementById('kisiFirmaId').value;
-  s.adSoyad = document.getElementById('adSoyad').value;
-  s.telefon = document.getElementById('kisiTelefon').value;
-  s.durum = document.getElementById('kisiDurum').value;
-  s.tehlikeSinifi = document.getElementById('kisiTehlikeSinifi').value;
-  s.personelTuru = document.getElementById('kisiPersonelTuru').value;
-  s.pasif = document.getElementById('kisiPasif').checked;
-  s.ilkGiris = document.getElementById('kisiIlkGiris').checked;
-  s.notlar = document.getElementById('kisiNotlar').value;
-}
-
-function _kisiSekmeyiFormaYukle(s) {
-  _kisiAktifSekmeId = s.id;
-  _duzenlenenKisiId = s.kisiId;
-  _kisiBelgeTaslak = s.belgeler;
-
-  document.getElementById('kisiModalBaslik').textContent = s.kisiId ? (s.personelNo + ' Kişisini Düzenle') : 'Yeni Yüklenici Personeli';
-
-  const firmalar = yukleniciFirmalariTumunuGetir();
-  _yukleniciFirmaListesiCiz(document.getElementById('kisiFirmaId'), firmalar, s.firmaId);
-  _yukleniciFirmaAramaBagla('kisiFirmaAra', 'kisiFirmaId', firmalar);
-  if (s.firmaAra) {
-    const aramaEl = document.getElementById('kisiFirmaAra');
-    aramaEl.value = s.firmaAra;
-    aramaEl.oninput();
-  }
-
-  document.getElementById('adSoyad').value = s.adSoyad;
-  document.getElementById('kisiTelefon').value = s.telefon;
-  document.getElementById('kisiDurum').innerHTML = KISI_DURUMLARI.map(d => `<option ${s.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('kisiTehlikeSinifi').innerHTML = YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${s.tehlikeSinifi === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
-  document.getElementById('kisiPersonelTuru').innerHTML = YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${s.personelTuru === t ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('');
-  document.getElementById('kisiPasif').checked = s.pasif;
-  document.getElementById('kisiIlkGiris').checked = s.ilkGiris;
-  document.getElementById('kisiNotlar').value = s.notlar;
-
-  _kisiFirmaTehlikesiniUygula();
-  _kisiBelgeListesiniCiz();
-  temizleFormHatalari('kisiForm');
-  _kisiSekmeCubugunuCiz();
-}
-
 // Seçili yüklenici firmanın işyeri tehlike sınıfı girildiyse personelin
 // tehlike sınıfı ondan gelir ve alan kilitlenir; girilmediyse elle seçilir.
 // Dönüş: değer değiştiyse true (belge geçerlilikleri yeniden çizilmeli).
-function _kisiFirmaTehlikesiniUygula() {
-  const sec = document.getElementById('kisiTehlikeSinifi');
-  const not = document.getElementById('kisiTehlikeKaynak');
-  const firmaTehlike = _yukleniciFirmaTehlikeSinifi(document.getElementById('kisiFirmaId').value);
+function _ykFirmaTehlikesiniUygula(firmaId, sec, notEl) {
+  const firmaTehlike = _yukleniciFirmaTehlikeSinifi(firmaId);
   const onceki = sec.value;
   if (firmaTehlike) {
     sec.value = firmaTehlike;
     sec.disabled = true;
-    if (not) not.textContent = 'Firmanın işyeri tehlike sınıfından geliyor.';
+    if (notEl) notEl.textContent = 'Firmanın işyeri tehlike sınıfından geliyor.';
   } else {
     sec.disabled = false;
-    if (not) not.textContent = '';
+    if (notEl) notEl.textContent = '';
   }
   return sec.value !== onceki;
 }
 
-function _kisiSekmeCubugunuCiz() {
-  const cubuk = document.getElementById('kisiSekmeCubugu');
-  if (!cubuk) return;
-  const aktif = _kisiAktifSekme();
-  // Aktif sekmenin etiketi yazılırken canlı güncellensin.
-  if (aktif) aktif.adSoyad = document.getElementById('adSoyad').value;
-  const etiket = s => (s.adSoyad || '').trim() || (s.kisiId ? s.personelNo : 'Yeni personel');
-  cubuk.innerHTML = _kisiSekmeler.map((s, i) => `
-    <span data-kisi-sekme="${s.id}" title="${_ykKacir(etiket(s))}" style="display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 10px; border-radius:16px; font-size:12px; cursor:pointer; max-width:170px;
-      ${s.id === _kisiAktifSekmeId ? 'background:var(--birincil, #1d4ed8); color:#fff; font-weight:600;' : 'background:#eef2f7; color:inherit;'}">
-      <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i + 1}. ${_ykKacir(etiket(s))}</span>
-      <span data-kisi-sekme-kapat="${s.id}" title="Bu formu kapat (kaydedilmez)" style="font-weight:700; opacity:.75; padding:0 2px;">×</span>
-    </span>`).join('') +
-    (_kisiSekmeler.length < KISI_FORM_SEKME_SINIRI
-      ? `<button type="button" class="tablo-buton" id="kisiYeniSekmeBtn" title="Yeni personel formu aç (en fazla ${KISI_FORM_SEKME_SINIRI})">+ Yeni Form</button>`
-      : `<span style="font-size:11px; color:var(--metin-soluk);">En fazla ${KISI_FORM_SEKME_SINIRI} form</span>`);
-
-  cubuk.querySelectorAll('[data-kisi-sekme]').forEach(el => el.addEventListener('click', () => {
-    const s = _kisiSekmeler.find(x => x.id === el.getAttribute('data-kisi-sekme'));
-    if (!s || s.id === _kisiAktifSekmeId) return;
-    _kisiFormuSekmeyeYaz();
-    _kisiSekmeyiFormaYukle(s);
-  }));
-  cubuk.querySelectorAll('[data-kisi-sekme-kapat]').forEach(el => el.addEventListener('click', e => {
-    e.stopPropagation();
-    _kisiSekmeKapat(el.getAttribute('data-kisi-sekme-kapat'));
-  }));
-  const yeniBtn = document.getElementById('kisiYeniSekmeBtn');
-  if (yeniBtn) yeniBtn.addEventListener('click', () => kisiModalAc());
-  _kisiAcikFormlarButonunuGuncelle();
+function _kisiFirmaTehlikesiniUygula() {
+  return _ykFirmaTehlikesiniUygula(document.getElementById('kisiFirmaId').value,
+    document.getElementById('kisiTehlikeSinifi'), document.getElementById('kisiTehlikeKaynak'));
 }
 
-function _kisiAcikFormlarButonunuGuncelle() {
-  const btn = document.getElementById('kisiAcikFormlarBtn');
-  if (!btn) return;
-  const gizli = !document.getElementById('kisiModalKatman').classList.contains('acik');
-  btn.style.display = gizli && _kisiSekmeler.length ? '' : 'none';
-  btn.textContent = `📝 Açık personel formları (${_kisiSekmeler.length})`;
-}
-
-// kisi verilirse o kişi için (zaten açıksa o sekmeye geçilir), verilmezse
-// yeni boş form açılır. En fazla KISI_FORM_SEKME_SINIRI form.
 function kisiModalAc(kisi) {
-  const katman = document.getElementById('kisiModalKatman');
-  const mevcut = kisi ? _kisiSekmeler.find(s => s.kisiId === kisi.id) : null;
-  if (mevcut) {
-    if (mevcut.id !== _kisiAktifSekmeId) { _kisiFormuSekmeyeYaz(); _kisiSekmeyiFormaYukle(mevcut); }
-    katman.classList.add('acik');
-    _kisiAcikFormlarButonunuGuncelle();
-    return;
-  }
-  if (_kisiSekmeler.length >= KISI_FORM_SEKME_SINIRI) {
-    alert(`Aynı anda en fazla ${KISI_FORM_SEKME_SINIRI} personel formu açık olabilir. Açık formlardan birini kaydedin veya kapatın.`);
-    kisiModalGoster();
-    return;
-  }
-  _kisiFormuSekmeyeYaz();
-  const s = _kisiSekmeTaslagiOlustur(kisi);
-  _kisiSekmeler.push(s);
-  _kisiSekmeyiFormaYukle(s);
-  katman.classList.add('acik');
-  _kisiAcikFormlarButonunuGuncelle();
-}
+  _duzenlenenKisiId = kisi ? kisi.id : null;
+  // Derin kopya: taslak üzerindeki değişiklikler kaydedilmeden modal kapatılırsa
+  // orijinal kayıt (repository'deki referans) bozulmasın.
+  _kisiBelgeTaslak = kisi && kisi.belgeler ? JSON.parse(JSON.stringify(kisi.belgeler)) : yukleniciBosBelgeler();
 
-function kisiModalGizle() {
-  _kisiFormuSekmeyeYaz();
-  document.getElementById('kisiModalKatman').classList.remove('acik');
-  _kisiAcikFormlarButonunuGuncelle();
-}
+  document.getElementById('kisiModalBaslik').textContent = kisi ? (kisi.personelNo + ' Kişisini Düzenle') : 'Yeni Yüklenici Personeli';
 
-function kisiModalGoster() {
-  const s = _kisiAktifSekme() || _kisiSekmeler[0];
-  if (!s) return;
-  if (s.id !== _kisiAktifSekmeId) _kisiSekmeyiFormaYukle(s);
+  const firmalar = yukleniciFirmalariTumunuGetir();
+  _yukleniciFirmaListesiCiz(document.getElementById('kisiFirmaId'), firmalar, kisi ? kisi.firmaId : '');
+  _yukleniciFirmaAramaBagla('kisiFirmaAra', 'kisiFirmaId', firmalar);
+
+  document.getElementById('adSoyad').value = kisi ? kisi.adSoyad : '';
+  document.getElementById('kisiTelefon').value = kisi ? kisi.telefon : '';
+  document.getElementById('kisiDurum').innerHTML = KISI_DURUMLARI.map(d => `<option ${kisi && kisi.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('kisiTehlikeSinifi').innerHTML = YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${(kisi ? kisi.tehlikeSinifi : 'az') === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
+  document.getElementById('kisiPersonelTuru').innerHTML = YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${(kisi ? kisi.personelTuru : 'teknik') === t ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('');
+  document.getElementById('kisiPasif').checked = !!(kisi && kisi.pasif);
+  document.getElementById('kisiIlkGiris').checked = !!(kisi && kisi.ilkGiris);
+  document.getElementById('kisiNotlar').value = kisi ? kisi.notlar : '';
+
+  _kisiFirmaTehlikesiniUygula();
+  _kisiBelgeListesiniCiz();
+  temizleFormHatalari('kisiForm');
   document.getElementById('kisiModalKatman').classList.add('acik');
-  _kisiAcikFormlarButonunuGuncelle();
-}
-
-// Bir formu (kaydetmeden ya da kaydettikten sonra) kapatır; başka açık form
-// varsa pencere açık kalır ve komşu sekmeye geçilir.
-function _kisiSekmeKapat(sekmeId) {
-  const i = _kisiSekmeler.findIndex(s => s.id === sekmeId);
-  if (i === -1) return;
-  const aktifti = sekmeId === _kisiAktifSekmeId;
-  if (!aktifti) _kisiFormuSekmeyeYaz();
-  _kisiSekmeler.splice(i, 1);
-  if (!_kisiSekmeler.length) {
-    _kisiAktifSekmeId = null;
-    _duzenlenenKisiId = null;
-    document.getElementById('kisiModalKatman').classList.remove('acik');
-    _kisiAcikFormlarButonunuGuncelle();
-    return;
-  }
-  if (aktifti) _kisiSekmeyiFormaYukle(_kisiSekmeler[Math.min(i, _kisiSekmeler.length - 1)]);
-  else _kisiSekmeCubugunuCiz();
 }
 
 function kisiModalKapat() {
-  _kisiSekmeKapat(_kisiAktifSekmeId);
+  document.getElementById('kisiModalKatman').classList.remove('acik');
+  _duzenlenenKisiId = null;
 }
 
 function kisiFormGonderildi(e) {
@@ -980,31 +848,171 @@ function kisiFormGonderildi(e) {
     personelTuru: document.getElementById('kisiPersonelTuru').value,
     pasif: document.getElementById('kisiPasif').checked,
     ilkGiris: document.getElementById('kisiIlkGiris').checked,
-    // Kopya: form kayıttan sonra da açık kalabildiği için, sonraki
-    // (kaydedilmemiş) düzenlemeler kayıtlı nesneye sızmasın.
-    belgeler: JSON.parse(JSON.stringify(_kisiBelgeTaslak)),
+    belgeler: _kisiBelgeTaslak,
     sonrakiKontrolTarihi: _duzenlenenKisi ? _duzenlenenKisi.sonrakiKontrolTarihi : undefined,
     notlar: document.getElementById('kisiNotlar').value
   };
 
   const sonuc = _duzenlenenKisiId ? yukleniciKisiGuncelle(_duzenlenenKisiId, veriler) : yukleniciKisiEkle(veriler);
   if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar); return; }
-  kisileriCiz(document.getElementById('kisiAramaKutusu').value);
 
-  // "Kaydet ve Kapat": sadece bu form kapanır, diğer açık formlar kalır.
-  // "Kaydet": form açık kalır (kullanıcı isteği: "kapatmadan kaydedip
-  // diğerine geçebileyim") — yeni kişiyse sekme artık o kaydı düzenler.
-  if (e.submitter && e.submitter.hasAttribute('data-kaydet-kapat')) { kisiModalKapat(); return; }
-  const s = _kisiAktifSekme();
-  if (s && sonuc.kisi) {
-    s.kisiId = sonuc.kisi.id;
-    s.personelNo = sonuc.kisi.personelNo;
-    _duzenlenenKisiId = s.kisiId;
-    document.getElementById('kisiModalBaslik').textContent = s.personelNo + ' Kişisini Düzenle';
+  kisiModalKapat();
+  kisileriCiz(document.getElementById('kisiAramaKutusu').value);
+}
+
+// ==================== BİRDEN FAZLA PERSONEL ====================
+// Kullanıcı isteği: "personel ekle butonu yanına birden fazla butonu koy,
+// direk 5 kişilik açılsın istediğim kadar doldurabileyim" — 5 personel
+// formu yan yana; belgeleri kontrol ederken sütunlar arasında gezilerek
+// doldurulur, tek "Kaydet" ile dolu olanlar kaydedilir (boş sütunlar
+// atlanır). Kayıtlar sonradan listeden tek tek düzenlenir (kisiModalAc).
+
+const TOPLU_KISI_FORM_SAYISI = 5;
+let _topluKisiTaslaklari = [];
+
+function _topluKisiBaslat() {
+  document.getElementById('topluKisiKapatBtn').addEventListener('click', topluKisiKapat);
+  document.getElementById('topluKisiIptalBtn').addEventListener('click', topluKisiKapat);
+  document.getElementById('topluKisiKaydetBtn').addEventListener('click', topluKisiKaydet);
+}
+
+function _topluKisiSutunHtml(i) {
+  const hata = alan => `<div class="alan-hatasi" data-tk-hata="${alan}" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>`;
+  return `
+    <div data-tk="${i}" style="border:1px solid var(--kenarlik); border-radius:10px; padding:10px; min-width:0;">
+      <div style="font-weight:700; margin-bottom:8px;">${i + 1}. Personel</div>
+      <label>Firma</label>
+      <input type="text" data-tk-alan="firmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
+      <select data-tk-alan="firmaId" size="5" style="height:auto;"></select>
+      ${hata('firmaId')}
+      <label>Ad Soyad</label>
+      <input type="text" data-tk-alan="adSoyad">
+      ${hata('adSoyad')}
+      <div class="form-satir-ikili">
+        <div><label>Telefon</label><input type="text" data-tk-alan="telefon"></div>
+        <div><label>Durum</label><select data-tk-alan="durum">${KISI_DURUMLARI.map(d => `<option>${d}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-satir-ikili">
+        <div>
+          <label>Tehlike Sınıfı</label>
+          <select data-tk-alan="tehlikeSinifi">${YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}">${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('')}</select>
+          <div data-tk-alan="tehlikeKaynak" style="font-size:11px; color:var(--metin-soluk); margin-top:-10px; margin-bottom:8px;"></div>
+        </div>
+        <div><label>Personel Türü</label><select data-tk-alan="personelTuru">${YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${t === 'teknik' ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-satir-ikili">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;"><input type="checkbox" data-tk-alan="pasif" style="width:auto;"> Pasif</label>
+        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;"><input type="checkbox" data-tk-alan="ilkGiris" style="width:auto;"> İlk Giriş</label>
+      </div>
+      <div data-tk-alan="canliDurum" style="margin:10px 0;"></div>
+      <div class="form-bolum-baslik">Belgeler</div>
+      <div data-tk-alan="belgeler"></div>
+      <label>Notlar</label>
+      <textarea data-tk-alan="notlar"></textarea>
+    </div>`;
+}
+
+function topluKisiAc() {
+  const kutu = document.getElementById('topluKisiSutunlar');
+  _topluKisiTaslaklari = Array.from({ length: TOPLU_KISI_FORM_SAYISI }, () => yukleniciBosBelgeler());
+  kutu.innerHTML = _topluKisiTaslaklari.map((_, i) => _topluKisiSutunHtml(i)).join('');
+  document.getElementById('topluKisiGenelHata').textContent = '';
+
+  const firmalar = yukleniciFirmalariTumunuGetir();
+  kutu.querySelectorAll('[data-tk]').forEach(sutun => {
+    const i = Number(sutun.getAttribute('data-tk'));
+    const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
+    const firmaSec = q('firmaId');
+    _yukleniciFirmaListesiCiz(firmaSec, firmalar, '');
+    q('firmaAra').addEventListener('input', () => {
+      const seciliId = firmaSec.value;
+      const terim = _basligiNormallestir(q('firmaAra').value);
+      _yukleniciFirmaListesiCiz(firmaSec, terim ? firmalar.filter(f => _basligiNormallestir(f.firmaAdi).includes(terim)) : firmalar, seciliId);
+    });
+    const belgeleriCiz = () => _topluKisiBelgeleriCiz(i);
+    firmaSec.addEventListener('change', () => { if (_ykFirmaTehlikesiniUygula(firmaSec.value, q('tehlikeSinifi'), q('tehlikeKaynak'))) belgeleriCiz(); });
+    q('tehlikeSinifi').addEventListener('change', belgeleriCiz);
+    q('personelTuru').addEventListener('change', belgeleriCiz);
+    q('ilkGiris').addEventListener('change', () => _topluKisiCanliDurumGuncelle(i));
+    belgeleriCiz();
+  });
+
+  document.getElementById('topluKisiKatman').classList.add('acik');
+}
+
+function topluKisiKapat() {
+  document.getElementById('topluKisiKatman').classList.remove('acik');
+  document.getElementById('topluKisiSutunlar').innerHTML = '';
+  _topluKisiTaslaklari = [];
+}
+
+function _topluKisiSutunu(i) { return document.querySelector(`#topluKisiSutunlar [data-tk="${i}"]`); }
+
+function _topluKisiBelgeleriCiz(i) {
+  const sutun = _topluKisiSutunu(i);
+  const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
+  _ykBelgeListesiCiz(q('belgeler'), _topluKisiTaslaklari[i], () => q('tehlikeSinifi').value, q('personelTuru').value, () => _topluKisiCanliDurumGuncelle(i));
+}
+
+function _topluKisiCanliDurumGuncelle(i) {
+  const sutun = _topluKisiSutunu(i);
+  if (!sutun) return;
+  const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
+  q('canliDurum').innerHTML = _ykCanliDurumHtml(q('tehlikeSinifi').value, q('ilkGiris').checked, _topluKisiTaslaklari[i]);
+}
+
+function _topluKisiVerisiniOku(i) {
+  const sutun = _topluKisiSutunu(i);
+  const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
+  return {
+    firmaId: q('firmaId').value,
+    adSoyad: q('adSoyad').value,
+    kimlikNo: '', bolum: '', gorev: '',
+    telefon: q('telefon').value,
+    durum: q('durum').value,
+    tehlikeSinifi: q('tehlikeSinifi').value,
+    personelTuru: q('personelTuru').value,
+    pasif: q('pasif').checked,
+    ilkGiris: q('ilkGiris').checked,
+    belgeler: _topluKisiTaslaklari[i],
+    notlar: q('notlar').value
+  };
+}
+
+// Firma ve ad soyad boşsa sütun "kullanılmamış" sayılır ve atlanır.
+function _topluKisiSutunuDoluMu(v) {
+  return !!(v.firmaId || (v.adSoyad || '').trim());
+}
+
+function topluKisiKaydet() {
+  const genelHata = document.getElementById('topluKisiGenelHata');
+  genelHata.textContent = '';
+  document.querySelectorAll('#topluKisiSutunlar [data-tk-hata]').forEach(el => { el.textContent = ''; });
+
+  const dolu = _topluKisiTaslaklari.map((_, i) => ({ i, veriler: _topluKisiVerisiniOku(i) })).filter(x => _topluKisiSutunuDoluMu(x.veriler));
+  if (!dolu.length) { genelHata.textContent = 'En az bir personelin firma ve ad soyad bilgisini girin.'; return; }
+
+  // Önce hepsi doğrulanır; eksik olan varsa hiçbiri kaydedilmez (yarım kayıt olmasın).
+  const hataliSutunlar = [];
+  dolu.forEach(({ i, veriler }) => {
+    const d = yukleniciKisiDogrula(veriler);
+    if (d.gecerli) return;
+    hataliSutunlar.push(i + 1);
+    const sutun = _topluKisiSutunu(i);
+    Object.keys(d.hatalar).forEach(alan => {
+      const el = sutun.querySelector(`[data-tk-hata="${alan}"]`);
+      if (el) el.textContent = d.hatalar[alan];
+    });
+  });
+  if (hataliSutunlar.length) {
+    genelHata.textContent = `${hataliSutunlar.join(', ')}. personelde eksik bilgi var. Düzeltip tekrar kaydedin (henüz hiçbiri kaydedilmedi).`;
+    return;
   }
-  _kisiSekmeCubugunuCiz();
-  const durumKutusu = document.getElementById('kisiCanliDurum');
-  if (durumKutusu) durumKutusu.insertAdjacentHTML('afterbegin', '<div style="font-size:12px; color:#15803d; font-weight:600; margin-bottom:6px;">✓ Kaydedildi</div>');
+
+  const kaydedilenler = dolu.map(({ veriler }) => yukleniciKisiEkle(veriler)).filter(s => s.basarili);
+  topluKisiKapat();
+  kisileriCiz(document.getElementById('kisiAramaKutusu').value);
+  alert(`${kaydedilenler.length} personel kaydedildi: ${kaydedilenler.map(s => s.kisi.adSoyad).join(', ')}`);
 }
 
 // ==================== ARAÇ / EKİPMAN ====================

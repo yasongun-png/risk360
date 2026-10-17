@@ -240,7 +240,8 @@ const YUKLENICI_FIRMA_EGITIMI_VARSAYILAN_AY = 6;
 const YUKLENICI_BELGE_BOLUMLERI = {
   zorunlu: 'Girişi Etkileyen Zorunlu Belgeler',
   firma: 'Firma / Diğer Belgeler',
-  operator: 'Operatör Belgeleri'
+  operator: 'Operatör Belgeleri',
+  ek: 'Ek Eğitimler (bilgi amaçlı)'
 };
 
 // Kullanıcı isteği: modalda önce Var/Yok tipi belgeler, sonra tarihli
@@ -268,14 +269,26 @@ const YUKLENICI_BELGE_TANIMLARI = [
   { id: 'psikoteknik', ad: 'Psikoteknik Belgesi', tur: 'var-yok', girisEngelleyici: false, operatorSart: true, bolum: 'operator' },
   { id: 'src', ad: 'SRC Belgesi', tur: 'var-yok', girisEngelleyici: false, operatorSart: true, bolum: 'operator' },
   { id: 'operatorluk', ad: 'Operatörlük Belgesi', tur: 'var-yok', girisEngelleyici: false, operatorSart: true, bolum: 'operator' },
-  { id: 'ehliyet', ad: 'Ehliyet', tur: 'var-yok', girisEngelleyici: false, operatorSart: true, bolum: 'operator' }
+  { id: 'ehliyet', ad: 'Ehliyet', tur: 'var-yok', girisEngelleyici: false, operatorSart: true, bolum: 'operator' },
+  // Kullanıcı isteği: "formlara yüksekte çalışma eğitimi ekleyelim, ama
+  // herhangi bir zorunluluk olmasın, personelin uygunluğunu etkilemesin
+  // şimdilik". bilgiAmacli: sadece formda girilir/saklanır; uygunluk, eksik
+  // belge sayısı ve raporlardaki belge listeleri (yukleniciGecerliBelgeTanimlari)
+  // bu tanımı HİÇ görmez.
+  { id: 'yuksekteCalisma', ad: 'Yüksekte Çalışma Eğitimi', tur: 'tarih-bilgi', girisEngelleyici: false, bilgiAmacli: true, bolum: 'ek' }
 ];
 
 function yukleniciBelgeTanimiGetir(id) {
   return YUKLENICI_BELGE_TANIMLARI.find(b => b.id === id) || null;
 }
 
+// Uygunluk / eksik belge hesabına giren belgeler (bilgi amaçlılar hariç).
 function yukleniciGecerliBelgeTanimlari(personelTuru) {
+  return yukleniciFormBelgeTanimlari(personelTuru).filter(b => !b.bilgiAmacli);
+}
+
+// Personel formunda gösterilen belgeler (bilgi amaçlılar dahil).
+function yukleniciFormBelgeTanimlari(personelTuru) {
   return YUKLENICI_BELGE_TANIMLARI.filter(b => !b.operatorSart || personelTuru === 'operator');
 }
 
@@ -313,7 +326,7 @@ function yukleniciYilEkle(tarihStr, yil) {
 // effectiveExpDate ile birebir aynı kurallar.
 function yukleniciBelgeBitisTarihiHesapla(belgeTanimi, kayit, tehlikeSinifi) {
   if (!belgeTanimi || !kayit) return '';
-  if (belgeTanimi.tur === 'var-yok') return '';
+  if (belgeTanimi.tur === 'var-yok' || belgeTanimi.tur === 'tarih-bilgi') return '';
 
   if (belgeTanimi.tur === 'egitim') {
     if (kayit.exp) return kayit.exp;
