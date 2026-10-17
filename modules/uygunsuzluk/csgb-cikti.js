@@ -662,9 +662,9 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId, oncekiNotlarla) {
   const tumAciklar = csgbToplantiNo(t) >= 2;
   const gorusulenler = maddeler.filter(k => notuVar(k) || (tumAciklar && k.durum !== 'Kapalı' && k.durum !== 'İptal'));
   const SUTUN = [7, 18, 41, 12, 12, 10].map(y => Math.round(SAYFA_GEN * y / 100));
-  const buToplantiNotu = k => notuVar(k)
-    ? w.paragraflar(t.maddeNotlari[k.id])
-    : [new docx.Paragraph({ children: [w.metin('Bu toplantıda görüşülmedi.', { size: 15, italics: true, color: '64748B' })] })];
+  // Kullanıcı isteği: not girilmeyen maddede "Bu toplantıda görüşülmedi"
+  // yazılmasın — sadece bu toplantının tarihi yazılır, altı boş kalır.
+  const buToplantiNotu = k => notuVar(k) ? w.paragraflar(t.maddeNotlari[k.id]) : [];
   const notHucresi = k => {
     const oncekiler = oncekiToplantilar
       .filter(o => ((o.maddeNotlari || {})[k.id] || '').trim())
@@ -672,9 +672,11 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId, oncekiNotlarla) {
         w.metin(csgbNotTarihi(o.tarih) + ': ', { bold: true, size: 14, color: '64748B' }),
         w.metin(o.maddeNotlari[k.id].trim(), { size: 14, color: '64748B' })
       ] }));
-    if (!oncekiler.length) return buToplantiNotu(k);
+    if (!oncekiler.length && notuVar(k)) return buToplantiNotu(k);
     const buEtiket = new docx.Paragraph({ spacing: { before: 40 }, children: [w.metin(csgbNotTarihi(t.tarih) + ':', { bold: true, size: 15 })] });
-    return [...oncekiler, buEtiket, ...buToplantiNotu(k)];
+    // Not yoksa tarih etiketi kalır, altı boş bırakılır (elle doldurmak için).
+    const bosSatir = new docx.Paragraph({ children: [] });
+    return [...oncekiler, buEtiket, ...(notuVar(k) ? buToplantiNotu(k) : [bosSatir])];
   };
 
   const katilimcilar = csgbKatilimcilariNormallestir(t.katilimcilar);
