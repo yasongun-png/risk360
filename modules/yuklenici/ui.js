@@ -87,6 +87,7 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('kisiModalIptalBtn').addEventListener('click', () => _kisiSekmeKapat(_kisiAktifSekmeId));
   document.getElementById('kisiAcikFormlarBtn').addEventListener('click', kisiModalGoster);
   document.getElementById('adSoyad').addEventListener('input', _kisiSekmeCubugunuCiz);
+  document.getElementById('kisiFirmaId').addEventListener('change', () => { if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz(); });
   document.getElementById('kisiForm').addEventListener('submit', kisiFormGonderildi);
   document.getElementById('kisiAramaKutusu').addEventListener('input', e => kisileriCiz(e.target.value));
   document.getElementById('kisiDurumFiltre').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
@@ -98,7 +99,7 @@ function yukleniciSayfasiniBaslat() {
     excelSablonIndir(YUKLENICI_FIRMA_IMPORT_KOLONLARI, 'yuklenici_firma_sablonu.xlsx');
   });
   document.getElementById('firmaDisaAktarBtn').addEventListener('click', () => {
-    excelDisaAktar(yukleniciFirmalariniGetir(''), YUKLENICI_FIRMA_EXPORT_KOLONLARI, 'yuklenici_firmalari.xlsx');
+    excelDisaAktar(yukleniciFirmalariniGetir('').map(f => Object.assign({}, f, { tehlikeSinifiGoruntu: YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[f.tehlikeSinifi] || '' })), YUKLENICI_FIRMA_EXPORT_KOLONLARI, 'yuklenici_firmalari.xlsx');
   });
   document.getElementById('firmaIceAktarBtn').addEventListener('click', () => document.getElementById('firmaIceAktarDosya').click());
   document.getElementById('firmaIceAktarDosya').addEventListener('change', e => {
@@ -184,7 +185,8 @@ const YUKLENICI_FIRMA_IMPORT_KOLONLARI = [
   { anahtar: 'yetkiliAdi', baslik: 'Yetkili Adı' },
   { anahtar: 'telefon', baslik: 'Telefon' },
   { anahtar: 'eposta', baslik: 'E-posta' },
-  { anahtar: 'riskSeviyesi', baslik: 'Risk Seviyesi' }
+  { anahtar: 'riskSeviyesi', baslik: 'Risk Seviyesi' },
+  { anahtar: 'tehlikeSinifi', baslik: 'Tehlike Sınıfı', esanlamlar: ['İşyeri Tehlike Sınıfı'] }
 ];
 
 const YUKLENICI_FIRMA_EXPORT_KOLONLARI = [
@@ -192,6 +194,7 @@ const YUKLENICI_FIRMA_EXPORT_KOLONLARI = [
   { anahtar: 'firmaAdi', baslik: 'Firma Adı' },
   { anahtar: 'yetkiliAdi', baslik: 'Yetkili' },
   { anahtar: 'riskSeviyesi', baslik: 'Risk' },
+  { anahtar: 'tehlikeSinifiGoruntu', baslik: 'Tehlike Sınıfı' },
   { anahtar: 'durum', baslik: 'Durum' }
 ];
 
@@ -648,6 +651,9 @@ function firmaModalAc(firma) {
   document.getElementById('firmaTelefon').value = firma ? firma.telefon : '';
   document.getElementById('eposta').value = firma ? firma.eposta : '';
   document.getElementById('firmaRiskSeviyesi').innerHTML = YUKLENICI_RISK_SEVIYELERI.map(r => `<option ${firma && firma.riskSeviyesi === r ? 'selected' : ''}>${r}</option>`).join('');
+  const firmaTehlike = firma ? (firma.tehlikeSinifi || '') : '';
+  document.getElementById('firmaTehlikeSinifi').innerHTML = '<option value="">— Seçilmedi —</option>' +
+    YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${firmaTehlike === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
   document.getElementById('firmaDurum').innerHTML = FIRMA_DURUMLARI.map(d => `<option ${firma && firma.durum === d ? 'selected' : ''}>${d}</option>`).join('');
   document.getElementById('firmaGerekliEvraklarKutusu').innerHTML = _gerekliEvrakCheckboxHtml('firmaGerekliEvrak', firma ? firma.gerekliEvraklar : VARSAYILAN_GEREKLI_EVRAKLAR);
   document.getElementById('firmaNotlar').value = firma ? firma.notlar : '';
@@ -674,6 +680,7 @@ function firmaFormGonderildi(e) {
     telefon: document.getElementById('firmaTelefon').value,
     eposta: document.getElementById('eposta').value,
     riskSeviyesi: document.getElementById('firmaRiskSeviyesi').value,
+    tehlikeSinifi: document.getElementById('firmaTehlikeSinifi').value,
     durum: document.getElementById('firmaDurum').value,
     gerekliEvraklar: Array.from(document.querySelectorAll('input[name="firmaGerekliEvrak"]:checked')).map(el => el.value),
     evraklar: _firmaEvrakTaslak.filter(e => e.tur),
@@ -685,6 +692,9 @@ function firmaFormGonderildi(e) {
 
   firmaModalKapat();
   firmalariCiz(document.getElementById('firmaAramaKutusu').value);
+  if (sonuc.guncellenenPersonelSayisi) {
+    alert(`${sonuc.guncellenenPersonelSayisi} personelin tehlike sınıfı "${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[sonuc.firma.tehlikeSinifi]}" olarak güncellendi.`);
+  }
 }
 
 // ==================== KİŞİLER ====================
@@ -822,9 +832,29 @@ function _kisiSekmeyiFormaYukle(s) {
   document.getElementById('kisiIlkGiris').checked = s.ilkGiris;
   document.getElementById('kisiNotlar').value = s.notlar;
 
+  _kisiFirmaTehlikesiniUygula();
   _kisiBelgeListesiniCiz();
   temizleFormHatalari('kisiForm');
   _kisiSekmeCubugunuCiz();
+}
+
+// Seçili yüklenici firmanın işyeri tehlike sınıfı girildiyse personelin
+// tehlike sınıfı ondan gelir ve alan kilitlenir; girilmediyse elle seçilir.
+// Dönüş: değer değiştiyse true (belge geçerlilikleri yeniden çizilmeli).
+function _kisiFirmaTehlikesiniUygula() {
+  const sec = document.getElementById('kisiTehlikeSinifi');
+  const not = document.getElementById('kisiTehlikeKaynak');
+  const firmaTehlike = _yukleniciFirmaTehlikeSinifi(document.getElementById('kisiFirmaId').value);
+  const onceki = sec.value;
+  if (firmaTehlike) {
+    sec.value = firmaTehlike;
+    sec.disabled = true;
+    if (not) not.textContent = 'Firmanın işyeri tehlike sınıfından geliyor.';
+  } else {
+    sec.disabled = false;
+    if (not) not.textContent = '';
+  }
+  return sec.value !== onceki;
 }
 
 function _kisiSekmeCubugunuCiz() {

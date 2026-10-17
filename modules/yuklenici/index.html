@@ -377,8 +377,16 @@
             <select id="firmaRiskSeviyesi"></select>
           </div>
         </div>
-        <label for="firmaDurum">Durum</label>
-        <select id="firmaDurum"></select>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="firmaTehlikeSinifi">İşyeri Tehlike Sınıfı</label>
+            <select id="firmaTehlikeSinifi" title="Seçilirse bu firmanın tüm personeline otomatik uygulanır"></select>
+          </div>
+          <div>
+            <label for="firmaDurum">Durum</label>
+            <select id="firmaDurum"></select>
+          </div>
+        </div>
 
         <div class="form-bolum-baslik">Gerekli Evraklar</div>
         <div id="firmaGerekliEvraklarKutusu" style="margin-bottom:14px;"></div>
@@ -428,6 +436,7 @@
           <div>
             <label for="kisiTehlikeSinifi">Tehlike Sınıfı</label>
             <select id="kisiTehlikeSinifi"></select>
+            <div id="kisiTehlikeKaynak" style="font-size:11px; color:var(--metin-soluk); margin-top:-10px; margin-bottom:8px;"></div>
           </div>
           <div>
             <label for="kisiPersonelTuru">Personel Türü</label>

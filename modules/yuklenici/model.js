@@ -80,6 +80,10 @@ function firmaOlustur(veriler) {
     telefon: (veriler.telefon || '').trim(),
     eposta: (veriler.eposta || '').trim(),
     riskSeviyesi: veriler.riskSeviyesi || 'Orta',
+    // İşyeri tehlike sınıfı (az/tehlikeli/cok, boş = seçilmedi). Girildiyse
+    // bu firmanın personeline otomatik uygulanır (bkz. service.js
+    // yukleniciFirmaTehlikeSinifiniPersoneleUygula, ui.js kişi formu).
+    tehlikeSinifi: yukleniciTehlikeSinifiNormallestir(veriler.tehlikeSinifi),
     durum: veriler.durum || 'Aktif',
     gerekliEvraklar: Array.isArray(veriler.gerekliEvraklar) ? veriler.gerekliEvraklar : VARSAYILAN_GEREKLI_EVRAKLAR.slice(),
     evraklar: Array.isArray(veriler.evraklar) ? veriler.evraklar : [],
@@ -205,6 +209,15 @@ function kisiOlustur(veriler) {
 
 const YUKLENICI_TEHLIKE_SINIFLARI = ['az', 'tehlikeli', 'cok'];
 const YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI = { az: 'Az Tehlikeli', tehlikeli: 'Tehlikeli', cok: 'Çok Tehlikeli' };
+
+// Firma tehlike sınıfı: kod (az/tehlikeli/cok) veya Türkçe etiket kabul eder
+// (Excel içe aktarımı için); tanınmazsa '' (seçilmedi).
+function yukleniciTehlikeSinifiNormallestir(deger) {
+  const ham = String(deger || '').trim();
+  if (YUKLENICI_TEHLIKE_SINIFLARI.includes(ham.toLowerCase())) return ham.toLowerCase();
+  const bulunan = Object.entries(YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI).find(([, ad]) => ad.toLocaleLowerCase('tr') === ham.toLocaleLowerCase('tr'));
+  return bulunan ? bulunan[0] : '';
+}
 const YUKLENICI_PERSONEL_TURLERI = ['teknik', 'operator'];
 const YUKLENICI_PERSONEL_TURU_ETIKETLERI = { teknik: 'Teknik Personel', operator: 'Operatör' };
 

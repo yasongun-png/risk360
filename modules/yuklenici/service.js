@@ -67,12 +67,41 @@ function yukleniciFirmaGuncelle(id, veriler) {
     telefon: (veriler.telefon || '').trim(),
     eposta: (veriler.eposta || '').trim(),
     riskSeviyesi: veriler.riskSeviyesi || 'Orta',
+    tehlikeSinifi: yukleniciTehlikeSinifiNormallestir(veriler.tehlikeSinifi),
     durum: veriler.durum || 'Aktif',
     gerekliEvraklar: veriler.gerekliEvraklar || VARSAYILAN_GEREKLI_EVRAKLAR.slice(),
     evraklar: veriler.evraklar || [],
     notlar: (veriler.notlar || '').trim()
   });
-  return { basarili: true, firma: guncellenen };
+  const guncellenenPersonelSayisi = guncellenen ? yukleniciFirmaTehlikeSinifiniPersoneleUygula(guncellenen) : 0;
+  return { basarili: true, firma: guncellenen, guncellenenPersonelSayisi };
+}
+
+// Kullanıcı isteği: firmaya işyeri tehlike sınıfı girildiyse o firmanın
+// personelinin kaydındaki tehlike sınıfı da buradan alınsın. Sadece farklı
+// olan kişiler, tek yazımda güncellenir. Dönüş: güncellenen kişi sayısı.
+function yukleniciFirmaTehlikeSinifiniPersoneleUygula(firma) {
+  if (!firma || !firma.tehlikeSinifi) return 0;
+  const kisiler = yukleniciKisileriTumunuGetir();
+  let sayi = 0;
+  const yeni = kisiler.map(k => {
+    if (k.firmaId !== firma.id || k.tehlikeSinifi === firma.tehlikeSinifi) return k;
+    sayi++;
+    return Object.assign({}, k, { tehlikeSinifi: firma.tehlikeSinifi });
+  });
+  if (sayi) _yukleniciKisileriKaydet(yeni);
+  return sayi;
+}
+
+function _yukleniciFirmaTehlikeSinifi(firmaId) {
+  const firma = firmaId ? yukleniciFirmaIdIleGetirRepo(firmaId) : null;
+  return firma && firma.tehlikeSinifi ? firma.tehlikeSinifi : '';
+}
+
+// Kişi kaydedilirken: firmanın tehlike sınıfı girildiyse o geçerlidir.
+function _yukleniciKisiTehlikeSinifi(veriler) {
+  return _yukleniciFirmaTehlikeSinifi(veriler.firmaId) ||
+    (YUKLENICI_TEHLIKE_SINIFLARI.includes(veriler.tehlikeSinifi) ? veriler.tehlikeSinifi : 'az');
 }
 
 function yukleniciFirmaSil(id) {
@@ -110,7 +139,8 @@ function yukleniciKisiEkle(veriler) {
   const personelNo = sonrakiNoUret('YP', yukleniciKisileriTumunuGetir(), 'personelNo');
   const yeniKisi = kisiOlustur(Object.assign({}, veriler, {
     personelNo,
-    firmaAdi: firma ? firma.firmaAdi : ''
+    firmaAdi: firma ? firma.firmaAdi : '',
+    tehlikeSinifi: _yukleniciKisiTehlikeSinifi(veriler)
   }));
   yukleniciKisiEkleRepo(yeniKisi);
   return { basarili: true, kisi: yeniKisi };
@@ -130,7 +160,7 @@ function yukleniciKisiGuncelle(id, veriler) {
     gorev: (veriler.gorev || '').trim(),
     telefon: (veriler.telefon || '').trim(),
     durum: veriler.durum || 'Onay Bekliyor',
-    tehlikeSinifi: YUKLENICI_TEHLIKE_SINIFLARI.includes(veriler.tehlikeSinifi) ? veriler.tehlikeSinifi : 'az',
+    tehlikeSinifi: _yukleniciKisiTehlikeSinifi(veriler),
     personelTuru: YUKLENICI_PERSONEL_TURLERI.includes(veriler.personelTuru) ? veriler.personelTuru : 'teknik',
     pasif: !!veriler.pasif,
     ilkGiris: !!veriler.ilkGiris,
@@ -191,7 +221,7 @@ function yukleniciKisilerTopluEkle(kayitlarListesi) {
         if (gercektenDolu) doluBelgeler[id] = deger;
       });
       sonucListe[mevcutIndeks] = Object.assign({}, varOlan, {
-        tehlikeSinifi: (v.tehlikeSinifi && v.tehlikeSinifi !== 'az') ? v.tehlikeSinifi : varOlan.tehlikeSinifi,
+        tehlikeSinifi: _yukleniciFirmaTehlikeSinifi(v.firmaId) || ((v.tehlikeSinifi && v.tehlikeSinifi !== 'az') ? v.tehlikeSinifi : varOlan.tehlikeSinifi),
         belgeler: Object.assign({}, varOlan.belgeler || {}, doluBelgeler),
         // pasif/ilkGiris sadece kaynak dosyada AÇIKÇA belirtilmişse (true/false,
         // undefined değil) güncellenir — belirtilmemişse mevcut değer korunur.
@@ -203,7 +233,7 @@ function yukleniciKisilerTopluEkle(kayitlarListesi) {
       guncellenenSayisi++;
     } else {
       sonNo += 1;
-      const yeniKisi = kisiOlustur(Object.assign({}, v, { personelNo: 'YP' + String(sonNo).padStart(4, '0') }));
+      const yeniKisi = kisiOlustur(Object.assign({}, v, { personelNo: 'YP' + String(sonNo).padStart(4, '0'), tehlikeSinifi: _yukleniciKisiTehlikeSinifi(v) }));
       yeniKisi.olusturan = iz.kim;
       sonucListe.push(yeniKisi);
       indeksHaritasi[anahtar] = sonucListe.length - 1;
