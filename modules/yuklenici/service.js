@@ -346,7 +346,7 @@ function yukleniciEksiklikMailMetni(kisiler) {
     return satirlar.join('\n');
   });
 
-  return ['Merhaba,', '', 'Aşağıdaki personelin eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.', '', bloklar.join('\n\n' + '-'.repeat(40) + '\n\n'), '', 'Bagfaş İş Güvenliği Birimi'].join('\n');
+  return ['Merhaba,', '', 'Aşağıdaki personelin eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.', '', bloklar.join('\n\n' + '-'.repeat(40) + '\n\n'), '', 'Bagfaş İş Güvenliği Birimi', 'Tel: 0 266 714 10 01 - Dahili: 374/375'].join('\n');
 }
 
 // ---- Kişiler ----
