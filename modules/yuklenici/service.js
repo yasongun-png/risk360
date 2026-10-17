@@ -301,6 +301,8 @@ function yukleniciKisiEksikBelgeleri(kisi) {
     if (b.id === 'firmaEgitimi') return;
     const kayit = belgeler[b.id] || {};
     if (uygunMu(b)) {
+      // Kullanıcı isteği: Geçici Görevlendirme geçerliyse yeterli, "doluyor" yazılmaz.
+      if (b.id === 'geciciGorev') return;
       const exp = yukleniciBelgeBitisTarihiHesapla(b, kayit, kisi.tehlikeSinifi);
       const kalan = exp ? gunFarkiHesapla(exp, bugun) : null;
       if (kalan !== null && kalan <= 30) satirlar.push(`${b.ad}: süresi ${formatTarihGoster(exp)} tarihinde doluyor`);
