@@ -673,7 +673,7 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId, oncekiNotlarla) {
         w.metin(o.maddeNotlari[k.id].trim(), { size: 14, color: '64748B' })
       ] }));
     if (!oncekiler.length) return buToplantiNotu(k);
-    const buEtiket = new docx.Paragraph({ spacing: { before: 40 }, children: [w.metin(csgbNotTarihi(t.tarih) + ' (bu toplantı):', { bold: true, size: 15 })] });
+    const buEtiket = new docx.Paragraph({ spacing: { before: 40 }, children: [w.metin(csgbNotTarihi(t.tarih) + ':', { bold: true, size: 15 })] });
     return [...oncekiler, buEtiket, ...buToplantiNotu(k)];
   };
 
