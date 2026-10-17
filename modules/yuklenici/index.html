@@ -29,11 +29,11 @@
 
     <div class="sekme-cubugu">
       <button type="button" data-sekme="dashboard">Dashboard</button>
+      <button type="button" data-sekme="kayitlar" class="sekme-seciliDegil">Personel Kayıtları</button>
       <button type="button" data-sekme="firmalar" class="sekme-seciliDegil">Yüklenici Firmalar</button>
       <button type="button" data-sekme="kisiler" class="sekme-seciliDegil">Yüklenici Personeli</button>
       <button type="button" data-sekme="araclar" class="sekme-seciliDegil">Araç / Ekipman</button>
       <button type="button" data-sekme="ziyaretciler" class="sekme-seciliDegil">Ziyaretçiler</button>
-      <button type="button" data-sekme="kayitlar" class="sekme-seciliDegil">Kayıtlar</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
       <button type="button" data-sekme="detayli-arama" class="sekme-seciliDegil">Detaylı Arama</button>
       <button type="button" class="birincil" id="hizliPersonelEkleBtn" style="margin-left:auto; width:auto; padding:9px 18px; font-size:13px; font-weight:600;">+ Personel Ekle</button>
@@ -535,13 +535,15 @@
   <script src="../../core/tenant.js"></script>
   <script src="../../core/excel.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js"></script>
-  <script src="validation.js"></script>
-  <script src="repository.js?v=2"></script>
-  <script src="service.js?v=3"></script>
-  <script src="ui.js?v=3"></script>
+  <!-- ?v= değeri: modül JS'si her değiştiğinde artırın; yoksa tarayıcı eski
+       dosyayı önbellekten alır, yeni index.html ile uyuşmaz ve sayfa çöker. -->
+  <script src="model.js?v=20261017b"></script>
+  <script src="validation.js?v=20261017b"></script>
+  <script src="repository.js?v=20261017b"></script>
+  <script src="service.js?v=20261017b"></script>
+  <script src="ui.js?v=20261017b"></script>
   <script src="roboto-font.js"></script>
-  <script src="cikti.js"></script>
+  <script src="cikti.js?v=20261017b"></script>
   <script>
     const kullanici = girisGerekliModul('yuklenici');
 
