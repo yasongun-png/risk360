@@ -335,15 +335,8 @@ function yukleniciEksiklikMailMetni(kisiler) {
   const bloklar = gruplar.map(g => {
     const firma = g.firmaId ? yukleniciFirmaIdIleGetirRepo(g.firmaId) : null;
     const satirlar = [];
-    if (firma) {
-      satirlar.push(`Firma: ${firma.firmaAdi}`);
-      const z = _firmaZenginlestir(firma);
-      const firmaSorunlari = z.eksikEvraklar.map(t => `${t}: yok`).concat(z.suresiGecenEvraklar.map(t => `${t}: süresi dolmuş`));
-      if (firmaSorunlari.length) {
-        satirlar.push('', 'Firma evrakları:');
-        firmaSorunlari.forEach(s => satirlar.push(`- ${s}`));
-      }
-    }
+    // Kullanıcı isteği: firma sözleşmeleri (İSG uzmanı / hekim) mailde istenmez.
+    if (firma) satirlar.push(`Firma: ${firma.firmaAdi}`);
     g.kisiler.forEach(k => {
       const eksikler = yukleniciKisiEksikBelgeleri(k);
       satirlar.push('', `${(k.adSoyad || '').trim() || '(Ad soyad girilmedi)'}:`);
