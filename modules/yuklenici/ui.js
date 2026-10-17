@@ -111,6 +111,8 @@ function yukleniciSayfasiniBaslat() {
     excelDisaAktar(yukleniciFirmalariniGetir('').map(f => Object.assign({}, f, { tehlikeSinifiGoruntu: YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[f.tehlikeSinifi] || '' })), YUKLENICI_FIRMA_EXPORT_KOLONLARI, 'yuklenici_firmalari.xlsx');
   });
   document.getElementById('firmaIceAktarBtn').addEventListener('click', () => document.getElementById('firmaIceAktarDosya').click());
+  document.getElementById('mukerrerFirmaBtn').addEventListener('click', mukerrerFirmalarAc);
+  document.getElementById('mukerrerFirmaKapatBtn').addEventListener('click', () => document.getElementById('mukerrerFirmaKatman').classList.remove('acik'));
   document.getElementById('firmaIceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
     excelIceAktar(dosya, YUKLENICI_FIRMA_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
@@ -653,6 +655,82 @@ function firmalariCiz(aramaMetni) {
   }));
 }
 
+// ==================== MÜKERRER FİRMALAR ====================
+
+function mukerrerFirmalarAc() {
+  mukerrerFirmalariCiz();
+  document.getElementById('mukerrerFirmaKatman').classList.add('acik');
+}
+
+function _mukerrerGrupHtml(grup, g, tur) {
+  const ad = `mkAna-${tur}-${g}`;
+  const satirlar = grup.map((f, i) => `
+    <tr>
+      <td style="text-align:center;"><input type="radio" name="${ad}" value="${f.id}" ${i === 0 ? 'checked' : ''} style="width:auto;"></td>
+      <td style="text-align:center;"><input type="checkbox" data-mk-dahil value="${f.id}" ${tur === 'kesin' ? 'checked' : ''} style="width:auto;"></td>
+      <td>${_ykKacir(f.firmaNo)}</td>
+      <td>${_ykKacir(f.firmaAdi)}</td>
+      <td style="text-align:center;">${f.personelSayisi}</td>
+      <td style="text-align:center;">${f.aracSayisi}</td>
+      <td>${_ykKayitTarihiGoster(f.olusturmaTarihi)}</td>
+    </tr>`).join('');
+  return `
+    <div data-mk-grup="${tur}-${g}" style="border:1px solid var(--kenarlik); border-radius:10px; padding:10px; margin-bottom:12px;">
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Ana</th><th>Birleştir</th><th>Firma No</th><th>Firma Adı</th><th>Personel</th><th>Araç</th><th>Kayıt Tarihi</th></tr></thead>
+          <tbody>${satirlar}</tbody>
+        </table>
+      </div>
+      <div style="text-align:right; margin-top:8px;"><button type="button" class="birincil" data-mk-birlestir="${tur}-${g}" style="width:auto;">Seçilenleri Birleştir</button></div>
+    </div>`;
+}
+
+function mukerrerFirmalariCiz() {
+  const kutu = document.getElementById('mukerrerFirmaIcerik');
+  const { kesin, olasi } = yukleniciMukerrerFirmaGruplariniBul();
+  if (!kesin.length && !olasi.length) {
+    kutu.innerHTML = '<div style="padding:16px; text-align:center; color:var(--metin-soluk);">Mükerrer görünen firma bulunamadı.</div>';
+    return;
+  }
+  kutu.innerHTML =
+    `<div class="form-bolum-baslik">Aynı Firma Görünenler (${kesin.length} grup)</div>` +
+    (kesin.length ? kesin.map((grup, g) => _mukerrerGrupHtml(grup, g, 'kesin')).join('') : '<p style="font-size:13px; color:var(--metin-soluk);">Yok.</p>') +
+    (olasi.length ? `<div class="form-bolum-baslik">Olası Mükerrerler — sadece ilk harfleri aynı (${olasi.length} grup)</div>
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin-top:-4px;">Bunlar farklı firmalar olabilir; sadece aynı olduğundan emin olduklarınızı işaretleyin.</p>` +
+      olasi.map((grup, g) => _mukerrerGrupHtml(grup, g, 'olasi')).join('') : '');
+
+  kutu.querySelectorAll('[data-mk-birlestir]').forEach(btn => btn.addEventListener('click', () => _mukerrerGrubuBirlestir(btn.getAttribute('data-mk-birlestir'))));
+}
+
+async function _mukerrerGrubuBirlestir(grupAnahtari) {
+  const grupEl = document.querySelector(`#mukerrerFirmaIcerik [data-mk-grup="${grupAnahtari}"]`);
+  const anaEl = grupEl.querySelector('input[type="radio"]:checked');
+  if (!anaEl) return;
+  const anaId = anaEl.value;
+  const kopyaIdleri = Array.from(grupEl.querySelectorAll('[data-mk-dahil]:checked')).map(el => el.value).filter(id => id !== anaId);
+  if (!kopyaIdleri.length) { alert('Ana firmaya birleştirilecek en az bir firmayı "Birleştir" sütunundan işaretleyin.'); return; }
+
+  const ozet = yukleniciFirmaBirlestirmeOzeti(anaId, kopyaIdleri);
+  if (!ozet) return;
+  const mesaj = `Ana firma: ${ozet.ana.firmaAdi} (${ozet.ana.firmaNo})\n\n` +
+    `Silinecek kopyalar:\n${ozet.kopyaFirmalar.map(f => `• ${f.firmaAdi} (${f.firmaNo})`).join('\n')}\n\n` +
+    `Ana firmaya taşınacak: ${ozet.personel} personel, ${ozet.arac} araç/ekipman` +
+    (ozet.ziyaretci ? `, ${ozet.ziyaretci} ziyaretçi kaydı` : '') +
+    (ozet.evrak ? `, ${ozet.evrak} firma evrakı` : '') + '.' +
+    (ozet.ayniIsimliPersonel ? `\n\n⚠ Taşınan personelden ${ozet.ayniIsimliPersonel} kişi ana firmada aynı isimle zaten kayıtlı; birleştirmeden sonra Personel sekmesinden kontrol edin.` : '') +
+    '\n\nBu işlem geri alınamaz. Birleştirilsin mi?';
+  const onay = onayModali(mesaj, 'Birleştir');
+  const mesajEl = document.getElementById('omMesaj');
+  if (mesajEl) mesajEl.style.whiteSpace = 'pre-line';
+  if (!(await onay)) return;
+
+  const sonuc = yukleniciFirmalariBirlestir(anaId, kopyaIdleri);
+  if (!sonuc.basarili) { if (sonuc.hata) alert(sonuc.hata); return; }
+  mukerrerFirmalariCiz();
+  firmalariCiz(document.getElementById('firmaAramaKutusu').value);
+}
+
 function firmaModalAc(firma) {
   _duzenlenenFirmaId = firma ? firma.id : null;
   _firmaEvrakTaslak = firma ? firma.evraklar.map(e => Object.assign({}, e)) : [];
@@ -942,10 +1020,13 @@ function _topluKisiSutunHtml(i) {
   return `
     <div data-tk="${i}" style="border:1px solid var(--kenarlik); border-radius:10px; padding:10px; min-width:0;">
       <div style="font-weight:700; margin-bottom:8px;">${i + 1}. Personel</div>
-      <label>Firma</label>
-      <input type="text" data-tk-alan="firmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
-      <select data-tk-alan="firmaId" size="5" style="height:auto;"></select>
-      <div data-tk-alan="firmaSecili"></div>
+      <div ${i > 0 ? 'style="display:none;"' : ''}>
+        <label>Firma${i === 0 ? ' <span style="font-weight:normal; font-size:12px; color:var(--metin-soluk);">(tüm personel bu firmaya kaydedilir)</span>' : ''}</label>
+        <input type="text" data-tk-alan="firmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
+        <select data-tk-alan="firmaId" size="5" style="height:auto;"></select>
+        <div data-tk-alan="firmaSecili"></div>
+      </div>
+      ${i > 0 ? '<label>Firma</label><div data-tk-alan="firmaEtiket" style="margin:0 0 12px; font-size:13px; font-weight:600;">1. personeldeki firma</div>' : ''}
       ${hata('firmaId')}
       <label>Ad Soyad</label>
       <input type="text" data-tk-alan="adSoyad">
@@ -992,18 +1073,17 @@ function topluKisiAc() {
       _yukleniciFirmaListesiCiz(firmaSec, terim ? firmalar.filter(f => _basligiNormallestir(f.firmaAdi).includes(terim)) : firmalar, seciliId);
     });
     const belgeleriCiz = () => _topluKisiBelgeleriCiz(i);
-    firmaSec.addEventListener('change', () => {
-      sutun.dataset.firmaElle = '1';
-      _topluKisiFirmaUygula(i, firmaSec.value);
-      // Kullanıcı isteği: "ilk forma seçtiğim firma diğerlerine de seçilsin,
-      // hangisinde seçersem fark etmeksizin" — elle firma seçilmemiş diğer
-      // sütunlara aynı firma yazılır (elle farklı firma seçilenler korunur).
+    // Kullanıcı isteği: "tek firma seçimi olsun, diğerleri de aynı firmaya
+    // kaydedilsin; 2-5'te firma seçimini gizle" — firma sadece 1. sütunda
+    // seçilir, diğer sütunların (gizli) seçimine aynen yazılır.
+    if (i === 0) firmaSec.addEventListener('change', () => {
+      _topluKisiFirmaUygula(0, firmaSec.value);
+      const secili = firmalar.find(f => f.id === firmaSec.value);
       kutu.querySelectorAll('[data-tk]').forEach(diger => {
-        if (diger === sutun || diger.dataset.firmaElle) return;
+        if (diger === sutun) return;
         const j = Number(diger.getAttribute('data-tk'));
-        const arama = diger.querySelector('[data-tk-alan="firmaAra"]');
-        arama.value = '';
         _yukleniciFirmaListesiCiz(diger.querySelector('[data-tk-alan="firmaId"]'), firmalar, firmaSec.value);
+        diger.querySelector('[data-tk-alan="firmaEtiket"]').textContent = secili ? secili.firmaAdi : '1. personeldeki firma';
         _topluKisiFirmaUygula(j, firmaSec.value);
       });
     });
@@ -1089,7 +1169,7 @@ function topluKisiKaydet() {
     const sutun = _topluKisiSutunu(i);
     Object.keys(d.hatalar).forEach(alan => {
       const el = sutun.querySelector(`[data-tk-hata="${alan}"]`);
-      if (el) el.textContent = d.hatalar[alan];
+      if (el) el.textContent = (alan === 'firmaId' && i > 0) ? 'Firmayı 1. personelde seçin.' : d.hatalar[alan];
     });
   });
   if (hataliSutunlar.length) {

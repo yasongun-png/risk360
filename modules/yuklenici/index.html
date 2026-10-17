@@ -107,6 +107,7 @@
           <button type="button" class="ikincil" id="firmaIceAktarBtn">İçe Aktar</button>
           <input type="file" id="firmaIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="firmaDisaAktarBtn">Dışa Aktar</button>
+          <button type="button" class="ikincil" id="mukerrerFirmaBtn" title="Aynı firma birden fazla eklendiyse kopyaları tek firmada birleştirir">Mükerrer Firmalar</button>
           <button type="button" class="birincil" id="yeniFirmaBtn" style="width:auto;">+ Firma Ekle</button>
         </div>
       </div>
@@ -407,6 +408,20 @@
         </div>
       </form>
       <button type="button" class="tablo-buton" id="firmaModalKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MÜKERRER FİRMALAR MODAL -->
+  <div class="modal-katman" id="mukerrerFirmaKatman">
+    <div class="modal-kutu" style="max-width:860px; max-height:88vh; overflow:auto;">
+      <h3>Mükerrer Firmalar</h3>
+      <p style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;">
+        Her grupta kalacak <b>ana firmayı</b> seçin. İşaretli diğer firmaların personeli, araçları, ziyaretçi kayıtları ve evrakları ana firmaya taşınır; kopya firmalar silinir.
+      </p>
+      <div id="mukerrerFirmaIcerik"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mukerrerFirmaKapatBtn">Kapat</button>
+      </div>
     </div>
   </div>
 

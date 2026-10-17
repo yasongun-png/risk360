@@ -121,6 +121,158 @@ function yukleniciBenzerFirmalariBul(firmaAdi, haricId) {
     .map(({ firma, fn }) => Object.assign({}, firma, { ayniAd: fn === n }));
 }
 
+// ---- Mükerrer firmaları birleştirme ----
+// Kullanıcı isteği: aynı firma defalarca eklenmiş ("Bursa Merkez Çevre
+// Laboratuvarı" / "BURSA MERKEZ ÇEVRE LABORATUVAR"). Kesin grup: normalize
+// ad aynı ya da biri diğerini içeriyor (≥4 harf). Olası grup: sadece ilk 4
+// harf aynı — bu geniş olduğu için ayrı listelenir, kullanıcı kontrol eder.
+function yukleniciMukerrerFirmaGruplariniBul() {
+  const firmalar = yukleniciFirmalariTumunuGetir();
+  const kisiler = yukleniciKisileriTumunuGetir();
+  const araclar = yukleniciAraclariTumunuGetir();
+  const n = firmalar.map(f => _basligiNormallestir(f.firmaAdi));
+
+  const ebeveyn = firmalar.map((_, i) => i);
+  const kok = i => { while (ebeveyn[i] !== i) { ebeveyn[i] = ebeveyn[ebeveyn[i]]; i = ebeveyn[i]; } return i; };
+  const birlestir = (a, b) => { const ka = kok(a), kb = kok(b); if (ka !== kb) ebeveyn[kb] = ka; };
+
+  for (let i = 0; i < firmalar.length; i++) {
+    for (let j = i + 1; j < firmalar.length; j++) {
+      if (!n[i] || !n[j]) continue;
+      if (n[i] === n[j] || (n[i].length >= 4 && n[j].length >= 4 && (n[i].includes(n[j]) || n[j].includes(n[i])))) birlestir(i, j);
+    }
+  }
+  const kesinKok = firmalar.map((_, i) => kok(i));
+
+  // Olası: kesin grupların üstüne ilk-4-harf eşleşmesi eklenir; en az iki
+  // farklı kesin gruptan (ya da tekil firmadan) oluşanlar olası sayılır.
+  for (let i = 0; i < firmalar.length; i++) {
+    for (let j = i + 1; j < firmalar.length; j++) {
+      if (n[i].length >= 3 && n[j].length >= 3 && n[i].slice(0, 4) === n[j].slice(0, 4)) birlestir(i, j);
+    }
+  }
+
+  const firmaBilgisi = i => {
+    const f = firmalar[i];
+    return Object.assign({}, f, {
+      personelSayisi: kisiler.filter(k => k.firmaId === f.id).length,
+      aracSayisi: araclar.filter(a => a.firmaId === f.id).length
+    });
+  };
+  // Grup içinde en çok personeli olan başta (varsayılan ana firma), sonra en eski kayıt.
+  const sirala = liste => liste.sort((a, b) => (b.personelSayisi + b.aracSayisi) - (a.personelSayisi + a.aracSayisi) ||
+    (a.olusturmaTarihi || '').localeCompare(b.olusturmaTarihi || ''));
+
+  const kesinHarita = {};
+  const olasiHarita = {};
+  firmalar.forEach((_, i) => {
+    (kesinHarita[kesinKok[i]] = kesinHarita[kesinKok[i]] || []).push(i);
+    (olasiHarita[kok(i)] = olasiHarita[kok(i)] || []).push(i);
+  });
+
+  const kesin = Object.values(kesinHarita).filter(g => g.length > 1).map(g => sirala(g.map(firmaBilgisi)));
+  const olasi = Object.values(olasiHarita)
+    .filter(g => new Set(g.map(i => kesinKok[i])).size > 1)
+    .map(g => sirala(g.map(firmaBilgisi)));
+  const adSirala = (a, b) => a[0].firmaAdi.localeCompare(b[0].firmaAdi, 'tr');
+  return { kesin: kesin.sort(adSirala), olasi: olasi.sort(adSirala) };
+}
+
+function _yukleniciEvrakAnahtari(e) {
+  return [_basligiNormallestir(e.tur), e.verilisTarihi || '', e.gecerlilikTarihi || ''].join('|');
+}
+
+// Birleştirme yapılmadan önce onay penceresinde gösterilecek sayılar.
+function yukleniciFirmaBirlestirmeOzeti(anaId, kopyaIdleri) {
+  const kopyalar = new Set(kopyaIdleri.filter(id => id !== anaId));
+  const firmalar = yukleniciFirmalariTumunuGetir();
+  const ana = firmalar.find(f => f.id === anaId);
+  const kopyaFirmalar = firmalar.filter(f => kopyalar.has(f.id));
+  if (!ana || !kopyaFirmalar.length) return null;
+  const kopyaAdlari = new Set(kopyaFirmalar.map(f => _basligiNormallestir(f.firmaAdi)));
+  kopyaAdlari.delete(_basligiNormallestir(ana.firmaAdi));
+
+  const kisiler = yukleniciKisileriTumunuGetir();
+  const anaKisiAdlari = new Set(kisiler.filter(k => k.firmaId === anaId).map(k => _basligiNormallestir(k.adSoyad)));
+  const tasinacakKisiler = kisiler.filter(k => kopyalar.has(k.firmaId));
+  const anaEvraklar = new Set((ana.evraklar || []).map(_yukleniciEvrakAnahtari));
+  const yeniEvrak = new Set();
+  kopyaFirmalar.forEach(f => (f.evraklar || []).forEach(e => { const a = _yukleniciEvrakAnahtari(e); if (!anaEvraklar.has(a)) yeniEvrak.add(a); }));
+
+  return {
+    ana,
+    kopyaFirmalar,
+    personel: tasinacakKisiler.length,
+    ayniIsimliPersonel: tasinacakKisiler.filter(k => anaKisiAdlari.has(_basligiNormallestir(k.adSoyad))).length,
+    arac: yukleniciAraclariTumunuGetir().filter(a => kopyalar.has(a.firmaId)).length,
+    ziyaretci: yukleniciZiyaretcileriTumunuGetir().filter(z => kopyaAdlari.has(_basligiNormallestir(z.firma))).length,
+    evrak: yeniEvrak.size
+  };
+}
+
+// Kopya firmaları ana firmaya birleştirir: personel/araçlar ana firmaya
+// taşınır (firmaId + firmaAdi), ziyaretçi kayıtlarındaki firma adı
+// güncellenir, evraklar ve gerekli evrak listeleri birleştirilir, ana firmada
+// boş kalan bilgiler kopyalardan doldurulur, sonra kopyalar silinir. Her
+// liste tek seferde yazılır (bkz. yukleniciKisilerTopluEkle gerekçesi).
+function yukleniciFirmalariBirlestir(anaId, kopyaIdleri) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  const ozet = yukleniciFirmaBirlestirmeOzeti(anaId, kopyaIdleri);
+  if (!ozet) return { basarili: false, hata: 'Birleştirilecek firma bulunamadı.' };
+
+  const { ana, kopyaFirmalar } = ozet;
+  const kopyalar = new Set(kopyaFirmalar.map(f => f.id));
+  const kopyaAdlari = new Set(kopyaFirmalar.map(f => _basligiNormallestir(f.firmaAdi)));
+  kopyaAdlari.delete(_basligiNormallestir(ana.firmaAdi));
+  const iz = yukleniciIzBilgisi();
+
+  // Ana firmanın yeni hâli
+  const evrakAnahtarlari = new Set();
+  const evraklar = [];
+  [ana].concat(kopyaFirmalar).forEach(f => (f.evraklar || []).forEach(e => {
+    const a = _yukleniciEvrakAnahtari(e);
+    if (evrakAnahtarlari.has(a)) return;
+    evrakAnahtarlari.add(a);
+    evraklar.push(e);
+  }));
+  const gerekliEvraklar = Array.from(new Set([ana].concat(kopyaFirmalar).reduce((t, f) => t.concat(f.gerekliEvraklar || []), [])));
+  const yeniAna = Object.assign({}, ana, { evraklar, gerekliEvraklar, guncellemeTarihi: iz.zaman, guncelleyen: iz.kim });
+  ['vergiNo', 'faaliyetAlani', 'yetkiliAdi', 'telefon', 'eposta', 'tehlikeSinifi', 'notlar'].forEach(alan => {
+    if (yeniAna[alan]) return;
+    const kaynak = kopyaFirmalar.find(f => f[alan]);
+    if (kaynak) yeniAna[alan] = kaynak[alan];
+  });
+
+  let degisenKisi = 0;
+  const kisiler = yukleniciKisileriTumunuGetir().map(k => {
+    if (!kopyalar.has(k.firmaId) && !(k.firmaId === anaId && yeniAna.tehlikeSinifi && k.tehlikeSinifi !== yeniAna.tehlikeSinifi)) return k;
+    degisenKisi++;
+    return Object.assign({}, k, {
+      firmaId: anaId,
+      firmaAdi: yeniAna.firmaAdi,
+      tehlikeSinifi: yeniAna.tehlikeSinifi || k.tehlikeSinifi,
+      guncellemeTarihi: iz.zaman,
+      guncelleyen: iz.kim
+    });
+  });
+  const araclar = yukleniciAraclariTumunuGetir().map(a => kopyalar.has(a.firmaId)
+    ? Object.assign({}, a, { firmaId: anaId, firmaAdi: yeniAna.firmaAdi, guncellemeTarihi: iz.zaman, guncelleyen: iz.kim })
+    : a);
+  const ziyaretciler = yukleniciZiyaretcileriTumunuGetir().map(z => kopyaAdlari.has(_basligiNormallestir(z.firma))
+    ? Object.assign({}, z, { firma: yeniAna.firmaAdi })
+    : z);
+  const firmalar = yukleniciFirmalariTumunuGetir()
+    .filter(f => !kopyalar.has(f.id))
+    .map(f => f.id === anaId ? yeniAna : f);
+
+  if (degisenKisi) _yukleniciKisileriKaydet(kisiler);
+  if (ozet.arac) _yukleniciAraclariKaydet(araclar);
+  if (ozet.ziyaretci) _yukleniciZiyaretcileriKaydet(ziyaretciler);
+  _yukleniciFirmalariKaydet(firmalar);
+
+  return { basarili: true, firma: yeniAna, silinenFirma: kopyaFirmalar.length, personel: ozet.personel, arac: ozet.arac, ziyaretci: ozet.ziyaretci };
+}
+
 function yukleniciFirmaSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciFirmaSilRepo(id);
