@@ -92,7 +92,10 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
   document.getElementById('kisiModalIptalBtn').addEventListener('click', kisiModalKapat);
   _topluKisiBaslat();
-  document.getElementById('kisiFirmaId').addEventListener('change', () => { if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz(); });
+  document.getElementById('kisiFirmaId').addEventListener('change', () => {
+    _kisiFirmaSeciliGorunum();
+    if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz();
+  });
   document.getElementById('kisiForm').addEventListener('submit', kisiFormGonderildi);
   document.getElementById('kisiAramaKutusu').addEventListener('input', e => kisileriCiz(e.target.value));
   document.getElementById('kisiDurumFiltre').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
@@ -787,6 +790,34 @@ function _ykFirmaTehlikesiniUygula(firmaId, sec, notEl) {
   return sec.value !== onceki;
 }
 
+// Kullanıcı isteği: "firma seçme alanı seçtikten sonra sadece seçtiğim
+// firma kalması lazım" — firma seçiliyse arama kutusu + uzun liste gizlenir,
+// yerine seçili firmanın adı ve "Değiştir" butonu gösterilir; Değiştir
+// listeyi yeniden açar (seçim korunur, yeni bir firmaya tıklanana kadar).
+function _ykFirmaSeciliGorunum(aramaEl, selectEl, seciliEl) {
+  const firma = selectEl.value ? yukleniciFirmaIdIleGetirRepo(selectEl.value) : null;
+  const kompakt = !!firma;
+  aramaEl.style.display = kompakt ? 'none' : '';
+  selectEl.style.display = kompakt ? 'none' : '';
+  seciliEl.innerHTML = kompakt ? `
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 12px; border:1px solid var(--kenarlik); border-radius:8px; background:#f8fafc; margin-bottom:14px;">
+      <b style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_ykKacir(firma.firmaAdi)}">${_ykKacir(firma.firmaAdi)}</b>
+      <button type="button" class="tablo-buton" data-firma-degistir>Değiştir</button>
+    </div>` : '';
+  if (kompakt) {
+    seciliEl.querySelector('[data-firma-degistir]').addEventListener('click', () => {
+      aramaEl.style.display = '';
+      selectEl.style.display = '';
+      seciliEl.innerHTML = '';
+      aramaEl.focus();
+    });
+  }
+}
+
+function _kisiFirmaSeciliGorunum() {
+  _ykFirmaSeciliGorunum(document.getElementById('kisiFirmaAra'), document.getElementById('kisiFirmaId'), document.getElementById('kisiFirmaSecili'));
+}
+
 function _kisiFirmaTehlikesiniUygula() {
   return _ykFirmaTehlikesiniUygula(document.getElementById('kisiFirmaId').value,
     document.getElementById('kisiTehlikeSinifi'), document.getElementById('kisiTehlikeKaynak'));
@@ -813,6 +844,7 @@ function kisiModalAc(kisi) {
   document.getElementById('kisiIlkGiris').checked = !!(kisi && kisi.ilkGiris);
   document.getElementById('kisiNotlar').value = kisi ? kisi.notlar : '';
 
+  _kisiFirmaSeciliGorunum();
   _kisiFirmaTehlikesiniUygula();
   _kisiBelgeListesiniCiz();
   temizleFormHatalari('kisiForm');
@@ -882,6 +914,7 @@ function _topluKisiSutunHtml(i) {
       <label>Firma</label>
       <input type="text" data-tk-alan="firmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
       <select data-tk-alan="firmaId" size="5" style="height:auto;"></select>
+      <div data-tk-alan="firmaSecili"></div>
       ${hata('firmaId')}
       <label>Ad Soyad</label>
       <input type="text" data-tk-alan="adSoyad">
@@ -957,6 +990,7 @@ function topluKisiAc() {
 function _topluKisiFirmaUygula(i, firmaId) {
   const sutun = _topluKisiSutunu(i);
   const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
+  _ykFirmaSeciliGorunum(q('firmaAra'), q('firmaId'), q('firmaSecili'));
   if (_ykFirmaTehlikesiniUygula(firmaId, q('tehlikeSinifi'), q('tehlikeKaynak'))) _topluKisiBelgeleriCiz(i);
   const hata = sutun.querySelector('[data-tk-hata="firmaId"]');
   if (hata && firmaId) hata.textContent = '';
@@ -1001,13 +1035,10 @@ function _topluKisiVerisiniOku(i) {
   };
 }
 
-// Kişiye ait hiçbir bilgi girilmemişse sütun "kullanılmamış" sayılır ve
-// atlanır. Firma tek başına sayılmaz: başka sütunda seçilen firma boş
-// sütunlara da otomatik yazıldığı için.
+// Kullanıcı isteği: "5'li formda personel adı girmezsem onu dikkate
+// almasın" — ad soyadı boş sütun, başka alanları dolu olsa bile atlanır.
 function _topluKisiSutunuDoluMu(v) {
-  if ((v.adSoyad || '').trim() || (v.telefon || '').trim() || (v.notlar || '').trim()) return true;
-  return Object.values(v.belgeler || {}).some(b => b && Object.entries(b).some(([alan, deger]) =>
-    alan !== 'ay' && deger !== '' && deger != null && !(alan === 'deger' && deger === 'Yok')));
+  return !!(v.adSoyad || '').trim();
 }
 
 function topluKisiKaydet() {
@@ -1016,7 +1047,7 @@ function topluKisiKaydet() {
   document.querySelectorAll('#topluKisiSutunlar [data-tk-hata]').forEach(el => { el.textContent = ''; });
 
   const dolu = _topluKisiTaslaklari.map((_, i) => ({ i, veriler: _topluKisiVerisiniOku(i) })).filter(x => _topluKisiSutunuDoluMu(x.veriler));
-  if (!dolu.length) { genelHata.textContent = 'En az bir personelin firma ve ad soyad bilgisini girin.'; return; }
+  if (!dolu.length) { genelHata.textContent = 'En az bir personelin ad soyadını girin (ad soyadı boş formlar dikkate alınmaz).'; return; }
 
   // Önce hepsi doğrulanır; eksik olan varsa hiçbiri kaydedilmez (yarım kayıt olmasın).
   const hataliSutunlar = [];
