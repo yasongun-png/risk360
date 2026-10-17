@@ -185,6 +185,7 @@ function yukleniciSayfasiniBaslat() {
     document.querySelectorAll('#kayitTabloGovde [data-kayit-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
   document.getElementById('kayitSecilenSilBtn').addEventListener('click', kayitSecilenleriSil);
+  document.getElementById('kayitMailEksikBtn').addEventListener('click', kayitSecilenleriMailEksik);
   document.getElementById('kayitTumExcelBtn').addEventListener('click', yukleniciTumKayitlariExcelAktar);
   document.getElementById('kayitUygunExcelBtn').addEventListener('click', yukleniciUygunKayitlariExcelAktar);
   document.getElementById('kayitUygunsuzExcelBtn').addEventListener('click', yukleniciUygunOlmayanKayitlariExcelAktar);
@@ -1433,6 +1434,7 @@ function kayitlariCiz(aramaMetni) {
         <span class="genel-rozet ${r.pasif ? 'rozet-pasif' : 'rozet-uygun'}" style="font-size:10px;">${r.pasif ? 'Pasif' : 'Aktif'}</span>
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-pasif-degistir2="${r.id}" data-yeni-pasif="${r.pasif ? 'false' : 'true'}">${r.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>` : ''}
         <button class="tablo-buton" data-duzenle-kayit="${r.id}" data-kind="${r.kind}">Düzenle</button>
+        ${r.kind === 'personel' ? `<button class="tablo-buton" data-mail-eksik="${r.id}" title="Bu kişinin eksiklerini mail metni olarak ver">Mail</button>` : ''}
         <button class="tablo-buton sil" data-sil-kayit="${r.id}" data-kind="${r.kind}">Sil</button>
       </td>
     `;
@@ -1452,6 +1454,10 @@ function kayitlariCiz(aramaMetni) {
       else aracModalAc(yukleniciAracIdIleGetirRepo(id));
     });
   });
+  govde.querySelectorAll('[data-mail-eksik]').forEach(btn => btn.addEventListener('click', () => {
+    const kisi = yukleniciKisiIdIleGetirRepo(btn.getAttribute('data-mail-eksik'));
+    if (kisi) mailEksikAc([kisi]);
+  }));
   govde.querySelectorAll('[data-sil-kayit]').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!(await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil'))) return;
@@ -1460,6 +1466,16 @@ function kayitlariCiz(aramaMetni) {
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
     });
   });
+}
+
+// Kullanıcı isteği: "Mail için Eksiklikler" Kayıtlar sekmesinde de olsun —
+// seçili personel (araçlar hariç) firma firma gruplanmış tek metinde.
+function kayitSecilenleriMailEksik() {
+  const kisiler = Array.from(document.querySelectorAll('#kayitTabloGovde [data-kayit-sec][data-kind="personel"]:checked'))
+    .map(cb => yukleniciKisiIdIleGetirRepo(cb.getAttribute('data-id')))
+    .filter(Boolean);
+  if (!kisiler.length) { alert('Lütfen listeden en az bir personel seçin (kutucuğu işaretleyin).'); return; }
+  mailEksikAc(kisiler);
 }
 
 async function kayitSecilenleriSil() {

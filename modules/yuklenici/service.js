@@ -353,7 +353,7 @@ function yukleniciEksiklikMailMetni(kisiler) {
     return satirlar.join('\n');
   });
 
-  return ['Merhaba,', '', 'Aşağıdaki personelin eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.', '', bloklar.join('\n\n')].join('\n');
+  return ['Merhaba,', '', 'Aşağıdaki personelin eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.', '', bloklar.join('\n\n' + '-'.repeat(40) + '\n\n')].join('\n');
 }
 
 // ---- Kişiler ----
