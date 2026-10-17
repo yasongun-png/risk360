@@ -31,7 +31,6 @@
       <button type="button" data-sekme="dashboard">Dashboard</button>
       <button type="button" data-sekme="kayitlar" class="sekme-seciliDegil">Personel Kayıtları</button>
       <button type="button" data-sekme="firmalar" class="sekme-seciliDegil">Yüklenici Firmalar</button>
-      <button type="button" data-sekme="kisiler" class="sekme-seciliDegil">Yüklenici Personeli</button>
       <button type="button" data-sekme="araclar" class="sekme-seciliDegil">Araç / Ekipman</button>
       <button type="button" data-sekme="ziyaretciler" class="sekme-seciliDegil">Ziyaretçiler</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
@@ -128,19 +127,10 @@
           <select id="kisiDurumFiltre" style="width:auto; margin:0;">
             <option value="">Tüm Durumlar</option>
           </select>
-          <button type="button" class="ikincil" id="kisiSablonIndirBtn">Şablon İndir</button>
-          <button type="button" class="ikincil" id="kisiIceAktarBtn">İçe Aktar</button>
-          <input type="file" id="kisiIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
-          <!-- Kullanıcı isteği: eski uygulamadaki gibi tüm belge bilgileri
-               (SGK/Adli Sicil/KKD/Sağlık/Temel İSG/Geçici Görev/MYK/Firma
-               Eğitimi) TEK dosyadan içe aktarılabilsin — üstteki "İçe Aktar"
-               sadece 6 temel alan taşıyor, bu buton "Kayıtlar" sekmesindeki
-               tam belgeli içe aktarımı (yukleniciKayitlariniIceAktar) burada
-               da kullanılabilir kılar, kullanıcı sekme değiştirmek zorunda
-               kalmaz. -->
-          <button type="button" class="ikincil" id="kisiDetayliIceAktarBtn" title="SGK/Adli Sicil/KKD/Sağlık/Temel İSG/Geçici Görev/MYK/Firma Eğitimi dahil tüm belge bilgilerini tek dosyadan içe aktarır">Belgeleriyle Birlikte İçe Aktar</button>
-          <input type="file" id="kisiDetayliIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
-          <button type="button" class="ikincil" id="kisiDisaAktarBtn">Dışa Aktar</button>
+          <!-- Kullanıcı isteği (2026-10-17): "Yüklenici Personeli" sekme
+               butonu kaldırıldı (Personel Kayıtları ile aynıydı). Bu bölüm
+               artık gösterilmiyor; içe/dışa aktarma butonları Personel
+               Kayıtları araç çubuğuna taşındı. -->
           <button type="button" class="ikincil" id="yeniTopluKisiBtn" title="5 kişilik form yan yana açılır; istediğiniz kadarını doldurun" style="width:auto;">+ Birden Fazla Personel</button>
           <button type="button" class="birincil" id="yeniKisiBtn" style="width:auto;">+ Personel Ekle</button>
         </div>
@@ -211,6 +201,14 @@
         <input type="text" id="kayitAramaKutusu" class="arama-kutusu" placeholder="Firma veya ad/kimliğe göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="kayitSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
+          <button type="button" class="ikincil" id="kisiSablonIndirBtn">Personel Şablonu İndir</button>
+          <button type="button" class="ikincil" id="kisiIceAktarBtn">Personel İçe Aktar</button>
+          <input type="file" id="kisiIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <!-- Eski uygulamadaki gibi tüm belge bilgileri (SGK/Adli Sicil/KKD/
+               Sağlık/Temel İSG/Geçici Görev/MYK/Firma Eğitimi) TEK dosyadan. -->
+          <button type="button" class="ikincil" id="kisiDetayliIceAktarBtn" title="SGK/Adli Sicil/KKD/Sağlık/Temel İSG/Geçici Görev/MYK/Firma Eğitimi dahil tüm belge bilgilerini tek dosyadan içe aktarır">Belgeleriyle Birlikte İçe Aktar</button>
+          <input type="file" id="kisiDetayliIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="kisiDisaAktarBtn">Personel Dışa Aktar</button>
           <button type="button" class="ikincil" id="kayitTumExcelBtn">Tüm Kayıtları Excel'e Aktar</button>
           <button type="button" class="ikincil" id="kayitUygunExcelBtn">Tam Uygun Olanlar (Excel)</button>
           <button type="button" class="ikincil" id="kayitUygunsuzExcelBtn">Uygun Olmayanlar (Excel)</button>
@@ -537,13 +535,13 @@
   <script src="../../core/metin-istem.js"></script>
   <!-- ?v= değeri: modül JS'si her değiştiğinde artırın; yoksa tarayıcı eski
        dosyayı önbellekten alır, yeni index.html ile uyuşmaz ve sayfa çöker. -->
-  <script src="model.js?v=20261017h"></script>
-  <script src="validation.js?v=20261017h"></script>
-  <script src="repository.js?v=20261017h"></script>
-  <script src="service.js?v=20261017h"></script>
-  <script src="ui.js?v=20261017h"></script>
+  <script src="model.js?v=20261017i"></script>
+  <script src="validation.js?v=20261017i"></script>
+  <script src="repository.js?v=20261017i"></script>
+  <script src="service.js?v=20261017i"></script>
+  <script src="ui.js?v=20261017i"></script>
   <script src="roboto-font.js"></script>
-  <script src="cikti.js?v=20261017h"></script>
+  <script src="cikti.js?v=20261017i"></script>
   <script>
     const kullanici = girisGerekliModul('yuklenici');
 

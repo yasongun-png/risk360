@@ -69,14 +69,15 @@ function yukleniciSayfasiniBaslat() {
 
   // Kullanıcı isteği: "personel ekle üst sağ boşlukta büyük buton olarak
   // dursun" — hangi sekmede olunursa olunsun tek tıkla personel eklenebilsin.
+  // "Yüklenici Personeli" sekmesi kaldırıldığı için Personel Kayıtları'na geçer.
   document.getElementById('hizliPersonelEkleBtn').addEventListener('click', () => {
-    gorunumDegistir('kisiler');
+    gorunumDegistir('kayitlar');
     kisiModalAc();
   });
   // Kullanıcı isteği: "personel ekle butonu yanına birden fazla butonu koy,
   // direk 5 kişilik açılsın istediğim kadar doldurabileyim".
   document.getElementById('hizliTopluPersonelBtn').addEventListener('click', () => {
-    gorunumDegistir('kisiler');
+    gorunumDegistir('kayitlar');
     topluKisiAc();
   });
   document.getElementById('yeniTopluKisiBtn').addEventListener('click', () => topluKisiAc());
@@ -846,6 +847,9 @@ async function firmaFormGonderildi(e) {
 // ==================== KİŞİLER ====================
 
 function kisileriCiz(aramaMetni) {
+  // "Yüklenici Personeli" sekmesi kaldırıldı; personel ekleme/düzenleme/içe
+  // aktarma sonrası görünen liste Personel Kayıtları olduğu için o da yenilenir.
+  if (_ykGorunum === 'kayitlar') kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
   const govde = document.getElementById('kisiTabloGovde');
   const bosDurum = document.getElementById('kisiBosDurum');
   const filtreler = { durum: document.getElementById('kisiDurumFiltre').value };
