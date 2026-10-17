@@ -82,8 +82,11 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('firmaEvrakEkleBtn').addEventListener('click', () => { _firmaEvrakTaslak.push(evrakOlustur({})); evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak); });
 
   document.getElementById('yeniKisiBtn').addEventListener('click', () => kisiModalAc());
-  document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
-  document.getElementById('kisiModalIptalBtn').addEventListener('click', kisiModalKapat);
+  // ✕ pencereyi gizler (açık formlar korunur), İptal sadece aktif formu kapatır.
+  document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalGizle);
+  document.getElementById('kisiModalIptalBtn').addEventListener('click', () => _kisiSekmeKapat(_kisiAktifSekmeId));
+  document.getElementById('kisiAcikFormlarBtn').addEventListener('click', kisiModalGoster);
+  document.getElementById('adSoyad').addEventListener('input', _kisiSekmeCubugunuCiz);
   document.getElementById('kisiForm').addEventListener('submit', kisiFormGonderildi);
   document.getElementById('kisiAramaKutusu').addEventListener('input', e => kisileriCiz(e.target.value));
   document.getElementById('kisiDurumFiltre').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
@@ -745,35 +748,184 @@ function _yukleniciFirmaAramaBagla(aramaId, selectId, firmalar) {
   };
 }
 
-function kisiModalAc(kisi) {
-  _duzenlenenKisiId = kisi ? kisi.id : null;
-  // Derin kopya: taslak üzerindeki değişiklikler kaydedilmeden modal kapatılırsa
-  // orijinal kayıt (repository'deki referans) bozulmasın.
-  _kisiBelgeTaslak = kisi && kisi.belgeler ? JSON.parse(JSON.stringify(kisi.belgeler)) : yukleniciBosBelgeler();
+// Kullanıcı isteği: "aynı anda 5 personel girişi açık olabilsin ve hepsine
+// işlem yapabileyim" — personel formu sekmeli: her sekme kendi taslağını
+// tutar ({ id, kisiId, personelNo, firmaAra, firmaId, adSoyad, ..., belgeler }),
+// sekme değişirken formdaki değerler taslağa yazılır, diğer taslak forma
+// yüklenir. _duzenlenenKisiId / _kisiBelgeTaslak her zaman AKTİF sekmeyi
+// gösterir (belge alanları _kisiBelgeTaslak'a doğrudan yazdığından o
+// sekmenin belgeler nesnesine işler).
+const KISI_FORM_SEKME_SINIRI = 5;
+let _kisiSekmeler = [];
+let _kisiAktifSekmeId = null;
 
-  document.getElementById('kisiModalBaslik').textContent = kisi ? (kisi.personelNo + ' Kişisini Düzenle') : 'Yeni Yüklenici Personeli';
+function _kisiSekmeTaslagiOlustur(kisi) {
+  return {
+    id: rastgeleId(),
+    kisiId: kisi ? kisi.id : null,
+    personelNo: kisi ? kisi.personelNo : '',
+    firmaAra: '',
+    firmaId: kisi ? kisi.firmaId : '',
+    adSoyad: kisi ? kisi.adSoyad : '',
+    telefon: kisi ? kisi.telefon : '',
+    durum: kisi ? kisi.durum : '',
+    tehlikeSinifi: kisi ? kisi.tehlikeSinifi : 'az',
+    personelTuru: kisi ? kisi.personelTuru : 'teknik',
+    pasif: !!(kisi && kisi.pasif),
+    ilkGiris: !!(kisi && kisi.ilkGiris),
+    notlar: kisi ? (kisi.notlar || '') : '',
+    // Derin kopya: kaydedilmeden kapatılırsa repository'deki kayıt bozulmasın.
+    belgeler: kisi && kisi.belgeler ? JSON.parse(JSON.stringify(kisi.belgeler)) : yukleniciBosBelgeler()
+  };
+}
+
+function _kisiAktifSekme() { return _kisiSekmeler.find(s => s.id === _kisiAktifSekmeId) || null; }
+
+// Formdaki güncel değerleri aktif sekmenin taslağına yazar.
+function _kisiFormuSekmeyeYaz() {
+  const s = _kisiAktifSekme();
+  if (!s) return;
+  s.firmaAra = document.getElementById('kisiFirmaAra').value;
+  s.firmaId = document.getElementById('kisiFirmaId').value;
+  s.adSoyad = document.getElementById('adSoyad').value;
+  s.telefon = document.getElementById('kisiTelefon').value;
+  s.durum = document.getElementById('kisiDurum').value;
+  s.tehlikeSinifi = document.getElementById('kisiTehlikeSinifi').value;
+  s.personelTuru = document.getElementById('kisiPersonelTuru').value;
+  s.pasif = document.getElementById('kisiPasif').checked;
+  s.ilkGiris = document.getElementById('kisiIlkGiris').checked;
+  s.notlar = document.getElementById('kisiNotlar').value;
+}
+
+function _kisiSekmeyiFormaYukle(s) {
+  _kisiAktifSekmeId = s.id;
+  _duzenlenenKisiId = s.kisiId;
+  _kisiBelgeTaslak = s.belgeler;
+
+  document.getElementById('kisiModalBaslik').textContent = s.kisiId ? (s.personelNo + ' Kişisini Düzenle') : 'Yeni Yüklenici Personeli';
 
   const firmalar = yukleniciFirmalariTumunuGetir();
-  _yukleniciFirmaListesiCiz(document.getElementById('kisiFirmaId'), firmalar, kisi ? kisi.firmaId : '');
+  _yukleniciFirmaListesiCiz(document.getElementById('kisiFirmaId'), firmalar, s.firmaId);
   _yukleniciFirmaAramaBagla('kisiFirmaAra', 'kisiFirmaId', firmalar);
+  if (s.firmaAra) {
+    const aramaEl = document.getElementById('kisiFirmaAra');
+    aramaEl.value = s.firmaAra;
+    aramaEl.oninput();
+  }
 
-  document.getElementById('adSoyad').value = kisi ? kisi.adSoyad : '';
-  document.getElementById('kisiTelefon').value = kisi ? kisi.telefon : '';
-  document.getElementById('kisiDurum').innerHTML = KISI_DURUMLARI.map(d => `<option ${kisi && kisi.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('kisiTehlikeSinifi').innerHTML = YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${(kisi ? kisi.tehlikeSinifi : 'az') === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
-  document.getElementById('kisiPersonelTuru').innerHTML = YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${(kisi ? kisi.personelTuru : 'teknik') === t ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('');
-  document.getElementById('kisiPasif').checked = !!(kisi && kisi.pasif);
-  document.getElementById('kisiIlkGiris').checked = !!(kisi && kisi.ilkGiris);
-  document.getElementById('kisiNotlar').value = kisi ? kisi.notlar : '';
+  document.getElementById('adSoyad').value = s.adSoyad;
+  document.getElementById('kisiTelefon').value = s.telefon;
+  document.getElementById('kisiDurum').innerHTML = KISI_DURUMLARI.map(d => `<option ${s.durum === d ? 'selected' : ''}>${d}</option>`).join('');
+  document.getElementById('kisiTehlikeSinifi').innerHTML = YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${s.tehlikeSinifi === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
+  document.getElementById('kisiPersonelTuru').innerHTML = YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${s.personelTuru === t ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('');
+  document.getElementById('kisiPasif').checked = s.pasif;
+  document.getElementById('kisiIlkGiris').checked = s.ilkGiris;
+  document.getElementById('kisiNotlar').value = s.notlar;
 
   _kisiBelgeListesiniCiz();
   temizleFormHatalari('kisiForm');
+  _kisiSekmeCubugunuCiz();
+}
+
+function _kisiSekmeCubugunuCiz() {
+  const cubuk = document.getElementById('kisiSekmeCubugu');
+  if (!cubuk) return;
+  const aktif = _kisiAktifSekme();
+  // Aktif sekmenin etiketi yazılırken canlı güncellensin.
+  if (aktif) aktif.adSoyad = document.getElementById('adSoyad').value;
+  const etiket = s => (s.adSoyad || '').trim() || (s.kisiId ? s.personelNo : 'Yeni personel');
+  cubuk.innerHTML = _kisiSekmeler.map((s, i) => `
+    <span data-kisi-sekme="${s.id}" title="${_ykKacir(etiket(s))}" style="display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 10px; border-radius:16px; font-size:12px; cursor:pointer; max-width:170px;
+      ${s.id === _kisiAktifSekmeId ? 'background:var(--birincil, #1d4ed8); color:#fff; font-weight:600;' : 'background:#eef2f7; color:inherit;'}">
+      <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i + 1}. ${_ykKacir(etiket(s))}</span>
+      <span data-kisi-sekme-kapat="${s.id}" title="Bu formu kapat (kaydedilmez)" style="font-weight:700; opacity:.75; padding:0 2px;">×</span>
+    </span>`).join('') +
+    (_kisiSekmeler.length < KISI_FORM_SEKME_SINIRI
+      ? `<button type="button" class="tablo-buton" id="kisiYeniSekmeBtn" title="Yeni personel formu aç (en fazla ${KISI_FORM_SEKME_SINIRI})">+ Yeni Form</button>`
+      : `<span style="font-size:11px; color:var(--metin-soluk);">En fazla ${KISI_FORM_SEKME_SINIRI} form</span>`);
+
+  cubuk.querySelectorAll('[data-kisi-sekme]').forEach(el => el.addEventListener('click', () => {
+    const s = _kisiSekmeler.find(x => x.id === el.getAttribute('data-kisi-sekme'));
+    if (!s || s.id === _kisiAktifSekmeId) return;
+    _kisiFormuSekmeyeYaz();
+    _kisiSekmeyiFormaYukle(s);
+  }));
+  cubuk.querySelectorAll('[data-kisi-sekme-kapat]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    _kisiSekmeKapat(el.getAttribute('data-kisi-sekme-kapat'));
+  }));
+  const yeniBtn = document.getElementById('kisiYeniSekmeBtn');
+  if (yeniBtn) yeniBtn.addEventListener('click', () => kisiModalAc());
+  _kisiAcikFormlarButonunuGuncelle();
+}
+
+function _kisiAcikFormlarButonunuGuncelle() {
+  const btn = document.getElementById('kisiAcikFormlarBtn');
+  if (!btn) return;
+  const gizli = !document.getElementById('kisiModalKatman').classList.contains('acik');
+  btn.style.display = gizli && _kisiSekmeler.length ? '' : 'none';
+  btn.textContent = `📝 Açık personel formları (${_kisiSekmeler.length})`;
+}
+
+// kisi verilirse o kişi için (zaten açıksa o sekmeye geçilir), verilmezse
+// yeni boş form açılır. En fazla KISI_FORM_SEKME_SINIRI form.
+function kisiModalAc(kisi) {
+  const katman = document.getElementById('kisiModalKatman');
+  const mevcut = kisi ? _kisiSekmeler.find(s => s.kisiId === kisi.id) : null;
+  if (mevcut) {
+    if (mevcut.id !== _kisiAktifSekmeId) { _kisiFormuSekmeyeYaz(); _kisiSekmeyiFormaYukle(mevcut); }
+    katman.classList.add('acik');
+    _kisiAcikFormlarButonunuGuncelle();
+    return;
+  }
+  if (_kisiSekmeler.length >= KISI_FORM_SEKME_SINIRI) {
+    alert(`Aynı anda en fazla ${KISI_FORM_SEKME_SINIRI} personel formu açık olabilir. Açık formlardan birini kaydedin veya kapatın.`);
+    kisiModalGoster();
+    return;
+  }
+  _kisiFormuSekmeyeYaz();
+  const s = _kisiSekmeTaslagiOlustur(kisi);
+  _kisiSekmeler.push(s);
+  _kisiSekmeyiFormaYukle(s);
+  katman.classList.add('acik');
+  _kisiAcikFormlarButonunuGuncelle();
+}
+
+function kisiModalGizle() {
+  _kisiFormuSekmeyeYaz();
+  document.getElementById('kisiModalKatman').classList.remove('acik');
+  _kisiAcikFormlarButonunuGuncelle();
+}
+
+function kisiModalGoster() {
+  const s = _kisiAktifSekme() || _kisiSekmeler[0];
+  if (!s) return;
+  if (s.id !== _kisiAktifSekmeId) _kisiSekmeyiFormaYukle(s);
   document.getElementById('kisiModalKatman').classList.add('acik');
+  _kisiAcikFormlarButonunuGuncelle();
+}
+
+// Bir formu (kaydetmeden ya da kaydettikten sonra) kapatır; başka açık form
+// varsa pencere açık kalır ve komşu sekmeye geçilir.
+function _kisiSekmeKapat(sekmeId) {
+  const i = _kisiSekmeler.findIndex(s => s.id === sekmeId);
+  if (i === -1) return;
+  const aktifti = sekmeId === _kisiAktifSekmeId;
+  if (!aktifti) _kisiFormuSekmeyeYaz();
+  _kisiSekmeler.splice(i, 1);
+  if (!_kisiSekmeler.length) {
+    _kisiAktifSekmeId = null;
+    _duzenlenenKisiId = null;
+    document.getElementById('kisiModalKatman').classList.remove('acik');
+    _kisiAcikFormlarButonunuGuncelle();
+    return;
+  }
+  if (aktifti) _kisiSekmeyiFormaYukle(_kisiSekmeler[Math.min(i, _kisiSekmeler.length - 1)]);
+  else _kisiSekmeCubugunuCiz();
 }
 
 function kisiModalKapat() {
-  document.getElementById('kisiModalKatman').classList.remove('acik');
-  _duzenlenenKisiId = null;
+  _kisiSekmeKapat(_kisiAktifSekmeId);
 }
 
 function kisiFormGonderildi(e) {
@@ -798,16 +950,31 @@ function kisiFormGonderildi(e) {
     personelTuru: document.getElementById('kisiPersonelTuru').value,
     pasif: document.getElementById('kisiPasif').checked,
     ilkGiris: document.getElementById('kisiIlkGiris').checked,
-    belgeler: _kisiBelgeTaslak,
+    // Kopya: form kayıttan sonra da açık kalabildiği için, sonraki
+    // (kaydedilmemiş) düzenlemeler kayıtlı nesneye sızmasın.
+    belgeler: JSON.parse(JSON.stringify(_kisiBelgeTaslak)),
     sonrakiKontrolTarihi: _duzenlenenKisi ? _duzenlenenKisi.sonrakiKontrolTarihi : undefined,
     notlar: document.getElementById('kisiNotlar').value
   };
 
   const sonuc = _duzenlenenKisiId ? yukleniciKisiGuncelle(_duzenlenenKisiId, veriler) : yukleniciKisiEkle(veriler);
   if (!sonuc.basarili) { formHatalariniGoster(sonuc.hatalar); return; }
-
-  kisiModalKapat();
   kisileriCiz(document.getElementById('kisiAramaKutusu').value);
+
+  // "Kaydet ve Kapat": sadece bu form kapanır, diğer açık formlar kalır.
+  // "Kaydet": form açık kalır (kullanıcı isteği: "kapatmadan kaydedip
+  // diğerine geçebileyim") — yeni kişiyse sekme artık o kaydı düzenler.
+  if (e.submitter && e.submitter.hasAttribute('data-kaydet-kapat')) { kisiModalKapat(); return; }
+  const s = _kisiAktifSekme();
+  if (s && sonuc.kisi) {
+    s.kisiId = sonuc.kisi.id;
+    s.personelNo = sonuc.kisi.personelNo;
+    _duzenlenenKisiId = s.kisiId;
+    document.getElementById('kisiModalBaslik').textContent = s.personelNo + ' Kişisini Düzenle';
+  }
+  _kisiSekmeCubugunuCiz();
+  const durumKutusu = document.getElementById('kisiCanliDurum');
+  if (durumKutusu) durumKutusu.insertAdjacentHTML('afterbegin', '<div style="font-size:12px; color:#15803d; font-weight:600; margin-bottom:6px;">✓ Kaydedildi</div>');
 }
 
 // ==================== ARAÇ / EKİPMAN ====================
