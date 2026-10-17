@@ -479,6 +479,7 @@
         <textarea id="kisiNotlar"></textarea>
 
         <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="kisiMailEksikBtn" style="margin-right:auto;">Mail için Eksiklikler</button>
           <button type="button" class="ikincil" id="kisiModalIptalBtn">İptal</button>
           <button type="submit" class="birincil">Kaydet</button>
         </div>
@@ -497,10 +498,25 @@
       </div>
       <div id="topluKisiGenelHata" style="color:var(--hata); font-size:13px; margin-top:10px;"></div>
       <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="topluKisiMailEksikBtn" style="margin-right:auto;">Mail için Eksiklikler</button>
         <button type="button" class="ikincil" id="topluKisiIptalBtn">İptal</button>
         <button type="button" class="birincil" id="topluKisiKaydetBtn">Kaydet</button>
       </div>
       <button type="button" class="tablo-buton" id="topluKisiKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <!-- MAİL İÇİN EKSİKLİKLER -->
+  <div class="modal-katman" id="mailEksikKatman">
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3>Mail için Eksiklikler</h3>
+      <p style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;">Metni kopyalayıp mailinize yapıştırın. Göndermeden önce burada düzenleyebilirsiniz.</p>
+      <textarea id="mailEksikMetin" style="width:100%; min-height:320px; font-family:inherit; font-size:13px; line-height:1.5;"></textarea>
+      <div id="mailEksikDurum" style="font-size:12.5px; color:var(--basari, #15803d); min-height:18px; margin-top:6px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="mailEksikKapatBtn">Kapat</button>
+        <button type="button" class="birincil" id="mailEksikKopyalaBtn">Kopyala</button>
+      </div>
     </div>
   </div>
 

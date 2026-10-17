@@ -98,6 +98,22 @@ function yukleniciSayfasiniBaslat() {
     if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz();
   });
   document.getElementById('kisiForm').addEventListener('submit', kisiFormGonderildi);
+  document.getElementById('kisiMailEksikBtn').addEventListener('click', () => mailEksikAc([{
+    adSoyad: document.getElementById('adSoyad').value,
+    firmaId: document.getElementById('kisiFirmaId').value,
+    tehlikeSinifi: document.getElementById('kisiTehlikeSinifi').value,
+    personelTuru: document.getElementById('kisiPersonelTuru').value,
+    ilkGiris: document.getElementById('kisiIlkGiris').checked,
+    belgeler: _kisiBelgeTaslak
+  }]));
+  document.getElementById('topluKisiMailEksikBtn').addEventListener('click', () => {
+    const dolu = _topluKisiTaslaklari.map((_, i) => _topluKisiVerisiniOku(i)).filter(_topluKisiSutunuDoluMu);
+    if (!dolu.length) { document.getElementById('topluKisiGenelHata').textContent = 'Eksiklik listesi için en az bir personelin ad soyadını girin.'; return; }
+    document.getElementById('topluKisiGenelHata').textContent = '';
+    mailEksikAc(dolu);
+  });
+  document.getElementById('mailEksikKapatBtn').addEventListener('click', () => document.getElementById('mailEksikKatman').classList.remove('acik'));
+  document.getElementById('mailEksikKopyalaBtn').addEventListener('click', _mailEksikKopyala);
   document.getElementById('kisiAramaKutusu').addEventListener('input', e => kisileriCiz(e.target.value));
   document.getElementById('kisiDurumFiltre').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
   document.getElementById('kisiTehlikeSinifi').addEventListener('change', _kisiBelgeListesiniCiz);
@@ -646,6 +662,27 @@ function firmalariCiz(aramaMetni) {
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu firmayı ve bağlı personelini silmek istediğinize emin misiniz?', 'Sil')) { yukleniciFirmaSil(btn.getAttribute('data-sil')); firmalariCiz(document.getElementById('firmaAramaKutusu').value); }
   }));
+}
+
+// ==================== MAİL İÇİN EKSİKLİKLER ====================
+
+function mailEksikAc(kisiler) {
+  document.getElementById('mailEksikMetin').value = yukleniciEksiklikMailMetni(kisiler);
+  document.getElementById('mailEksikDurum').textContent = '';
+  document.getElementById('mailEksikKatman').classList.add('acik');
+}
+
+async function _mailEksikKopyala() {
+  const alan = document.getElementById('mailEksikMetin');
+  const durum = document.getElementById('mailEksikDurum');
+  try {
+    await navigator.clipboard.writeText(alan.value);
+  } catch (err) {
+    // file:// ya da izin yoksa eski yöntem
+    alan.select();
+    document.execCommand('copy');
+  }
+  durum.textContent = '✔ Kopyalandı — mailinize yapıştırabilirsiniz (Ctrl+V).';
 }
 
 // ==================== MÜKERRER FİRMALAR ====================

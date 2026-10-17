@@ -282,6 +282,76 @@ function yukleniciFirmaSil(id) {
   return { basarili: true };
 }
 
+// ---- Mail için eksiklik metni ----
+// Kullanıcı isteği: personel formlarında "Mail için Eksiklikler" — kişinin
+// adı ve eksik/süresi dolmuş/yaklaşan belgeleri, maile yapıştırılacak düz
+// yazı olarak. Diploma/MYK gibi karşılıklı belgelerden biri uygunsa diğeri
+// eksik sayılmaz; İlk Giriş işaretliyse Firma Eğitimi listelenmez (verilecek).
+function yukleniciKisiEksikBelgeleri(kisi) {
+  const bugun = bugunIso();
+  const belgeler = kisi.belgeler || {};
+  const tanimlar = yukleniciGecerliBelgeTanimlari(kisi.personelTuru);
+  const uygunMu = b => yukleniciBelgeUygunMu(b, belgeler[b.id], kisi.tehlikeSinifi, bugun);
+  const satirlar = [];
+  tanimlar.forEach(b => {
+    if (kisi.ilkGiris && b.id === 'firmaEgitimi') return;
+    const kayit = belgeler[b.id] || {};
+    if (uygunMu(b)) {
+      const exp = yukleniciBelgeBitisTarihiHesapla(b, kayit, kisi.tehlikeSinifi);
+      const kalan = exp ? gunFarkiHesapla(exp, bugun) : null;
+      if (kalan !== null && kalan <= 30) satirlar.push(`${b.ad}: süresi ${formatTarihGoster(exp)} tarihinde doluyor`);
+      return;
+    }
+    const es = b.karsilikliId ? tanimlar.find(t => t.id === b.karsilikliId) : null;
+    if (es && uygunMu(es)) return;
+    if (es) { // ikisi de yoksa tek satır
+      if (tanimlar.indexOf(es) < tanimlar.indexOf(b)) return;
+      satirlar.push(`${b.ad} veya ${es.ad}: yok`);
+      return;
+    }
+    const exp = yukleniciBelgeBitisTarihiHesapla(b, kayit, kisi.tehlikeSinifi);
+    if (b.tur === 'egitim' && kayit.base && !(kayit.egitmen || '').trim() && (!exp || exp >= bugun)) satirlar.push(`${b.ad}: eğitmen bilgisi eksik`);
+    else if (exp && exp < bugun) satirlar.push(`${b.ad}: süresi dolmuş (${formatTarihGoster(exp)})`);
+    else if (exp && !kayit.base && b.tur !== 'tarih-tek') satirlar.push(`${b.ad}: veriliş tarihi girilmemiş`);
+    else if (kayit.base && kayit.base > bugun) satirlar.push(`${b.ad}: tarihi ileri bir tarih (${formatTarihGoster(kayit.base)})`);
+    else satirlar.push(`${b.ad}: yok`);
+  });
+  return satirlar;
+}
+
+// kisiler: [{ adSoyad, firmaId, belgeler, tehlikeSinifi, personelTuru, ilkGiris }]
+function yukleniciEksiklikMailMetni(kisiler) {
+  const gruplar = [];
+  kisiler.forEach(k => {
+    let g = gruplar.find(x => x.firmaId === (k.firmaId || ''));
+    if (!g) gruplar.push(g = { firmaId: k.firmaId || '', kisiler: [] });
+    g.kisiler.push(k);
+  });
+
+  const bloklar = gruplar.map(g => {
+    const firma = g.firmaId ? yukleniciFirmaIdIleGetirRepo(g.firmaId) : null;
+    const satirlar = [];
+    if (firma) {
+      satirlar.push(`Firma: ${firma.firmaAdi}`);
+      const z = _firmaZenginlestir(firma);
+      const firmaSorunlari = z.eksikEvraklar.map(t => `${t}: yok`).concat(z.suresiGecenEvraklar.map(t => `${t}: süresi dolmuş`));
+      if (firmaSorunlari.length) {
+        satirlar.push('', 'Firma evrakları:');
+        firmaSorunlari.forEach(s => satirlar.push(`- ${s}`));
+      }
+    }
+    g.kisiler.forEach(k => {
+      const eksikler = yukleniciKisiEksikBelgeleri(k);
+      satirlar.push('', `${(k.adSoyad || '').trim() || '(Ad soyad girilmedi)'}:`);
+      if (eksikler.length) eksikler.forEach(s => satirlar.push(`- ${s}`));
+      else satirlar.push('- Eksik belge yok');
+    });
+    return satirlar.join('\n');
+  });
+
+  return ['Merhaba,', '', 'Aşağıdaki personelin eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.', '', bloklar.join('\n\n')].join('\n');
+}
+
 // ---- Kişiler ----
 
 function yukleniciKisileriniGetir(aramaMetni, filtreler) {
