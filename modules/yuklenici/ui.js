@@ -87,7 +87,6 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('firmaForm').addEventListener('submit', firmaFormGonderildi);
   document.getElementById('firmaAdi').addEventListener('input', _firmaBenzerUyarisiniCiz);
   document.getElementById('firmaAramaKutusu').addEventListener('input', e => firmalariCiz(e.target.value));
-  document.getElementById('firmaEvrakEkleBtn').addEventListener('click', () => { _firmaEvrakTaslak.push(evrakOlustur({})); evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak); });
 
   document.getElementById('yeniKisiBtn').addEventListener('click', () => kisiModalAc());
   document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
@@ -428,37 +427,30 @@ function dashboardCiz() {
     : '<tr><td colspan="2" style="text-align:center;">Veri yok</td></tr>';
 }
 
-// ==================== FİRMA: SERBEST EVRAK LİSTESİ BUILDER ====================
-// Yüklenici Personeli artık sabit belge checklist'i kullanıyor (aşağıda), bu
-// serbest liste sadece Firma modalında kalıyor.
+// ==================== FİRMA: SÖZLEŞMELER (VAR/YOK) ====================
+// Kullanıcı isteği: "bu kadar teferruata gerek yok, işyeri hekimi ve iş
+// güvenliği uzmanı sözleşmesi var/yok seçilsin yeterli". Veri modeli
+// değişmedi: "Var" = firma.evraklar'da o türde (tarihsiz) bir evrak olması.
+// Firmadaki diğer türdeki eski evraklar formda görünmez ama korunur.
+const _FIRMA_SOZLESME_ALANLARI = [
+  { tur: 'İş Güvenliği Uzmanı Sözleşmesi', alanId: 'firmaIsgUzmaniSozlesme' },
+  { tur: 'İşyeri Hekimi Sözleşmesi', alanId: 'firmaHekimSozlesme' }
+];
 
-function evrakListesiniCiz(kutuId, taslakDizisi) {
-  const kutu = document.getElementById(kutuId);
-  kutu.innerHTML = taslakDizisi.map(e => `
-    <div style="display:grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 32px; gap:8px; align-items:start; margin-bottom:8px;">
-      <select data-evrak-alan="tur" data-evrak-id="${e.id}">
-        ${EVRAK_TURLERI.map(t => `<option ${e.tur === t ? 'selected' : ''}>${t}</option>`).join('')}
-      </select>
-      <input type="date" placeholder="Veriliş" data-evrak-alan="verilisTarihi" data-evrak-id="${e.id}" value="${e.verilisTarihi}">
-      <input type="date" placeholder="Geçerlilik" data-evrak-alan="gecerlilikTarihi" data-evrak-id="${e.id}" value="${e.gecerlilikTarihi}">
-      <input placeholder="Dosya adı" data-evrak-alan="dosyaAdi" data-evrak-id="${e.id}" value="${e.dosyaAdi.replace(/"/g, '&quot;')}">
-      <input placeholder="Not" data-evrak-alan="not" data-evrak-id="${e.id}" value="${e.not.replace(/"/g, '&quot;')}">
-      <button type="button" class="tablo-buton sil" data-evrak-sil="${e.id}" title="Sil">✕</button>
-    </div>
-  `).join('') || '<p style="font-size:12px; color:var(--metin-soluk);">Henüz evrak eklenmedi.</p>';
+function _firmaSozlesmeleriniDoldur(evraklar) {
+  _FIRMA_SOZLESME_ALANLARI.forEach(({ tur, alanId }) => {
+    document.getElementById(alanId).value = (evraklar || []).some(e => e.tur === tur) ? 'Var' : 'Yok';
+  });
+}
 
-  kutu.querySelectorAll('[data-evrak-alan]').forEach(el => {
-    el.addEventListener('input', () => {
-      const evrak = _firmaEvrakTaslak.find(x => x.id === el.getAttribute('data-evrak-id'));
-      if (evrak) evrak[el.getAttribute('data-evrak-alan')] = el.value;
-    });
+function _firmaEvraklariniSozlesmelerleBirlestir(evraklar) {
+  const sonuc = (evraklar || []).filter(e => e.tur && !YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.includes(e.tur));
+  _FIRMA_SOZLESME_ALANLARI.forEach(({ tur, alanId }) => {
+    if (document.getElementById(alanId).value !== 'Var') return;
+    const mevcut = (evraklar || []).find(e => e.tur === tur);
+    sonuc.push(mevcut ? Object.assign({}, mevcut, { gecerlilikTarihi: '' }) : evrakOlustur({ tur }));
   });
-  kutu.querySelectorAll('[data-evrak-sil]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _firmaEvrakTaslak = _firmaEvrakTaslak.filter(x => x.id !== btn.getAttribute('data-evrak-sil'));
-      evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak);
-    });
-  });
+  return sonuc;
 }
 
 // ==================== KİŞİ: SABİT BELGE CHECKLIST BUILDER ====================
@@ -777,11 +769,9 @@ function firmaModalAc(firma) {
   document.getElementById('firmaTehlikeSinifi').innerHTML = '<option value="">— Seçilmedi —</option>' +
     YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${firmaTehlike === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
   document.getElementById('firmaDurum').innerHTML = FIRMA_DURUMLARI.map(d => `<option ${firma && firma.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('firmaGerekliEvraklarKutusu').innerHTML = `<div style="font-size:13px;">${YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.map(t => `✔ ${t}`).join('<br>')}</div>
-    <div style="font-size:12px; color:var(--metin-soluk); margin-top:4px;">Firmanın uygunluğu sadece bu iki sözleşmeye göre hesaplanır; aşağıdaki Evraklar bölümüne ekleyin.</div>`;
+  _firmaSozlesmeleriniDoldur(_firmaEvrakTaslak);
   document.getElementById('firmaNotlar').value = firma ? firma.notlar : '';
 
-  evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak);
   temizleFormHatalari('firmaForm');
   _firmaBenzerUyarisiniCiz();
   document.getElementById('firmaModalKatman').classList.add('acik');
@@ -836,7 +826,7 @@ async function firmaFormGonderildi(e) {
     tehlikeSinifi: document.getElementById('firmaTehlikeSinifi').value,
     durum: document.getElementById('firmaDurum').value,
     gerekliEvraklar: YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.slice(),
-    evraklar: _firmaEvrakTaslak.filter(e => e.tur),
+    evraklar: _firmaEvraklariniSozlesmelerleBirlestir(_firmaEvrakTaslak),
     notlar: document.getElementById('firmaNotlar').value
   };
 
@@ -964,7 +954,7 @@ function _ykFirmaSozlesmeUyarisiHtml(firma) {
   return `
     <div style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:8px; padding:8px 10px; font-size:12.5px; margin:-6px 0 14px;">
       <b>⚠ ${sorunlar.map(_ykKacir).join(', ')}.</b>
-      <div style="margin-top:2px;">Yüklenici Firmalar sekmesinde bu firmayı açıp (Düzenle) sözleşmeleri Evraklar bölümüne ekleyin.</div>
+      <div style="margin-top:2px;">Yüklenici Firmalar sekmesinde bu firmayı açıp (Düzenle) Sözleşmeler bölümünde "Var" seçin.</div>
     </div>`;
 }
 

@@ -1,9 +1,12 @@
 // Yüklenici Yönetimi iş kuralları: evrak uygunluk hesaplama ve özet.
 
 // Firma uygunluğu sadece YUKLENICI_FIRMA_GEREKLI_EVRAKLAR'a göre: diğer
-// türdeki evrakların süresi geçse bile firma "Uygun Değil" olmaz.
+// türdeki evrakların süresi geçse bile firma "Uygun Değil" olmaz. Sözleşmeler
+// formda sadece Var/Yok seçildiği için tarih dikkate alınmaz.
 function _firmaZenginlestir(firma) {
-  const istenenEvraklar = (firma.evraklar || []).filter(e => YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.includes(e.tur));
+  const istenenEvraklar = (firma.evraklar || [])
+    .filter(e => YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.includes(e.tur))
+    .map(e => Object.assign({}, e, { gecerlilikTarihi: '' }));
   const uygunluk = uygunlukHesapla(istenenEvraklar, YUKLENICI_FIRMA_GEREKLI_EVRAKLAR, bugunIso());
   return Object.assign({}, firma, uygunluk);
 }

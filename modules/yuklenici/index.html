@@ -392,12 +392,17 @@
           </div>
         </div>
 
-        <div class="form-bolum-baslik">İstenen Evraklar</div>
-        <div id="firmaGerekliEvraklarKutusu" style="margin-bottom:14px;"></div>
-
-        <div class="form-bolum-baslik">Evraklar</div>
-        <div id="firmaEvrakListesi"></div>
-        <button type="button" class="ikincil" id="firmaEvrakEkleBtn" style="width:auto; margin-bottom:14px;">+ Evrak Ekle</button>
+        <div class="form-bolum-baslik">Sözleşmeler</div>
+        <div class="form-satir-ikili">
+          <div>
+            <label for="firmaIsgUzmaniSozlesme">İş Güvenliği Uzmanı Sözleşmesi</label>
+            <select id="firmaIsgUzmaniSozlesme"><option>Yok</option><option>Var</option></select>
+          </div>
+          <div>
+            <label for="firmaHekimSozlesme">İşyeri Hekimi Sözleşmesi</label>
+            <select id="firmaHekimSozlesme"><option>Yok</option><option>Var</option></select>
+          </div>
+        </div>
 
         <label for="firmaNotlar">Notlar</label>
         <textarea id="firmaNotlar"></textarea>
