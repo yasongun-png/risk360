@@ -85,6 +85,7 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('firmaModalKapatBtn').addEventListener('click', firmaModalKapat);
   document.getElementById('firmaModalIptalBtn').addEventListener('click', firmaModalKapat);
   document.getElementById('firmaForm').addEventListener('submit', firmaFormGonderildi);
+  document.getElementById('firmaAdi').addEventListener('input', _firmaBenzerUyarisiniCiz);
   document.getElementById('firmaAramaKutusu').addEventListener('input', e => firmalariCiz(e.target.value));
   document.getElementById('firmaEvrakEkleBtn').addEventListener('click', () => { _firmaEvrakTaslak.push(evrakOlustur({})); evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak); });
 
@@ -673,7 +674,23 @@ function firmaModalAc(firma) {
 
   evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak);
   temizleFormHatalari('firmaForm');
+  _firmaBenzerUyarisiniCiz();
   document.getElementById('firmaModalKatman').classList.add('acik');
+}
+
+// Firma adı yazılırken benzer kayıtlı firmaları alanın altında gösterir.
+function _firmaBenzerUyarisiniCiz() {
+  const kutu = document.getElementById('firmaAdiBenzer');
+  const benzerler = yukleniciBenzerFirmalariBul(document.getElementById('firmaAdi').value, _duzenlenenFirmaId);
+  if (!benzerler.length) { kutu.innerHTML = ''; return; }
+  const gosterilen = benzerler.slice(0, 8);
+  const ayniVar = benzerler.some(f => f.ayniAd);
+  kutu.innerHTML = `
+    <div style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:8px; padding:8px 10px; font-size:12.5px; margin:-4px 0 12px;">
+      <b>⚠ ${ayniVar ? 'Bu isimde bir firma zaten kayıtlı!' : 'Benzer isimli firma kayıtlı:'}</b>
+      <div style="margin-top:4px; line-height:1.6;">${gosterilen.map(f => `${f.ayniAd ? '<b>' : ''}${_ykKacir(f.firmaAdi)} <span style="opacity:.7;">(${_ykKacir(f.firmaNo)})</span>${f.ayniAd ? '</b>' : ''}`).join('<br>')}${benzerler.length > gosterilen.length ? `<br>… ve ${benzerler.length - gosterilen.length} firma daha` : ''}</div>
+      <div style="margin-top:4px; opacity:.85;">Aynı firmayı tekrar eklemeyin; personel girerken listeden bu firmayı seçin.</div>
+    </div>`;
 }
 
 function firmaModalKapat() {
@@ -681,9 +698,23 @@ function firmaModalKapat() {
   _duzenlenenFirmaId = null;
 }
 
-function firmaFormGonderildi(e) {
+async function firmaFormGonderildi(e) {
   e.preventDefault();
   temizleFormHatalari('firmaForm');
+
+  // Yeni firma eklerken benzer isimli firma varsa onay iste.
+  if (!_duzenlenenFirmaId) {
+    const benzerler = yukleniciBenzerFirmalariBul(document.getElementById('firmaAdi').value, null);
+    if (benzerler.length) {
+      const liste = benzerler.slice(0, 5).map(f => `• ${f.firmaAdi} (${f.firmaNo})`).join('\n');
+      const mesaj = (benzerler.some(f => f.ayniAd) ? 'Bu isimde bir firma zaten kayıtlı:' : 'Benzer isimli firma kayıtlı:') +
+        '\n' + liste + (benzerler.length > 5 ? `\n… ve ${benzerler.length - 5} firma daha` : '') + '\n\nYine de yeni firma olarak eklensin mi?';
+      const onay = onayModali(mesaj, 'Yine de Ekle');
+      const mesajEl = document.getElementById('omMesaj');
+      if (mesajEl) mesajEl.style.whiteSpace = 'pre-line'; // liste satır satır görünsün
+      if (!(await onay)) return;
+    }
+  }
 
   const veriler = {
     firmaAdi: document.getElementById('firmaAdi').value,

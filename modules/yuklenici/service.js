@@ -104,6 +104,23 @@ function _yukleniciKisiTehlikeSinifi(veriler) {
     (YUKLENICI_TEHLIKE_SINIFLARI.includes(veriler.tehlikeSinifi) ? veriler.tehlikeSinifi : 'az');
 }
 
+// Kullanıcı isteği: "daha önce benzer bir firma girildiyse en azından ilk
+// 3-4 harfi, kullanıcıyı firma eklemede uyar; bir sürü aynı firma girilmiş".
+// Büyük/küçük harf, Türkçe karakter, boşluk ve noktalama yok sayılır.
+// Benzer: normalize ad aynı ilk 4 (ad kısaysa 3) harfle başlıyor ya da biri
+// diğerini içeriyor. Tam aynı olanlar listenin başında.
+function yukleniciBenzerFirmalariBul(firmaAdi, haricId) {
+  const n = _basligiNormallestir(firmaAdi);
+  if (n.length < 3) return [];
+  const onEk = n.slice(0, 4);
+  return yukleniciFirmalariTumunuGetir()
+    .filter(f => f.id !== haricId)
+    .map(f => ({ firma: f, fn: _basligiNormallestir(f.firmaAdi) }))
+    .filter(({ fn }) => fn && (fn.startsWith(onEk) || (fn.length >= 4 && n.length >= 4 && (fn.includes(n) || n.includes(fn)))))
+    .sort((a, b) => (b.fn === n) - (a.fn === n) || a.firma.firmaAdi.localeCompare(b.firma.firmaAdi, 'tr'))
+    .map(({ firma, fn }) => Object.assign({}, firma, { ayniAd: fn === n }));
+}
+
 function yukleniciFirmaSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciFirmaSilRepo(id);
