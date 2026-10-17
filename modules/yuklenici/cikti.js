@@ -139,6 +139,7 @@ function yukleniciDetayliExcelAktar() {
         'Temel İSG Başlangıç': bg('temelIsg').base ? formatTarihGoster(bg('temelIsg').base) : '',
         'Temel İSG Bitiş': expHesap('temelIsg') ? formatTarihGoster(expHesap('temelIsg')) : '',
         'Temel İSG Uygun': uygunMu('temelIsg') ? 'Uygun' : 'Uygun Değil',
+        'Geçici Görev Başlangıç': bg('geciciGorev').base ? formatTarihGoster(bg('geciciGorev').base) : '',
         'Geçici Görev Bitiş': bg('geciciGorev').exp ? formatTarihGoster(bg('geciciGorev').exp) : '',
         'Geçici Görev Uygun': uygunMu('geciciGorev') ? 'Uygun' : 'Uygun Değil',
         'MYK (Var)': yukleniciBelgeVarMi(bg('myk')) ? 'Evet' : 'Hayır',
@@ -375,9 +376,10 @@ function _yukleniciDetayliExcelIceAktarUygula(dosya, tamamlaninca) {
       if ((s.kkd || '').trim()) belgeler.kkd = { deger: _yukleniciVarYokCoz(s.kkd) };
       if ((s.saglikBaslangic || '').trim()) belgeler.saglik = { base: excelTarihiNormallestir(s.saglikBaslangic) };
       if ((s.temelIsgBaslangic || '').trim()) belgeler.temelIsg = { base: excelTarihiNormallestir(s.temelIsgBaslangic) };
-      // geciciGorev artık tek tarih (tarih-tek) — eski dosyadaki başlangıç
-      // sütunu yok sayılır, sadece bitiş (en son giriş tarihi) alınır.
-      if ((s.geciciBitis || '').trim()) belgeler.geciciGorev = { exp: excelTarihiNormallestir(s.geciciBitis) };
+      // geciciGorev: başlangıç–bitiş tarih aralığı (tarih-aralik).
+      if ((s.geciciBaslangic || '').trim() || (s.geciciBitis || '').trim()) {
+        belgeler.geciciGorev = { base: excelTarihiNormallestir(s.geciciBaslangic), exp: excelTarihiNormallestir(s.geciciBitis) };
+      }
       // MYK artık Var/Yok — eski dosyada bir başlangıç tarihi varsa belge
       // fiilen mevcuttu demektir, "Var" olarak aktarılır.
       if ((s.mykBaslangic || '').trim()) belgeler.myk = { deger: 'Var' };

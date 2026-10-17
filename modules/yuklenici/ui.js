@@ -475,9 +475,11 @@ function _kisiBelgeSatiriHtml(belgeTanimi, kayit, tehlikeSinifi) {
         <option value="Var" ${varMi ? 'selected' : ''}>Var</option>
       </select>
     `;
-  } else if (belgeTanimi.tur === 'tarih-tek') {
+  } else if (belgeTanimi.tur === 'tarih-aralik') {
     alanlar = `
-      <input type="date" data-belge-alan="exp" data-belge-id="${belgeTanimi.id}" value="${k.exp || ''}" title="En son giriş yapabileceği tarih" style="width:auto;">
+      <input type="date" data-belge-alan="base" data-belge-id="${belgeTanimi.id}" value="${k.base || ''}" title="Başlangıç" style="width:auto;">
+      <span style="font-size:12px; color:var(--metin-soluk);">–</span>
+      <input type="date" data-belge-alan="exp" data-belge-id="${belgeTanimi.id}" value="${k.exp || ''}" title="Bitiş" style="width:auto;">
     `;
   } else if (belgeTanimi.tur === 'tarih-tehlike') {
     const hesapExp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, k, tehlikeSinifi);

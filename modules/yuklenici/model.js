@@ -234,8 +234,8 @@ const YUKLENICI_EGITIM_YIL_HARITASI = { az: 3, tehlikeli: 2, cok: 1 };
 const YUKLENICI_FIRMA_EGITIMI_AY_SECENEKLERI = [1, 2, 3, 4, 5, 6, 9, 12];
 const YUKLENICI_FIRMA_EGITIMI_VARSAYILAN_AY = 6;
 
-// tur: 'var-yok' | 'tarih-tek' (Geçici Görevlendirme; tek bir "en son giriş
-// yapabileceği tarih" — exp — girilir, başlangıç tutulmaz) | 'tarih-tehlike'
+// tur: 'var-yok' | 'tarih-aralik' (Geçici Görevlendirme; başlangıç — base —
+// ve bitiş — exp — elle girilir) | 'tarih-tehlike'
 // (Sağlık/Temel İSG; exp boşsa base+tehlike-sınıfı-yılı ile hesaplanır) |
 // 'egitim' (Firma Eğitimi; exp boşsa base+ay ile hesaplanır, eğitmen adı zorunlu).
 // girisEngelleyici: eksik/süresi geçmişse "Giriş Engeli" (kritik) sayılır —
@@ -271,9 +271,11 @@ const YUKLENICI_BELGE_TANIMLARI = [
   // bu tanımı HİÇ görmez. Kullanıcı isteği: tarihli değil Var/Yok; ayrı "bilgi
   // amaçlı" başlığı yerine Var/Yok'ların hemen altında gösterilsin.
   { id: 'yuksekteCalisma', ad: 'Yüksekte Çalışma Eğitimi', tur: 'var-yok', girisEngelleyici: false, bilgiAmacli: true, bolum: 'zorunlu' },
-  // Kullanıcı isteği: iki tarih (başlangıç/bitiş) yerine tek tarih — "en son
-  // giriş yapabileceği tarih".
-  { id: 'geciciGorev', ad: 'Geçici Görevlendirme Belgesi', tur: 'tarih-tek', girisEngelleyici: true, bolum: 'zorunlu' },
+  // Kullanıcı isteği (2026-10-17): tek tarih iyi olmadı, eskisi gibi
+  // başlangıç–bitiş tarih aralığı olsun. Tek tarih döneminde sadece bitişle
+  // (exp) kaydedilmiş kişiler bozulmasın diye başlangıç boşsa sadece bitişe
+  // bakılır; başlangıç girildiyse ve henüz gelmediyse giriş yapamaz.
+  { id: 'geciciGorev', ad: 'Geçici Görevlendirme Belgesi', tur: 'tarih-aralik', girisEngelleyici: true, bolum: 'zorunlu' },
   { id: 'saglik', ad: 'Sağlık Raporu', tur: 'tarih-tehlike', girisEngelleyici: true, yilHaritasi: 'saglik', bolum: 'zorunlu' },
   { id: 'temelIsg', ad: 'Temel İSG Eğitimi Belgesi', tur: 'tarih-tehlike', girisEngelleyici: true, yilHaritasi: 'egitim', bolum: 'zorunlu' },
   { id: 'firmaEgitimi', ad: 'Firma Eğitimi', tur: 'egitim', girisEngelleyici: true, bolum: 'zorunlu' },
@@ -346,8 +348,7 @@ function yukleniciBelgeBitisTarihiHesapla(belgeTanimi, kayit, tehlikeSinifi) {
     return yukleniciYilEkle(kayit.base, yilHaritasi[tehlikeSinifi] || 1);
   }
 
-  // tarih-tek (Geçici Görevlendirme) — tek alan (exp) doğrudan "en son giriş
-  // yapabileceği tarih"tir, elle girilir.
+  // tarih-aralik (Geçici Görevlendirme) — bitiş (exp) elle girilir.
   return kayit.exp || '';
 }
 
@@ -402,9 +403,10 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
     if (kalan !== null && kalan <= 30) return sorunUret(`${ilkBiten.etiket} yaklaşıyor`, ilkBiten.exp, false, ilkBiten.etiket);
   }
 
-  // tarih-tek: tek alan (exp) = en son giriş yapabileceği tarih.
+  // tarih-aralik: başlangıç (base, opsiyonel) – bitiş (exp, zorunlu).
   const gecici = belgeGetir('geciciGorev');
   if (!gecici.exp) return sorunUret('Geçici Görevlendirme yok', '', true, 'Geçici Görev');
+  if (gecici.base && gecici.base > bugun) return sorunUret('Geçici Görevlendirme henüz başlamadı', gecici.base, true, 'Geçici Görev');
   const geciciKalan = kalanGunHesapla(gecici.exp);
   if (geciciKalan !== null && geciciKalan < 0) return sorunUret('Geçici Görevlendirme süresi dolmuş', gecici.exp, true, 'Geçici Görev');
   if (geciciKalan !== null && geciciKalan <= 30) return sorunUret('Geçici Görevlendirme yaklaşıyor', gecici.exp, false, 'Geçici Görev');
@@ -425,8 +427,8 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
 // Tek bir belgenin "Uygun" sayılıp sayılmayacağı — satır renklendirme
 // (getRowClassForPersonel) ve Dashboard KPI'ları için kullanılır. var-yok
 // belgede deger==='Var' (veya eski tarihli kayıtlarda base, bkz.
-// yukleniciBelgeVarMi); tarih-tek'te (Geçici Görevlendirme) sadece
-// bugün<=exp yeterlidir (başlangıç tutulmaz); diğer tarihli belgelerde
+// yukleniciBelgeVarMi); tarih-aralik'ta (Geçici Görevlendirme) bugün<=exp
+// ve başlangıç girildiyse başlangıç<=bugün; diğer tarihli belgelerde
 // base<=bugün<=exp aralığında olması gerekir.
 function yukleniciBelgeUygunMu(belgeTanimi, kayit, tehlikeSinifi, referansTarih) {
   const bugun = referansTarih || bugunIso();
@@ -434,7 +436,7 @@ function yukleniciBelgeUygunMu(belgeTanimi, kayit, tehlikeSinifi, referansTarih)
   if (belgeTanimi.tur === 'var-yok') return yukleniciBelgeVarMi(k);
   const exp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, k, tehlikeSinifi);
   if (!exp) return false;
-  if (belgeTanimi.tur === 'tarih-tek') return bugun <= exp;
+  if (belgeTanimi.tur === 'tarih-aralik') return (!k.base || k.base <= bugun) && bugun <= exp;
   if (!k.base) return false;
   return k.base <= bugun && bugun <= exp;
 }
