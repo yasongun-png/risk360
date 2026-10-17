@@ -592,13 +592,6 @@ function _ykCanliDurumHtml(tehlikeSinifi, ilkGiris, belgeler) {
   }
   return `<div class="genel-rozet rozet-yaklasiyor" style="font-size:13px; padding:8px 12px;">⚠ Yakında Dolacak — ${kritik.sebep}${kritik.sonTarih ? ` (${formatTarihGoster(kritik.sonTarih)}, ${kritik.kalanGun} gün kaldı)` : ''}</div>`;
 }
-function _gerekliEvrakCheckboxHtml(kutuId, seciliListe) {
-  return EVRAK_TURLERI.map(t => `
-    <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; margin-right:14px; margin-bottom:6px;">
-      <input type="checkbox" name="${kutuId}" value="${t}" ${seciliListe.includes(t) ? 'checked' : ''}> ${t}
-    </label>
-  `).join('');
-}
 
 // Firma için: serbest evrak modeli (eksikEvraklar/suresiGecenEvraklar).
 function _uygunlukOzetiHtml(z) {
@@ -747,7 +740,8 @@ function firmaModalAc(firma) {
   document.getElementById('firmaTehlikeSinifi').innerHTML = '<option value="">— Seçilmedi —</option>' +
     YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${firmaTehlike === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('');
   document.getElementById('firmaDurum').innerHTML = FIRMA_DURUMLARI.map(d => `<option ${firma && firma.durum === d ? 'selected' : ''}>${d}</option>`).join('');
-  document.getElementById('firmaGerekliEvraklarKutusu').innerHTML = _gerekliEvrakCheckboxHtml('firmaGerekliEvrak', firma ? firma.gerekliEvraklar : VARSAYILAN_GEREKLI_EVRAKLAR);
+  document.getElementById('firmaGerekliEvraklarKutusu').innerHTML = `<div style="font-size:13px;">${YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.map(t => `✔ ${t}`).join('<br>')}</div>
+    <div style="font-size:12px; color:var(--metin-soluk); margin-top:4px;">Firmanın uygunluğu sadece bu iki sözleşmeye göre hesaplanır; aşağıdaki Evraklar bölümüne ekleyin.</div>`;
   document.getElementById('firmaNotlar').value = firma ? firma.notlar : '';
 
   evrakListesiniCiz('firmaEvrakListesi', _firmaEvrakTaslak);
@@ -804,7 +798,7 @@ async function firmaFormGonderildi(e) {
     riskSeviyesi: document.getElementById('firmaRiskSeviyesi').value,
     tehlikeSinifi: document.getElementById('firmaTehlikeSinifi').value,
     durum: document.getElementById('firmaDurum').value,
-    gerekliEvraklar: Array.from(document.querySelectorAll('input[name="firmaGerekliEvrak"]:checked')).map(el => el.value),
+    gerekliEvraklar: YUKLENICI_FIRMA_GEREKLI_EVRAKLAR.slice(),
     evraklar: _firmaEvrakTaslak.filter(e => e.tur),
     notlar: document.getElementById('firmaNotlar').value
   };
@@ -912,7 +906,7 @@ function _ykFirmaSeciliGorunum(aramaEl, selectEl, seciliEl) {
     <div style="display:flex; align-items:center; gap:8px; padding:9px 12px; border:1px solid var(--kenarlik); border-radius:8px; background:#f8fafc; margin-bottom:14px;">
       <b style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${_ykKacir(firma.firmaAdi)}">${_ykKacir(firma.firmaAdi)}</b>
       <button type="button" class="tablo-buton" data-firma-degistir>Değiştir</button>
-    </div>` : '';
+    </div>${_ykFirmaSozlesmeUyarisiHtml(firma)}` : '';
   if (kompakt) {
     seciliEl.querySelector('[data-firma-degistir]').addEventListener('click', () => {
       aramaEl.style.display = '';
@@ -921,6 +915,20 @@ function _ykFirmaSeciliGorunum(aramaEl, selectEl, seciliEl) {
       aramaEl.focus();
     });
   }
+}
+
+// Kullanıcı isteği: "personel girişinde yüklenici firmada işyeri hekimi / iş
+// güvenliği uzmanı seçilmediyse sözleşme eksik desin, firmadan seçin desin".
+// Uyarıdır, personel kaydını engellemez.
+function _ykFirmaSozlesmeUyarisiHtml(firma) {
+  const z = _firmaZenginlestir(firma);
+  const sorunlar = z.eksikEvraklar.map(t => `${t} eksik`).concat(z.suresiGecenEvraklar.map(t => `${t} süresi geçmiş`));
+  if (!sorunlar.length) return '';
+  return `
+    <div style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:8px; padding:8px 10px; font-size:12.5px; margin:-6px 0 14px;">
+      <b>⚠ ${sorunlar.map(_ykKacir).join(', ')}.</b>
+      <div style="margin-top:2px;">Yüklenici Firmalar sekmesinde bu firmayı açıp (Düzenle) sözleşmeleri Evraklar bölümüne ekleyin.</div>
+    </div>`;
 }
 
 function _kisiFirmaSeciliGorunum() {

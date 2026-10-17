@@ -6,6 +6,11 @@ const KISI_DURUMLARI = ['Girişe Uygun', 'Eksik Evrak', 'Süresi Geçmiş', 'Ona
 const YUKLENICI_RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Kritik'];
 const EVRAK_TURLERI = ['SGK Hizmet / Giriş Bildirgesi', 'İSG Eğitimi', 'Sağlık Raporu', 'Mesleki Yeterlilik', 'KKD Zimmet', 'İş İzni', 'Mali Mesuliyet / Sigorta', 'Sözleşme', 'İş Güvenliği Uzmanı Sözleşmesi', 'İşyeri Hekimi Sözleşmesi', 'Diğer'];
 const VARSAYILAN_GEREKLI_EVRAKLAR = ['SGK Hizmet / Giriş Bildirgesi', 'İSG Eğitimi', 'Sağlık Raporu'];
+// Kullanıcı isteği: "yüklenici firma girişinde sadece istenen evrak iş
+// güvenliği uzmanı ve işyeri hekimi sözleşmesi olsun" — firma uygunluğu
+// tüm firmalarda sadece bu ikisine göre hesaplanır (kayıtlı eski
+// gerekliEvraklar listeleri dikkate alınmaz, bkz. service.js _firmaZenginlestir).
+const YUKLENICI_FIRMA_GEREKLI_EVRAKLAR = ['İş Güvenliği Uzmanı Sözleşmesi', 'İşyeri Hekimi Sözleşmesi'];
 
 function bugunIso() {
   return new Date().toISOString().slice(0, 10);
