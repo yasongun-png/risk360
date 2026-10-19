@@ -505,18 +505,32 @@ function dokumanKutuphanesiPenceresiniAc() {
   document.getElementById('dkmKutuphaneKatman').classList.add('acik');
 }
 
+// Kullanıcı isteği: "diğer sekmelerin yanına koy" — sayfada sekme çubuğu
+// varsa buton son sekmenin hemen yanına (sekme görünümünde) konur; yoksa
+// "← Kontrol Paneline Dön" bağlantısının sağına. Buton data-sekme taşımaz,
+// modüllerin sekme kodu onu sekme saymaz (bkz. hizmet-sozlesmesi ui.js).
 function _dkmOtomatikButonuEkle() {
-  if (document.querySelector('[data-dokumanlar-satir-ici]')) return;
-  const geri = document.querySelector('a.geri-link');
-  if (!geri || document.getElementById('dkmAcBtn')) return;
+  if (document.querySelector('[data-dokumanlar-satir-ici]') || document.getElementById('dkmAcBtn')) return;
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.id = 'dkmAcBtn';
-  btn.className = 'ikincil';
   btn.textContent = '📁 Dokümanlar';
   btn.title = 'Bu modüle ait form, talimat ve prosedür dosyaları';
-  btn.style.cssText = 'float:right; width:auto; padding:7px 14px; font-size:13px; font-weight:600;';
   btn.addEventListener('click', dokumanKutuphanesiPenceresiniAc);
+
+  const cubuk = document.querySelector('.sekme-cubugu');
+  if (cubuk) {
+    btn.className = 'sekme-seciliDegil';
+    const sekmeler = cubuk.querySelectorAll('button[data-sekme]');
+    const son = sekmeler.length ? sekmeler[sekmeler.length - 1] : null;
+    if (son && son.parentNode === cubuk) son.insertAdjacentElement('afterend', btn);
+    else cubuk.appendChild(btn);
+    return;
+  }
+  const geri = document.querySelector('a.geri-link');
+  if (!geri) return;
+  btn.className = 'ikincil';
+  btn.style.cssText = 'float:right; width:auto; padding:7px 14px; font-size:13px; font-weight:600;';
   geri.parentNode.insertBefore(btn, geri);
 }
 

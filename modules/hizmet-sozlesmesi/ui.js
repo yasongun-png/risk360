@@ -34,7 +34,7 @@ function _hsGorunumDegistir(gorunum) {
   _hsGorunum = gorunum;
   document.getElementById('bolum-kayitlar').style.display = gorunum === 'kayitlar' ? '' : 'none';
   document.getElementById('bolum-sicil-ozeti').style.display = gorunum === 'sicil-ozeti' ? '' : 'none';
-  document.querySelectorAll('.sekme-cubugu button').forEach(btn => {
+  document.querySelectorAll('.sekme-cubugu button[data-sekme]').forEach(btn => {
     btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum);
   });
   if (gorunum === 'sicil-ozeti') sicilOzetiCiz();
@@ -49,7 +49,7 @@ function _hsFirmaSeciciDoldur() {
 }
 
 function hizmetSozlesmesiSayfasiniBaslat() {
-  document.querySelectorAll('.sekme-cubugu button').forEach(btn => {
+  document.querySelectorAll('.sekme-cubugu button[data-sekme]').forEach(btn => {
     btn.addEventListener('click', () => _hsGorunumDegistir(btn.getAttribute('data-sekme')));
   });
   _hsFirmaSeciciDoldur();
