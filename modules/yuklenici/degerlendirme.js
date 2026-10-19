@@ -7,13 +7,10 @@
 // girmez). Puan = alınan / (değerlendirilen madde × 2) × 100. Sınıf:
 // A (≥85) Uygun — çalışılabilir, B (70–84) İyileştirme gerekli, C (<70) Yetersiz.
 
+// Kullanıcı isteği (2026-10-19): "Dokümantasyon ve Yasal Gereklilikler" grubu
+// şimdilik çıkarıldı (d1–d6; personel evrakları zaten Personel Kayıtları'nda
+// takip ediliyor). Eski kayıtlardaki d* cevapları puana girmez.
 const YK_DEG_KRITERLERI = [
-  { id: 'd1', grup: 'Dokümantasyon ve Yasal Gereklilikler', metin: 'Çalışanların SGK işe giriş bildirgeleri eksiksiz' },
-  { id: 'd2', grup: 'Dokümantasyon ve Yasal Gereklilikler', metin: 'Çalışanların sağlık raporları geçerli' },
-  { id: 'd3', grup: 'Dokümantasyon ve Yasal Gereklilikler', metin: 'Temel İSG eğitimleri geçerli ve belgeli' },
-  { id: 'd4', grup: 'Dokümantasyon ve Yasal Gereklilikler', metin: 'Mesleki yeterlilik / MYK belgeleri (gereken işlerde) mevcut' },
-  { id: 'd5', grup: 'Dokümantasyon ve Yasal Gereklilikler', metin: 'İşe özel risk değerlendirmesi / iş güvenliği planı sunuldu' },
-  { id: 'd6', grup: 'Dokümantasyon ve Yasal Gereklilikler', metin: 'İSG uzmanı ve işyeri hekimi hizmeti mevcut' },
   { id: 's1', grup: 'Saha Uygulamaları', metin: 'KKD (baret, gözlük, iş ayakkabısı vb.) eksiksiz ve doğru kullanıldı' },
   { id: 's2', grup: 'Saha Uygulamaları', metin: 'Yüksekte çalışma önlemleri alındı (emniyet kemeri, iskele, korkuluk)' },
   { id: 's3', grup: 'Saha Uygulamaları', metin: 'Çalışma izinleri (sıcak iş, kapalı alan, yüksekte vb.) alındı ve kurallara uyuldu' },
