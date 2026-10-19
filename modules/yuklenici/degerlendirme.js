@@ -19,6 +19,8 @@ const YK_DEG_KRITERLERI = [
   { id: 's6', grup: 'Saha Uygulamaları', metin: 'Elektrikli çalışmalarda güvenlik önlemleri (kilitleme-etiketleme) uygulandı' },
   { id: 's7', grup: 'Saha Uygulamaları', metin: 'Kimyasal / tehlikeli madde kullanımı ve depolaması uygun' },
   { id: 's8', grup: 'Saha Uygulamaları', metin: 'Yangın önlemleri alındı (söndürücü, sıcak işte gözcü vb.)' },
+  // Kullanıcı isteği: dokümantasyon grubu yerine tek madde.
+  { id: 'y0', grup: 'Yönetim ve İletişim', metin: 'İstenen evraklar zamanında ve eksiksiz gönderildi' },
   { id: 'y1', grup: 'Yönetim ve İletişim', metin: 'Firma sorumlusu / formen sahada ve ulaşılabilir' },
   { id: 'y2', grup: 'Yönetim ve İletişim', metin: 'İSG talimatlarına ve yapılan uyarılara uyuldu' },
   { id: 'y3', grup: 'Yönetim ve İletişim', metin: 'İş kazası / ramak kala olayları zamanında bildirildi' },
