@@ -325,30 +325,87 @@ function yukleniciKisiEksikBelgeleri(kisi) {
   return satirlar;
 }
 
-// kisiler: [{ adSoyad, firmaId, belgeler, tehlikeSinifi, personelTuru, ilkGiris }]
-function yukleniciEksiklikMailMetni(kisiler) {
+// Kullanıcı isteği: "geçici görevlendirme dışında diğer evraklarda sorun
+// yoksa ... geçici görevlendirme tarihleri arasında (tek tarihse o tarih)
+// fabrikamızda İSG bilgilendirmesi yapılarak giriş yapması uygundur". Kişi
+// onaylanabilir: eksik listesinde (30 gün içinde dolacak uyarıları hariç) bir
+// şey yok ve Geçici Görevlendirme bitiş tarihi girilmiş, geçmemiş.
+// Dönüş: null (onaylanamaz) ya da giriş tarih metni.
+function yukleniciKisiGirisOnayTarihi(kisi) {
+  const sorunlar = yukleniciKisiEksikBelgeleri(kisi).filter(s => !/tarihinde doluyor$/.test(s));
+  if (sorunlar.length) return null;
+  const g = (kisi.belgeler || {}).geciciGorev || {};
+  if (!g.exp || g.exp < bugunIso()) return null;
+  return g.base
+    ? `${formatTarihGoster(g.base)} - ${formatTarihGoster(g.exp)} tarihleri arasında`
+    : `${formatTarihGoster(g.exp)} tarihine kadar`;
+}
+
+function _yukleniciFirmaGruplari(kisiler) {
   const gruplar = [];
   kisiler.forEach(k => {
     let g = gruplar.find(x => x.firmaId === (k.firmaId || ''));
     if (!g) gruplar.push(g = { firmaId: k.firmaId || '', kisiler: [] });
     g.kisiler.push(k);
   });
+  return gruplar;
+}
 
-  const bloklar = gruplar.map(g => {
-    const firma = g.firmaId ? yukleniciFirmaIdIleGetirRepo(g.firmaId) : null;
-    const satirlar = [];
+function _yukleniciKisiAdi(k) {
+  return (k.adSoyad || '').trim() || '(Ad soyad girilmedi)';
+}
+
+// kisiler: [{ adSoyad, firmaId, belgeler, tehlikeSinifi, personelTuru, ilkGiris }]
+// Seçilenlerden evrakı tam olanlar için giriş onayı, eksiği olanlar için
+// eksik listesi üretilir (ikisi aynı mailde, firma firma).
+function yukleniciEksiklikMailMetni(kisiler) {
+  const ayirici = '\n\n' + '-'.repeat(40) + '\n\n';
+  const firmaBasligi = firmaId => {
     // Kullanıcı isteği: firma sözleşmeleri (İSG uzmanı / hekim) mailde istenmez.
-    if (firma) satirlar.push(`Firma: ${firma.firmaAdi}`);
-    g.kisiler.forEach(k => {
-      const eksikler = yukleniciKisiEksikBelgeleri(k);
-      satirlar.push('', `${(k.adSoyad || '').trim() || '(Ad soyad girilmedi)'}:`);
-      if (eksikler.length) eksikler.forEach(s => satirlar.push(`- ${s}`));
-      else satirlar.push('- Eksik belge yok');
-    });
-    return satirlar.join('\n');
+    const firma = firmaId ? yukleniciFirmaIdIleGetirRepo(firmaId) : null;
+    return firma ? `Firma: ${firma.firmaAdi}` : '';
+  };
+
+  const onaylilar = [];
+  const eksikliler = [];
+  kisiler.forEach(k => {
+    const tarih = yukleniciKisiGirisOnayTarihi(k);
+    if (tarih) onaylilar.push(Object.assign({}, k, { _girisTarihi: tarih }));
+    else eksikliler.push(k);
   });
 
-  return ['Merhaba,', '', 'Aşağıdaki personelin eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.', '', bloklar.join('\n\n' + '-'.repeat(40) + '\n\n'), '', 'Bagfaş İş Güvenliği Birimi', 'Tel: 0 266 714 10 00 - Dahili: 374'].join('\n');
+  const parcalar = ['Merhaba,'];
+  if (onaylilar.length) {
+    const bloklar = _yukleniciFirmaGruplari(onaylilar).map(g => [firmaBasligi(g.firmaId)]
+      .concat(g.kisiler.map(k => `- ${_yukleniciKisiAdi(k)}: ${k._girisTarihi}`))
+      .filter(Boolean).join('\n'));
+    // Kullanıcı isteği: birden çok personel varsa "personellerinizin".
+    parcalar.push(
+      onaylilar.length > 1
+        ? 'İletmiş olduğunuz evraklar kontrol edilmiş olup aşağıda isimleri yazılı personellerinizin, belirtilen geçici görevlendirme tarihlerinde fabrikamızda İSG bilgilendirmesi yapılarak giriş yapması uygundur.'
+        : 'İletmiş olduğunuz evraklar kontrol edilmiş olup aşağıda ismi yazılı personelinizin, belirtilen geçici görevlendirme tarihlerinde fabrikamızda İSG bilgilendirmesi yapılarak giriş yapması uygundur.',
+      bloklar.join(ayirici)
+    );
+  }
+  if (eksikliler.length) {
+    const bloklar = _yukleniciFirmaGruplari(eksikliler).map(g => {
+      const satirlar = [firmaBasligi(g.firmaId)].filter(Boolean);
+      g.kisiler.forEach(k => {
+        const eksikler = yukleniciKisiEksikBelgeleri(k);
+        satirlar.push('', `${_yukleniciKisiAdi(k)}:`);
+        if (eksikler.length) eksikler.forEach(s => satirlar.push(`- ${s}`));
+        else satirlar.push('- Eksik belge yok');
+      });
+      return satirlar.join('\n').replace(/^\n/, '');
+    });
+    const kime = eksikliler.length > 1 ? 'personellerinizin' : 'personelinizin';
+    parcalar.push(
+      `Aşağıdaki ${kime}${onaylilar.length ? ' ise' : ''} eksik belgelerinin tamamlanarak tarafımıza iletilmesini rica ederiz.`,
+      bloklar.join(ayirici)
+    );
+  }
+  parcalar.push('Bilgilerinize saygılarımızla,', 'Bagfaş İş Güvenliği Birimi\nTel: 0 266 714 10 00 - Dahili: 374');
+  return parcalar.join('\n\n');
 }
 
 // ---- Kişiler ----
