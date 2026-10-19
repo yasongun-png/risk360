@@ -300,6 +300,10 @@ function yukleniciKisiEksikBelgeleri(kisi) {
     // Kullanıcı isteği: Firma Eğitimi'ni yüklenici değil biz veriyoruz — mailde istenmez.
     if (b.id === 'firmaEgitimi') return;
     const kayit = belgeler[b.id] || {};
+    // Kullanıcı isteği: Geçici Görevlendirme'nin başlangıcı ileri bir tarih
+    // olsa da fark etmez — bitişi geçmemişse mailde sorun sayılmaz (kişi onay
+    // metninde o tarih aralığıyla yer alır).
+    if (b.id === 'geciciGorev' && kayit.exp && kayit.exp >= bugun) return;
     if (uygunMu(b)) {
       // Kullanıcı isteği: Geçici Görevlendirme geçerliyse yeterli, "doluyor" yazılmaz.
       if (b.id === 'geciciGorev') return;
