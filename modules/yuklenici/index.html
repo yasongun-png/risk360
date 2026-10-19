@@ -31,6 +31,7 @@
       <button type="button" data-sekme="dashboard">Dashboard</button>
       <button type="button" data-sekme="kayitlar" class="sekme-seciliDegil">Personel Kayıtları</button>
       <button type="button" data-sekme="firmalar" class="sekme-seciliDegil">Yüklenici Firmalar</button>
+      <button type="button" data-sekme="degerlendirme" class="sekme-seciliDegil">İSG Değerlendirme</button>
       <button type="button" data-sekme="araclar" class="sekme-seciliDegil">Araç / Ekipman</button>
       <button type="button" data-sekme="ziyaretciler" class="sekme-seciliDegil">Ziyaretçiler</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
@@ -42,6 +43,25 @@
 
     <!-- Dokümanlar: içerik core/dokumanlar.js tarafından kurulur (bkz. ui.js). -->
     <div id="bolum-formlar" data-dokumanlar-satir-ici style="display:none;"></div>
+
+    <!-- İSG UYUM DEĞERLENDİRMESİ (bkz. degerlendirme.js) -->
+    <div id="bolum-degerlendirme" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="degAramaKutusu" class="arama-kutusu" placeholder="Firma, iş veya değerlendirene göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="degFirmaFiltre" style="width:auto; margin:0;"></select>
+          <button type="button" class="birincil" id="yeniDegBtn" style="width:auto;">+ Yeni Değerlendirme</button>
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin:-4px 0 10px;">Yüklenicinin belirli bir tarih aralığında yaptığı iş için İSG uyum kontrol listesi. Puan: Uygun 2, Kısmen 1, Uygun Değil 0 (Uygulanmaz puana girmez) — A ≥ 85, B 70–84, C &lt; 70.</p>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Dönem</th><th>Firma</th><th>Yapılan İş</th><th>Puan</th><th>Sonuç</th><th>Değerlendiren</th><th>İşlemler</th></tr></thead>
+          <tbody id="degTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="degBosDurum"></div>
+    </div>
 
     <div id="bolum-dashboard">
       <!-- Son Güncellemeler: en yeni en üstte, 7 satır görünür, eskiler kutu
@@ -116,7 +136,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Firma No</th><th>Firma Adı</th><th>Yetkili</th><th>Risk</th><th>Durum</th><th>Uygunluk</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Firma No</th><th>Firma Adı</th><th>Yetkili</th><th>Risk</th><th>Durum</th><th>Uygunluk</th><th>Son Değerlendirme</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
           <tbody id="firmaTabloGovde"></tbody>
         </table>
       </div>
@@ -514,6 +534,71 @@
     </div>
   </div>
 
+  <!-- İSG UYUM DEĞERLENDİRMESİ FORMU -->
+  <div class="modal-katman" id="degModalKatman">
+    <div class="modal-kutu" style="max-width:900px; width:95vw; max-height:92vh; overflow:auto;">
+      <h3 id="degModalBaslik">Yeni İSG Uyum Değerlendirmesi</h3>
+      <div class="form-satir-ikili">
+        <div>
+          <label for="degFirma">Yüklenici Firma</label>
+          <select id="degFirma"></select>
+        </div>
+        <div>
+          <label for="degDegerlendiren">Değerlendiren</label>
+          <input type="text" id="degDegerlendiren">
+        </div>
+      </div>
+      <div class="form-satir-ikili">
+        <div>
+          <label for="degBaslangic">Başlangıç Tarihi</label>
+          <input type="date" id="degBaslangic">
+        </div>
+        <div>
+          <label for="degBitis">Bitiş Tarihi</label>
+          <input type="date" id="degBitis">
+        </div>
+      </div>
+      <div class="form-satir-ikili">
+        <div>
+          <label for="degIsTanimi">Yapılan İş</label>
+          <input type="text" id="degIsTanimi" placeholder="Örn: Kazan dairesi boru değişimi">
+        </div>
+        <div>
+          <label for="degLokasyon">Lokasyon</label>
+          <input type="text" id="degLokasyon" placeholder="Örn: Sülfürik asit tesisi">
+        </div>
+      </div>
+      <div class="form-satir-ikili">
+        <div>
+          <label for="degKazaSayisi">İş Kazası Sayısı</label>
+          <input type="number" id="degKazaSayisi" min="0" value="0">
+        </div>
+        <div>
+          <label for="degRamakKalaSayisi">Ramak Kala Sayısı</label>
+          <input type="number" id="degRamakKalaSayisi" min="0" value="0">
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; margin:6px 0;">
+        <div class="form-bolum-baslik" style="margin:0; flex:1;">Kontrol Listesi</div>
+        <button type="button" class="tablo-buton" id="degTumuUygunBtn" title="Boş bırakılan maddeleri Uygun işaretler">Boşları "Uygun" yap</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Kriter</th><th>Sonuç</th><th>Açıklama</th></tr></thead>
+          <tbody id="degKriterGovde"></tbody>
+        </table>
+      </div>
+      <div id="degCanliPuan" style="margin:10px 0; font-weight:600;"></div>
+      <label for="degNotlar">Notlar / Genel Değerlendirme</label>
+      <textarea id="degNotlar"></textarea>
+      <div id="degHata" style="color:var(--hata); font-size:13px; min-height:18px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="degModalIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="degModalKaydetBtn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MAİL İÇİN EKSİKLİKLER -->
   <div class="modal-katman" id="mailEksikKatman">
     <div class="modal-kutu" style="max-width:640px;">
@@ -544,9 +629,10 @@
   <script src="validation.js?v=20261019c"></script>
   <script src="repository.js?v=20261019c"></script>
   <script src="service.js?v=20261019f"></script>
-  <script src="ui.js?v=20261019c"></script>
+  <script src="ui.js?v=20261019d"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js?v=20261019c"></script>
+  <script src="degerlendirme.js?v=20261019d"></script>
   <script src="../../core/dokumanlar.js?v=20261019e"></script>
   <script>
     const kullanici = girisGerekliModul('yuklenici');

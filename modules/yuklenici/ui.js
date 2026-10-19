@@ -95,6 +95,7 @@ function yukleniciSayfasiniBaslat() {
   _topluKisiBaslat();
   // Dokümanlar sekmesi (ortak bileşen, bkz. core/dokumanlar.js).
   dokumanKutuphanesiniKur(document.getElementById('bolum-formlar'));
+  yukleniciDegerlendirmeBaslat();
   document.getElementById('kisiFirmaId').addEventListener('change', () => {
     _kisiFirmaSeciliGorunum();
     if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz();
@@ -256,7 +257,7 @@ function _yukleniciKisiIceAktarSatiriEkle(satir) {
 function gorunumDegistir(gorunum) {
   _ykGorunum = gorunum;
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum));
-  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama', 'formlar'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
+  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama', 'formlar', 'degerlendirme'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
 
   if (gorunum === 'dashboard') dashboardCiz();
   else if (gorunum === 'firmalar') firmalariCiz('');
@@ -266,6 +267,7 @@ function gorunumDegistir(gorunum) {
   else if (gorunum === 'kayitlar') kayitlariCiz('');
   else if (gorunum === 'detayli-arama') detayliAramaCiz();
   else if (gorunum === 'formlar') dokumanListesiniCiz();
+  else if (gorunum === 'degerlendirme') degerlendirmeleriCiz();
   else ozetiCiz();
 }
 
@@ -626,6 +628,13 @@ function _kisiUygunlukOzetiHtml(k) {
 
 // ==================== FİRMALAR ====================
 
+// Firma tablosunda son İSG uyum değerlendirmesinin puanı (bkz. degerlendirme.js).
+function _ykSonDegerlendirmeHtml(firmaId) {
+  const d = yukleniciFirmaSonDegerlendirme(firmaId);
+  if (!d) return '<span style="font-size:12px; color:var(--metin-soluk);">—</span>';
+  return `${_ykDegSinifRozeti(d)}<div style="font-size:11px; color:var(--metin-soluk);">${formatTarihGoster(d.bitis)}</div>`;
+}
+
 function firmalariCiz(aramaMetni) {
   const govde = document.getElementById('firmaTabloGovde');
   const bosDurum = document.getElementById('firmaBosDurum');
@@ -648,6 +657,7 @@ function firmalariCiz(aramaMetni) {
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.riskSeviyesi)}">${_ykKacir(f.riskSeviyesi)}</span></td>
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.durum)}">${_ykKacir(f.durum)}</span></td>
       <td>${_uygunlukOzetiHtml(f)}</td>
+      <td>${_ykSonDegerlendirmeHtml(f.id)}</td>
       <td>${_ykKayitTarihiGoster(f.olusturmaTarihi)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${f.id}">Düzenle</button>
