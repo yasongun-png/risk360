@@ -35,8 +35,28 @@
       <button type="button" data-sekme="ziyaretciler" class="sekme-seciliDegil">Ziyaretçiler</button>
       <button type="button" data-sekme="ozet" class="sekme-seciliDegil">Özet</button>
       <button type="button" data-sekme="detayli-arama" class="sekme-seciliDegil">Detaylı Arama</button>
+      <button type="button" data-sekme="formlar" class="sekme-seciliDegil">Formlar / Talimatlar</button>
       <button type="button" class="birincil" id="hizliPersonelEkleBtn" style="margin-left:auto; width:auto; padding:9px 18px; font-size:13px; font-weight:600;">+ Personel Ekle</button>
       <button type="button" class="ikincil" id="hizliTopluPersonelBtn" title="5 kişilik form yan yana açılır; istediğiniz kadarını doldurun" style="width:auto; padding:9px 14px; font-size:13px; font-weight:600;">+ Birden Fazla Personel</button>
+    </div>
+
+    <div id="bolum-formlar" style="display:none;">
+      <div class="arac-cubugu">
+        <input type="text" id="formAramaKutusu" class="arama-kutusu" placeholder="Form / talimat adına göre ara...">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="formTurFiltre" style="width:auto; margin:0;"></select>
+          <button type="button" class="birincil" id="formYukleBtn" style="width:auto;">+ Dosya Yükle</button>
+          <input type="file" id="formDosya" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="display:none;">
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin:-4px 0 10px;">PDF, Word, Excel veya JPEG/PNG yükleyebilirsiniz; dosyayı bu alana sürükleyip bırakmak da olur.</p>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Tür</th><th>Adı</th><th>Dosya</th><th>Boyut</th><th>Yükleme Tarihi</th><th>İşlemler</th></tr></thead>
+          <tbody id="formTabloGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="formBosDurum"></div>
     </div>
 
     <div id="bolum-dashboard">
@@ -510,6 +530,35 @@
     </div>
   </div>
 
+  <!-- FORM / TALİMAT YÜKLE -->
+  <div class="modal-katman" id="formYukleKatman">
+    <div class="modal-kutu" style="max-width:480px;">
+      <h3>Form / Talimat Yükle</h3>
+      <p id="formYukleDosyaAdi" style="font-size:13px; color:var(--metin-soluk); margin-top:-6px;"></p>
+      <label for="formYukleAd">Adı</label>
+      <input type="text" id="formYukleAd" placeholder="Örn: Sıcak Çalışma İzin Formu">
+      <label for="formYukleTur">Tür</label>
+      <select id="formYukleTur"></select>
+      <div id="formYukleHata" style="color:var(--hata); font-size:13px; min-height:18px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="formYukleIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="formYukleKaydetBtn">Yükle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM / TALİMAT ÖNİZLEME (indirmeden aç) -->
+  <div class="modal-katman" id="formOnizlemeKatman">
+    <div class="modal-kutu" style="max-width:1100px; width:95vw; height:90vh; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <h3 id="formOnizlemeBaslik" style="margin:0; flex:1; font-size:16px;"></h3>
+        <button type="button" class="tablo-buton" id="formOnizlemeIndirBtn">İndir</button>
+        <button type="button" class="tablo-buton" id="formOnizlemeKapatBtn">✕ Kapat</button>
+      </div>
+      <div id="formOnizlemeIcerik" style="flex:1; min-height:0; border:1px solid var(--kenarlik); border-radius:8px; overflow:hidden;"></div>
+    </div>
+  </div>
+
   <!-- MAİL İÇİN EKSİKLİKLER -->
   <div class="modal-katman" id="mailEksikKatman">
     <div class="modal-kutu" style="max-width:640px;">
@@ -526,6 +575,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <script src="../../core/data.js?v=4"></script>
@@ -535,13 +585,14 @@
   <script src="../../core/metin-istem.js"></script>
   <!-- ?v= değeri: modül JS'si her değiştiğinde artırın; yoksa tarayıcı eski
        dosyayı önbellekten alır, yeni index.html ile uyuşmaz ve sayfa çöker. -->
-  <script src="model.js?v=20261017i"></script>
-  <script src="validation.js?v=20261017i"></script>
-  <script src="repository.js?v=20261017i"></script>
-  <script src="service.js?v=20261017i"></script>
-  <script src="ui.js?v=20261017i"></script>
+  <script src="model.js?v=20261019a"></script>
+  <script src="validation.js?v=20261019a"></script>
+  <script src="repository.js?v=20261019a"></script>
+  <script src="service.js?v=20261019a"></script>
+  <script src="ui.js?v=20261019a"></script>
   <script src="roboto-font.js"></script>
-  <script src="cikti.js?v=20261017i"></script>
+  <script src="cikti.js?v=20261019a"></script>
+  <script src="formlar.js?v=20261019a"></script>
   <script>
     const kullanici = girisGerekliModul('yuklenici');
 

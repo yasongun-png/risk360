@@ -93,6 +93,7 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
   document.getElementById('kisiModalIptalBtn').addEventListener('click', kisiModalKapat);
   _topluKisiBaslat();
+  yukleniciFormlarBaslat();
   document.getElementById('kisiFirmaId').addEventListener('change', () => {
     _kisiFirmaSeciliGorunum();
     if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz();
@@ -254,7 +255,7 @@ function _yukleniciKisiIceAktarSatiriEkle(satir) {
 function gorunumDegistir(gorunum) {
   _ykGorunum = gorunum;
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum));
-  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
+  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama', 'formlar'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
 
   if (gorunum === 'dashboard') dashboardCiz();
   else if (gorunum === 'firmalar') firmalariCiz('');
@@ -263,6 +264,7 @@ function gorunumDegistir(gorunum) {
   else if (gorunum === 'ziyaretciler') ziyaretcileriCiz();
   else if (gorunum === 'kayitlar') kayitlariCiz('');
   else if (gorunum === 'detayli-arama') detayliAramaCiz();
+  else if (gorunum === 'formlar') formlariCiz();
   else ozetiCiz();
 }
 
