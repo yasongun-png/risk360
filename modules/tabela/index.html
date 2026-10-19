@@ -91,6 +91,7 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="katalogKategoriFiltre" style="width:auto; margin:0;"><option value="">Tüm Kategoriler</option></select>
           <button type="button" class="ikincil" id="katalogYazdirBtn" title="Görsel + boş lokasyon kutusu; sahada elle doldurmak için">Saha Formu Yazdır</button>
+          <button type="button" class="ikincil" id="katalogIceAktarBtn" title="JPEG/PNG, PDF veya katalog paketi (.json) ile levhaları toplu ekler">Katalog İçe Aktar</button>
           <button type="button" class="birincil" id="yeniKatalogBtn" style="width:auto;">+ Katalog Tabelası</button>
         </div>
       </div>
@@ -238,6 +239,32 @@
     </div>
   </div>
 
+  <!-- KATALOG İÇE AKTAR (bkz. katalog-ice-aktar.js) -->
+  <div class="modal-katman" id="katalogIceAktarKatman">
+    <div class="modal-kutu" id="katalogIceAktarKutu" style="max-width:820px; width:95vw; max-height:92vh; display:flex; flex-direction:column;">
+      <h3 style="margin-bottom:4px;">Katalog İçe Aktar</h3>
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin:0 0 10px;">
+        JPEG/PNG (her resim bir levha), PDF (her sayfa bir levha) veya hazır katalog paketi (.json) seçin; dosyaları bu pencereye sürükleyebilirsiniz.
+        Her levhanın adını ve kategorisini kontrol edin; katalogda aynı adla olanlar işaretsiz gelir.
+      </p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+        <button type="button" class="birincil" id="katalogIceAktarSecBtn" style="width:auto;">Dosya Seç</button>
+        <input type="file" id="katalogIceAktarDosya" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.json,image/jpeg,image/png,application/pdf,application/json" style="display:none;">
+        <input type="text" id="katalogIceAktarAra" placeholder="Listede ara..." style="width:180px; margin:0;">
+        <select id="katalogIceAktarKategori" style="width:auto; margin:0;"></select>
+        <button type="button" class="tablo-buton" id="katalogIceAktarHepsiBtn">Görünenlerin hepsini seç</button>
+        <button type="button" class="tablo-buton" id="katalogIceAktarHicbiriBtn">Hiçbirini seçme</button>
+      </div>
+      <div id="katalogIceAktarOzet" style="font-size:12.5px; margin-bottom:6px;"></div>
+      <div id="katalogIceAktarListe" style="flex:1; min-height:120px; overflow:auto; border:1px solid var(--kenarlik); border-radius:8px;"></div>
+      <div id="katalogIceAktarDurum" style="font-size:12.5px; color:var(--metin-soluk); min-height:18px; margin-top:6px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="katalogIceAktarKapatBtn">Kapat</button>
+        <button type="button" class="birincil" id="katalogIceAktarKaydetBtn" disabled>Kataloğa Kaydet (0)</button>
+      </div>
+    </div>
+  </div>
+
   <!-- KATALOG MODAL -->
   <div class="modal-katman" id="katalogModalKatman">
     <div class="modal-kutu" style="max-width:560px;">
@@ -288,11 +315,12 @@
   <script src="../../core/excel.js"></script>
   <script src="../../core/rapor.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js"></script>
-  <script src="validation.js"></script>
-  <script src="repository.js"></script>
-  <script src="service.js"></script>
-  <script src="ui.js"></script>
+  <script src="model.js?v=20261019a"></script>
+  <script src="validation.js?v=20261019a"></script>
+  <script src="repository.js?v=20261019a"></script>
+  <script src="service.js?v=20261019a"></script>
+  <script src="ui.js?v=20261019a"></script>
+  <script src="katalog-ice-aktar.js?v=20261019a"></script>
   <script>
     const kullanici = girisGerekliModul('tabela');
 

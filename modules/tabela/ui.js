@@ -29,6 +29,7 @@ function tabelaSayfasiniBaslat(firma) {
   _tbMevcutBaslat();
   _tbIhtiyacBaslat();
   _tbKatalogBaslat();
+  _tbKatalogIceAktarBaslat();
   _tbOzetBaslat();
 
   tbGorunumDegistir('mevcut');
