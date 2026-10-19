@@ -31,6 +31,14 @@ function _dkmModul() {
   return m ? decodeURIComponent(m[1]) : 'genel';
 }
 
+// Pencere başlığında hangi modülün dokümanları olduğu görünsün: sayfa
+// başlığından ("İSG Platform - KKD Takibi" -> "KKD Takibi").
+function _dkmModulBasligi() {
+  const h1 = document.querySelector('h1');
+  const metin = (h1 && h1.textContent.trim()) || String(document.title || '').replace(/^.*?-\s*/, '');
+  return metin.trim();
+}
+
 function _dkmAnahtar() {
   const modul = _dkmModul();
   return tenantAnahtar(_DOKUMAN_ANAHTAR_ISTISNA[modul] || (modul.replace(/-/g, '_') + '_dokumanlar'));
@@ -97,8 +105,21 @@ async function _dkmStorage() {
 
 // ==================== Veri ====================
 
+// Kullanıcı bildirdi: "hangi modülden eklendiyse orada görünmeli, şu an hepsi
+// her yerden görünüyor". Anahtar zaten modüle özel; buna ek olarak her kayıt
+// yüklendiği modülü (modul alanı) taşır ve liste ona göre süzülür. Alanı
+// olmayan eski kayıtlarda modül, Storage yolundan çıkarılır.
+function _dkmKayitModulu(d) {
+  if (d.modul) return d.modul;
+  const m = String(d.yol || '').match(/^dokumanlar\/([^/]+)\//);
+  if (m) return m[1];
+  if (/^yuklenici-formlar\//.test(d.yol || '')) return 'yuklenici';
+  return null; // bilinmiyorsa anahtarın sahibi modülde gösterilir
+}
+
 function dokumanlariTumunuGetir() {
-  return oku(_dkmAnahtar(), []);
+  const modul = _dkmModul();
+  return oku(_dkmAnahtar(), []).filter(d => { const m = _dkmKayitModulu(d); return !m || m === modul; });
 }
 
 function dokumanlariGetir(aramaMetni, tur) {
@@ -132,6 +153,7 @@ async function dokumanYukle(dosya, ad, tur) {
   const kullanici = typeof oturumdakiKullanici === 'function' ? oturumdakiKullanici() : null;
   const kayit = {
     id: rastgeleId(),
+    modul: _dkmModul(),
     ad: (ad || '').trim() || dosya.name,
     tur: DOKUMAN_TURLERI.includes(tur) ? tur : 'Form',
     dosyaAdi: dosya.name,
@@ -141,7 +163,8 @@ async function dokumanYukle(dosya, ad, tur) {
     yuklemeTarihi: new Date().toISOString(),
     olusturan: kullanici ? (kullanici.adSoyad || kullanici.kullaniciAdi || '') : ''
   };
-  const liste = dokumanlariTumunuGetir();
+  // Yazarken süzülmemiş tam liste kullanılır (başka modülün kaydı silinmesin).
+  const liste = oku(_dkmAnahtar(), []);
   liste.push(kayit);
   yaz(_dkmAnahtar(), liste);
   return { basarili: true, dokuman: kayit };
@@ -149,10 +172,9 @@ async function dokumanYukle(dosya, ad, tur) {
 
 async function dokumanSil(id) {
   if (typeof _silmeYetkisiKontrolEt === 'function' && !_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
-  const liste = dokumanlariTumunuGetir();
-  const kayit = liste.find(d => d.id === id);
+  const kayit = dokumanlariTumunuGetir().find(d => d.id === id);
   if (!kayit) return { basarili: false };
-  yaz(_dkmAnahtar(), liste.filter(d => d.id !== id));
+  yaz(_dkmAnahtar(), oku(_dkmAnahtar(), []).filter(d => d.id !== id));
   // Storage'daki dosyayı da silmeyi dene — başarısız olsa bile kayıt silinmiş olur.
   const storage = await _dkmStorage();
   if (storage && kayit.yol) storage.ref().child(kayit.yol).delete().catch(() => {});
@@ -168,7 +190,7 @@ function _dkmPencereleriEkle() {
     <div class="modal-katman" id="dkmKutuphaneKatman">
       <div class="modal-kutu" style="max-width:1000px; width:95vw; max-height:90vh; overflow:auto;">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-          <h3 style="margin:0; flex:1;">📁 Dokümanlar</h3>
+          <h3 style="margin:0; flex:1;">📁 Dokümanlar${_dkmModulBasligi() ? ' — ' + _dkmKacir(_dkmModulBasligi()) : ''}</h3>
           <button type="button" class="tablo-buton" id="dkmKutuphaneKapatBtn">✕ Kapat</button>
         </div>
         <div id="dkmKutuphaneIcerik"></div>
@@ -269,7 +291,7 @@ function dokumanListesiniCiz() {
   govde.innerHTML = '';
   if (!liste.length) {
     bosDurum.classList.add('gorunur');
-    bosDurum.textContent = arama || tur ? 'Aramanızla eşleşen doküman bulunamadı.' : 'Henüz doküman yüklenmedi. "+ Doküman Yükle" ile ya da dosyayı bu alana sürükleyerek ekleyin.';
+    bosDurum.textContent = arama || tur ? 'Aramanızla eşleşen doküman bulunamadı.' : 'Bu modüle henüz doküman yüklenmedi. "+ Doküman Yükle" ile ya da dosyayı bu alana sürükleyerek ekleyin. (Her modülün dokümanları ayrıdır.)';
     return;
   }
   bosDurum.classList.remove('gorunur');
