@@ -93,7 +93,8 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
   document.getElementById('kisiModalIptalBtn').addEventListener('click', kisiModalKapat);
   _topluKisiBaslat();
-  yukleniciFormlarBaslat();
+  // Dokümanlar sekmesi (ortak bileşen, bkz. core/dokumanlar.js).
+  dokumanKutuphanesiniKur(document.getElementById('bolum-formlar'));
   document.getElementById('kisiFirmaId').addEventListener('change', () => {
     _kisiFirmaSeciliGorunum();
     if (_kisiFirmaTehlikesiniUygula()) _kisiBelgeListesiniCiz();
@@ -264,7 +265,7 @@ function gorunumDegistir(gorunum) {
   else if (gorunum === 'ziyaretciler') ziyaretcileriCiz();
   else if (gorunum === 'kayitlar') kayitlariCiz('');
   else if (gorunum === 'detayli-arama') detayliAramaCiz();
-  else if (gorunum === 'formlar') formlariCiz();
+  else if (gorunum === 'formlar') dokumanListesiniCiz();
   else ozetiCiz();
 }
 

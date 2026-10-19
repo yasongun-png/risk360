@@ -154,7 +154,10 @@
           altAnahtar = govde === f.slug ? '' : govde.slice(onEk.length);
         }
       });
-      const modulAdi = _BILDIRIM_ANAHTAR_MODUL_ESLESME[altAnahtar] || null;
+      // Dokümanlar (core/dokumanlar.js): '<modül>_dokumanlar'; Yüklenici 'yuklenici_formlar'.
+      const dokumanModulu = altAnahtar === 'yuklenici_formlar' ? 'yuklenici'
+        : (/_dokumanlar$/.test(altAnahtar) ? altAnahtar.replace(/_dokumanlar$/, '').replace(/_/g, '-') : null);
+      const modulAdi = _BILDIRIM_ANAHTAR_MODUL_ESLESME[altAnahtar] || dokumanModulu || null;
       const modul = modulAdi ? MODULLER.find(m => m.anahtar === modulAdi) : null;
       return { firma: eslesenFirma, modul: modul || null };
     }
