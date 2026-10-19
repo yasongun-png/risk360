@@ -116,6 +116,7 @@ function formlariCiz() {
       <td>${f.yuklemeTarihi ? formatTarihGoster(f.yuklemeTarihi.slice(0, 10)) : '-'}</td>
       <td>
         <button class="tablo-buton" data-form-ac="${f.id}" title="İndirmeden uygulama içinde açar">Aç</button>
+        <button class="tablo-buton" data-form-yazdir="${f.id}" title="İndirmeden yazdırır">Yazdır</button>
         <button class="tablo-buton" data-form-indir="${f.id}">İndir</button>
         <button class="tablo-buton sil" data-form-sil="${f.id}">Sil</button>
       </td>
@@ -123,6 +124,7 @@ function formlariCiz() {
   `).join('');
 
   govde.querySelectorAll('[data-form-ac]').forEach(btn => btn.addEventListener('click', () => yukleniciFormOnizle(btn.getAttribute('data-form-ac'))));
+  govde.querySelectorAll('[data-form-yazdir]').forEach(btn => btn.addEventListener('click', () => yukleniciFormYazdir(btn.getAttribute('data-form-yazdir'))));
   govde.querySelectorAll('[data-form-indir]').forEach(btn => btn.addEventListener('click', () => yukleniciFormIndir(btn.getAttribute('data-form-indir'))));
 
   govde.querySelectorAll('[data-form-sil]').forEach(btn => btn.addEventListener('click', async () => {
@@ -216,6 +218,9 @@ async function yukleniciFormOnizle(id) {
       const blobUrl = URL.createObjectURL(new Blob([blob], { type: tip }));
       if (uzanti === 'pdf') {
         icerik.innerHTML = `<iframe data-blob-url="${blobUrl}" src="${blobUrl}" style="width:100%; height:100%; border:0;"></iframe>`;
+        // Yazdır'ın PDF yüklenmeden çağrılmaması için yüklenmeyi bekle.
+        const iframe = icerik.querySelector('iframe');
+        await new Promise(coz => { iframe.addEventListener('load', coz, { once: true }); setTimeout(coz, 4000); });
       } else {
         icerik.innerHTML = `<div style="height:100%; overflow:auto; background:#e5e7eb; text-align:center;"><img data-blob-url="${blobUrl}" src="${blobUrl}" style="max-width:100%; height:auto;"></div>`;
       }
@@ -255,6 +260,53 @@ async function yukleniciFormOnizle(id) {
       <p style="font-size:13px;">Sağ üstteki <b>İndir</b> ile dosyayı indirip açabilirsiniz.</p>
     </div>`;
   }
+}
+
+// Kullanıcı isteği: "direk indirmeden yazdırılabilsin". Önizlemede açılan
+// içerik yazdırılır: PDF tarayıcının kendi PDF yazdırmasıyla, resim/Word/
+// Excel ise görünmez bir çerçeveye kopyalanıp oradan yazdırılır.
+function yukleniciFormOnizlemeyiYazdir() {
+  const icerik = document.getElementById('formOnizlemeIcerik');
+  const pdfCerceve = icerik.querySelector('iframe');
+  if (pdfCerceve) {
+    try { pdfCerceve.contentWindow.focus(); pdfCerceve.contentWindow.print(); return; } catch (e) { console.error(e); }
+  }
+  const kaynak = icerik.querySelector('img, .docx-wrapper, #formOnizlemeExcel');
+  if (!kaynak) { alert('Bu dosya uygulama içinde yazdırılamıyor; İndir ile indirip yazdırabilirsiniz.'); return; }
+
+  const cerceve = document.createElement('iframe');
+  cerceve.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0;';
+  document.body.appendChild(cerceve);
+  const belge = cerceve.contentDocument;
+  const baslik = _ykKacir(document.getElementById('formOnizlemeBaslik').textContent);
+  // docx-preview stillerini (<style> etiketleri içerikte) de taşı.
+  const stiller = Array.from(icerik.querySelectorAll('style')).map(s => s.outerHTML).join('');
+  belge.open();
+  belge.write(`<!doctype html><html><head><meta charset="utf-8"><title>${baslik}</title>${stiller}
+    <style>
+      @page { margin: 10mm; }
+      body { margin: 0; font-family: Arial, sans-serif; }
+      img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+      table { border-collapse: collapse; }
+      #formOnizlemeExcel td { border: 1px solid #94a3b8; padding: 3px 6px; font-size: 11px; }
+      .docx-wrapper { background: none !important; padding: 0 !important; }
+      .docx-wrapper > section.docx { box-shadow: none !important; margin: 0 !important; }
+    </style></head><body>${kaynak.outerHTML}</body></html>`);
+  belge.close();
+
+  const yazdir = () => {
+    cerceve.contentWindow.focus();
+    cerceve.contentWindow.print();
+    setTimeout(() => cerceve.remove(), 1000);
+  };
+  const resimler = Array.from(belge.images).filter(i => !i.complete);
+  if (!resimler.length) yazdir();
+  else Promise.all(resimler.map(i => new Promise(coz => { i.onload = i.onerror = coz; }))).then(yazdir);
+}
+
+async function yukleniciFormYazdir(id) {
+  await yukleniciFormOnizle(id);
+  yukleniciFormOnizlemeyiYazdir();
 }
 
 let _ykFormSeciliDosya = null;
@@ -324,5 +376,6 @@ function yukleniciFormlarBaslat() {
   document.getElementById('formYukleIptalBtn').addEventListener('click', _ykFormYuklemePenceresiKapat);
   document.getElementById('formYukleKaydetBtn').addEventListener('click', _ykFormYuklemeyiKaydet);
   document.getElementById('formOnizlemeKapatBtn').addEventListener('click', yukleniciFormOnizlemeKapat);
+  document.getElementById('formOnizlemeYazdirBtn').addEventListener('click', yukleniciFormOnizlemeyiYazdir);
   _ykFormSurukleBirakKur();
 }
