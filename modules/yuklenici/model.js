@@ -273,8 +273,8 @@ const YUKLENICI_BELGE_TANIMLARI = [
   { id: 'yuksekteCalisma', ad: 'Yüksekte Çalışma Eğitimi', tur: 'var-yok', girisEngelleyici: false, bilgiAmacli: true, bolum: 'zorunlu' },
   // Kullanıcı isteği (2026-10-17): tek tarih iyi olmadı, eskisi gibi
   // başlangıç–bitiş tarih aralığı olsun. Tek tarih döneminde sadece bitişle
-  // (exp) kaydedilmiş kişiler bozulmasın diye başlangıç boşsa sadece bitişe
-  // bakılır; başlangıç girildiyse ve henüz gelmediyse giriş yapamaz.
+  // (exp) kaydedilmiş kişiler bozulmasın diye uygunlukta sadece bitişe bakılır.
+  // Kullanıcı isteği (2026-10-19): başlangıç ileri bir tarih olsa da fark etmez.
   { id: 'geciciGorev', ad: 'Geçici Görevlendirme Belgesi', tur: 'tarih-aralik', girisEngelleyici: true, bolum: 'zorunlu' },
   { id: 'saglik', ad: 'Sağlık Raporu', tur: 'tarih-tehlike', girisEngelleyici: true, yilHaritasi: 'saglik', bolum: 'zorunlu' },
   { id: 'temelIsg', ad: 'Temel İSG Eğitimi Belgesi', tur: 'tarih-tehlike', girisEngelleyici: true, yilHaritasi: 'egitim', bolum: 'zorunlu' },
@@ -406,7 +406,6 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
   // tarih-aralik: başlangıç (base, opsiyonel) – bitiş (exp, zorunlu).
   const gecici = belgeGetir('geciciGorev');
   if (!gecici.exp) return sorunUret('Geçici Görevlendirme yok', '', true, 'Geçici Görev');
-  if (gecici.base && gecici.base > bugun) return sorunUret('Geçici Görevlendirme henüz başlamadı', gecici.base, true, 'Geçici Görev');
   const geciciKalan = kalanGunHesapla(gecici.exp);
   if (geciciKalan !== null && geciciKalan < 0) return sorunUret('Geçici Görevlendirme süresi dolmuş', gecici.exp, true, 'Geçici Görev');
   if (geciciKalan !== null && geciciKalan <= 30) return sorunUret('Geçici Görevlendirme yaklaşıyor', gecici.exp, false, 'Geçici Görev');
@@ -427,8 +426,8 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
 // Tek bir belgenin "Uygun" sayılıp sayılmayacağı — satır renklendirme
 // (getRowClassForPersonel) ve Dashboard KPI'ları için kullanılır. var-yok
 // belgede deger==='Var' (veya eski tarihli kayıtlarda base, bkz.
-// yukleniciBelgeVarMi); tarih-aralik'ta (Geçici Görevlendirme) bugün<=exp
-// ve başlangıç girildiyse başlangıç<=bugün; diğer tarihli belgelerde
+// yukleniciBelgeVarMi); tarih-aralik'ta (Geçici Görevlendirme) sadece
+// bugün<=exp (başlangıç ileri tarihli olabilir); diğer tarihli belgelerde
 // base<=bugün<=exp aralığında olması gerekir.
 function yukleniciBelgeUygunMu(belgeTanimi, kayit, tehlikeSinifi, referansTarih) {
   const bugun = referansTarih || bugunIso();
@@ -436,7 +435,8 @@ function yukleniciBelgeUygunMu(belgeTanimi, kayit, tehlikeSinifi, referansTarih)
   if (belgeTanimi.tur === 'var-yok') return yukleniciBelgeVarMi(k);
   const exp = yukleniciBelgeBitisTarihiHesapla(belgeTanimi, k, tehlikeSinifi);
   if (!exp) return false;
-  if (belgeTanimi.tur === 'tarih-aralik') return (!k.base || k.base <= bugun) && bugun <= exp;
+  // Kullanıcı isteği: başlangıç ileri bir tarih olsa da fark etmez — sadece bitişe bakılır.
+  if (belgeTanimi.tur === 'tarih-aralik') return bugun <= exp;
   if (!k.base) return false;
   return k.base <= bugun && bugun <= exp;
 }
