@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="assets/icons/favicon-32.png">
+<title>İSG Platform - Çöp Kutusu</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  table.ck-tablo { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--kart-bg); border-radius: 8px; overflow: hidden; box-shadow: var(--golge); }
+  table.ck-tablo th, table.ck-tablo td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--kenarlik); vertical-align: top; }
+  table.ck-tablo th { background: #f8fafc; font-weight: 600; white-space: nowrap; }
+  .ck-sarici { overflow-x: auto; }
+  .ck-filtre { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
+  .ck-filtre select, .ck-filtre input { width: auto; margin: 0; }
+  .ck-etiket { color: var(--metin-soluk); font-size: 12px; }
+  .ck-geri { background: #dcfce7; color: #15803d; border-radius: 9px; padding: 1px 8px; font-size: 11.5px; font-weight: 600; }
+  tr.ck-donuk td { opacity: .6; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka" role="link" title="Ana sayfaya dön" style="cursor:pointer;" onclick="location.href='dashboard.html'">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <span style="margin:0 8px; color:var(--metin-soluk);">·</span>
+    <a href="islem-kayitlari.html" class="geri-link">📝 Yapılan İşlemler</a>
+    <h2 style="margin-top:14px;">🗑 Çöp Kutusu</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-6px;">
+      Tüm modüllerde silinen kayıtlar burada <b>30 gün</b> saklanır. <b>Geri Getir</b> kaydı eski yerine (içeriğiyle birlikte) ekler.
+      Aynı anda silinenler (ör. bir yüklenici firma ve bağlı personeli) tek satırda birlikte geri getirilir.
+      Bu özellik eklenmeden önce silinmiş kayıtlar burada yoktur.
+    </p>
+
+    <div class="ck-filtre">
+      <input type="text" id="ckArama" class="arama-kutusu" placeholder="Kayıt adı, kullanıcı, modül ara..." style="min-width:240px;">
+      <select id="ckFirma"><option value="">Tüm Firmalar</option></select>
+      <select id="ckModul"><option value="">Tüm Modüller</option></select>
+      <select id="ckDurum">
+        <option value="bekleyen">Geri getirilmemiş</option>
+        <option value="">Tümü</option>
+        <option value="geri">Geri getirilmiş</option>
+      </select>
+      <span id="ckSayac" style="font-size:12px; color:var(--metin-soluk);"></span>
+    </div>
+
+    <div class="ck-sarici">
+      <table class="ck-tablo">
+        <thead><tr><th>Silinme Zamanı</th><th>Silen</th><th>Firma</th><th>Modül</th><th>Silinen Kayıtlar</th><th>İşlem</th></tr></thead>
+        <tbody id="ckGovde"></tbody>
+      </table>
+    </div>
+    <div class="bos-durum" id="ckBos">Çöp kutusu boş.</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="core/data.js?v=5"></script>
+  <script src="core/auth.js"></script>
+  <script src="core/tenant.js"></script>
+  <script src="core/metin-istem.js"></script>
+  <script>
+    function _ckKacir(v) {
+      return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    // Depolama anahtarı soneki -> okunur modül adı (bkz. islem-kayitlari.html).
+    const _CK_MODUL_ADLARI = [
+      [/^personel/, 'Personel'], [/^egitim|^sinav_/, 'Eğitim'], [/^yillik_/, 'Yıllık Plan'],
+      [/^risk_/, 'Risk Değerlendirmesi'], [/^kurul_/, 'İSG Kurulu'], [/^acil_durum/, 'Acil Durum'],
+      [/^kimyasal/, 'Kimyasal'], [/^periyodik_/, 'Periyodik Kontrol'], [/^kkd_|^malzeme_/, 'KKD Takibi'],
+      [/^olay_kaza/, 'Olay / Kaza'], [/^uygunsuzluk_csgb_/, 'ÇSGB Denetimi'], [/^uygunsuzluk/, 'Uygunsuzluk'],
+      [/^yuklenici_firmalari/, 'Yüklenici · Firma'], [/^yuklenici_kisileri/, 'Yüklenici · Personel'], [/^yuklenici_araclari/, 'Yüklenici · Araç'],
+      [/^yuklenici_/, 'Yüklenici'], [/^stajyer/, 'Staj'], [/^saha_denetim/, 'Saha Denetim'], [/^is_izin/, 'İş İzinleri'],
+      [/^tespit_oneri/, 'Tespit ve Öneri'], [/^hizmet_sozlesme/, 'Hizmet Sözleşmeleri'], [/^harita_/, 'Saha Haritası'],
+      [/^jsa/, 'JSA'], [/^tabela_/, 'Tabela Yönetimi'], [/_dokumanlar$/, 'Dokümanlar'],
+      [/^kullanicilar$/, 'Kullanıcılar'], [/^firmalar$/, 'Firmalar']
+    ];
+    function _ckModulAdi(sonek) {
+      for (const [desen, ad] of _CK_MODUL_ADLARI) if (desen.test(sonek || '')) return ad;
+      return sonek || '-';
+    }
+
+    let _ckBelgeler = [];   // { _ref (bulut) | _id (yerel), ...belge }
+    let _ckGruplar = [];
+
+    async function _ckYukle() {
+      _ckBelgeler = [];
+      if (_bulutAktif && _bulutDb) {
+        const snap = await _bulutDb.collection('cop_kutusu').orderBy('zaman', 'desc').limit(1000).get();
+        snap.forEach(d => _ckBelgeler.push(Object.assign({ _ref: d.ref }, d.data())));
+      } else {
+        try { _ckBelgeler = JSON.parse(localStorage.getItem('isg_cop_kutusu_yerel') || '[]'); } catch (e) { _ckBelgeler = []; }
+      }
+      await _ckEskileriTemizle();
+      // islemId'ye göre grupla
+      const harita = new Map();
+      _ckBelgeler.forEach(b => {
+        const g = harita.get(b.islemId) || { islemId: b.islemId, belgeler: [], zaman: b.zaman };
+        g.belgeler.push(b);
+        if ((b.zaman || '') > (g.zaman || '')) g.zaman = b.zaman;
+        harita.set(b.islemId, g);
+      });
+      _ckGruplar = Array.from(harita.values()).sort((a, b) => (b.zaman || '').localeCompare(a.zaman || ''));
+    }
+
+    // 30 günden eski kayıtlar kalıcı silinir.
+    async function _ckEskileriTemizle() {
+      const sinir = new Date(Date.now() - COP_KUTUSU_GUN * 864e5).toISOString();
+      const eskiler = _ckBelgeler.filter(b => (b.zaman || '') < sinir);
+      if (!eskiler.length) return;
+      if (_bulutAktif && _bulutDb) await Promise.all(eskiler.map(b => b._ref.delete().catch(() => {})));
+      _ckBelgeler = _ckBelgeler.filter(b => (b.zaman || '') >= sinir);
+      if (!_bulutAktif) _yerelYazDene('isg_cop_kutusu_yerel', JSON.stringify(_ckBelgeler));
+    }
+
+    function _ckSecimDoldur(id, degerler) {
+      const sec = document.getElementById(id);
+      const onceki = sec.value;
+      const ilk = sec.options[0].outerHTML;
+      sec.innerHTML = ilk + degerler.map(([v, t]) => `<option value="${_ckKacir(v)}">${_ckKacir(t)}</option>`).join('');
+      if (degerler.some(([v]) => v === onceki)) sec.value = onceki;
+    }
+
+    function _ckFiltreleriDoldur() {
+      const firmalar = new Map(), moduller = new Map();
+      _ckBelgeler.forEach(b => {
+        if (b.firmaSlug) firmalar.set(b.firmaSlug, b.firmaAdi || b.firmaSlug);
+        const m = _ckModulAdi(b.sonek); moduller.set(m, m);
+      });
+      const sirala = h => Array.from(h.entries()).sort((a, b) => a[1].localeCompare(b[1], 'tr'));
+      _ckSecimDoldur('ckFirma', sirala(firmalar));
+      _ckSecimDoldur('ckModul', sirala(moduller));
+    }
+
+    function _ckGrupBilgi(g) {
+      const ilk = g.belgeler[0];
+      const moduller = Array.from(new Set(g.belgeler.map(b => _ckModulAdi(b.sonek))));
+      const sayi = g.belgeler.reduce((t, b) => t + (b.sayi || (b.kayitlar || []).length), 0);
+      const etiketler = g.belgeler.flatMap(b => (b.etiketler || []).map(e => ({ modul: _ckModulAdi(b.sonek), e })));
+      const geri = g.belgeler.every(b => b.geriGetirildi);
+      return { ilk, moduller, sayi, etiketler, geri };
+    }
+
+    function _ckCiz() {
+      const arama = document.getElementById('ckArama').value.trim().toLocaleLowerCase('tr');
+      const firma = document.getElementById('ckFirma').value;
+      const modul = document.getElementById('ckModul').value;
+      const durum = document.getElementById('ckDurum').value;
+      const liste = _ckGruplar.filter(g => {
+        const bi = _ckGrupBilgi(g);
+        if (firma && !g.belgeler.some(b => b.firmaSlug === firma)) return false;
+        if (modul && !bi.moduller.includes(modul)) return false;
+        if (durum === 'bekleyen' && bi.geri) return false;
+        if (durum === 'geri' && !bi.geri) return false;
+        if (arama) {
+          const metin = [bi.ilk.adSoyad, bi.ilk.kullaniciAdi, bi.ilk.firmaAdi, ...bi.moduller, ...bi.etiketler.map(x => x.e)].join(' ').toLocaleLowerCase('tr');
+          if (!metin.includes(arama)) return false;
+        }
+        return true;
+      });
+      document.getElementById('ckSayac').textContent = `${liste.length} silme işlemi`;
+      document.getElementById('ckBos').classList.toggle('gorunur', !liste.length);
+      document.getElementById('ckGovde').innerHTML = liste.map(g => {
+        const bi = _ckGrupBilgi(g);
+        const gruplu = {};
+        bi.etiketler.forEach(x => { (gruplu[x.modul] = gruplu[x.modul] || []).push(x.e); });
+        const kayitMetni = Object.entries(gruplu).map(([m, etiketler]) => {
+          const toplam = g.belgeler.filter(b => _ckModulAdi(b.sonek) === m).reduce((t, b) => t + (b.sayi || 0), 0);
+          return `<div><span class="ck-etiket">${_ckKacir(m)} (${toplam}):</span> ${_ckKacir(etiketler.slice(0, 8).join(', '))}${toplam > Math.min(8, etiketler.length) ? ` <span class="ck-etiket">ve ${toplam - Math.min(8, etiketler.length)} kayıt daha</span>` : ''}</div>`;
+        }).join('') || `<span class="ck-etiket">${bi.sayi} kayıt</span>`;
+        const geriBilgi = bi.geri ? `<div><span class="ck-geri">Geri getirildi</span> <span class="ck-etiket">${_ckKacir(new Date(g.belgeler[0].geriGetirildi.zaman).toLocaleString('tr-TR'))} · ${_ckKacir(g.belgeler[0].geriGetirildi.adSoyad || '')}</span></div>` : '';
+        return `
+        <tr class="${bi.geri ? 'ck-donuk' : ''}">
+          <td style="white-space:nowrap;">${new Date(g.zaman).toLocaleString('tr-TR')}</td>
+          <td>${_ckKacir(bi.ilk.adSoyad || bi.ilk.kullaniciAdi || '-')}</td>
+          <td>${_ckKacir(bi.ilk.firmaAdi || '-')}</td>
+          <td>${_ckKacir(bi.moduller.join(', '))}</td>
+          <td>${kayitMetni}${geriBilgi}</td>
+          <td style="white-space:nowrap;">
+            ${bi.geri ? '' : `<button class="tablo-buton" data-ck-geri="${_ckKacir(g.islemId)}">Geri Getir</button>`}
+            <button class="tablo-buton sil" data-ck-sil="${_ckKacir(g.islemId)}">Kalıcı Sil</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      document.querySelectorAll('[data-ck-geri]').forEach(b => b.addEventListener('click', () => _ckGeriGetir(b.getAttribute('data-ck-geri'), b)));
+      document.querySelectorAll('[data-ck-sil]').forEach(b => b.addEventListener('click', () => _ckKaliciSil(b.getAttribute('data-ck-sil'))));
+    }
+
+    async function _ckGeriGetir(islemId, btn) {
+      const g = _ckGruplar.find(x => x.islemId === islemId);
+      if (!g) return;
+      const bi = _ckGrupBilgi(g);
+      const mesaj = `${bi.ilk.firmaAdi || ''} — ${bi.moduller.join(', ')}: ${bi.sayi} kayıt eski yerine geri getirilsin mi?`;
+      if (!(await onayModali(mesaj, 'Geri Getir'))) return;
+      btn.disabled = true;
+      btn.textContent = 'Geri getiriliyor...';
+      try {
+        const sonuc = await copKutusuGeriGetir(g.belgeler);
+        const kullanici = oturumdakiKullanici();
+        const iz = { zaman: new Date().toISOString(), adSoyad: kullanici ? (kullanici.adSoyad || kullanici.kullaniciAdi || '') : '' };
+        for (const b of g.belgeler) {
+          b.geriGetirildi = iz;
+          if (_bulutAktif && b._ref) await b._ref.update({ geriGetirildi: iz });
+        }
+        if (!_bulutAktif) _yerelYazDene('isg_cop_kutusu_yerel', JSON.stringify(_ckBelgeler));
+        let m = `${sonuc.eklenen} kayıt geri getirildi.`;
+        if (sonuc.zatenVar) m += `\n${sonuc.zatenVar} kayıt zaten yerindeydi (tekrar eklenmedi).`;
+        if (sonuc.kirpilmis) m += `\n${sonuc.kirpilmis} kayıt çok büyük olduğu için saklanamamıştı, geri getirilemedi.`;
+        alert(m);
+      } catch (e) {
+        console.error(e);
+        alert('Geri getirilemedi: ' + (e.message || e));
+      }
+      _ckCiz();
+    }
+
+    async function _ckKaliciSil(islemId) {
+      const g = _ckGruplar.find(x => x.islemId === islemId);
+      if (!g) return;
+      if (!(await onayModali('Bu silme işlemi çöp kutusundan kalıcı olarak kaldırılsın mı? Bir daha geri getirilemez.', 'Kalıcı Sil'))) return;
+      try {
+        if (_bulutAktif) await Promise.all(g.belgeler.map(b => b._ref.delete()));
+        _ckBelgeler = _ckBelgeler.filter(b => b.islemId !== islemId);
+        if (!_bulutAktif) _yerelYazDene('isg_cop_kutusu_yerel', JSON.stringify(_ckBelgeler));
+        _ckGruplar = _ckGruplar.filter(x => x.islemId !== islemId);
+      } catch (e) {
+        alert('Silinemedi: ' + (e.message || e));
+      }
+      _ckCiz();
+    }
+
+    const session = girisGerekliAdmin();
+
+    if (session) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + session.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = 'index.html';
+      });
+      ['ckFirma', 'ckModul', 'ckDurum'].forEach(id => document.getElementById(id).addEventListener('change', _ckCiz));
+      document.getElementById('ckArama').addEventListener('input', _ckCiz);
+
+      bulutHazirOlduğunda(async () => {
+        try {
+          await _ckYukle();
+        } catch (e) {
+          console.error(e);
+          document.getElementById('ckBos').textContent = 'Çöp kutusu okunamadı: ' + (e.message || e);
+        }
+        _ckFiltreleriDoldur();
+        _ckCiz();
+      });
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
+</body>
+</html>

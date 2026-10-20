@@ -39,6 +39,14 @@ service cloud.firestore {
     match /fotograflar/{belgeId} {
       allow read, write: if request.auth != null;
     }
+    // İşlem kayıtları (islem-kayitlari.html) ve silinen kayıtların tam
+    // içeriği (Çöp Kutusu, cop-kutusu.html) — bkz. core/data.js.
+    match /islem_kayitlari/{belgeId} {
+      allow read, write: if request.auth != null;
+    }
+    match /cop_kutusu/{belgeId} {
+      allow read, write: if request.auth != null;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

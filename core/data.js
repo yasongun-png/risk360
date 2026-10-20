@@ -209,8 +209,122 @@ function _islemKaydiOlustur(anahtar, yeniDeger) {
       yerel.push(kayit);
       _yerelYazDene('isg_islem_kayitlari_yerel', JSON.stringify(yerel.slice(-1000)));
     }
+    if (silinen.length) _copKutusunaYaz(anahtar, silinen, kayit);
   } catch (e) {
     console.warn('İşlem kaydı oluşturulamadı:', e);
+  }
+}
+
+// ---- Çöp Kutusu ----
+// Kullanıcı isteği (2026-10-20, bir yüklenici firması personeliyle birlikte
+// yanlışlıkla silindikten sonra): "tüm modülleri kapsayan çöp kutusu —
+// silinen kayıtları geri getirme". Bir yazımda listeden çıkan HER kaydın TAM
+// içeriği 'cop_kutusu' koleksiyonuna (bulut kapalıysa localStorage) yazılır.
+// Aynı kullanıcı eylemindeki yazımlar (ör. firma + bağlı personel) aynı
+// islemId'yi alır ve çöp kutusunda birlikte geri getirilir. Ekran:
+// cop-kutusu.html (sadece admin). Kayıtlar 30 gün tutulur.
+const COP_KUTUSU_GUN = 30;
+const _COP_PARCA_SINIRI = 700 * 1024; // Firestore belge sınırı ~1MB
+let _copIslemId = null;
+
+function _copIslemIdAl() {
+  if (!_copIslemId) {
+    _copIslemId = rastgeleId();
+    // Aynı senkron eylemdeki (aynı tıklamadaki) tüm yazımlar aynı kimliği alır.
+    setTimeout(() => { _copIslemId = null; }, 0);
+  }
+  return _copIslemId;
+}
+
+// Çöp kutusundaki bir işlem grubunu (aynı islemId'li belgeler) geri getirir.
+// Her anahtar için GÜNCEL liste sunucudan okunur (önbellekte olmayan bir
+// firmanın verisini boş sanıp üzerine yazmamak için; bkz. buyukVeriFirmadanOku),
+// listede zaten bulunan id'ler atlanır, eksikler eklenip TEK yazımla kaydedilir.
+// Dönüş: { eklenen, zatenVar, kirpilmis }.
+async function copKutusuGeriGetir(belgeler) {
+  const sonuc = { eklenen: 0, zatenVar: 0, kirpilmis: 0 };
+  const anahtarlar = {};
+  belgeler.forEach(b => {
+    (anahtarlar[b.anahtar] = anahtarlar[b.anahtar] || { firmaSlug: b.firmaSlug, kayitlar: [] }).kayitlar.push(...(b.kayitlar || []));
+  });
+  for (const [anahtar, { firmaSlug, kayitlar }] of Object.entries(anahtarlar)) {
+    const kucuk = _KUCUK_SENKRON_ANAHTARLAR.has(anahtar);
+    let mevcut;
+    if (!_bulutAktif) mevcut = oku(anahtar, []);
+    else if (kucuk) mevcut = oku(anahtar, []);
+    else mevcut = await buyukVeriFirmadanOku(anahtar, []);
+    if (!Array.isArray(mevcut)) throw new Error('Geri getirilecek yer bir liste değil: ' + anahtar);
+    const varOlan = new Set(mevcut.map(k => k && k.id));
+    const eklenecek = [];
+    kayitlar.forEach(k => {
+      if (k._kirpildi) { sonuc.kirpilmis++; return; }
+      if (varOlan.has(k.id)) { sonuc.zatenVar++; return; }
+      varOlan.add(k.id);
+      eklenecek.push(k);
+    });
+    if (!eklenecek.length) continue;
+    const yeni = mevcut.concat(eklenecek);
+    if (_bulutAktif && !kucuk) buyukVeriFirmayaYaz(anahtar, yeni, firmaSlug);
+    else yaz(anahtar, yeni);
+    sonuc.eklenen += eklenecek.length;
+  }
+  return sonuc;
+}
+
+// Çöp kutusunda kaydın okunur adı: işlem kaydı etiketi yoksa yaygın ad
+// alanlarından ilki (modüller farklı alan adları kullanıyor).
+const _COP_AD_ALANLARI = ['adSoyad', 'ad', 'tabelaAdi', 'baslik', 'konu', 'tanim', 'isTanimi', 'kimyasalAdi', 'ekipmanAdi', 'tehlike', 'aciklama', 'tespit', 'firmaAdi', 'dosyaAdi'];
+function _copKayitEtiketi(k) {
+  const etiket = _islemKaydiEtiketi(k);
+  if (etiket) return etiket;
+  if (!k || typeof k !== 'object') return '';
+  const alan = _COP_AD_ALANLARI.find(a => typeof k[a] === 'string' && k[a].trim());
+  const metin = alan ? k[alan].trim() : '';
+  return metin.length > 90 ? metin.slice(0, 87) + '…' : metin;
+}
+
+function _copKutusunaYaz(anahtar, silinen, ozet) {
+  try {
+    const islemId = _copIslemIdAl();
+    // Kayıtlar belge sınırına sığacak parçalara bölünür; tek başına sınırı
+    // aşan (ör. gömülü büyük görselli) kayıt kırpılmış bir iz olarak saklanır.
+    const parcalar = [[]];
+    let boyut = 0;
+    silinen.forEach(k => {
+      let json = JSON.stringify(k);
+      let kayit = k;
+      if (json.length > _COP_PARCA_SINIRI) {
+        kayit = { id: k.id, _kirpildi: true, etiket: _copKayitEtiketi(k) };
+        json = JSON.stringify(kayit);
+      }
+      if (boyut + json.length > _COP_PARCA_SINIRI && parcalar[parcalar.length - 1].length) { parcalar.push([]); boyut = 0; }
+      parcalar[parcalar.length - 1].push(kayit);
+      boyut += json.length;
+    });
+    parcalar.forEach((kayitlar, i) => {
+      const belge = {
+        islemId, parca: i, parcaSayisi: parcalar.length,
+        zaman: ozet.zaman, anahtar: String(anahtar),
+        firmaSlug: ozet.firmaSlug, firmaAdi: ozet.firmaAdi, sonek: ozet.sonek,
+        kullaniciId: ozet.kullaniciId, kullaniciAdi: ozet.kullaniciAdi, adSoyad: ozet.adSoyad,
+        sayfa: ozet.sayfa,
+        sayi: kayitlar.length,
+        etiketler: kayitlar.slice(0, 20).map(_copKayitEtiketi).filter(Boolean),
+        kayitlar,
+        geriGetirildi: null
+      };
+      if (_bulutAktif && _bulutDb) {
+        _bulutDb.collection('cop_kutusu').add(belge).catch(e => console.warn('Çöp kutusuna yazılamadı:', e));
+      } else {
+        let yerel = [];
+        try { yerel = JSON.parse(localStorage.getItem('isg_cop_kutusu_yerel') || '[]'); } catch (e) { yerel = []; }
+        belge._id = rastgeleId();
+        yerel.push(belge);
+        _yerelYazDene('isg_cop_kutusu_yerel', JSON.stringify(yerel.slice(-300)));
+      }
+    });
+  } catch (e) {
+    console.warn('Çöp kutusu kaydı oluşturulamadı:', e);
   }
 }
 
