@@ -524,6 +524,7 @@ function yukleniciKisilerTopluEkle(kayitlarListesi) {
       });
       sonucListe[mevcutIndeks] = Object.assign({}, varOlan, {
         tehlikeSinifi: _yukleniciFirmaTehlikeSinifi(v.firmaId) || ((v.tehlikeSinifi && v.tehlikeSinifi !== 'az') ? v.tehlikeSinifi : varOlan.tehlikeSinifi),
+        personelTuru: YUKLENICI_PERSONEL_TURLERI.includes(v.personelTuru) ? v.personelTuru : varOlan.personelTuru,
         belgeler: Object.assign({}, varOlan.belgeler || {}, doluBelgeler),
         // pasif/ilkGiris sadece kaynak dosyada AÇIKÇA belirtilmişse (true/false,
         // undefined değil) güncellenir — belirtilmemişse mevcut değer korunur.

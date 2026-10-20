@@ -143,12 +143,20 @@ function yukleniciDetayliExcelAktar() {
         'Geçici Görev Bitiş': bg('geciciGorev').exp ? formatTarihGoster(bg('geciciGorev').exp) : '',
         'Geçici Görev Uygun': uygunMu('geciciGorev') ? 'Uygun' : 'Uygun Değil',
         'MYK (Var)': yukleniciBelgeVarMi(bg('myk')) ? 'Evet' : 'Hayır',
+        'Diploma (Var)': yukleniciBelgeVarMi(bg('diploma')) ? 'Evet' : 'Hayır',
         'Firma Eğitimi Tarih': bg('firmaEgitimi').base ? formatTarihGoster(bg('firmaEgitimi').base) : '',
         'Firma Eğitimi Bitiş': expHesap('firmaEgitimi') ? formatTarihGoster(expHesap('firmaEgitimi')) : '',
         'Firma Eğitimi Eğitmen': bg('firmaEgitimi').egitmen || '',
         'Firma Eğitimi Uygun': uygunMu('firmaEgitimi') ? 'Uygun' : 'Uygun Değil',
         'Pasif': k.pasif ? 'Evet' : 'Hayır',
         'İlk Giriş': k.ilkGiris ? 'Evet' : 'Hayır',
+        // Geri yüklemede kaybolmasın diye (bkz. YUKLENICI_DETAYLI_ICE_AKTAR_KOLONLARI).
+        'Personel Türü': YUKLENICI_PERSONEL_TURU_ETIKETLERI[k.personelTuru] || '',
+        'Psikoteknik (Var)': yukleniciBelgeVarMi(bg('psikoteknik')) ? 'Evet' : 'Hayır',
+        'SRC (Var)': yukleniciBelgeVarMi(bg('src')) ? 'Evet' : 'Hayır',
+        'Operatörlük (Var)': yukleniciBelgeVarMi(bg('operatorluk')) ? 'Evet' : 'Hayır',
+        'Ehliyet (Var)': yukleniciBelgeVarMi(bg('ehliyet')) ? 'Evet' : 'Hayır',
+        'Yüksekte Çalışma (Var)': yukleniciBelgeVarMi(bg('yuksekteCalisma')) ? 'Evet' : 'Hayır',
         'Kayıt Tarihi': k.olusturmaTarihi ? formatTarihGoster(k.olusturmaTarihi.slice(0, 10)) : ''
       };
     });
@@ -190,6 +198,7 @@ const YUKLENICI_DETAYLI_ICE_AKTAR_KOLONLARI = [
   { anahtar: 'geciciBaslangic', baslik: 'Geçici Görev Başlangıç' },
   { anahtar: 'geciciBitis', baslik: 'Geçici Görev Bitiş' },
   { anahtar: 'mykBaslangic', baslik: 'MYK Başlangıç' },
+  { anahtar: 'mykVar', baslik: 'MYK (Var)' },
   { anahtar: 'mykBitis', baslik: 'MYK Bitiş' },
   { anahtar: 'feTarih', baslik: 'Firma Eğitimi Tarih' },
   { anahtar: 'feBitis', baslik: 'Firma Eğitimi Bitiş' },
@@ -205,8 +214,24 @@ const YUKLENICI_DETAYLI_ICE_AKTAR_KOLONLARI = [
   // (kullanıcı isteği), bu yüzden burada bilerek eşleştirilmiyor.
   { anahtar: 'diploma', baslik: 'Diploma (Var)' },
   { anahtar: 'pasif', baslik: 'Pasif' },
-  { anahtar: 'ilkGiris', baslik: 'İlk Giriş' }
+  { anahtar: 'ilkGiris', baslik: 'İlk Giriş' },
+  // 2026-10-20: silinen bir firmanın personeli geri yüklenirken operatör
+  // bilgileri kaybolmasın diye eklendi (dosyada yoksa boş kalır).
+  { anahtar: 'personelTuru', baslik: 'Personel Türü' },
+  { anahtar: 'psikoteknik', baslik: 'Psikoteknik (Var)' },
+  { anahtar: 'src', baslik: 'SRC (Var)' },
+  { anahtar: 'operatorluk', baslik: 'Operatörlük (Var)' },
+  { anahtar: 'ehliyet', baslik: 'Ehliyet (Var)' },
+  { anahtar: 'yuksekteCalisma', baslik: 'Yüksekte Çalışma (Var)' }
 ];
+
+function _yukleniciPersonelTuruCoz(deger) {
+  const n = _basligiNormallestir(deger);
+  if (!n) return undefined;
+  if (n.startsWith('operator')) return 'operator';
+  if (n.startsWith('teknik')) return 'teknik';
+  return undefined;
+}
 
 // Eski uygulamanın "Detaylı Excel" çıktısı Tehlike Sınıfı'nı düz etiketle
 // DEĞİL, ham iç kodla yazıyor ("cok"/"tehlikeli"/"az" — bkz. btnExportExcelDetail
@@ -383,12 +408,17 @@ function _yukleniciDetayliExcelIceAktarUygula(dosya, tamamlaninca) {
       // MYK artık Var/Yok — eski dosyada bir başlangıç tarihi varsa belge
       // fiilen mevcuttu demektir, "Var" olarak aktarılır.
       if ((s.mykBaslangic || '').trim()) belgeler.myk = { deger: 'Var' };
+      else if ((s.mykVar || '').trim()) belgeler.myk = { deger: _yukleniciVarYokCoz(s.mykVar) };
       if ((s.feTarih || '').trim()) {
         belgeler.firmaEgitimi = { base: excelTarihiNormallestir(s.feTarih), exp: excelTarihiNormallestir(s.feBitis), egitmen: s.feEgitmen, ay: YUKLENICI_FIRMA_EGITIMI_VARSAYILAN_AY };
       }
       if ((s.diploma || '').trim()) belgeler.diploma = { deger: _yukleniciVarYokCoz(s.diploma) };
+      ['psikoteknik', 'src', 'operatorluk', 'ehliyet', 'yuksekteCalisma'].forEach(id => {
+        if ((s[id] || '').trim()) belgeler[id] = { deger: _yukleniciVarYokCoz(s[id]) };
+      });
 
       return {
+        personelTuru: _yukleniciPersonelTuruCoz(s.personelTuru),
         firmaId: firma ? firma.id : '',
         firmaAdi: firma ? firma.firmaAdi : (s.firma || '').trim(),
         adSoyad: s.personel,
