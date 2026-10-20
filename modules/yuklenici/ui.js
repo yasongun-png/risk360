@@ -632,7 +632,17 @@ function _kisiUygunlukOzetiHtml(k) {
 function _ykSonDegerlendirmeHtml(firmaId) {
   const d = yukleniciFirmaSonDegerlendirme(firmaId);
   if (!d) return '<span style="font-size:12px; color:var(--metin-soluk);">—</span>';
-  return `${_ykDegSinifRozeti(d)}<div style="font-size:11px; color:var(--metin-soluk);">${formatTarihGoster(d.bitis)}</div>`;
+  // Tıklanınca Yüklenici Değerlendirme sekmesi bu firmaya süzülmüş açılır.
+  return `<a href="#" data-son-deg="${firmaId}" title="Bu firmanın değerlendirmelerini aç" style="text-decoration:none;">${_ykDegSinifRozeti(d)}</a>
+    <div style="font-size:11px; color:var(--metin-soluk);">${_ykKacir(d.sonuc)} · ${formatTarihGoster(d.bitis)}</div>`;
+}
+
+function _ykFirmaDegerlendirmeleriniAc(firmaId) {
+  gorunumDegistir('degerlendirme');
+  const filtre = document.getElementById('degFirmaFiltre');
+  filtre.dispatchEvent(new Event('focus')); // seçenekleri tazele
+  filtre.value = firmaId;
+  degerlendirmeleriCiz();
 }
 
 function firmalariCiz(aramaMetni) {
@@ -667,6 +677,7 @@ function firmalariCiz(aramaMetni) {
     govde.appendChild(satir);
   });
 
+  govde.querySelectorAll('[data-son-deg]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); _ykFirmaDegerlendirmeleriniAc(a.getAttribute('data-son-deg')); }));
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => firmaModalAc(yukleniciFirmaIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu firmayı ve bağlı personelini silmek istediğinize emin misiniz?', 'Sil')) { yukleniciFirmaSil(btn.getAttribute('data-sil')); firmalariCiz(document.getElementById('firmaAramaKutusu').value); }
