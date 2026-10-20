@@ -169,6 +169,35 @@ function yukleniciSayfasiniBaslat() {
     });
   });
 
+  // Kullanıcı isteği: araçları da içe / dışa aktarabilmek.
+  document.getElementById('aracSablonIndirBtn').addEventListener('click', () => {
+    excelSablonIndir(YUKLENICI_ARAC_IMPORT_KOLONLARI, 'yuklenici_arac_sablonu.xlsx');
+  });
+  document.getElementById('aracDisaAktarBtn').addEventListener('click', () => {
+    const satirlar = yukleniciAraclariniGetir('').map(a => Object.assign({}, a, {
+      ptmBitis: a.ptmExp, zmsBitis: a.zmsExp, tuvBitis: a.tuvExp,
+      genelDurum: a.uygunMu ? 'Uygun' : 'Uygun Değil',
+      pasifGoruntu: a.pasif ? 'Evet' : 'Hayır'
+    }));
+    excelDisaAktar(satirlar, YUKLENICI_ARAC_EXPORT_KOLONLARI, 'yuklenici_araclari.xlsx');
+  });
+  document.getElementById('aracIceAktarBtn').addEventListener('click', () => document.getElementById('aracIceAktarDosya').click());
+  document.getElementById('aracIceAktarDosya').addEventListener('change', e => {
+    const dosya = e.target.files[0];
+    excelIceAktar(dosya, YUKLENICI_ARAC_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      const sonuc = yukleniciAraclarTopluEkle(satirlar);
+      let mesaj = `${sonuc.eklenen} araç/ekipman eklendi, ${sonuc.guncellenen} mevcut kayıt güncellendi.`;
+      if (sonuc.hatalar.length) {
+        mesaj += `\n${sonuc.hatalar.length} satır eklenemedi:\n` + sonuc.hatalar.slice(0, 10).join('\n');
+        if (sonuc.hatalar.length > 10) mesaj += `\n... ve ${sonuc.hatalar.length - 10} tane daha.`;
+      }
+      alert(mesaj);
+      araclariCiz(document.getElementById('aracAramaKutusu').value);
+    });
+  });
+
   document.getElementById('yeniAracBtn').addEventListener('click', () => aracModalAc());
   document.getElementById('aracModalKapatBtn').addEventListener('click', aracModalKapat);
   document.getElementById('aracModalIptalBtn').addEventListener('click', aracModalKapat);
@@ -246,6 +275,42 @@ const YUKLENICI_KISI_EXPORT_KOLONLARI = [
   { anahtar: 'gorev', baslik: 'Görev' },
   { anahtar: 'durumGoruntu', baslik: 'Durum' },
   { anahtar: 'sonrakiKontrolTarihi', baslik: 'Sonraki Kontrol' }
+];
+
+// Araç içe aktarma şablonu: içe aktarılan dosya dışa aktarılanla aynı
+// başlıkları da kabul eder (esanlamlar), böylece dışa aktarılan liste
+// düzenlenip geri yüklenebilir.
+const YUKLENICI_ARAC_IMPORT_KOLONLARI = [
+  { anahtar: 'firmaAdi', baslik: 'Firma Adı', esanlamlar: ['Firma'] },
+  { anahtar: 'tur', baslik: 'Tür (Araç/Ekipman)', esanlamlar: ['Tür'] },
+  { anahtar: 'kimlik', baslik: 'Plaka / Seri No', esanlamlar: ['Plaka', 'Seri No', 'Kimlik'] },
+  { anahtar: 'ptmVar', baslik: 'PTM (Var/Yok)', esanlamlar: ['PTM'] },
+  { anahtar: 'ptmTarih', baslik: 'PTM Tarihi' },
+  { anahtar: 'ptmGecerlilik', baslik: 'PTM Geçerlilik' },
+  { anahtar: 'ruhsat', baslik: 'Ruhsat (Var/Yok)', esanlamlar: ['Ruhsat'] },
+  { anahtar: 'zmsTarih', baslik: 'ZMS Tarihi' },
+  { anahtar: 'zmsGecerlilik', baslik: 'ZMS Geçerlilik' },
+  { anahtar: 'tuvTarih', baslik: 'TÜVTÜRK Tarihi' },
+  { anahtar: 'tuvGecerlilik', baslik: 'TÜVTÜRK Geçerlilik' },
+  { anahtar: 'notlar', baslik: 'Notlar' }
+];
+
+const YUKLENICI_ARAC_EXPORT_KOLONLARI = [
+  { anahtar: 'aracNo', baslik: 'Araç No' },
+  { anahtar: 'firmaAdi', baslik: 'Firma Adı' },
+  { anahtar: 'tur', baslik: 'Tür (Araç/Ekipman)' },
+  { anahtar: 'kimlik', baslik: 'Plaka / Seri No' },
+  { anahtar: 'ptmVar', baslik: 'PTM (Var/Yok)' },
+  { anahtar: 'ptmTarih', baslik: 'PTM Tarihi' },
+  { anahtar: 'ptmBitis', baslik: 'PTM Bitiş' },
+  { anahtar: 'ruhsat', baslik: 'Ruhsat (Var/Yok)' },
+  { anahtar: 'zmsTarih', baslik: 'ZMS Tarihi' },
+  { anahtar: 'zmsBitis', baslik: 'ZMS Bitiş' },
+  { anahtar: 'tuvTarih', baslik: 'TÜVTÜRK Tarihi' },
+  { anahtar: 'tuvBitis', baslik: 'TÜVTÜRK Bitiş' },
+  { anahtar: 'genelDurum', baslik: 'Genel Durum' },
+  { anahtar: 'pasifGoruntu', baslik: 'Pasif' },
+  { anahtar: 'notlar', baslik: 'Notlar' }
 ];
 
 function _yukleniciKisiIceAktarSatiriEkle(satir) {

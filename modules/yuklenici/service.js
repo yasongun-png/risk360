@@ -596,6 +596,57 @@ function yukleniciAracGuncelle(id, veriler) {
   return { basarili: true, arac: guncellenen };
 }
 
+// Kullanıcı isteği: araçları Excel'den içe aktarma. Satırlar { firmaAdi, tur,
+// kimlik, ptmVar, ptmTarih, ptmGecerlilik, ruhsat, zmsTarih, zmsGecerlilik,
+// tuvTarih, tuvGecerlilik, notlar }. Firma adla (normalize) eşleşir; aynı
+// firmada aynı plaka/seri no varsa yeni kayıt açılmaz, satırda DOLU olan
+// alanlar mevcut kaydın üzerine yazılır. Tek yazım (bkz. yukleniciKisilerTopluEkle).
+function yukleniciAraclarTopluEkle(satirlar) {
+  const firmalar = yukleniciFirmalariTumunuGetir();
+  const firmaBul = ad => firmalar.find(f => _basligiNormallestir(f.firmaAdi) === _basligiNormallestir(ad));
+  const liste = yukleniciAraclariTumunuGetir();
+  const anahtar = (firmaId, kimlik) => firmaId + '|' + _basligiNormallestir(kimlik);
+  const indeks = {};
+  liste.forEach((a, i) => { indeks[anahtar(a.firmaId, a.kimlik)] = i; });
+  let sonNo = 0;
+  liste.forEach(a => { const m = String(a.aracNo || '').match(/(\d+)$/); if (m) sonNo = Math.max(sonNo, parseInt(m[1], 10)); });
+
+  const iz = yukleniciIzBilgisi();
+  const sonuc = { eklenen: 0, guncellenen: 0, hatalar: [] };
+  satirlar.forEach((s, i) => {
+    const satirNo = i + 2;
+    const kimlik = String(s.kimlik || '').trim();
+    if (!kimlik && !String(s.firmaAdi || '').trim()) return; // boş satır
+    const firma = firmaBul(s.firmaAdi);
+    if (!firma) { sonuc.hatalar.push(`Satır ${satirNo}: Firma "${s.firmaAdi || ''}" bulunamadı. Önce firmayı ekleyin.`); return; }
+    if (!kimlik) { sonuc.hatalar.push(`Satır ${satirNo}: Plaka / Seri No boş.`); return; }
+
+    const dolu = {};
+    if (String(s.tur || '').trim()) dolu.tur = YUKLENICI_ARAC_TURLERI.find(t => _basligiNormallestir(t) === _basligiNormallestir(s.tur)) || 'Araç';
+    ['ptmVar', 'ruhsat'].forEach(alan => { if (String(s[alan] || '').trim()) dolu[alan] = /^(var|evet|e|x|1)$/i.test(String(s[alan]).trim()) ? 'Var' : 'Yok'; });
+    ['ptmTarih', 'ptmGecerlilik', 'zmsTarih', 'zmsGecerlilik', 'tuvTarih', 'tuvGecerlilik'].forEach(alan => {
+      const t = excelTarihiNormallestir(s[alan]);
+      if (t) dolu[alan] = t;
+    });
+    if (String(s.notlar || '').trim()) dolu.notlar = String(s.notlar).trim();
+
+    const k = anahtar(firma.id, kimlik);
+    if (indeks[k] !== undefined) {
+      liste[indeks[k]] = Object.assign({}, liste[indeks[k]], dolu, { guncellemeTarihi: iz.zaman, guncelleyen: iz.kim });
+      sonuc.guncellenen++;
+    } else {
+      sonNo += 1;
+      const yeni = aracOlustur(Object.assign({ tur: 'Araç' }, dolu, { firmaId: firma.id, firmaAdi: firma.firmaAdi, kimlik, aracNo: 'YA' + String(sonNo).padStart(4, '0') }));
+      yeni.olusturan = iz.kim;
+      liste.push(yeni);
+      indeks[k] = liste.length - 1;
+      sonuc.eklenen++;
+    }
+  });
+  if (sonuc.eklenen || sonuc.guncellenen) _yukleniciAraclariKaydet(liste);
+  return sonuc;
+}
+
 function yukleniciAracSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciAracSilRepo(id);

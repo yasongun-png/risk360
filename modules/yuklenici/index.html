@@ -173,6 +173,10 @@
         <input type="text" id="aracAramaKutusu" class="arama-kutusu" placeholder="Plaka/seri no veya firmaya göre ara...">
         <div style="display:flex; gap:8px;">
           <select id="aracSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
+          <button type="button" class="ikincil" id="aracSablonIndirBtn">Şablon İndir</button>
+          <button type="button" class="ikincil" id="aracIceAktarBtn" title="Aynı firmada aynı plaka/seri no varsa yeni kayıt açılmaz, dolu alanlar güncellenir">İçe Aktar</button>
+          <input type="file" id="aracIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="aracDisaAktarBtn">Dışa Aktar</button>
           <button type="button" class="birincil" id="yeniAracBtn" style="width:auto;">+ Araç / Ekipman Ekle</button>
         </div>
       </div>
@@ -628,8 +632,8 @@
   <script src="model.js?v=20261019d"></script>
   <script src="validation.js?v=20261019c"></script>
   <script src="repository.js?v=20261019c"></script>
-  <script src="service.js?v=20261019f"></script>
-  <script src="ui.js?v=20261020a"></script>
+  <script src="service.js?v=20261020a"></script>
+  <script src="ui.js?v=20261020b"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js?v=20261019c"></script>
   <script src="degerlendirme.js?v=20261019f"></script>
