@@ -434,6 +434,111 @@ function _bulutYaziSiraya(anahtar, yazFn) {
   return buSira;
 }
 
+// ---- Büyük verinin parçalı saklanması ----
+// Bir modülün tüm kayıtları tek bir "buyuk_veri" belgesinde tutulur ve
+// Firestore belge sınırı ~1MB'dır. 2026-10-21: Bagfaş risk analizi (520 risk,
+// ~480KB) mevcut risklerle birlikte bu sınırı aştı ve içe aktarım "Bulut
+// yazımı başarısız oldu" ile reddedildi. Dizi değerler _BUYUK_PARCA_SINIRI'nı
+// aşarsa birden çok belgeye bölünür:
+//   <anahtar>            { deger: ilkParca, firma, parcaSayisi: n, surum }
+//   <anahtar>__parcaI    { deger: parcaI,   firma, ana: <anahtar>, parcaNo: I, surum }
+// Hepsi tek batch ile (atomik) yazılır; okurken sadece aynı "surum"daki tüm
+// parçalar gelince birleştirilir. Sınırın altındaki veri eskisi gibi tek belge
+// ({ deger, firma }) olarak yazılır, yani küçük modüller hiç etkilenmez.
+const _BUYUK_PARCA_SINIRI = 700 * 1024;
+const _PARCA_EKI = '__parca';
+// Anahtar başına buluttaki bilinen parça sayısı (fazla kalan eski parçaları
+// silebilmek için).
+const _bulutParcaSayilari = {};
+// Snapshot'tan gelen, henüz birleştirilmemiş parçalar: { anahtar: { ana, parcalar: {no: data} } }
+const _bulutParcaTamponu = {};
+
+function _parcaBelgeId(anahtar, no) {
+  return anahtar + _PARCA_EKI + no;
+}
+
+function _diziyiParcala(deger) {
+  const kodlayici = new TextEncoder();
+  const parcalar = [[]];
+  let boyut = 0;
+  deger.forEach(kayit => {
+    const b = kodlayici.encode(JSON.stringify(kayit === undefined ? null : kayit)).length + 1;
+    if (boyut + b > _BUYUK_PARCA_SINIRI && parcalar[parcalar.length - 1].length) { parcalar.push([]); boyut = 0; }
+    parcalar[parcalar.length - 1].push(kayit);
+    boyut += b;
+  });
+  return parcalar;
+}
+
+function _buyukVeriBuluttaYaz(anahtar, deger, firmaSlug) {
+  const koleksiyon = _bulutDb.collection('buyuk_veri');
+  const firma = firmaSlug || '';
+  const eskiParcaSayisi = _bulutParcaSayilari[anahtar] || 1;
+  const parcalar = Array.isArray(deger) ? _diziyiParcala(deger) : [deger];
+  const n = Array.isArray(deger) ? parcalar.length : 1;
+
+  // Tek belgeye sığıyor ve önceden parçalı değildi: eskisiyle birebir aynı yazım.
+  if (n === 1 && eskiParcaSayisi <= 1) {
+    return koleksiyon.doc(anahtar).set({ deger, firma }).then(() => { _bulutParcaSayilari[anahtar] = 1; });
+  }
+
+  const batch = _bulutDb.batch();
+  if (n === 1) {
+    batch.set(koleksiyon.doc(anahtar), { deger, firma });
+  } else {
+    const surum = rastgeleId();
+    batch.set(koleksiyon.doc(anahtar), { deger: parcalar[0], firma, parcaSayisi: n, surum });
+    for (let i = 1; i < n; i++) {
+      batch.set(koleksiyon.doc(_parcaBelgeId(anahtar, i)), { deger: parcalar[i], firma, ana: anahtar, parcaNo: i, surum });
+    }
+  }
+  for (let i = n; i < eskiParcaSayisi; i++) batch.delete(koleksiyon.doc(_parcaBelgeId(anahtar, i)));
+  return batch.commit().then(() => { _bulutParcaSayilari[anahtar] = n; });
+}
+
+// Snapshot'tan gelen bir buyuk_veri belgesini önbelleğe uygular; parçalı
+// belgeleri ancak bütün parçalar aynı sürümde gelince birleştirir.
+function _buyukVeriBelgesiniUygula(id, data, silindiMi) {
+  const parcaEslesme = id.match(/^(.*)__parca(\d+)$/);
+  if (parcaEslesme) {
+    const ana = parcaEslesme[1];
+    const tampon = _bulutParcaTamponu[ana] || (_bulutParcaTamponu[ana] = { ana: null, parcalar: {} });
+    if (silindiMi) delete tampon.parcalar[parcaEslesme[2]];
+    else tampon.parcalar[parcaEslesme[2]] = data;
+    if (!silindiMi) _parcalariBirlestir(ana);
+    return;
+  }
+  if (silindiMi) {
+    delete _bulutOnbellek[id];
+    delete _bulutParcaTamponu[id];
+    delete _bulutParcaSayilari[id];
+    return;
+  }
+  if (data.parcaSayisi > 1) {
+    const tampon = _bulutParcaTamponu[id] || (_bulutParcaTamponu[id] = { ana: null, parcalar: {} });
+    tampon.ana = data;
+    _parcalariBirlestir(id);
+    return;
+  }
+  delete _bulutParcaTamponu[id];
+  _bulutParcaSayilari[id] = 1;
+  _bulutOnbellek[id] = data.deger;
+}
+
+function _parcalariBirlestir(anahtar) {
+  const tampon = _bulutParcaTamponu[anahtar];
+  if (!tampon || !tampon.ana) return;
+  const n = tampon.ana.parcaSayisi;
+  const liste = [tampon.ana.deger || []];
+  for (let i = 1; i < n; i++) {
+    const p = tampon.parcalar[i];
+    if (!p || p.surum !== tampon.ana.surum) return; // eksik ya da eski sürüm — tamamlanınca tekrar denenir
+    liste.push(p.deger || []);
+  }
+  _bulutParcaSayilari[anahtar] = Math.max(n, _bulutParcaSayilari[anahtar] || 0);
+  _bulutOnbellek[anahtar] = [].concat(...liste);
+}
+
 // Bekleyen (henüz sunucudan onay gelmemiş) bulut yazımı varken sayfa yenilenir/kapanırsa o yazımlar yarıda
 // kesilir ve kayıtlar kaybolur (ör. 84 satırlık Excel aktarımı sıralı yazıldığı için birkaç saniye sürer ve
 // kullanıcı F5 yaparsa yalnızca yazılabilenler kalır). Tarayıcıdan "Siteden ayrılmak istiyor musunuz?" uyarısı çıkarılır.
@@ -459,7 +564,7 @@ function yaz(anahtar, deger) {
       return;
     }
     _bulutOnbellek[anahtar] = deger;
-    _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' }))
+    _bulutYaziSiraya(anahtar, () => _buyukVeriBuluttaYaz(anahtar, deger, _bulutFirmaSlugu))
       .catch(e => console.error('Firestore yazma hatasi:', e));
     return;
   }
@@ -475,10 +580,20 @@ function yaz(anahtar, deger) {
 function yazVeSonucuGetir(anahtar, deger) {
   if (_bulutAktif && !_YEREL_SADECE_ANAHTARLAR.has(anahtar) && !_KUCUK_SENKRON_ANAHTARLAR.has(anahtar)) {
     _islemKaydiOlustur(anahtar, deger);
+    const onceki = _bulutOnbellek[anahtar];
+    const oncekiVarMi = Object.prototype.hasOwnProperty.call(_bulutOnbellek, anahtar);
     _bulutOnbellek[anahtar] = deger;
-    return _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: _bulutFirmaSlugu || '' }))
+    return _bulutYaziSiraya(anahtar, () => _buyukVeriBuluttaYaz(anahtar, deger, _bulutFirmaSlugu))
       .then(() => ({ basarili: true }))
-      .catch(e => { console.error('Firestore yazma hatasi:', e); return { basarili: false, hata: e }; });
+      .catch(e => {
+        console.error('Firestore yazma hatasi:', e);
+        // Başarısız yazım ekranda kaydedilmiş gibi kalmasın: arada başka bir
+        // yazım olmadıysa önbellek eski hâline döner.
+        if (_bulutOnbellek[anahtar] === deger) {
+          if (oncekiVarMi) _bulutOnbellek[anahtar] = onceki; else delete _bulutOnbellek[anahtar];
+        }
+        return { basarili: false, hata: e };
+      });
   }
   yaz(anahtar, deger);
   return Promise.resolve({ basarili: true });
@@ -542,7 +657,7 @@ function buyukVeriFirmayaYaz(anahtar, deger, firmaSlug) {
   if (_bulutAktif) {
     _islemKaydiOlustur(anahtar, deger);
     _bulutOnbellek[anahtar] = deger;
-    _bulutYaziSiraya(anahtar, () => _bulutDb.collection('buyuk_veri').doc(anahtar).set({ deger, firma: firmaSlug || '' }))
+    _bulutYaziSiraya(anahtar, () => _buyukVeriBuluttaYaz(anahtar, deger, firmaSlug))
       .catch(e => console.error('Firestore yazma hatasi:', e));
     return;
   }
@@ -571,8 +686,16 @@ async function buyukVeriFirmadanOku(anahtar, varsayilan) {
   if (!anahtar) return varsayilan;
   if (!_bulutAktif) return oku(anahtar, varsayilan);
   if (Object.prototype.hasOwnProperty.call(_bulutOnbellek, anahtar)) return _bulutOnbellek[anahtar];
-  const belge = await _bulutDb.collection('buyuk_veri').doc(anahtar).get();
-  return belge.exists ? belge.data().deger : varsayilan;
+  const koleksiyon = _bulutDb.collection('buyuk_veri');
+  const belge = await koleksiyon.doc(anahtar).get();
+  if (!belge.exists) return varsayilan;
+  const data = belge.data();
+  if (!(data.parcaSayisi > 1)) return data.deger;
+  // Parçalı büyük veri (bkz. _buyukVeriBuluttaYaz).
+  const parcalar = await Promise.all(Array.from({ length: data.parcaSayisi - 1 }, (_, i) => koleksiyon.doc(_parcaBelgeId(anahtar, i + 1)).get()));
+  if (parcalar.some(p => !p.exists || p.data().surum !== data.surum)) throw new Error('Parçalı veri eksik okundu: ' + anahtar);
+  _bulutParcaSayilari[anahtar] = Math.max(data.parcaSayisi, _bulutParcaSayilari[anahtar] || 0);
+  return [].concat(data.deger || [], ...parcalar.map(p => p.data().deger || []));
 }
 
 function rastgeleId() {
@@ -826,12 +949,11 @@ function bulutFirmaHazirOlduğunda(firmaSlug, callback) {
         // araya giren bir snapshot, F5 YAPMADAN dahi sildiğimiz/eklediğimiz
         // kaydı ekranda geri getirebilir (bkz. _bulutYaziBeklemedeSayaci
         // yorumu, kullanıcı raporu: tespit-öneri modülünde silme).
-        if (_anahtarIcinYaziBeklemedeMi(change.doc.id)) return;
-        if (change.type === 'removed') {
-          delete _bulutOnbellek[change.doc.id];
-        } else {
-          _bulutOnbellek[change.doc.id] = change.doc.data().deger;
-        }
+        const id = change.doc.id;
+        const anaAnahtar = id.replace(/__parca\d+$/, '');
+        if (_anahtarIcinYaziBeklemedeMi(anaAnahtar)) return;
+        // Parçalı büyük veri desteği (bkz. _buyukVeriBelgesiniUygula).
+        _buyukVeriBelgesiniUygula(id, change.type === 'removed' ? null : change.doc.data(), change.type === 'removed');
       });
       if (!_bulutFirmaHazir) {
         _bulutFirmaHazir = true;
