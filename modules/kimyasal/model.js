@@ -16,6 +16,18 @@ const KIMYASAL_DEPOLAMA_GRUPLARI = [
   'Korozif', 'Basınçlı Gaz', 'Su ile Reaktif', 'Patlayıcı', 'Çevre için Tehlikeli', 'Genel'
 ];
 
+// Kimyasalın özellikleri (birden fazla seçilebilir, ör. nitrik asit = Asit +
+// Oksitleyici Madde + Aşındırıcı Madde). Depolama matrisi bu özelliklere göre
+// kurulur. İlk 9 sınıf ve varsayılan kurallar "Kimyasal Depolama Matrisi"
+// levhasından (GHS piktogramlarına göre) alınmıştır; son 5 sınıf ek olarak
+// tanımlanmıştır. Kurallar firma bazında kullanıcı tarafından değiştirilebilir
+// (bkz. kimyasalMatrisKurallariGetir).
+const KIMYASAL_OZELLIKLERI = [
+  'Yanıcı Madde', 'Patlayıcı Madde', 'Akut Toksisite', 'Oksitleyici Madde', 'Basınçlı Gaz',
+  'Sağlık Tehlikesi', 'Ciddi Sağlık Tehlikesi', 'Aşındırıcı Madde', 'Çevre İçin Zararlı',
+  'Asit', 'Baz', 'Tuz', 'İndirgen', 'Su ile Reaktif'
+];
+
 const KIMYASAL_RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Kritik'];
 const KIMYASAL_DURUMLARI = ['Aktif', 'Pasif', 'Kullanım Dışı', 'İptal'];
 
@@ -27,18 +39,82 @@ const GHS_PIKTOGRAMLARI = [
 
 const NFPA_OZEL_KODLARI = { OX: 'Oksitleyici (OX)', W: 'Su ile Reaksiyona Girmemeli (W)' };
 
-// Depolama grubu bazlı birlikte-depolanmaması gereken çiftler (simetrik).
-const KIMYASAL_UYUMSUZLUK_KURALLARI = {
-  'Asit': ['Baz / Alkali', 'Oksitleyici', 'Su ile Reaktif'],
-  'Baz / Alkali': ['Asit', 'Oksitleyici'],
-  'Oksitleyici': ['Yanıcı / Parlayıcı', 'Asit', 'Baz / Alkali', 'Su ile Reaktif'],
-  'Yanıcı / Parlayıcı': ['Oksitleyici', 'Patlayıcı'],
-  'Toksik': ['Asit', 'Baz / Alkali'],
-  'Korozif': ['Yanıcı / Parlayıcı', 'Su ile Reaktif'],
-  'Basınçlı Gaz': ['Yanıcı / Parlayıcı', 'Oksitleyici'],
-  'Su ile Reaktif': ['Asit', 'Baz / Alkali', 'Oksitleyici', 'Korozif'],
-  'Patlayıcı': ['Yanıcı / Parlayıcı', 'Oksitleyici']
+const KIMYASAL_OZELLIK_GHS = {
+  'Yanıcı Madde': 'GHS02', 'Patlayıcı Madde': 'GHS01', 'Akut Toksisite': 'GHS06',
+  'Oksitleyici Madde': 'GHS03', 'Basınçlı Gaz': 'GHS04', 'Sağlık Tehlikesi': 'GHS07',
+  'Ciddi Sağlık Tehlikesi': 'GHS08', 'Aşındırıcı Madde': 'GHS05', 'Çevre İçin Zararlı': 'GHS09'
 };
+
+// Eski kayıtlardaki Depolama Grubu / özellik adlarını yeni sınıflara çevirir.
+const _KIMYASAL_OZELLIK_ESLEME = {
+  'Yanıcı / Parlayıcı': 'Yanıcı Madde', 'Patlayıcı': 'Patlayıcı Madde', 'Toksik': 'Akut Toksisite',
+  'Oksitleyici': 'Oksitleyici Madde', 'Korozif': 'Aşındırıcı Madde', 'Çevre için Tehlikeli': 'Çevre İçin Zararlı',
+  'Baz / Alkali': 'Baz'
+};
+
+function kimyasalOzellikNormalize(ad) {
+  return _KIMYASAL_OZELLIK_ESLEME[ad] || ad;
+}
+
+// U = birlikte depolanabilir, X = birlikte depolanamaz, S = özel önlemlerle
+// birlikte depolanabilir. Satır/sütun sırası KIMYASAL_OZELLIKLERI ile aynı.
+const _KIMYASAL_MATRIS_VARSAYILAN_SATIRLAR = [
+  'UXXXXSSXX XXSSX',
+  'XUXXXXXXX XXXXX',
+  'XXUXXUUXX XXUUX',
+  'XXXUXXXXX XXSXX',
+  'XXXXUSSXX XXUSX',
+  'SXUXSUUUX UUUUS',
+  'SXUXSUUUX UUUUS',
+  'XXXXXUUUX UUUSX',
+  'XXXXXXXXU XXXXX',
+  'XXXXXUUUX UXUXX',
+  'XXXXXUUUX XUUUX',
+  'SXUSUUUUX UUUUS',
+  'SXUXSUUSX XUUUX',
+  'XXXXXSSXX XXSXU'
+];
+
+function _kimMatrisAnahtari(a, b) {
+  const i = KIMYASAL_OZELLIKLERI.indexOf(a), j = KIMYASAL_OZELLIKLERI.indexOf(b);
+  return i <= j ? `${a}|${b}` : `${b}|${a}`;
+}
+
+function kimyasalMatrisVarsayilanDurum(a, b) {
+  const i = KIMYASAL_OZELLIKLERI.indexOf(a), j = KIMYASAL_OZELLIKLERI.indexOf(b);
+  if (i < 0 || j < 0) return 'U';
+  const satir = _KIMYASAL_MATRIS_VARSAYILAN_SATIRLAR[Math.min(i, j)].replace(' ', '');
+  return satir[Math.max(i, j)];
+}
+
+// Kullanıcının değiştirdiği hücreler (yalnızca varsayılandan farklı olanlar)
+// firma bazlı saklanır: { "A|B": "U"|"X"|"S" }.
+function _kimMatrisKuralAnahtari() {
+  return tenantAnahtar('kimyasal_matris_kurallari');
+}
+
+function kimyasalMatrisKurallariGetir() {
+  try { return (typeof oku === 'function' && oku(_kimMatrisKuralAnahtari(), {})) || {}; } catch (e) { return {}; }
+}
+
+function kimyasalMatrisKuraliKaydet(a, b, durum) {
+  const kurallar = Object.assign({}, kimyasalMatrisKurallariGetir());
+  const anahtar = _kimMatrisAnahtari(a, b);
+  if (durum === kimyasalMatrisVarsayilanDurum(a, b)) delete kurallar[anahtar];
+  else kurallar[anahtar] = durum;
+  yaz(_kimMatrisKuralAnahtari(), kurallar);
+}
+
+function kimyasalMatrisKurallariniSifirla() {
+  yaz(_kimMatrisKuralAnahtari(), {});
+}
+
+function kimyasalMatrisDurumu(a, b, kurallar) {
+  a = kimyasalOzellikNormalize(a); b = kimyasalOzellikNormalize(b);
+  if (!a || !b || a === 'Genel' || b === 'Genel') return 'U';
+  const k = kurallar || kimyasalMatrisKurallariGetir();
+  return k[_kimMatrisAnahtari(a, b)] || kimyasalMatrisVarsayilanDurum(a, b);
+}
 
 function _listeyeAyir(deger) {
   if (Array.isArray(deger)) return deger.map(s => String(s).trim()).filter(Boolean);
@@ -129,12 +205,23 @@ function kimyasalDepolamaGrubuTahminEt(ad, hKodlari) {
   const h = (hKodlari || []).join(' ');
   const iceren = (liste) => liste.some(kelime => isim.includes(kelime));
 
-  if (iceren(['nitrat', 'perklorat', 'peroksit', 'permanganat', 'kromat', 'klorat'])) return 'Oksitleyici';
+  const hVar = (re) => re.test(h);
+
+  // Önce H kodundan kesin sınıflar (ad yanıltıcı olabilir).
+  if (hVar(/H20[0-5]/)) return 'Patlayıcı';
+  if (hVar(/H26[01]/)) return 'Su ile Reaktif';
+  if (hVar(/H27[012]/)) return 'Oksitleyici';
+
+  if (iceren(['nitrat', 'perklorat', 'peroksit', 'permanganat', 'kromat', 'klorat', 'hipoklorit'])) return 'Oksitleyici';
   if (iceren(['asit'])) return 'Asit';
-  if (iceren(['hidroksit', 'kostik', 'amonyak', 'karbonat'])) return 'Baz / Alkali';
-  if (iceren(['kükürt', 'benzin', 'tiner', 'etanol', 'metanol', 'solvent', 'aseton', 'lpg', 'propan', 'bütan', 'hidrojen'])) return 'Yanıcı / Parlayıcı';
-  if (/H2[4-7]\d/.test(h)) return 'Oksitleyici';
-  if (/H31[489]|H320/.test(h)) return 'Korozif';
+  if (iceren(['hidroksit', 'kostik', 'amonyak', 'amonyum hidroksit', 'sud kostik'])) return 'Baz / Alkali';
+  if (iceren(['benzin', 'tiner', 'etanol', 'metanol', 'izopropanol', 'alkol', 'solvent', 'aseton', 'lpg', 'propan', 'bütan', 'hidrojen', 'asetilen', 'motorin', 'mazot', 'dizel', 'yakıt', 'kükürt'])) return 'Yanıcı / Parlayıcı';
+
+  if (hVar(/H22[0-8]|H24[12]|H25[012]/)) return 'Yanıcı / Parlayıcı';
+  if (hVar(/H28[01]/)) return 'Basınçlı Gaz';
+  if (hVar(/H290|H314/)) return 'Korozif';
+  if (hVar(/H30[01]|H31[01]|H33[01]/)) return 'Toksik';
+  if (hVar(/H4[01]\d/)) return 'Çevre için Tehlikeli';
   return '';
 }
 
@@ -155,32 +242,95 @@ function kimyasalSdsSuresiGecmisMi(sdsRevizyonTarihi, bugunStr) {
   return gunFarki > 1825;
 }
 
-// İki depolama grubunun birlikte depolanabilir olup olmadığını söyler.
-// KIMYASAL_UYUMSUZLUK_KURALLARI tek yönlü tanımlı olabileceğinden (ör.
-// yalnızca 'Asit': [...'Oksitleyici'] yazılıp tersi unutulmuş olabilir) her
-// iki yönde de bakılır. Aynı grup veya boş grup her zaman uyumlu sayılır.
+// Geriye uyumluluk: iki grup/özellik "birlikte depolanamaz" değilse uyumlu.
 function kimyasalGruplarUyumluMu(grubuA, grubuB) {
-  if (!grubuA || !grubuB || grubuA === grubuB) return true;
-  const aYonu = (KIMYASAL_UYUMSUZLUK_KURALLARI[grubuA] || []).includes(grubuB);
-  const bYonu = (KIMYASAL_UYUMSUZLUK_KURALLARI[grubuB] || []).includes(grubuA);
-  return !(aYonu || bYonu);
+  return kimyasalMatrisDurumu(grubuA, grubuB) !== 'X';
+}
+
+// Ad, H kodları ve GHS piktogramlarından olası TÜM özellikleri önerir.
+function kimyasalOzellikleriTahminEt(ad, hKodlari, ghsPiktogramlari) {
+  const isim = String(ad || '').toLocaleLowerCase('tr');
+  const h = (hKodlari || []).join(' ');
+  const ghs = (ghsPiktogramlari || []).join(' ');
+  const iceren = (liste) => liste.some(kelime => isim.includes(kelime));
+  const sonuc = new Set();
+
+  Object.keys(KIMYASAL_OZELLIK_GHS).forEach(o => { if (ghs.includes(KIMYASAL_OZELLIK_GHS[o])) sonuc.add(o); });
+  if (iceren(['asit'])) sonuc.add('Asit');
+  if (iceren(['hidroksit', 'kostik', 'amonyak'])) sonuc.add('Baz');
+  if (iceren(['nitrat', 'perklorat', 'peroksit', 'permanganat', 'kromat', 'klorat', 'hipoklorit', 'nitrik']) || /H27[012]/.test(h)) sonuc.add('Oksitleyici Madde');
+  if (iceren(['sülfit', 'tiyosülfat', 'hidrazin', 'hidrür', 'ditiyonit'])) sonuc.add('İndirgen');
+  if (iceren(['klorür', 'sülfat', 'nitrat', 'karbonat', 'fosfat', 'sülfit', 'asetat', 'tuz']) && !sonuc.has('Asit')) sonuc.add('Tuz');
+  if (iceren(['benzin', 'tiner', 'etanol', 'metanol', 'izopropanol', 'alkol', 'solvent', 'aseton', 'lpg', 'propan', 'bütan', 'hidrojen', 'asetilen', 'motorin', 'mazot', 'dizel', 'yakıt']) && !sonuc.has('Oksitleyici Madde')) sonuc.add('Yanıcı Madde');
+  if (/H22[0-8]|H24[12]|H25[012]/.test(h)) sonuc.add('Yanıcı Madde');
+  if (/H20[0-5]/.test(h)) sonuc.add('Patlayıcı Madde');
+  if (/H26[01]/.test(h)) sonuc.add('Su ile Reaktif');
+  if (/H28[01]/.test(h)) sonuc.add('Basınçlı Gaz');
+  if (/H290|H314/.test(h)) sonuc.add('Aşındırıcı Madde');
+  if (/H30[01]|H31[01]|H33[01]/.test(h)) sonuc.add('Akut Toksisite');
+  if (/H334|H34\d|H35\d|H36\d|H37\d/.test(h)) sonuc.add('Ciddi Sağlık Tehlikesi');
+  if (/H302|H312|H332|H315|H317|H319|H335|H336/.test(h)) sonuc.add('Sağlık Tehlikesi');
+  if (/H4[01]\d/.test(h)) sonuc.add('Çevre İçin Zararlı');
+  return KIMYASAL_OZELLIKLERI.filter(o => sonuc.has(o));
+}
+
+// İki özellik listesi için genel durum (en kötüsü: X > S > U) ve
+// sorunlu çiftler.
+function kimyasalOzellikKarsilastir(listeA, listeB, kurallar) {
+  const k = kurallar || kimyasalMatrisKurallariGetir();
+  let durum = 'U';
+  const ciftler = [];
+  (listeA || []).forEach(a => (listeB || []).forEach(b => {
+    const d = kimyasalMatrisDurumu(a, b, k);
+    if (d === 'U') return;
+    ciftler.push(`${kimyasalOzellikNormalize(a)} ↔ ${kimyasalOzellikNormalize(b)}${d === 'S' ? ' (özel önlem)' : ''}`);
+    if (d === 'X') durum = 'X';
+    else if (durum !== 'X') durum = 'S';
+  }));
+  return { durum, ciftler };
+}
+
+// Yalnızca "birlikte depolanamaz" çiftler (boş dizi = depolanabilir).
+function kimyasalOzellikCatismalari(listeA, listeB) {
+  const k = kimyasalMatrisKurallariGetir();
+  const catisma = [];
+  (listeA || []).forEach(a => (listeB || []).forEach(b => {
+    if (kimyasalMatrisDurumu(a, b, k) === 'X') catisma.push(`${kimyasalOzellikNormalize(a)} ↔ ${kimyasalOzellikNormalize(b)}`);
+  }));
+  return catisma;
+}
+
+// Bir kaydın matriste kullanılacak özellikleri: seçili özellikler; yoksa
+// GHS piktogramları + Depolama Grubu; hiçbiri yoksa ad/H kodlarından tahmin.
+function kimyasalEfektifOzellikleri(k) {
+  if (Array.isArray(k.ozellikler) && k.ozellikler.length) {
+    return { liste: Array.from(new Set(k.ozellikler.map(kimyasalOzellikNormalize))), tahminMi: false };
+  }
+  const tahmin = new Set(kimyasalOzellikleriTahminEt(k.ad, k.hKodlari, k.ghsPiktogramlari));
+  if (k.depolamaGrubu && k.depolamaGrubu !== 'Genel') tahmin.add(kimyasalOzellikNormalize(k.depolamaGrubu));
+  const liste = KIMYASAL_OZELLIKLERI.filter(o => tahmin.has(o));
+  return { liste: liste.length ? liste : ['Genel'], tahminMi: liste.length > 0 };
 }
 
 // Aynı lokasyondaki, aktif kayıtları ikili karşılaştırarak birlikte
 // depolanmaması gereken çiftleri tespit eder.
 function kimyasalDepolamaUyumsuzluklariBul(kayitlar) {
   const aktifler = (kayitlar || []).filter(k => k.durum !== 'İptal' && k.lokasyon);
+  const kurallar = kimyasalMatrisKurallariGetir();
   const sonuc = [];
   for (let i = 0; i < aktifler.length; i++) {
     for (let j = i + 1; j < aktifler.length; j++) {
       const a = aktifler[i];
       const b = aktifler[j];
       if (a.lokasyon !== b.lokasyon) continue;
-      if (kimyasalGruplarUyumluMu(a.depolamaGrubu, b.depolamaGrubu)) continue;
+      const aO = kimyasalEfektifOzellikleri(a).liste;
+      const bO = kimyasalEfektifOzellikleri(b).liste;
+      const ozel = kurallar['kim:' + [a.id, b.id].sort().join('|')];
+      if (ozel ? ozel !== 'X' : kimyasalOzellikKarsilastir(aO, bO, kurallar).durum !== 'X') continue;
       sonuc.push({
         lokasyon: a.lokasyon,
-        a: a.ad, aGrup: a.depolamaGrubu,
-        b: b.ad, bGrup: b.depolamaGrubu,
+        a: a.ad, aGrup: aO.join(', '),
+        b: b.ad, bGrup: bO.join(', '),
         siddet: (a.kritikMi || b.kritikMi) ? 'Kritik' : 'Yüksek'
       });
     }
@@ -205,6 +355,7 @@ function kimyasalKaydiOlustur(veriler) {
     bolum: (veriler.bolum || '').trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
     depolamaGrubu: veriler.depolamaGrubu || 'Genel',
+    ozellikler: Array.isArray(veriler.ozellikler) ? veriler.ozellikler : _listeyeAyir(veriler.ozellikler),
     fizikselHali: veriler.fizikselHali || 'Sıvı',
     miktar: veriler.miktar === '' || veriler.miktar == null ? null : Number(veriler.miktar),
     birim: (veriler.birim || '').trim(),

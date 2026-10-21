@@ -65,6 +65,15 @@ function kimyasalSayfasiniBaslat() {
     Array.from(secim.options).forEach(o => { o.selected = (o.value === oneri); });
   });
 
+  document.getElementById('ozellikTahminBtn').addEventListener('click', () => {
+    const hKodlari = document.getElementById('hKodlari').value.split(/[;,]+/).map(s => s.trim()).filter(Boolean);
+    const ghs = document.getElementById('ghsPiktogramlari').value.split(/[;,]+/).map(s => s.trim()).filter(Boolean);
+    const oneri = kimyasalOzellikleriTahminEt(document.getElementById('ad').value, hKodlari, ghs);
+    if (!oneri.length) { alert('Kimyasal adından veya H kodlarından özellik önerisi çıkarılamadı, lütfen elle işaretleyin.'); return; }
+    const secili = Array.from(document.querySelectorAll('#kimyasalOzellikleri input:checked')).map(c => c.value);
+    _kimOzellikKutulariniCiz(Array.from(new Set(secili.concat(oneri))));
+  });
+
   document.getElementById('sdsGorseliDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
     e.target.value = '';
@@ -112,6 +121,11 @@ function kimyasalSayfasiniBaslat() {
       hKodlariMetin: (k.hKodlari || []).join('; '),
       pKodlariMetin: (k.pKodlari || []).join('; ')
     })));
+  });
+  document.getElementById('matrisKuralSifirlaBtn').addEventListener('click', () => {
+    if (!confirm('Tüm uyumluluk kuralları ve kimyasal çiftleri için yaptığınız değişiklikler silinip levhadaki varsayılanlara dönülecek. Emin misiniz?')) return;
+    kimyasalMatrisKurallariniSifirla();
+    _kimDepolamaMatrisiniEkranaCiz();
   });
   document.getElementById('matrisYazdirBtn').addEventListener('click', () => {
     const kayitlar = _kimDepolamaMatrisiKayitlariGetir();
@@ -270,6 +284,13 @@ function _sdsGorseliOnizlemeCiz() {
   }
 }
 
+function _kimOzellikKutulariniCiz(secililer) {
+  secililer = (secililer || []).map(kimyasalOzellikNormalize);
+  document.getElementById('kimyasalOzellikleri').innerHTML = KIMYASAL_OZELLIKLERI.map(o =>
+    `<label style="display:inline-flex; align-items:center; gap:4px; font-weight:400; margin:0; cursor:pointer;"><input type="checkbox" value="${o}" ${secililer.includes(o) ? 'checked' : ''} style="width:auto; margin:0;">${o}</label>`
+  ).join('');
+}
+
 function _kimKisalt(metin, uzunluk) {
   const m = String(metin || '');
   return m.length > uzunluk ? m.slice(0, uzunluk) + '…' : m;
@@ -284,20 +305,51 @@ function _kimDepolamaMatrisiKayitlariGetir() {
   return kimyasallariGetir('', {})
     .filter(k => k.durum !== 'İptal')
     .map(k => {
-      const belirsiz = !k.depolamaGrubu || k.depolamaGrubu === 'Genel';
-      const tahmin = belirsiz ? kimyasalDepolamaGrubuTahminEt(k.ad, k.hKodlari) : '';
+      const ef = kimyasalEfektifOzellikleri(k);
       return Object.assign({}, k, {
-        depolamaGrubuEfektif: tahmin || k.depolamaGrubu || 'Genel',
-        depolamaGrubuTahminiMi: !!tahmin
+        ozellikListesi: ef.liste,
+        depolamaGrubuEfektif: ef.liste.join(', '),
+        depolamaGrubuTahminiMi: ef.tahminMi
       });
     })
     .sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
 }
 
-// "Depolama Matrisi" sekmesinin ekran görünümü -- yazdırma çıktısıyla aynı
-// veriyi (kimyasalGruplarUyumluMu) kullanır ama uygulamanın kendi rozet
-// (genel-rozet) renklerine sahip bir tablo olarak ekrana çizer.
+// Levhadaki gibi yuvarlak işaretler: U yeşil ✓, X kırmızı ✕, S sarı !
+const _KIM_DURUM_ISARET = {
+  U: { renk: '#16a34a', isaret: '✓', ad: 'Birlikte depolanabilir' },
+  X: { renk: '#dc2626', isaret: '✕', ad: 'Birlikte depolanamaz' },
+  S: { renk: '#eab308', isaret: '!', ad: 'Özel önlemlerle birlikte depolanabilir' }
+};
+const _KIM_DURUM_SIRASI = { U: 'X', X: 'S', S: 'U' };
+
+function _kimDurumIsaretiHtml(durum, degistiMi) {
+  const d = _KIM_DURUM_ISARET[durum] || _KIM_DURUM_ISARET.U;
+  return `<span title="${d.ad}" style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:${d.renk}; color:#fff; font-weight:800; font-size:15px;${degistiMi ? ' box-shadow:0 0 0 3px #2563eb;' : ''}">${d.isaret}</span>`;
+}
+
+function _kimCiftAnahtari(a, b) {
+  return 'kim:' + [a.id, b.id].sort().join('|');
+}
+
+// İki kimyasalın durumu: kullanıcı bu çift için özel durum girdiyse o,
+// yoksa özellik kurallarından hesaplanan en kötü durum.
+function _kimCiftDurumu(a, b, kurallar) {
+  const ozel = kurallar[_kimCiftAnahtari(a, b)];
+  const hesap = kimyasalOzellikKarsilastir(a.ozellikListesi, b.ozellikListesi, kurallar);
+  return { durum: ozel || hesap.durum, ozelMi: !!ozel, ciftler: hesap.ciftler, hesaplanan: hesap.durum };
+}
+
+function _kimCiftDurumuKaydet(a, b, durum, hesaplanan) {
+  const kurallar = Object.assign({}, kimyasalMatrisKurallariGetir());
+  const anahtar = _kimCiftAnahtari(a, b);
+  if (durum === hesaplanan) delete kurallar[anahtar];
+  else kurallar[anahtar] = durum;
+  yaz(tenantAnahtar('kimyasal_matris_kurallari'), kurallar);
+}
+
 function _kimDepolamaMatrisiniEkranaCiz() {
+  _kimMatrisKurallariniCiz();
   const icerik = document.getElementById('depolamaMatrisiIcerik');
   const bosDurum = document.getElementById('depolamaMatrisiBosDurum');
   const kayitlar = _kimDepolamaMatrisiKayitlariGetir();
@@ -310,48 +362,84 @@ function _kimDepolamaMatrisiniEkranaCiz() {
   }
   bosDurum.classList.remove('gorunur');
 
+  const kurallar = kimyasalMatrisKurallariGetir();
   const tahminUyarisi = kayitlar.some(k => k.depolamaGrubuTahminiMi)
-    ? '<p style="font-size:12px; color:#b45309; margin:0 0 10px;">⚠ "*" ile işaretli kimyasallarda Depolama Grubu kayıtta seçilmemiş; kimyasal adından canlı tahmin edilmiştir (kayda yazılmadı). Kalıcı ve kesin olması için kaydı açıp Depolama Grubu\'nu "Öner" ile seçip kaydedin.</p>'
+    ? '<p style="font-size:12px; color:#b45309; margin:0 0 10px;">⚠ "*" ile işaretli kimyasallarda Kimyasal Özellikleri seçilmemiş; GHS piktogramı, H kodu ve addan tahmin edilmiştir. Kesin olması için kaydı açıp özellikleri işaretleyin.</p>'
     : '';
-  const basliklar = kayitlar.map(k => `<th>${_kimKacir(k.kimyasalNo)}</th>`).join('');
+  const basliklar = kayitlar.map(k => `<th title="${_kimKacir(k.ad)}">${_kimKacir(k.kimyasalNo)}</th>`).join('');
   const govde = kayitlar.map((satirK, i) => {
     const hucreler = kayitlar.map((sutunK, j) => {
       if (i === j) return '<td style="text-align:center; background:#f1f5f9;">—</td>';
-      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubuEfektif, sutunK.depolamaGrubuEfektif);
-      return `<td style="text-align:center;"><span class="genel-rozet rozet-${uyumluMu ? 'dusuk' : 'kritik'}">${uyumluMu ? '✓ Uyumlu' : '✕ Uyumsuz'}</span></td>`;
+      const s = _kimCiftDurumu(satirK, sutunK, kurallar);
+      const aciklama = (s.ozelMi ? 'Kullanıcı tarafından değiştirildi. ' : '') + (s.ciftler.join('; ') || _KIM_DURUM_ISARET[s.durum].ad) + ' — değiştirmek için tıklayın';
+      return `<td style="text-align:center; cursor:pointer;" data-kim-a="${i}" data-kim-b="${j}" title="${_kimKacir(aciklama)}">${_kimDurumIsaretiHtml(s.durum, s.ozelMi)}</td>`;
     }).join('');
     const yildiz = satirK.depolamaGrubuTahminiMi ? '*' : '';
-    return `<tr><td style="font-weight:700; white-space:nowrap;">${_kimKacir(satirK.kimyasalNo)} — ${_kimKacir(_kimKisalt(satirK.ad, 30))} <span style="font-weight:400; color:var(--metin-soluk);">(${_kimKacir(satirK.depolamaGrubuEfektif)}${yildiz})</span></td>${hucreler}</tr>`;
+    return `<tr><td style="font-weight:700; white-space:nowrap;">${_kimKacir(satirK.kimyasalNo)} — ${_kimKacir(_kimKisalt(satirK.ad, 30))}<div style="font-weight:400; font-size:11px; color:var(--metin-soluk);">${_kimKacir(satirK.depolamaGrubuEfektif)}${yildiz}</div></td>${hucreler}</tr>`;
   }).join('');
 
   icerik.innerHTML = `${tahminUyarisi}<table class="veri-tablosu"><thead><tr><th>Kimyasal</th>${basliklar}</tr></thead><tbody>${govde}</tbody></table>`;
+  icerik.querySelectorAll('[data-kim-a]').forEach(td => td.addEventListener('click', () => {
+    const a = kayitlar[Number(td.dataset.kimA)], b = kayitlar[Number(td.dataset.kimB)];
+    const s = _kimCiftDurumu(a, b, kimyasalMatrisKurallariGetir());
+    _kimCiftDurumuKaydet(a, b, _KIM_DURUM_SIRASI[s.durum], s.hesaplanan);
+    _kimDepolamaMatrisiniEkranaCiz();
+  }));
 }
 
-// Depolama Grubu bazlı ikili uyumluluk kontrolü (kimyasalGruplarUyumluMu)
-// kullanılarak kayıtlar arasında bir kimyasal x kimyasal ızgara (matris)
-// oluşturur. Satır/sütun başlıkları Kimyasal No -- tam ad zaten satır
-// etiketinde de yazdığı için sütunları dar tutmak için tekrarlanmaz.
+// Özellik x özellik kural tablosu (levha görünümü), hücreye tıklayınca
+// ✓ → ✕ → ! → ✓ döner; simetrik olarak kaydedilir.
+function _kimMatrisKurallariniCiz() {
+  const kap = document.getElementById('matrisKurallariIcerik');
+  if (!kap) return;
+  const kurallar = kimyasalMatrisKurallariGetir();
+  const etiket = (o) => `${KIMYASAL_OZELLIK_GHS[o] ? `<span style="display:block; font-size:10px; color:#b91c1c;">◆ ${KIMYASAL_OZELLIK_GHS[o]}</span>` : ''}${_kimKacir(o)}`;
+  const basliklar = KIMYASAL_OZELLIKLERI.map(o => `<th style="font-size:11px; text-align:center; min-width:62px;">${etiket(o)}</th>`).join('');
+  const govde = KIMYASAL_OZELLIKLERI.map((a, i) => {
+    const hucreler = KIMYASAL_OZELLIKLERI.map((b, j) => {
+      const durum = kimyasalMatrisDurumu(a, b, kurallar);
+      const degisti = durum !== kimyasalMatrisVarsayilanDurum(a, b);
+      return `<td style="text-align:center; cursor:pointer;" data-kural-a="${i}" data-kural-b="${j}" title="${_kimKacir(a)} ↔ ${_kimKacir(b)}: ${_KIM_DURUM_ISARET[durum].ad}">${_kimDurumIsaretiHtml(durum, degisti)}</td>`;
+    }).join('');
+    return `<tr${i % 2 ? ' style="background:var(--zemin-ikincil, #f8fafc);"' : ''}><td style="font-weight:700; font-size:12px; white-space:nowrap;">${etiket(a)}</td>${hucreler}</tr>`;
+  }).join('');
+  kap.innerHTML = `<table class="veri-tablosu"><thead><tr><th></th>${basliklar}</tr></thead><tbody>${govde}</tbody></table>`;
+  kap.querySelectorAll('[data-kural-a]').forEach(td => td.addEventListener('click', () => {
+    const a = KIMYASAL_OZELLIKLERI[Number(td.dataset.kuralA)], b = KIMYASAL_OZELLIKLERI[Number(td.dataset.kuralB)];
+    kimyasalMatrisKuraliKaydet(a, b, _KIM_DURUM_SIRASI[kimyasalMatrisDurumu(a, b)]);
+    _kimDepolamaMatrisiniEkranaCiz();
+  }));
+}
+
+function _kimYaziciIsaret(durum) {
+  const d = _KIM_DURUM_ISARET[durum];
+  return `<span style="display:inline-block; width:18px; height:18px; line-height:18px; border-radius:50%; background:${d.renk}; color:#fff; font-weight:800; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">${d.isaret}</span>`;
+}
+
+// Yazdırma çıktısı: kimyasallar arası matris + kullanılan kural tablosu.
 function _kimDepolamaMatrisiHtml(kayitlar) {
+  const kurallar = kimyasalMatrisKurallariGetir();
   const basliklar = kayitlar.map(k => `<th>${_raporKacir(k.kimyasalNo)}</th>`).join('');
   const govde = kayitlar.map((satirK, i) => {
     const hucreler = kayitlar.map((sutunK, j) => {
       if (i === j) return '<td style="background:#f1f5f9; text-align:center;">—</td>';
-      const uyumluMu = kimyasalGruplarUyumluMu(satirK.depolamaGrubuEfektif, sutunK.depolamaGrubuEfektif);
-      return uyumluMu
-        ? '<td style="text-align:center; color:#15803d;">Uyumlu</td>'
-        : '<td style="text-align:center; color:#b91c1c; font-weight:700; background:#fee2e2;">✕ UYUMSUZ</td>';
+      return `<td style="text-align:center;">${_kimYaziciIsaret(_kimCiftDurumu(satirK, sutunK, kurallar).durum)}</td>`;
     }).join('');
     const yildiz = satirK.depolamaGrubuTahminiMi ? '*' : '';
-    return `<tr><td style="font-weight:700; white-space:nowrap;">${_raporKacir(satirK.kimyasalNo)} — ${_raporKacir(satirK.ad)} <span style="font-weight:400; color:#555;">(${_raporKacir(satirK.depolamaGrubuEfektif)}${yildiz})</span></td>${hucreler}</tr>`;
+    return `<tr><td style="font-weight:700;">${_raporKacir(satirK.kimyasalNo)} — ${_raporKacir(satirK.ad)} <span style="font-weight:400; color:#555;">(${_raporKacir(satirK.depolamaGrubuEfektif)}${yildiz})</span></td>${hucreler}</tr>`;
   }).join('');
+  const kuralBaslik = KIMYASAL_OZELLIKLERI.map(o => `<th style="font-size:9px;">${_raporKacir(o)}</th>`).join('');
+  const kuralGovde = KIMYASAL_OZELLIKLERI.map(a => `<tr><td style="font-weight:700; font-size:10px;">${_raporKacir(a)}</td>${KIMYASAL_OZELLIKLERI.map(b => `<td style="text-align:center;">${_kimYaziciIsaret(kimyasalMatrisDurumu(a, b, kurallar))}</td>`).join('')}</tr>`).join('');
   const tahminNotu = kayitlar.some(k => k.depolamaGrubuTahminiMi)
-    ? ' "*" işaretli kimyasallarda Depolama Grubu kayıtta seçilmemiş, addan tahmin edilmiştir; kesinleştirmek için kaydı açıp seçin.'
+    ? ' "*" işaretli kimyasallarda özellikler kayıtta seçilmemiş, GHS/H kodu/addan tahmin edilmiştir.'
     : '';
 
   return `
-    <div class="doc-title">Kimyasal Depolama Uyumluluk Matrisi</div>
-    <div class="doc-meta">Depolama Grubu bazlı, KIMYASAL_UYUMSUZLUK_KURALLARI referans alınarak oluşturulmuştur. Toplam ${kayitlar.length} kimyasal. Sütun başlıkları Kimyasal No'dur, tam ad ve depolama grubu satır etiketinde yer alır.${tahminNotu}</div>
+    <div class="doc-title">Kimyasal Depolama Matrisi</div>
+    <div class="doc-meta">✓ Birlikte depolanabilir, ✕ Birlikte depolanamaz, ! Özel önlemlerle birlikte depolanabilir. Toplam ${kayitlar.length} kimyasal; sütun başlıkları Kimyasal No'dur.${tahminNotu}</div>
     <table><tr><th>Kimyasal</th>${basliklar}</tr>${govde}</table>
+    <div class="doc-title" style="margin-top:18px; font-size:15px;">Uyumluluk Kuralları</div>
+    <table><tr><th></th>${kuralBaslik}</tr>${kuralGovde}</table>
   `;
 }
 
@@ -417,6 +505,7 @@ function kimyasalModalAc(kayit) {
   document.getElementById('lokasyon').value = kayit ? kayit.lokasyon : '';
   document.getElementById('tedarikci').value = kayit ? kayit.tedarikci : '';
   document.getElementById('depolamaGrubu').innerHTML = KIMYASAL_DEPOLAMA_GRUPLARI.map(g => `<option ${kayit && kayit.depolamaGrubu === g ? 'selected' : ''}>${g}</option>`).join('');
+  _kimOzellikKutulariniCiz(kayit ? (kayit.ozellikler || []) : []);
   document.getElementById('fizikselHali').innerHTML = KIMYASAL_FIZIKSEL_HALLER.map(f => `<option ${kayit && kayit.fizikselHali === f ? 'selected' : ''}>${f}</option>`).join('');
   document.getElementById('miktar').value = kayit && kayit.miktar != null ? kayit.miktar : '';
   document.getElementById('birim').value = kayit ? kayit.birim : '';
@@ -476,6 +565,7 @@ function kimyasalFormGonderildi(e) {
     lokasyon: document.getElementById('lokasyon').value,
     tedarikci: document.getElementById('tedarikci').value,
     depolamaGrubu: document.getElementById('depolamaGrubu').value,
+    ozellikler: Array.from(document.querySelectorAll('#kimyasalOzellikleri input:checked')).map(c => c.value),
     fizikselHali: document.getElementById('fizikselHali').value,
     miktar: document.getElementById('miktar').value,
     birim: document.getElementById('birim').value,

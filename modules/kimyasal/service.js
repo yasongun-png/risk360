@@ -58,6 +58,7 @@ function kimyasalGuncelle(id, veriler) {
     bolum: veriler.bolum.trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
     depolamaGrubu: veriler.depolamaGrubu || 'Genel',
+    ozellikler: Array.isArray(veriler.ozellikler) ? veriler.ozellikler : String(veriler.ozellikler || '').split(/[;,]+/).map(s => s.trim()).filter(Boolean),
     fizikselHali: veriler.fizikselHali || 'Sıvı',
     miktar: veriler.miktar === '' || veriler.miktar == null ? null : Number(veriler.miktar),
     birim: (veriler.birim || '').trim(),

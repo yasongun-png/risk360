@@ -66,11 +66,18 @@
 
     <div id="bolum-matris" style="display:none;">
       <div class="arac-cubugu">
-        <p style="color:var(--metin-soluk); font-size:13px; margin:0;">Aktif kimyasalların Depolama Grubu'na göre ikili uyumluluğu (yeşil: uyumlu, kırmızı: birlikte depolanmamalı).</p>
+        <p style="color:var(--metin-soluk); font-size:13px; margin:0;">✓ birlikte depolanabilir &nbsp; ✕ birlikte depolanamaz &nbsp; ! özel önlemlerle birlikte depolanabilir. Hücreye tıklayarak değiştirebilirsiniz.</p>
         <button type="button" class="ikincil" id="matrisYazdirBtn" style="width:auto;">Yazdır</button>
       </div>
+      <h3 style="margin:8px 0 6px; font-size:15px;">Kimyasallar Arası Matris</h3>
       <div class="tablo-scroll" id="depolamaMatrisiIcerik"></div>
       <div class="bos-durum" id="depolamaMatrisiBosDurum"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:22px 0 6px;">
+        <h3 style="margin:0; font-size:15px;">Uyumluluk Kuralları (Özelliklere Göre)</h3>
+        <button type="button" class="ikincil" id="matrisKuralSifirlaBtn" style="width:auto;">Varsayılana Dön</button>
+      </div>
+      <p style="color:var(--metin-soluk); font-size:12px; margin:0 0 8px;">Varsayılanlar "Kimyasal Depolama Matrisi" levhasından alınmıştır. Değiştirdiğiniz hücreler mavi çerçeveyle gösterilir; değişiklik bu firmanın tüm kimyasallarına uygulanır.</p>
+      <div class="tablo-scroll" id="matrisKurallariIcerik"></div>
     </div>
   </div>
 
@@ -108,6 +115,11 @@
             <label for="fizikselHali">Fiziksel Hali</label>
             <select id="fizikselHali"></select>
           </div>
+        </div>
+
+        <div>
+          <label>Kimyasal Özellikleri <span style="font-weight:400; color:var(--metin-soluk); font-size:12px;">(birden fazla seçilebilir, depolama matrisi buna göre hazırlanır)</span> <button type="button" class="tablo-buton" id="ozellikTahminBtn" style="margin-left:4px; padding:1px 8px; font-size:11px;">Öner</button></label>
+          <div id="kimyasalOzellikleri" style="display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:12px;"></div>
         </div>
 
         <div class="form-satir-ikili">
@@ -239,12 +251,12 @@
   <script src="../../core/rapor.js"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js"></script>
+  <script src="model.js?v=20261021c"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
-  <script src="service.js"></script>
+  <script src="service.js?v=20261021b"></script>
   <script src="sds-oku.js"></script>
-  <script src="ui.js"></script>
+  <script src="ui.js?v=20261021b"></script>
   <script src="cikti.js"></script>
   <script>
     const kullanici = girisGerekliModul('kimyasal');
