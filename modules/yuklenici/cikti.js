@@ -244,8 +244,103 @@ function _yukleniciTehlikeSinifiCoz(deger) {
   return bulunan ? bulunan[0] : 'az';
 }
 
+// Şablonda "Evet" yazılır ama elle doldururken "Var", "E", "X" de yazılabilir.
 function _yukleniciVarYokCoz(evetHayir) {
-  return String(evetHayir || '').trim().toLowerCase() === 'evet' ? 'Var' : 'Yok';
+  return ['evet', 'var', 'e', 'x', '1', 'var.'].includes(String(evetHayir || '').trim().toLocaleLowerCase('tr')) ? 'Var' : 'Yok';
+}
+
+// "Belgeleriyle Birlikte İçe Aktar" için boş şablon. Sütun başlıkları
+// YUKLENICI_DETAYLI_ICE_AKTAR_KOLONLARI ile birebir (içe aktarma "SGK (Var)"
+// başlığından bu formatı tanır). Eski uygulamadan kalan MYK Başlangıç/Bitiş
+// ve Firma Eğitimi Bitiş sütunları şablona konmaz (içe aktarma yine okur).
+const YUKLENICI_BELGELI_SABLON_KOLONLARI = [
+  { baslik: 'Firma', genislik: 30, liste: 'firma', aciklama: 'Firmalar sayfasındaki adla aynı yazın (listeden seçebilirsiniz). Sistemde olmayan firma yeni açılır.' },
+  { baslik: 'Personel', genislik: 26, aciklama: 'Ad Soyad. Aynı firmada aynı ad varsa yeni kayıt açılmaz, mevcut kayıt güncellenir.' },
+  { baslik: 'Tehlike Sınıfı', genislik: 15, liste: ['Az Tehlikeli', 'Tehlikeli', 'Çok Tehlikeli'], aciklama: 'Boş bırakılırsa firmanın tehlike sınıfı kullanılır.' },
+  { baslik: 'Personel Türü', genislik: 16, liste: ['Teknik Personel', 'Operatör'], aciklama: 'Operatör seçilirse Psikoteknik/SRC/Operatörlük/Ehliyet istenir.' },
+  { baslik: 'SGK (Var)', genislik: 11, liste: 'evet' },
+  { baslik: 'Adli Sicil (Var)', genislik: 11, liste: 'evet' },
+  { baslik: 'KKD Zimmet (Var)', genislik: 11, liste: 'evet' },
+  { baslik: 'Sağlık Başlangıç', genislik: 14, tarih: true, aciklama: 'Sağlık raporu tarihi (GG.AA.YYYY). Bitiş tehlike sınıfına göre otomatik hesaplanır.' },
+  { baslik: 'Temel İSG Başlangıç', genislik: 14, tarih: true, aciklama: 'Temel İSG eğitimi tarihi (GG.AA.YYYY). Bitiş otomatik hesaplanır.' },
+  { baslik: 'Geçici Görev Başlangıç', genislik: 14, tarih: true, aciklama: 'Geçici görevlendirme başlangıç tarihi.' },
+  { baslik: 'Geçici Görev Bitiş', genislik: 14, tarih: true, aciklama: 'Geçici görevlendirme bitiş tarihi.' },
+  { baslik: 'MYK (Var)', genislik: 11, liste: 'evet', aciklama: 'Diploma veya MYK belgesinden biri yeterlidir.' },
+  { baslik: 'Diploma (Var)', genislik: 11, liste: 'evet' },
+  { baslik: 'Yüksekte Çalışma (Var)', genislik: 12, liste: 'evet' },
+  { baslik: 'Psikoteknik (Var)', genislik: 12, liste: 'evet', aciklama: 'Sadece operatörler için.' },
+  { baslik: 'SRC (Var)', genislik: 11, liste: 'evet', aciklama: 'Sadece operatörler için.' },
+  { baslik: 'Operatörlük (Var)', genislik: 12, liste: 'evet', aciklama: 'Sadece operatörler için.' },
+  { baslik: 'Ehliyet (Var)', genislik: 11, liste: 'evet', aciklama: 'Sadece operatörler için.' },
+  { baslik: 'Firma Eğitimi Tarih', genislik: 14, tarih: true, aciklama: 'İsteğe bağlı.' },
+  { baslik: 'Firma Eğitimi Eğitmen', genislik: 20, aciklama: 'İsteğe bağlı.' },
+  { baslik: 'Pasif', genislik: 8, liste: 'evet', aciklama: 'Boş bırakılırsa değiştirilmez.' },
+  { baslik: 'İlk Giriş', genislik: 9, liste: 'evet', aciklama: 'Boş bırakılırsa değiştirilmez.' }
+];
+
+function yukleniciBelgeliSablonIndir() {
+  exceljsHazirOlduğunda(async () => {
+    try {
+      const kolonlar = YUKLENICI_BELGELI_SABLON_KOLONLARI;
+      const firmalar = yukleniciFirmalariTumunuGetir().map(f => f.firmaAdi).filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'tr'));
+      const SATIR = 500;
+      const harf = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+
+      const wb = new ExcelJS.Workbook();
+      // İçe aktarma ilk sayfayı okur — veri sayfası mutlaka ilk sırada.
+      const ws = wb.addWorksheet('Personel', { views: [{ state: 'frozen', ySplit: 1 }] });
+      const fs = wb.addWorksheet('Firmalar');
+      const as = wb.addWorksheet('Açıklama');
+
+      ws.columns = kolonlar.map(k => ({ header: k.baslik, width: k.genislik }));
+      const baslik = ws.getRow(1);
+      baslik.height = 30;
+      baslik.eachCell(c => {
+        c.font = { bold: true, color: { argb: 'FF1F2937' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB8B2A8' } };
+        c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        c.border = { bottom: { style: 'thin', color: { argb: 'FF6B7280' } } };
+      });
+
+      fs.columns = [{ header: 'Kayıtlı Firmalar', width: 40 }];
+      fs.getRow(1).font = { bold: true };
+      firmalar.forEach(ad => fs.addRow([ad]));
+
+      kolonlar.forEach((k, i) => {
+        if (k.aciklama) ws.getCell(1, i + 1).note = k.aciklama;
+        let dv = null;
+        if (k.liste === 'evet') dv = { type: 'list', allowBlank: true, formulae: ['"Evet,Hayır"'] };
+        else if (k.liste === 'firma' && firmalar.length) dv = { type: 'list', allowBlank: true, showErrorMessage: false, formulae: [`Firmalar!$A$2:$A$${firmalar.length + 1}`] };
+        else if (Array.isArray(k.liste)) dv = { type: 'list', allowBlank: true, formulae: [`"${k.liste.join(',')}"`] };
+        for (let r = 2; r <= SATIR; r++) {
+          const c = ws.getCell(`${harf(i)}${r}`);
+          if (dv) c.dataValidation = dv;
+          if (k.tarih) c.numFmt = 'dd.mm.yyyy';
+        }
+      });
+
+      as.columns = [{ header: 'Sütun', width: 26 }, { header: 'Nasıl doldurulur', width: 90 }];
+      as.getRow(1).font = { bold: true };
+      as.addRow(['Genel', 'Her satır bir personel. Belgesi olan sütunlara "Evet", olmayanlara "Hayır" yazın; boş bırakılan hücre mevcut bilgiyi değiştirmez.']);
+      as.addRow(['Tarihler', 'GG.AA.YYYY biçiminde yazın (ör. 15.03.2026).']);
+      as.addRow(['İçe aktarma', 'Personel Kayıtları > "Belgeleriyle Birlikte İçe Aktar" butonuyla bu dosyayı seçin.']);
+      kolonlar.forEach(k => as.addRow([k.baslik, k.aciklama || (k.liste === 'evet' ? 'Evet / Hayır' : '')]));
+      as.getColumn(2).alignment = { wrapText: true, vertical: 'top' };
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'yuklenici_belgeli_personel_sablonu.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    } catch (e) {
+      console.error(e);
+      alert('Şablon oluşturulamadı: ' + (e.message || e));
+    }
+  });
 }
 
 // Eski uygulamanın SADE "Tüm Kayıtları Excel'e Aktar" çıktısı (btnExportExcel,
@@ -422,7 +517,8 @@ function _yukleniciDetayliExcelIceAktarUygula(dosya, tamamlaninca) {
         firmaId: firma ? firma.id : '',
         firmaAdi: firma ? firma.firmaAdi : (s.firma || '').trim(),
         adSoyad: s.personel,
-        tehlikeSinifi: _yukleniciTehlikeSinifiCoz(s.tehlike),
+        // Boş bırakılmışsa firmanın tehlike sınıfı (o da yoksa Az Tehlikeli).
+        tehlikeSinifi: (s.tehlike || '').trim() ? _yukleniciTehlikeSinifiCoz(s.tehlike) : ((firma && firma.tehlikeSinifi) || 'az'),
         // Pasif/İlk Giriş sütunları dosyada varsa (Evet/Hayır) okunur; yoksa
         // undefined kalır ve yukleniciKisilerTopluEkle mevcut değeri korur.
         pasif: (s.pasif || '').trim() ? /evet/i.test(s.pasif) : undefined,

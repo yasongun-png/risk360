@@ -162,6 +162,7 @@ function yukleniciSayfasiniBaslat() {
   });
 
   document.getElementById('kisiDetayliIceAktarBtn').addEventListener('click', () => document.getElementById('kisiDetayliIceAktarDosya').click());
+  document.getElementById('kisiBelgeliSablonBtn').addEventListener('click', yukleniciBelgeliSablonIndir);
   document.getElementById('kisiDetayliIceAktarDosya').addEventListener('change', e => {
     yukleniciKayitlariniIceAktar(e.target.files[0], () => {
       e.target.value = '';
