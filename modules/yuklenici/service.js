@@ -828,6 +828,13 @@ function yukleniciKisiPasifDurumunuDegistir(id, pasif) {
   return { basarili: true };
 }
 
+function yukleniciAracPasifDurumunuDegistir(id, pasif) {
+  const arac = yukleniciAracIdIleGetirRepo(id);
+  if (!arac) return { basarili: false };
+  yukleniciAracGuncelleRepo(id, { pasif: !!pasif });
+  return { basarili: true };
+}
+
 // ---- Kayıtlar (Personel + Araç birleşik liste) ----
 // Eski uygulamadaki "Kayıtlar" sekmesinin karşılığı (bkz.
 // yuklenici-standalone.html satır 2273-2367) — iki farklı varlığı TEK

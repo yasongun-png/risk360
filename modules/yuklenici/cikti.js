@@ -506,196 +506,194 @@ function _yukleniciPdfHazirla() {
   return pdf;
 }
 
-function yukleniciPdfIndir() {
-  const kisiler = yukleniciKisileriTumunuGetir().filter(k => !k.pasif);
-  if (!kisiler.length) { alert('PDF için uygun veri bulunamadı.'); return; }
+// ---- İSG Onaylı Liste ortak parçaları ----
+// Personel, araç ve birleşik liste aynı başlık/tablo/altbilgi düzenini
+// kullanır. Altbilgi (sayfa no) en sonda tüm sayfalara birlikte basılır ki
+// birden fazla tablo olduğunda "Sayfa x / y" toplamı doğru çıksın.
 
-  const satirlar = kisiler
+const _YK_PDF_ALTBILGI_H = 12;
+
+function _ykSiraliPersonelSatirlari() {
+  return yukleniciKisileriTumunuGetir().filter(k => !k.pasif)
     .map(k => ({ kisi: k, sonuc: yukleniciGirebilecegiSonTarihHesapla(k, bugunIso()) }))
     .sort((a, b) => {
       const f = _yukleniciNormalizeText(a.kisi.firmaAdi).localeCompare(_yukleniciNormalizeText(b.kisi.firmaAdi));
       if (f !== 0) return f;
       return _yukleniciNormalizeText(a.kisi.adSoyad).localeCompare(_yukleniciNormalizeText(b.kisi.adSoyad));
     });
+}
 
+function _ykSiraliAracSatirlari() {
+  return yukleniciAraclariniGetir('').filter(a => !a.pasif)
+    .sort((a, b) => {
+      const f = _yukleniciNormalizeText(a.firmaAdi).localeCompare(_yukleniciNormalizeText(b.firmaAdi));
+      if (f !== 0) return f;
+      return _yukleniciNormalizeText(a.kimlik).localeCompare(_yukleniciNormalizeText(b.kimlik));
+    });
+}
+
+function _ykPdfBaslikYaz(pdf, baslik) {
+  const olusturmaTR = new Date().toLocaleString('tr-TR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  pdf.setFont('Roboto', 'normal');
+  pdf.setTextColor(0);
+  pdf.setFontSize(13);
+  pdf.text(baslik, 14, 12);
+  pdf.setFontSize(10);
+  pdf.text(`Oluşturma: ${olusturmaTR}`, 14, 18);
+}
+
+// Son sütun "tarih | durum" biçiminde; durum rengi renkSec(durum) ile.
+function _ykPdfTabloCiz(pdf, startY, head, body, columnStyles, renkSec) {
+  const sonSutun = head.length - 1;
+  pdf.autoTable({
+    startY,
+    head: [head],
+    body,
+    margin: { left: 14, right: 14, top: 22, bottom: _YK_PDF_ALTBILGI_H },
+    styles: { font: 'Roboto', fontStyle: 'normal', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: 20 },
+    // Açık füme başlık rengi kullanıcı isteğiyle eski uygulamanın lacivert
+    // (11,44,82) başlığından bilerek farklılaştırıldı.
+    headStyles: { font: 'Roboto', fontStyle: 'normal', fontSize: 9, fillColor: [184, 178, 168], textColor: [31, 41, 55] },
+    columnStyles,
+    didParseCell: data => {
+      if (data.section === 'body' && data.column.index === sonSutun) data.cell.text = [];
+    },
+    didDrawCell: data => {
+      if (data.section !== 'body' || data.column.index !== sonSutun) return;
+      const doc = data.doc;
+      const parts = String(data.row.raw[sonSutun] || '').split('|');
+      const x = data.cell.x + 2;
+      const y = data.cell.y + data.cell.height / 2 + 2;
+      doc.setTextColor(0, 0, 0);
+      doc.text(parts[0].trim(), x, y);
+      if (parts[1]) {
+        const durum = parts[1].trim();
+        doc.setTextColor(...renkSec(durum));
+        doc.text(durum, x + doc.getTextWidth(parts[0].trim()) + 4, y);
+      }
+      doc.setTextColor(0, 0, 0);
+    }
+  });
+  return pdf.lastAutoTable.finalY;
+}
+
+function _ykPersonelTablosuCiz(pdf, startY, satirlar) {
+  const body = satirlar.map(({ kisi, sonuc }) => ([
+    _yukleniciFirmaAdiNormallestir(kisi.firmaAdi),
+    _yukleniciTrTitleCase(kisi.adSoyad),
+    `${sonuc.sonTarih ? formatTarihGoster(sonuc.sonTarih) : '-'} | ${sonuc.durumMetni}`
+  ]));
+  return _ykPdfTabloCiz(pdf, startY, ['Firma', 'Personel', 'Girebileceği Son Tarih'], body,
+    { 0: { cellWidth: 62 }, 1: { cellWidth: 62 }, 2: { cellWidth: 58 } },
+    durum => {
+      if (durum.includes('Uygun')) return [22, 163, 74];
+      if (durum.includes('Eğitim Verilecek')) return [245, 158, 11];
+      if (durum.includes('Eksik')) return [220, 38, 38];
+      return [20, 20, 20];
+    });
+}
+
+// Araçta son tarih = PTM/ZMS/TÜVTÜRK bitişlerinden en erken olanı.
+function _ykAracTablosuCiz(pdf, startY, araclar) {
+  const body = araclar.map(a => {
+    const eksikler = [];
+    if (!a.ptmOk) eksikler.push('PTM');
+    if (!a.ruhsatOk) eksikler.push('Ruhsat');
+    if (!a.zmsOk) eksikler.push('ZMS');
+    if (!a.tuvOk) eksikler.push('TÜVTÜRK');
+    const tarihler = [a.ptmExp, a.zmsExp, a.tuvExp].filter(Boolean).sort();
+    const sonTarih = a.uygunMu && tarihler.length ? formatTarihGoster(tarihler[0]) : '-';
+    const durum = a.uygunMu ? 'Uygun' : 'Eksik: ' + eksikler.join(', ');
+    return [
+      _yukleniciFirmaAdiNormallestir(a.firmaAdi),
+      a.tur || '-',
+      String(a.kimlik || '').toLocaleUpperCase('tr-TR'),
+      `${sonTarih} | ${durum}`
+    ];
+  });
+  return _ykPdfTabloCiz(pdf, startY, ['Firma', 'Tür', 'Plaka / Seri No', 'Girebileceği Son Tarih'], body,
+    { 0: { cellWidth: 58 }, 1: { cellWidth: 20 }, 2: { cellWidth: 38 }, 3: { cellWidth: 66 } },
+    durum => durum === 'Uygun' ? [22, 163, 74] : [220, 38, 38]);
+}
+
+// İkinci tablonun ara başlığı; sayfanın dibine sıkışacaksa yeni sayfaya geçer.
+function _ykPdfAraBaslik(pdf, y, metin) {
+  const pageH = pdf.internal.pageSize.getHeight();
+  if (y + 30 > pageH - _YK_PDF_ALTBILGI_H) { pdf.addPage(); y = 14; }
+  pdf.setFont('Roboto', 'normal');
+  pdf.setFontSize(11);
+  pdf.setTextColor(0);
+  pdf.text(metin, 14, y + 2);
+  return y + 6;
+}
+
+function _ykPdfAltbilgileriYazVeKaydet(pdf, onEk) {
+  const footerText = '✓ Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.';
+  const pageCount = pdf.internal.getNumberOfPages();
+  const pageW = pdf.internal.pageSize.getWidth();
+  const y = pdf.internal.pageSize.getHeight() - 6;
+  for (let i = 1; i <= pageCount; i++) {
+    pdf.setPage(i);
+    pdf.setFont('Roboto', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 128, 0);
+    pdf.text(footerText, 14, y);
+    pdf.setTextColor(120);
+    const pText = `Sayfa ${i} / ${pageCount}`;
+    pdf.text(pText, pageW - 14 - pdf.getTextWidth(pText), y);
+    pdf.setTextColor(0);
+  }
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  pdf.save(`${onEk}_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.pdf`);
+}
+
+function yukleniciPdfIndir() {
+  const satirlar = _ykSiraliPersonelSatirlari();
+  if (!satirlar.length) { alert('PDF için uygun veri bulunamadı.'); return; }
   const pdf = _yukleniciPdfHazirla();
   if (!pdf) return;
-
   try {
-    const olusturmaTR = new Date().toLocaleString('tr-TR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-    pdf.setFont('Roboto', 'normal');
-    pdf.setTextColor(0);
-    pdf.setFontSize(13);
-    pdf.text('İSG ONAYLI YÜKLENİCİ PERSONEL LİSTESİ', 14, 12);
-    pdf.setFontSize(10);
-    pdf.text(`Oluşturma: ${olusturmaTR}`, 14, 18);
-
-    const footerText = '✓ Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.';
-    const FOOTER_H = 12;
-
-    const bodyRows = satirlar.map(({ kisi, sonuc }) => ([
-      _yukleniciFirmaAdiNormallestir(kisi.firmaAdi),
-      _yukleniciTrTitleCase(kisi.adSoyad),
-      `${sonuc.sonTarih ? formatTarihGoster(sonuc.sonTarih) : '-'} | ${sonuc.durumMetni}`
-    ]));
-
-    pdf.autoTable({
-      startY: 22,
-      head: [['Firma', 'Personel', 'Girebileceği Son Tarih']],
-      body: bodyRows,
-      margin: { left: 14, right: 14, top: 22, bottom: FOOTER_H },
-      styles: { font: 'Roboto', fontStyle: 'normal', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: 20 },
-      // Açık füme başlık rengi kullanıcı isteğiyle eski uygulamanın lacivert
-      // (11,44,82) başlığından bilerek farklılaştırıldı.
-      headStyles: { font: 'Roboto', fontStyle: 'normal', fontSize: 9, fillColor: [184, 178, 168], textColor: [31, 41, 55] },
-      columnStyles: { 0: { cellWidth: 62 }, 1: { cellWidth: 62 }, 2: { cellWidth: 58 } },
-      didParseCell: data => {
-        if (data.section === 'body' && data.column.index === 2) data.cell.text = [];
-      },
-      didDrawCell: data => {
-        if (data.section !== 'body' || data.column.index !== 2) return;
-        const doc = data.doc;
-        const parts = String(data.row.raw[2] || '').split('|');
-        const x = data.cell.x + 2;
-        const y = data.cell.y + data.cell.height / 2 + 2;
-
-        doc.setTextColor(0, 0, 0);
-        doc.text(parts[0].trim(), x, y);
-
-        if (parts[1]) {
-          const durum = parts[1].trim();
-          const offset = doc.getTextWidth(parts[0].trim()) + 4;
-          if (durum.includes('Uygun')) doc.setTextColor(22, 163, 74);
-          else if (durum.includes('Eğitim Verilecek')) doc.setTextColor(245, 158, 11);
-          else if (durum.includes('Eksik')) doc.setTextColor(220, 38, 38);
-          else doc.setTextColor(20, 20, 20);
-          doc.text(durum, x + offset, y);
-        }
-        doc.setTextColor(0, 0, 0);
-      },
-      didDrawPage: () => {
-        const pageCount = pdf.internal.getNumberOfPages();
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const pageNo = pdf.internal.getCurrentPageInfo().pageNumber;
-        const y = pageH - 6;
-
-        pdf.setFont('Roboto', 'normal');
-        pdf.setFontSize(9);
-        pdf.setTextColor(0, 128, 0);
-        pdf.text(footerText, 14, y);
-
-        pdf.setTextColor(120);
-        const pText = `Sayfa ${pageNo} / ${pageCount}`;
-        pdf.text(pText, pageW - 14 - pdf.getTextWidth(pText), y);
-        pdf.setTextColor(0);
-      }
-    });
-
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const dosyaAdi = `isgonaylitaseronlistesi_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.pdf`;
-    pdf.save(dosyaAdi);
+    _ykPdfBaslikYaz(pdf, 'İSG ONAYLI YÜKLENİCİ PERSONEL LİSTESİ');
+    _ykPersonelTablosuCiz(pdf, 22, satirlar);
+    _ykPdfAltbilgileriYazVeKaydet(pdf, 'isgonaylitaseronlistesi');
   } catch (e) {
     console.error(e);
     alert('PDF indirilemedi: ' + (e.message || e));
   }
 }
 
-// Personel "İSG Onaylı Liste"sinin araç/ekipman karşılığı: aktif araçlar,
-// firma + plaka sırasıyla; son tarih = PTM/ZMS/TÜVTÜRK bitişlerinden en
-// erken olanı, durum = Uygun ya da eksik/süresi geçmiş belgeler.
 function yukleniciAracPdfIndir() {
-  const araclar = yukleniciAraclariniGetir('').filter(a => !a.pasif);
+  const araclar = _ykSiraliAracSatirlari();
   if (!araclar.length) { alert('PDF için uygun araç / ekipman kaydı bulunamadı.'); return; }
-
-  const satirlar = araclar.sort((a, b) => {
-    const f = _yukleniciNormalizeText(a.firmaAdi).localeCompare(_yukleniciNormalizeText(b.firmaAdi));
-    if (f !== 0) return f;
-    return _yukleniciNormalizeText(a.kimlik).localeCompare(_yukleniciNormalizeText(b.kimlik));
-  });
-
   const pdf = _yukleniciPdfHazirla();
   if (!pdf) return;
-
   try {
-    const olusturmaTR = new Date().toLocaleString('tr-TR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-    pdf.setFont('Roboto', 'normal');
-    pdf.setTextColor(0);
-    pdf.setFontSize(13);
-    pdf.text('İSG ONAYLI YÜKLENİCİ ARAÇ / EKİPMAN LİSTESİ', 14, 12);
-    pdf.setFontSize(10);
-    pdf.text(`Oluşturma: ${olusturmaTR}`, 14, 18);
+    _ykPdfBaslikYaz(pdf, 'İSG ONAYLI YÜKLENİCİ ARAÇ / EKİPMAN LİSTESİ');
+    _ykAracTablosuCiz(pdf, 22, araclar);
+    _ykPdfAltbilgileriYazVeKaydet(pdf, 'isgonayliaraclistesi');
+  } catch (e) {
+    console.error(e);
+    alert('PDF indirilemedi: ' + (e.message || e));
+  }
+}
 
-    const footerText = '✓ Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.';
-    const FOOTER_H = 12;
-
-    const bodyRows = satirlar.map(a => {
-      const eksikler = [];
-      if (!a.ptmOk) eksikler.push('PTM');
-      if (!a.ruhsatOk) eksikler.push('Ruhsat');
-      if (!a.zmsOk) eksikler.push('ZMS');
-      if (!a.tuvOk) eksikler.push('TÜVTÜRK');
-      const tarihler = [a.ptmExp, a.zmsExp, a.tuvExp].filter(Boolean).sort();
-      const sonTarih = a.uygunMu && tarihler.length ? formatTarihGoster(tarihler[0]) : '-';
-      const durum = a.uygunMu ? 'Uygun' : 'Eksik: ' + eksikler.join(', ');
-      return [
-        _yukleniciFirmaAdiNormallestir(a.firmaAdi),
-        a.tur || '-',
-        String(a.kimlik || '').toLocaleUpperCase('tr-TR'),
-        `${sonTarih} | ${durum}`
-      ];
-    });
-
-    pdf.autoTable({
-      startY: 22,
-      head: [['Firma', 'Tür', 'Plaka / Seri No', 'Girebileceği Son Tarih']],
-      body: bodyRows,
-      margin: { left: 14, right: 14, top: 22, bottom: FOOTER_H },
-      styles: { font: 'Roboto', fontStyle: 'normal', fontSize: 9, cellPadding: 2, overflow: 'linebreak', textColor: 20 },
-      headStyles: { font: 'Roboto', fontStyle: 'normal', fontSize: 9, fillColor: [184, 178, 168], textColor: [31, 41, 55] },
-      columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: 20 }, 2: { cellWidth: 38 }, 3: { cellWidth: 66 } },
-      didParseCell: data => {
-        if (data.section === 'body' && data.column.index === 3) data.cell.text = [];
-      },
-      didDrawCell: data => {
-        if (data.section !== 'body' || data.column.index !== 3) return;
-        const doc = data.doc;
-        const parts = String(data.row.raw[3] || '').split('|');
-        const x = data.cell.x + 2;
-        const y = data.cell.y + data.cell.height / 2 + 2;
-        doc.setTextColor(0, 0, 0);
-        doc.text(parts[0].trim(), x, y);
-        if (parts[1]) {
-          const durum = parts[1].trim();
-          const offset = doc.getTextWidth(parts[0].trim()) + 4;
-          if (durum === 'Uygun') doc.setTextColor(22, 163, 74);
-          else doc.setTextColor(220, 38, 38);
-          doc.text(durum, x + offset, y);
-        }
-        doc.setTextColor(0, 0, 0);
-      },
-      didDrawPage: () => {
-        const pageCount = pdf.internal.getNumberOfPages();
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const pageNo = pdf.internal.getCurrentPageInfo().pageNumber;
-        const y = pageH - 6;
-        pdf.setFont('Roboto', 'normal');
-        pdf.setFontSize(9);
-        pdf.setTextColor(0, 128, 0);
-        pdf.text(footerText, 14, y);
-        pdf.setTextColor(120);
-        const pText = `Sayfa ${pageNo} / ${pageCount}`;
-        pdf.text(pText, pageW - 14 - pdf.getTextWidth(pText), y);
-        pdf.setTextColor(0);
-      }
-    });
-
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    pdf.save(`isgonayliaraclistesi_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.pdf`);
+// Personel + araç/ekipman tek PDF'te (Dashboard butonu).
+function yukleniciBirlesikPdfIndir() {
+  const satirlar = _ykSiraliPersonelSatirlari();
+  const araclar = _ykSiraliAracSatirlari();
+  if (!satirlar.length && !araclar.length) { alert('PDF için uygun personel veya araç / ekipman kaydı bulunamadı.'); return; }
+  const pdf = _yukleniciPdfHazirla();
+  if (!pdf) return;
+  try {
+    _ykPdfBaslikYaz(pdf, 'İSG ONAYLI YÜKLENİCİ PERSONEL VE ARAÇ / EKİPMAN LİSTESİ');
+    let y = _ykPdfAraBaslik(pdf, 24, `Personel (${satirlar.length})`);
+    if (satirlar.length) y = _ykPersonelTablosuCiz(pdf, y, satirlar);
+    else { pdf.setFontSize(9); pdf.text('Aktif personel kaydı yok.', 14, y + 3); y += 6; }
+    y = _ykPdfAraBaslik(pdf, y + 8, `Araç / Ekipman (${araclar.length})`);
+    if (araclar.length) _ykAracTablosuCiz(pdf, y, araclar);
+    else { pdf.setFontSize(9); pdf.text('Aktif araç / ekipman kaydı yok.', 14, y + 3); }
+    _ykPdfAltbilgileriYazVeKaydet(pdf, 'isgonaylipersonelaraclistesi');
   } catch (e) {
     console.error(e);
     alert('PDF indirilemedi: ' + (e.message || e));

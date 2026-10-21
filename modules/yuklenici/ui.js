@@ -229,6 +229,7 @@ function yukleniciSayfasiniBaslat() {
   });
   document.getElementById('kayitPdfBtn').addEventListener('click', yukleniciPdfIndir);
   document.getElementById('aracPdfBtn').addEventListener('click', yukleniciAracPdfIndir);
+  document.getElementById('dashOnayliListeBtn').addEventListener('click', yukleniciBirlesikPdfIndir);
 
   document.getElementById('detayliAramaKutusu').addEventListener('input', detayliAramaCiz);
   document.getElementById('detayliBelgeFiltre').addEventListener('change', detayliAramaCiz);
@@ -1352,6 +1353,7 @@ function araclariCiz(aramaMetni) {
       <td>${a.uygunMu ? '<span class="genel-rozet rozet-uygun">Uygun</span>' : '<span class="genel-rozet rozet-uygun-degil">Uygun Değil</span>'}</td>
       <td>${_ykKayitTarihiGoster(a.olusturmaTarihi)}</td>
       <td>
+        <button class="tablo-buton" data-arac-pasif="${a.id}" data-yeni-pasif="${a.pasif ? 'false' : 'true'}">${a.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>
         <button class="tablo-buton" data-duzenle="${a.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${a.id}">Sil</button>
       </td>
@@ -1359,6 +1361,10 @@ function araclariCiz(aramaMetni) {
     govde.appendChild(satir);
   });
 
+  govde.querySelectorAll('[data-arac-pasif]').forEach(btn => btn.addEventListener('click', () => {
+    yukleniciAracPasifDurumunuDegistir(btn.getAttribute('data-arac-pasif'), btn.getAttribute('data-yeni-pasif') === 'true');
+    araclariCiz(document.getElementById('aracAramaKutusu').value);
+  }));
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => aracModalAc(yukleniciAracIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu araç/ekipman kaydını silmek istediğinize emin misiniz?', 'Sil')) { yukleniciAracSil(btn.getAttribute('data-sil')); araclariCiz(document.getElementById('aracAramaKutusu').value); }
@@ -1528,7 +1534,7 @@ function kayitlariCiz(aramaMetni) {
       <td>${_ykKacir(r.egitmen)}</td>
       <td>
         <span class="genel-rozet ${r.pasif ? 'rozet-pasif' : 'rozet-uygun'}" style="font-size:10px;">${r.pasif ? 'Pasif' : 'Aktif'}</span>
-        ${r.kind === 'personel' ? `<button class="tablo-buton" data-pasif-degistir2="${r.id}" data-yeni-pasif="${r.pasif ? 'false' : 'true'}">${r.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>` : ''}
+        <button class="tablo-buton" data-pasif-degistir2="${r.id}" data-kind="${r.kind}" data-yeni-pasif="${r.pasif ? 'false' : 'true'}">${r.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>
         <button class="tablo-buton" data-duzenle-kayit="${r.id}" data-kind="${r.kind}">Düzenle</button>
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-mail-eksik="${r.id}" title="Bu kişinin eksiklerini mail metni olarak ver">Mail</button>` : ''}
         <button class="tablo-buton sil" data-sil-kayit="${r.id}" data-kind="${r.kind}">Sil</button>
@@ -1539,7 +1545,8 @@ function kayitlariCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-pasif-degistir2]').forEach(btn => {
     btn.addEventListener('click', () => {
-      yukleniciKisiPasifDurumunuDegistir(btn.getAttribute('data-pasif-degistir2'), btn.getAttribute('data-yeni-pasif') === 'true');
+      const degistir = btn.getAttribute('data-kind') === 'personel' ? yukleniciKisiPasifDurumunuDegistir : yukleniciAracPasifDurumunuDegistir;
+      degistir(btn.getAttribute('data-pasif-degistir2'), btn.getAttribute('data-yeni-pasif') === 'true');
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
     });
   });
