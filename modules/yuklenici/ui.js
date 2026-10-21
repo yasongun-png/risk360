@@ -228,6 +228,7 @@ function yukleniciSayfasiniBaslat() {
     yukleniciKayitlariniIceAktar(e.target.files[0], () => { e.target.value = ''; });
   });
   document.getElementById('kayitPdfBtn').addEventListener('click', yukleniciPdfIndir);
+  document.getElementById('aracPdfBtn').addEventListener('click', yukleniciAracPdfIndir);
 
   document.getElementById('detayliAramaKutusu').addEventListener('input', detayliAramaCiz);
   document.getElementById('detayliBelgeFiltre').addEventListener('change', detayliAramaCiz);
