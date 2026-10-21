@@ -48,8 +48,12 @@ function excelDisaAktar(liste, kolonlar, dosyaAdi) {
   });
 }
 
+// Alt simge rakamlar (₀-₉) normal rakama çevrilir: aksi halde "Olasılık (O₂)"
+// başlığı "Olasılık (O)" ile aynı anahtara düşüp risk şablonunda ilk puanın
+// üzerine önlem sonrası puanı yazıyordu.
 function _basligiNormallestir(metin) {
-  const harfEslesme = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', İ: 'i' };
+  const harfEslesme = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', İ: 'i',
+    '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
   return String(metin ?? '')
     .trim()
     .toLowerCase()
