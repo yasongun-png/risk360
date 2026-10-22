@@ -93,7 +93,12 @@ function riskSayfasiniBaslat() {
   document.getElementById('modalKapatBtn').addEventListener('click', modalKapat);
   document.getElementById('modalIptalBtn').addEventListener('click', modalKapat);
   document.getElementById('riskForm').addEventListener('submit', formGonderildi);
-  document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
+  // Yazarken her harfte değil, yazma durunca (250 ms) aranır.
+  let _riskAramaZamanlayici = null;
+  document.getElementById('aramaKutusu').addEventListener('input', e => {
+    clearTimeout(_riskAramaZamanlayici);
+    _riskAramaZamanlayici = setTimeout(() => kayitlariCiz(e.target.value), 250);
+  });
   document.getElementById('bolumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('bolumYeniBtn').addEventListener('click', async () => {
     const ad = await metinIstemModali('Yeni bölüm adı:', '', '');
@@ -583,28 +588,17 @@ function _riskSiralamaHazirla() {
   });
 }
 
-function kayitlariCiz(aramaMetni) {
-  const govde = document.getElementById('tabloGovde');
-  const bosDurum = document.getElementById('bosDurum');
-  const bolum = document.getElementById('bolumFiltre').value;
-  const siralama = riskSiralamaDegeri();
-  const riskler = riskSiralamaUygula(riskleriGetir(aramaMetni, { bolum }), siralama);
-  document.getElementById('riskNoOk').textContent = siralama === 'noArtan' ? '▲' : (siralama === 'noAzalan' ? '▼' : '');
+// Kullanıcı raporu (2026-10-22): "Sayfa Yanıt Vermiyor" -- Tüm Bölümler'de
+// 2600 uzun metinli risk tek seferde çizilince sayfa ~7 sn donuyordu (ve
+// aramada her harfte tekrarlıyordu). Liste artık 100'er satır gösterilir
+// ("Daha fazla göster"), HTML tek seferde basılır, butonlar tek bir dinleyiciyle
+// (olay delegasyonu) yakalanır, arama yazarken kısa bir bekleme vardır.
+const _RISK_SAYFA_BOYUTU = 100;
+let _riskGosterilenSayi = _RISK_SAYFA_BOYUTU;
+let _riskTabloDinleyiciKuruldu = false;
 
-  govde.innerHTML = '';
-
-  if (riskler.length === 0) {
-    bosDurum.classList.add('gorunur');
-    bosDurum.textContent = aramaMetni || bolum
-      ? 'Filtrenizle eşleşen risk kaydı bulunamadı.'
-      : 'Henüz risk kaydı eklenmedi. "+ Yeni Risk" ile başlayın.';
-    return;
-  }
-  bosDurum.classList.remove('gorunur');
-
-  riskler.forEach(r => {
-    const satir = document.createElement('tr');
-    satir.innerHTML = `
+function _riskSatirHtml(r) {
+  return `<tr>
       <td><input type="checkbox" data-sec data-id="${r.id}"></td>
       <td>${_riskKacir(r.riskNo)}</td>
       <td>${_riskKacir(r.yontem)}</td>
@@ -628,38 +622,76 @@ function kayitlariCiz(aramaMetni) {
         <button class="tablo-buton" data-sablon-yap="${r.id}" title="Bu kaydı hazır şablon olarak kaydet">⭐ Şablon Yap</button>
         <button class="tablo-buton sil" data-sil="${r.id}">Sil</button>
       </td>
-    `;
-    govde.appendChild(satir);
-  });
-  fotoReferanslariCoz(govde);
+    </tr>`;
+}
 
-  govde.querySelectorAll('[data-duzenle]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const r = riskIdIleGetirRepo(btn.getAttribute('data-duzenle'));
+function _riskTabloDinleyicisiniKur() {
+  if (_riskTabloDinleyiciKuruldu) return;
+  _riskTabloDinleyiciKuruldu = true;
+  document.getElementById('tabloGovde').addEventListener('click', async e => {
+    const duzenle = e.target.closest('[data-duzenle]');
+    if (duzenle) {
+      const r = riskIdIleGetirRepo(duzenle.getAttribute('data-duzenle'));
       if (r) modalAc(r);
-    });
-  });
-
-  govde.querySelectorAll('[data-sablon-yap]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-sablon-yap');
+      return;
+    }
+    const sablon = e.target.closest('[data-sablon-yap]');
+    if (sablon) {
       if (!(await onayModali('Bu risk kaydı (tehlike/risk/önlem metinleri) hazır şablon olarak kaydedilsin mi? Bu şablonu daha sonra bu veya başka bir firmada yeniden kullanabilirsiniz.', 'Kaydet'))) return;
-      const sonuc = riskSablonKaydetKayittan(id);
+      const sonuc = riskSablonKaydetKayittan(sablon.getAttribute('data-sablon-yap'));
       if (!sonuc.basarili) { alert(sonuc.hata); return; }
       alert('Şablon kaydedildi. "Hazır Şablonlar" listesinde "Kendi Şablonum" olarak görünecek.');
-    });
-  });
-
-  govde.querySelectorAll('[data-sil]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-sil');
+      return;
+    }
+    const sil = e.target.closest('[data-sil]');
+    if (sil) {
       if (await onayModali('Bu risk kaydını silmek istediğinize emin misiniz?', 'Sil')) {
-        riskSil(id);
+        riskSil(sil.getAttribute('data-sil'));
         _bolumFiltreDoldur();
-        kayitlariCiz(document.getElementById('aramaKutusu').value);
+        kayitlariCiz(document.getElementById('aramaKutusu').value, true);
       }
-    });
+    }
   });
+}
+
+// devamMi=true: aynı filtrede kalınıyor (ör. silme, "daha fazla göster");
+// gösterilen satır sayısı korunur. Aksi halde ilk 100 satıra döner.
+function kayitlariCiz(aramaMetni, devamMi) {
+  _riskTabloDinleyicisiniKur();
+  if (!devamMi) _riskGosterilenSayi = _RISK_SAYFA_BOYUTU;
+  const govde = document.getElementById('tabloGovde');
+  const bosDurum = document.getElementById('bosDurum');
+  const dahaFazla = document.getElementById('riskDahaFazla');
+  const bolum = document.getElementById('bolumFiltre').value;
+  const siralama = riskSiralamaDegeri();
+  const riskler = riskSiralamaUygula(riskleriGetir(aramaMetni, { bolum }), siralama);
+  document.getElementById('riskNoOk').textContent = siralama === 'noArtan' ? '▲' : (siralama === 'noAzalan' ? '▼' : '');
+  document.getElementById('tumunuSecCheckbox').checked = false;
+
+  if (riskler.length === 0) {
+    govde.innerHTML = '';
+    dahaFazla.style.display = 'none';
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = aramaMetni || bolum
+      ? 'Filtrenizle eşleşen risk kaydı bulunamadı.'
+      : 'Henüz risk kaydı eklenmedi. "+ Yeni Risk" ile başlayın.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  const gosterilecek = riskler.slice(0, _riskGosterilenSayi);
+  govde.innerHTML = gosterilecek.map(_riskSatirHtml).join('');
+  fotoReferanslariCoz(govde);
+
+  const kalan = riskler.length - gosterilecek.length;
+  dahaFazla.style.display = '';
+  dahaFazla.innerHTML = `<span>${riskler.length} riskten ${gosterilecek.length} tanesi gösteriliyor.</span>` +
+    (kalan > 0 ? ` <button type="button" class="ikincil" data-daha style="width:auto;">+${Math.min(_RISK_SAYFA_BOYUTU, kalan)} daha göster</button>
+       <button type="button" class="ikincil" data-tumu style="width:auto;" title="Çok sayıda risk varsa sayfa birkaç saniye yavaşlayabilir">Tümünü göster (${riskler.length})</button>` : '');
+  const daha = dahaFazla.querySelector('[data-daha]');
+  if (daha) daha.onclick = () => { _riskGosterilenSayi += _RISK_SAYFA_BOYUTU; kayitlariCiz(document.getElementById('aramaKutusu').value, true); };
+  const tumu = dahaFazla.querySelector('[data-tumu]');
+  if (tumu) tumu.onclick = () => { _riskGosterilenSayi = Infinity; kayitlariCiz(document.getElementById('aramaKutusu').value, true); };
 }
 
 function ozetiCiz() {
@@ -904,5 +936,6 @@ function formGonderildi(e) {
   _bekleyenHaritaKonum = null;
   modalKapat();
   _bolumFiltreDoldur();
-  kayitlariCiz(document.getElementById('aramaKutusu').value);
+  // Düzenleme sonrası liste aynı yerde kalsın (gösterilen satır sayısı korunur).
+  kayitlariCiz(document.getElementById('aramaKutusu').value, true);
 }
