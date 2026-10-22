@@ -269,16 +269,15 @@ function riskSayfasiniBaslat() {
   document.getElementById('wordRaporBtn').addEventListener('click', () => hazirlayanModalAc('word'));
   document.getElementById('excelRaporBtn').addEventListener('click', () => hazirlayanModalAc('excel'));
   document.getElementById('hazirlayanModalKapatBtn').addEventListener('click', hazirlayanModalKapat);
-  document.getElementById('hazirlayanPersonelSec').addEventListener('change', () => {
-    if (document.getElementById('hazirlayanPersonelSec').value) document.getElementById('hazirlayanManuel').value = '';
-  });
-  document.getElementById('hazirlayanManuel').addEventListener('input', () => {
-    if (document.getElementById('hazirlayanManuel').value.trim()) document.getElementById('hazirlayanPersonelSec').value = '';
+  document.getElementById('riskEkibiUyeEkleBtn').addEventListener('click', () => {
+    document.getElementById('riskEkibiGovde').insertAdjacentHTML('beforeend', _riskEkibiSatiriHtml({}));
+    const yeni = document.querySelector('#riskEkibiGovde tr:last-child [data-ekip-sil]');
+    yeni.addEventListener('click', () => yeni.closest('tr').remove());
   });
   document.getElementById('hazirlayanOnaylaBtn').addEventListener('click', async () => {
-    const secilenPersonel = document.getElementById('hazirlayanPersonelSec').value;
-    const manuel = document.getElementById('hazirlayanManuel').value.trim();
-    const hazirlayanAdi = manuel || secilenPersonel;
+    // hazirlayanAdi artık ekip listesidir (dizi): [{ gorev, adSoyad, belgeNo }].
+    const hazirlayanAdi = _riskEkibiFormdanOku();
+    riskEkibiKaydet(hazirlayanAdi);
     const dugme = document.getElementById('hazirlayanOnaylaBtn');
     const eskiMetin = dugme.textContent;
     dugme.disabled = true;
@@ -346,13 +345,50 @@ function riskSayfasiniBaslat() {
 // handler'ındaki dallanma).
 let _hazirlayanFormat = 'pdf';
 
+// Risk Değerlendirmesi Yönetmeliği md. 6'daki ekip bileşimi -- ekip hiç
+// girilmemişse bu satırlarla başlar.
+const RISK_EKIBI_GOREVLERI = [
+  'İşveren / İşveren Vekili', 'İş Güvenliği Uzmanı', 'İşyeri Hekimi', 'Çalışan Temsilcisi',
+  'Destek Elemanı', 'Bilgi Sahibi Çalışan'
+];
+
+function _riskEkibiSatiriHtml(uye) {
+  return `<tr>
+    <td><input type="text" data-ekip="gorev" list="riskEkibiGorevListesi" value="${_riskKacir(uye.gorev || '')}" style="margin:0;"></td>
+    <td><input type="text" data-ekip="adSoyad" list="riskEkibiPersonelListesi" value="${_riskKacir(uye.adSoyad || '')}" placeholder="Ad Soyad" style="margin:0;"></td>
+    <td><input type="text" data-ekip="belgeNo" value="${_riskKacir(uye.belgeNo || '')}" style="margin:0;"></td>
+    <td><button type="button" class="tablo-buton sil" data-ekip-sil title="Satırı kaldır">✕</button></td>
+  </tr>`;
+}
+
+function _riskEkibiCiz(uyeler) {
+  const govde = document.getElementById('riskEkibiGovde');
+  govde.innerHTML = uyeler.map(_riskEkibiSatiriHtml).join('');
+  govde.querySelectorAll('[data-ekip-sil]').forEach(b => b.addEventListener('click', () => b.closest('tr').remove()));
+}
+
+function _riskEkibiFormdanOku() {
+  return Array.from(document.querySelectorAll('#riskEkibiGovde tr')).map(tr => ({
+    gorev: tr.querySelector('[data-ekip="gorev"]').value.trim(),
+    adSoyad: tr.querySelector('[data-ekip="adSoyad"]').value.trim(),
+    belgeNo: tr.querySelector('[data-ekip="belgeNo"]').value.trim()
+  })).filter(u => u.gorev || u.adSoyad);
+}
+
 function hazirlayanModalAc(format) {
   _hazirlayanFormat = format || 'pdf';
-  const secim = document.getElementById('hazirlayanPersonelSec');
+  document.getElementById('hazirlayanBaslik').textContent = `${{ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF'} Raporu — Risk Değerlendirme Ekibi`;
+  document.getElementById('hazirlayanOnaylaBtn').textContent = `${{ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF'} Oluştur`;
   const personeller = personelleriGetir('', false);
-  secim.innerHTML = '<option value="">— Seçiniz —</option>' +
-    personeller.map(p => `<option value="${p.adSoyad}">${p.adSoyad}</option>`).join('');
-  document.getElementById('hazirlayanManuel').value = '';
+  document.getElementById('riskEkibiPersonelListesi').innerHTML = personeller.map(p => `<option value="${_riskKacir(p.adSoyad)}">`).join('');
+  if (!document.getElementById('riskEkibiGorevListesi')) {
+    const dl = document.createElement('datalist');
+    dl.id = 'riskEkibiGorevListesi';
+    dl.innerHTML = RISK_EKIBI_GOREVLERI.map(g => `<option value="${g}">`).join('');
+    document.body.appendChild(dl);
+  }
+  const kayitli = riskEkibiGetir();
+  _riskEkibiCiz(kayitli.length ? kayitli : RISK_EKIBI_GOREVLERI.map(gorev => ({ gorev })));
   document.getElementById('hazirlayanModalKatman').classList.add('acik');
 }
 

@@ -259,17 +259,20 @@
   </div>
 
   <div class="modal-katman" id="hazirlayanModalKatman">
-    <div class="modal-kutu" style="max-width:460px;">
-      <h3>PDF Raporu — Hazırlayan</h3>
+    <div class="modal-kutu" style="max-width:760px;">
+      <h3 id="hazirlayanBaslik">Rapor — Risk Değerlendirme Ekibi</h3>
       <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;">
-        Raporu hazırlayan kişi her sayfanın altında ve son sayfadaki imza bölümünde görünecektir.
+        Ekip raporun sonunda imza tablosu olarak yer alır ve bu firma için kaydedilir; bir sonraki raporda yeniden girmeniz gerekmez.
+        Boş bırakılan satırlar rapora boş imza satırı olarak basılır, istemediğiniz satırı ✕ ile silin.
       </p>
-
-      <label for="hazirlayanPersonelSec">Personel Listesinden Seç</label>
-      <select id="hazirlayanPersonelSec"></select>
-
-      <label for="hazirlayanManuel">veya Manuel Gir</label>
-      <input type="text" id="hazirlayanManuel" placeholder="Ad Soyad">
+      <datalist id="riskEkibiPersonelListesi"></datalist>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th style="width:34%;">Görevi</th><th>Adı Soyadı</th><th style="width:20%;">Belge No / Unvan</th><th style="width:40px;"></th></tr></thead>
+          <tbody id="riskEkibiGovde"></tbody>
+        </table>
+      </div>
+      <button type="button" class="ikincil" id="riskEkibiUyeEkleBtn" style="width:auto; margin-top:8px;">+ Üye Ekle</button>
 
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="hazirlayanModalKapatBtn">İptal</button>
@@ -315,11 +318,11 @@
   <script src="../personel/service.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
-  <script src="repository.js"></script>
+  <script src="repository.js?v=20261022c"></script>
   <script src="sablon-repository.js"></script>
   <script src="service.js?v=20261022"></script>
-  <script src="cikti.js?v=20261022b"></script>
-  <script src="ui.js?v=20261022b"></script>
+  <script src="cikti.js?v=20261022c"></script>
+  <script src="ui.js?v=20261022c"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 

@@ -141,6 +141,16 @@ function _riskYontemBolumuHtml(riskler) {
   return fineKinneyHtml + hiraHtml;
 }
 
+// Raporların imza bölümü: risk değerlendirme ekibi ([{gorev, adSoyad,
+// belgeNo}]). Eski çağrılar için tek bir hazırlayan adı (metin) da kabul
+// edilir; hiçbir şey verilmezse yönetmelikteki görevlerle boş satırlar basılır.
+function _riskEkipListesi(ekip) {
+  if (Array.isArray(ekip) && ekip.length) return ekip;
+  if (typeof ekip === 'string' && ekip.trim()) return [{ gorev: 'Hazırlayan', adSoyad: ekip.trim(), belgeNo: '' }];
+  const gorevler = typeof RISK_EKIBI_GOREVLERI !== 'undefined' ? RISK_EKIBI_GOREVLERI : ['İşveren / İşveren Vekili', 'İş Güvenliği Uzmanı', 'İşyeri Hekimi', 'Çalışan Temsilcisi', 'Destek Elemanı', 'Bilgi Sahibi Çalışan'];
+  return gorevler.map(gorev => ({ gorev, adSoyad: '', belgeNo: '' }));
+}
+
 function _riskFotoHucre(url) {
   return url ? `<img class="rsk-foto-thumb" src="${url}">` : '<div class="rsk-foto-bos"></div>';
 }
@@ -288,11 +298,16 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
   const parcalar = [];
   for (let i = 0; i < riskler.length; i += _RSK_PDF_SATIR_PARCA) parcalar.push(riskler.slice(i, i + _RSK_PDF_SATIR_PARCA));
 
+  const ekip = _riskEkipListesi(hazirlayanAdi);
   const imzaHtml = `
-    <div class="rsk-imza">
-      <div><b>Hazırlayan:</b> ${_riskCiktiKacir(hazirlayanAdi) || '_____________________'}</div>
-      <div><b>İmza:</b> _____________________</div>
-      <div><b>Tarih:</b> ${bugun}</div>
+    <div class="rsk-imza" style="display:block;">
+      <div style="font-size:11pt; font-weight:700; margin-bottom:2mm;">RİSK DEĞERLENDİRME EKİBİ</div>
+      <table class="rsk-tablo" style="width:100%;">
+        <colgroup><col style="width:24%"><col style="width:30%"><col style="width:18%"><col style="width:28%"></colgroup>
+        <thead><tr><th>Görevi</th><th>Adı Soyadı</th><th>Belge No / Unvan</th><th>İmza</th></tr></thead>
+        <tbody>${ekip.map(u => `<tr style="height:11mm;"><td>${_riskCiktiKacir(u.gorev)}</td><td>${_riskCiktiKacir(u.adSoyad)}</td><td>${_riskCiktiKacir(u.belgeNo)}</td><td></td></tr>`).join('')}</tbody>
+      </table>
+      <div style="margin-top:2mm; font-size:9pt;"><b>Tarih:</b> ${bugun}</div>
     </div>`;
 
   const gruplar = [
@@ -555,12 +570,17 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
     kisaltmaSatiri,
     _riskWordListesiTablosu(riskler, !!filtreler.bolum),
     new docx.Paragraph({ text: '', spacing: { after: 300 } }),
-    new docx.Paragraph({ children: [
-      new docx.TextRun({ text: 'Hazırlayan: ', bold: true, size: _RSK_WORD_METIN_BOYUT }),
-      new docx.TextRun({ text: (hazirlayanAdi || '_____________________'), size: _RSK_WORD_METIN_BOYUT }),
-      new docx.TextRun({ text: '     İmza: _____________________     Tarih: ', bold: true, size: _RSK_WORD_METIN_BOYUT }),
-      new docx.TextRun({ text: bugun, size: _RSK_WORD_METIN_BOYUT })
-    ]})
+    new docx.Paragraph({ keepNext: true, children: [new docx.TextRun({ text: 'RİSK DEĞERLENDİRME EKİBİ', bold: true, size: 22 })], spacing: { after: 120 } }),
+    new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        new docx.TableRow({ tableHeader: true, cantSplit: true, children: [['Görevi', 24], ['Adı Soyadı', 30], ['Belge No / Unvan', 18], ['İmza', 28]].map(([h, g]) => _riskWordBaslikHucre(h, { width: { size: g, type: docx.WidthType.PERCENTAGE } })) }),
+        ..._riskEkipListesi(hazirlayanAdi).map(u => new docx.TableRow({ cantSplit: true, height: { value: 560, rule: docx.HeightRule.ATLEAST }, children: [
+          _riskWordMetinHucre(u.gorev || ' '), _riskWordMetinHucre(u.adSoyad || ' '), _riskWordMetinHucre(u.belgeNo || ' '), _riskWordMetinHucre(' ')
+        ] }))
+      ]
+    }),
+    new docx.Paragraph({ children: [new docx.TextRun({ text: `Tarih: ${bugun}`, bold: true, size: _RSK_WORD_METIN_BOYUT })], spacing: { before: 120 } })
   ];
 
   const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
@@ -668,10 +688,34 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
   const sonVeriSatiri = 5 + riskler.length;
   ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: sonVeriSatiri, column: kolonlar.length } };
   ws.views = [{ state: 'frozen', ySplit: 5 }];
-  ws.getCell(`A${sonVeriSatiri + 2}`).value = `Hazırlayan: ${hazirlayanAdi || '_____________________'}     İmza: _____________________     Tarih: ${bugun}`;
-  ws.getCell(`A${sonVeriSatiri + 2}`).font = { bold: true, size: 10 };
-  ws.getCell(`A${sonVeriSatiri + 3}`).value = 'Düzey kısaltmaları yerine tam adlar yazılmıştır. Puan sütunları sayıdır; başlıktaki filtre okları ile süzülüp sıralanabilir.';
-  ws.getCell(`A${sonVeriSatiri + 3}`).font = { italic: true, size: 8, color: { argb: 'FF4B5563' } };
+  ws.getCell(`A${sonVeriSatiri + 2}`).value = 'Puan sütunları sayıdır; başlıktaki filtre okları ile süzülüp sıralanabilir.';
+  ws.getCell(`A${sonVeriSatiri + 2}`).font = { italic: true, size: 8, color: { argb: 'FF4B5563' } };
+
+  // Risk değerlendirme ekibi imza tablosu (4 parça: Görevi / Adı Soyadı /
+  // Belge No / İmza), sütun sayısına göre birleştirilmiş hücrelerle.
+  let e = sonVeriSatiri + 4;
+  ws.getCell(`A${e}`).value = 'RİSK DEĞERLENDİRME EKİBİ';
+  ws.getCell(`A${e}`).font = { bold: true, size: 11 };
+  e++;
+  const n = kolonlar.length;
+  const dilimler = [[1, Math.floor(n * 0.24)], [Math.floor(n * 0.24) + 1, Math.floor(n * 0.54)], [Math.floor(n * 0.54) + 1, Math.floor(n * 0.72)], [Math.floor(n * 0.72) + 1, n]];
+  const ekipSatiri = (degerler, baslikMi) => {
+    dilimler.forEach(([bas, son], i) => {
+      if (son > bas) ws.mergeCells(e, bas, e, son);
+      const c = ws.getCell(e, bas);
+      c.value = degerler[i];
+      c.alignment = { vertical: 'middle', horizontal: baslikMi ? 'center' : 'left', wrapText: true };
+      c.font = baslikMi ? { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 } : { size: 10 };
+      if (baslikMi) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
+      for (let k = bas; k <= son; k++) ws.getCell(e, k).border = kenar;
+    });
+    ws.getRow(e).height = baslikMi ? 18 : 30;
+    e++;
+  };
+  ekipSatiri(['Görevi', 'Adı Soyadı', 'Belge No / Unvan', 'İmza'], true);
+  _riskEkipListesi(hazirlayanAdi).forEach(u => ekipSatiri([u.gorev, u.adSoyad, u.belgeNo, '']));
+  ws.getCell(`A${e + 1}`).value = `Tarih: ${bugun}`;
+  ws.getCell(`A${e + 1}`).font = { bold: true, size: 10 };
 
   // ---- Yöntem sayfası ----
   const ys = wb.addWorksheet('Yöntem');

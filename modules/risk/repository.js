@@ -75,6 +75,21 @@ function riskIdIleGetirRepo(id) {
   return riskTumunuGetir().find(r => r.id === id) || null;
 }
 
+// ---- Risk Değerlendirme Ekibi (raporların imza bölümü) ----
+// Kullanıcı isteği: "hazırlayan risk değerlendirme ekibi olmalı" -- firma
+// bazında bir kez girilir, her raporda (PDF/Word/Excel) imza tablosu olur.
+function _riskEkibiAnahtari() {
+  return tenantAnahtar('risk_ekibi');
+}
+
+function riskEkibiGetir() {
+  return oku(_riskEkibiAnahtari(), []);
+}
+
+function riskEkibiKaydet(uyeler) {
+  yaz(_riskEkibiAnahtari(), uyeler);
+}
+
 // ---- Bölüm listesi (henüz hiç risk kaydı olmayan bölümlerin de seçilebilir/
 // silinebilir olması için ayrı, kalıcı bir liste — bkz. uygunsuzluk modülündeki
 // Konu/Defter ile aynı desen). ----
