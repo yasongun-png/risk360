@@ -107,10 +107,50 @@ function riskleriGetir(aramaMetni, filtreler) {
 // doğrulanıp bellekte kayda dönüştürülür (riskNo'lar da bellekte art arda
 // üretilir), sonuçta riskKayitlariTopluEkleRepo ile TEK BİR toplu (ve
 // GERÇEKTEN Firestore'a ulaştığı doğrulanan) yazımla kaydedilir.
+// İki risk kaydının "aynı risk" sayılması için karşılaştırılan alanlar —
+// risk no, id, tarih, durum ve fotoğraflar hariç içerik alanları. Büyük/küçük
+// harf ve boşluk farkları yok sayılır.
+const _RISK_MUKERRER_ALANLARI = ['bolum', 'yer', 'faaliyet', 'tehlike', 'risk', 'onlem', 'O', 'F', 'S', 'planlanan', 'On', 'Fn', 'Sn'];
+
+function riskMukerrerAnahtari(kayit) {
+  return _RISK_MUKERRER_ALANLARI
+    .map(alan => String(kayit[alan] ?? '').toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim())
+    .join('|');
+}
+
+// Aynı içerikteki kayıt gruplarından ilki (listede önce olan — genelde ilk
+// içe aktarılan) kalır; diğerleri silinecekler listesine girer. Kullanıcının
+// sonradan düzenlediği bir kopya artık farklı içerikte olduğundan dokunulmaz.
+function riskMukerrerleriBul() {
+  const ilkGorulen = new Map();
+  const silinecekler = [];
+  riskTumunuGetir().forEach(r => {
+    const anahtar = riskMukerrerAnahtari(r);
+    if (ilkGorulen.has(anahtar)) silinecekler.push(r);
+    else ilkGorulen.set(anahtar, r);
+  });
+  const bolumBazinda = {};
+  silinecekler.forEach(r => { bolumBazinda[r.bolum || '-'] = (bolumBazinda[r.bolum || '-'] || 0) + 1; });
+  return { silinecekler, bolumBazinda, kalacakSayisi: ilkGorulen.size };
+}
+
+async function riskMukerrerleriTemizle() {
+  const { silinecekler } = riskMukerrerleriBul();
+  if (!silinecekler.length) return { basarili: true, silinen: 0 };
+  const silinecekIdler = new Set(silinecekler.map(r => r.id));
+  const yeniListe = riskTumunuGetir().filter(r => !silinecekIdler.has(r.id));
+  const sonuc = await yazVeSonucuGetir(tenantAnahtar('risk_kayitlari'), yeniListe);
+  return sonuc.basarili ? { basarili: true, silinen: silinecekler.length } : { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
+}
+
 async function riskExcelTopluEkle(verilerListesi) {
   const mevcutListe = riskTumunuGetir();
   const basariliKayitlar = [];
   const hatalar = [];
+  // Aynı dosya ikinci kez içe aktarılırsa mükerrer kayıt açılmasın:
+  // mevcut kayıtlarla (ve dosyanın kendi içinde) birebir aynı satırlar atlanır.
+  const mevcutAnahtarlar = new Set(mevcutListe.map(riskMukerrerAnahtari));
+  let atlanan = 0;
   verilerListesi.forEach((veriler, index) => {
     const dogrulama = riskDogrula(veriler);
     if (!dogrulama.gecerli) {
@@ -118,13 +158,17 @@ async function riskExcelTopluEkle(verilerListesi) {
       return;
     }
     const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutListe.concat(basariliKayitlar));
-    basariliKayitlar.push(riskKaydiOlustur(Object.assign({}, veriler, { riskNo })));
+    const kayit = riskKaydiOlustur(Object.assign({}, veriler, { riskNo }));
+    const anahtar = riskMukerrerAnahtari(kayit);
+    if (mevcutAnahtarlar.has(anahtar)) { atlanan++; return; }
+    mevcutAnahtarlar.add(anahtar);
+    basariliKayitlar.push(kayit);
   });
 
-  if (!basariliKayitlar.length) return { basarili: 0, basarisizSayisi: hatalar.length, hatalar };
+  if (!basariliKayitlar.length) return { basarili: 0, basarisizSayisi: hatalar.length, hatalar, atlanan };
   const yazimSonucu = await riskKayitlariTopluEkleRepo(basariliKayitlar);
-  if (!yazimSonucu.basarili) return { basarili: 0, basarisizSayisi: verilerListesi.length, hatalar: hatalar.concat(['Bulut yazımı başarısız oldu.']) };
-  return { basarili: basariliKayitlar.length, basarisizSayisi: hatalar.length, hatalar };
+  if (!yazimSonucu.basarili) return { basarili: 0, basarisizSayisi: verilerListesi.length, hatalar: hatalar.concat(['Bulut yazımı başarısız oldu.']), atlanan: 0 };
+  return { basarili: basariliKayitlar.length, basarisizSayisi: hatalar.length, hatalar, atlanan };
 }
 
 function riskEkle(veriler) {

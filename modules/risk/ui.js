@@ -142,6 +142,31 @@ function riskSayfasiniBaslat() {
     _bolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
+  // Kullanıcı isteği: aynı Excel birkaç kez içe aktarılınca oluşan
+  // tekrar eden kayıtları temizlemek.
+  document.getElementById('mukerrerTemizleBtn').addEventListener('click', async () => {
+    if (!kullaniciSilebilirMi(oturumdakiKullanici())) { alert('Kayıt silme yetkiniz yok.'); return; }
+    const { silinecekler, bolumBazinda, kalacakSayisi } = riskMukerrerleriBul();
+    if (!silinecekler.length) { alert('Tekrar eden risk kaydı bulunamadı.'); return; }
+    const ozet = Object.entries(bolumBazinda).sort((a, b) => b[1] - a[1]).slice(0, 12)
+      .map(([bolum, adet]) => `• ${bolum}: ${adet}`).join('\n');
+    const dahaFazla = Object.keys(bolumBazinda).length > 12 ? `\n• ... ve ${Object.keys(bolumBazinda).length - 12} bölüm daha` : '';
+    // confirm(): bölüm listesi satır satır okunabilsin diye (onayModali satır sonlarını göstermiyor).
+    const onay = confirm(
+      `İçeriği birebir aynı olan ${silinecekler.length} tekrar eden risk kaydı bulundu. Her birinin ilk kaydı kalacak, kopyaları silinecek (silinenler Çöp Kutusu'na gider).\n\n${ozet}${dahaFazla}\n\nSonuçta ${kalacakSayisi} risk kaydı kalacak. Devam edilsin mi?`
+    );
+    if (!onay) return;
+    const dugme = document.getElementById('mukerrerTemizleBtn');
+    dugme.disabled = true;
+    try {
+      const sonuc = await riskMukerrerleriTemizle();
+      alert(sonuc.basarili ? `${sonuc.silinen} tekrar eden kayıt silindi.` : sonuc.hata);
+    } finally {
+      dugme.disabled = false;
+    }
+    _bolumFiltreDoldur();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeOzet').addEventListener('click', () => gorunumDegistir('ozet'));
 
@@ -173,7 +198,9 @@ function riskSayfasiniBaslat() {
       if (hataMesaji) { alert(hataMesaji); return; }
       satirlar.forEach(satir => { satir.termin = excelTarihiNormallestir(satir.termin); });
       const sonuc = await riskExcelTopluEkle(satirlar);
-      alert(excelIceAktarOzetMesaji(sonuc));
+      let mesaj = excelIceAktarOzetMesaji(sonuc);
+      if (sonuc.atlanan) mesaj += `\n${sonuc.atlanan} satır zaten kayıtlı olduğu için tekrar eklenmedi.`;
+      alert(mesaj);
       _bolumFiltreDoldur();
       kayitlariCiz(document.getElementById('aramaKutusu').value);
     });
