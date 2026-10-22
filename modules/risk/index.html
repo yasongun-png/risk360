@@ -49,6 +49,7 @@
       <div class="arac-cubugu">
         <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Bölüm, yer, tehlike veya risk açıklamasına göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="riskSiralama" title="Sıralama (raporlar da bu sırayla çıkar)" style="width:auto; margin:0;"></select>
           <button type="button" class="ikincil" id="hazirSablonlarBtn">Hazır Şablonlar</button>
           <button type="button" class="ikincil" id="sablonIndirBtn">Şablon İndir</button>
           <button type="button" class="ikincil" id="iceAktarBtn">İçe Aktar</button>
@@ -78,7 +79,7 @@
           <thead>
             <tr>
               <th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th>
-              <th>Risk No</th><th>Yöntem</th><th>Bölüm</th><th>Yer / Ekipman</th><th>Tehlike</th><th>Risk</th>
+              <th id="riskNoBaslik" style="cursor:pointer; white-space:nowrap;" title="Risk No'ya göre sırala (tekrar tıklayınca yön değişir)">Risk No <span id="riskNoOk"></span></th><th>Yöntem</th><th>Bölüm</th><th>Yer / Ekipman</th><th>Tehlike</th><th>Risk</th>
               <th>Alınmış Önlem</th><th>RP1</th><th>Düzey</th><th>Öncesi</th><th>Alınacak Önlem</th><th>RP2</th><th>Azalma</th><th>Sonrası</th>
               <th>Sorumlu</th><th>Termin</th><th>Durum</th><th>İşlemler</th>
             </tr>
@@ -320,9 +321,9 @@
   <script src="validation.js"></script>
   <script src="repository.js?v=20261022c"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261022"></script>
-  <script src="cikti.js?v=20261022c"></script>
-  <script src="ui.js?v=20261022c"></script>
+  <script src="service.js?v=20261022d"></script>
+  <script src="cikti.js?v=20261022d"></script>
+  <script src="ui.js?v=20261022d"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 

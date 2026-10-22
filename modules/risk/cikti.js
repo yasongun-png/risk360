@@ -4,6 +4,15 @@
 // özellikleriyle aynı mantık, sade/siyah-beyaz görünüm (uygunsuzluk modülüyle
 // tutarlı) + risk düzeyi rozetleri anlamlı olduğu için renkli bırakıldı.
 
+// Raporlar listede seçilen sıralamayı izler (Risk No artan/azalan vb.);
+// varsayılan "en son eklenen" seçiliyse raporların eski düzeni korunur:
+// risk düzeyine göre yüksekten düşüğe.
+function _riskRaporSirala(riskler) {
+  const secim = typeof riskSiralamaDegeri === 'function' ? riskSiralamaDegeri() : 'duzey';
+  const sirali = riskSiralamaUygula(riskler, secim === 'yeni' ? 'duzey' : secim);
+  riskler.splice(0, riskler.length, ...sirali);
+}
+
 function _riskCiktiKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
@@ -283,12 +292,7 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
   })));
   // Farklı yöntemlerin (Fine-Kinney/5x5 Matris) ham RP değerleri kıyaslanamaz olduğundan
   // önce ortak ciddiyet sırasına, eşitlikte kendi ölçeği içindeki göreli puana göre sıralanır.
-  riskler.sort((a, b) => {
-    const siraFarki = riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1);
-    if (siraFarki !== 0) return siraFarki;
-    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
-    return goreliPuan(b) - goreliPuan(a);
-  });
+  _riskRaporSirala(riskler);
 
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(_bugun());
@@ -535,12 +539,7 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
     return;
   }
   const riskler = risklerHam.slice();
-  riskler.sort((a, b) => {
-    const siraFarki = riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1);
-    if (siraFarki !== 0) return siraFarki;
-    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
-    return goreliPuan(b) - goreliPuan(a);
-  });
+  _riskRaporSirala(riskler);
 
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(_bugun());
@@ -617,12 +616,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
     alert('Seçili filtreler için Excel raporu oluşturulacak risk kaydı yok.');
     return;
   }
-  riskler.sort((a, b) => {
-    const siraFarki = riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1);
-    if (siraFarki !== 0) return siraFarki;
-    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
-    return goreliPuan(b) - goreliPuan(a);
-  });
+  _riskRaporSirala(riskler);
   await _riskExcelHazir();
 
   const firma = aktifFirmaGetir();
@@ -806,12 +800,7 @@ async function riskPptxOlustur() {
   })));
   // Farklı yöntemlerin (Fine-Kinney/5x5 Matris) ham RP değerleri kıyaslanamaz olduğundan
   // önce ortak ciddiyet sırasına, eşitlikte kendi ölçeği içindeki göreli puana göre sıralanır.
-  riskler.sort((a, b) => {
-    const siraFarki = riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1);
-    if (siraFarki !== 0) return siraFarki;
-    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
-    return goreliPuan(b) - goreliPuan(a);
-  });
+  _riskRaporSirala(riskler);
 
   const firma = aktifFirmaGetir();
   const baslik = 'RİSK DEĞERLENDİRME' + (filtreler.bolum ? ' – ' + filtreler.bolum : '');

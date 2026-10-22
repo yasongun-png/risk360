@@ -95,8 +95,32 @@ function riskleriGetir(aramaMetni, filtreler) {
   }
 
   // Kullanıcı isteği: "en son yazdığım risk en üstte görünsün" -- en son
-  // eklenen (olusturmaTarihi'ne göre) en üstte.
+  // eklenen (olusturmaTarihi'ne göre) en üstte. Başka bir sıralama için
+  // bkz. riskSiralamaUygula.
   return liste.sort((a, b) => (b.olusturmaTarihi || '').localeCompare(a.olusturmaTarihi || ''));
+}
+
+// Kullanıcı isteği: "risk no ile sıralama yapılabilsin büyükten küçüğe
+// küçükten büyüğe". Risk No'lar "BAG0012" biçiminde olduğundan sayısal
+// duyarlı karşılaştırılır (BAG0009 < BAG0010). 'duzey': raporların eski
+// varsayılanı -- önce ortak ciddiyet sırası, sonra ölçeğe göre göreli puan.
+const RISK_SIRALAMALARI = [
+  { deger: 'yeni', etiket: 'En son eklenen üstte' },
+  { deger: 'noArtan', etiket: 'Risk No (küçükten büyüğe)' },
+  { deger: 'noAzalan', etiket: 'Risk No (büyükten küçüğe)' },
+  { deger: 'duzey', etiket: 'Risk düzeyi (yüksekten düşüğe)' }
+];
+
+function riskSiralamaUygula(liste, siralama) {
+  const noKarsilastir = (a, b) => String(a.riskNo || '').localeCompare(String(b.riskNo || ''), 'tr', { numeric: true, sensitivity: 'base' });
+  const kopya = liste.slice();
+  if (siralama === 'noArtan') return kopya.sort(noKarsilastir);
+  if (siralama === 'noAzalan') return kopya.sort((a, b) => noKarsilastir(b, a));
+  if (siralama === 'duzey') {
+    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
+    return kopya.sort((a, b) => (riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1)) || (goreliPuan(b) - goreliPuan(a)) || noKarsilastir(a, b));
+  }
+  return kopya;
 }
 
 // Excel toplu içe aktarma için -- bkz. modules/tespit-oneri/service.js

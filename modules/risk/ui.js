@@ -333,6 +333,7 @@ function riskSayfasiniBaslat() {
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
 
+  _riskSiralamaHazirla();
   _bolumFiltreDoldur();
   gorunumDegistir('kayitlar');
 }
@@ -516,11 +517,38 @@ function _riskKacir(v) {
   return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+// Seçili sıralama bu tarayıcıda hatırlanır (kişisel kolaylık; erişilemezse varsayılan).
+const _RISK_SIRALAMA_YEREL = 'isg_risk_siralama';
+
+function riskSiralamaDegeri() {
+  const secim = document.getElementById('riskSiralama');
+  return (secim && secim.value) || 'yeni';
+}
+
+function _riskSiralamaHazirla() {
+  const secim = document.getElementById('riskSiralama');
+  secim.innerHTML = RISK_SIRALAMALARI.map(s => `<option value="${s.deger}">${s.etiket}</option>`).join('');
+  let kayitli = null;
+  try { kayitli = localStorage.getItem(_RISK_SIRALAMA_YEREL); } catch (e) { /* yok sayılır */ }
+  if (RISK_SIRALAMALARI.some(s => s.deger === kayitli)) secim.value = kayitli;
+  const uygula = () => {
+    try { localStorage.setItem(_RISK_SIRALAMA_YEREL, secim.value); } catch (e) { /* yok sayılır */ }
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  };
+  secim.addEventListener('change', uygula);
+  document.getElementById('riskNoBaslik').addEventListener('click', () => {
+    secim.value = secim.value === 'noArtan' ? 'noAzalan' : 'noArtan';
+    uygula();
+  });
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('tabloGovde');
   const bosDurum = document.getElementById('bosDurum');
   const bolum = document.getElementById('bolumFiltre').value;
-  const riskler = riskleriGetir(aramaMetni, { bolum });
+  const siralama = riskSiralamaDegeri();
+  const riskler = riskSiralamaUygula(riskleriGetir(aramaMetni, { bolum }), siralama);
+  document.getElementById('riskNoOk').textContent = siralama === 'noArtan' ? '▲' : (siralama === 'noAzalan' ? '▼' : '');
 
   govde.innerHTML = '';
 
