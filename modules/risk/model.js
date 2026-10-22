@@ -364,7 +364,12 @@ function riskKaydiOlustur(veriler) {
     id: veriler.id || rastgeleId(),
     riskNo: veriler.riskNo || '',
     yontem: RISK_YONTEMLERI.includes(veriler.yontem) ? veriler.yontem : 'Fine-Kinney',
+    // Kullanıcı isteği (2026-10-22): üstteki gruplama "Risk Değerlendirme
+    // Konusu", formdaki "Bölüm" ayrı bir alan olsun. Mevcut kayıtlarla ve
+    // filtre/taşıma/ekip/risk no mantığıyla uyum için konu `bolum` alanında
+    // kalır; formdaki bölüm `altBolum`'dür (boşsa bkz. riskBolumGoruntu).
     bolum: (veriler.bolum || '').trim(),
+    altBolum: (veriler.altBolum || '').trim(),
     yer: (veriler.yer || '').trim(),
     faaliyet: (veriler.faaliyet || '').trim(),
     tehlike: (veriler.tehlike || '').trim(),

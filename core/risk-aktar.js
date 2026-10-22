@@ -90,9 +90,10 @@ function _raModalKur() {
       <h3 style="margin-bottom:4px;">Risk Değerlendirmesine Aktar</h3>
       <p id="raKaynak" style="font-size:12.5px; color:var(--metin-soluk); margin:0 0 10px;"></p>
       <div id="raUyari" style="display:none; font-size:12.5px; background:#fef3c7; color:#92400e; padding:8px 10px; border-radius:8px; margin-bottom:10px;"></div>
-      <datalist id="raBolumListesi"></datalist>
+      <datalist id="raKonuListesi"></datalist>
+      <label for="raKonu">Risk Değerlendirme Konusu</label><input type="text" id="raKonu" list="raKonuListesi" placeholder="Mevcut konuyu seçin veya yeni ad yazın">
       <div class="form-satir-ikili">
-        <div><label for="raBolum">Bölüm</label><input type="text" id="raBolum" list="raBolumListesi" placeholder="Mevcut bölümü seçin veya yeni ad yazın"></div>
+        <div><label for="raBolum">Bölüm</label><input type="text" id="raBolum"></div>
         <div><label for="raYer">Yer / Ekipman</label><input type="text" id="raYer"></div>
       </div>
       <label for="raFaaliyet">Faaliyet</label><input type="text" id="raFaaliyet">
@@ -127,7 +128,10 @@ function riskeAktarModaliAc(istek) {
   _raAcikIstek = istek;
   const a = istek.alanlar || {};
   const deger = (id, v) => { document.getElementById(id).value = v == null ? '' : String(v); };
-  document.getElementById('raBolumListesi').innerHTML = _raBolumleri().map(b => `<option value="${_raKacir(b)}">`).join('');
+  const konular = _raBolumleri();
+  document.getElementById('raKonuListesi').innerHTML = konular.map(b => `<option value="${_raKacir(b)}">`).join('');
+  // Kaynak kaydın bölümü mevcut bir konuyla aynı adı taşıyorsa konu da önerilir.
+  deger('raKonu', konular.includes(a.bolum) ? a.bolum : '');
   document.getElementById('raKaynak').textContent = `Kaynak: ${istek.modulAdi || istek.modul}${istek.etiket ? ' — ' + istek.etiket : ''}. Alanlar kayıttan dolduruldu; kontrol edip O/F/Ş puanlarını seçin.`;
   const onceki = riskeAktarilanRiskNo(istek.modul, istek.id);
   const uyari = document.getElementById('raUyari');
@@ -147,18 +151,19 @@ async function _raKaydet() {
   const istek = _raAcikIstek;
   if (!istek) return;
   const v = id => document.getElementById(id).value.trim();
-  const zorunlu = [['raBolum', 'Bölüm'], ['raYer', 'Yer / Ekipman'], ['raFaaliyet', 'Faaliyet'], ['raTehlike', 'Tehlike'], ['raRisk', 'Risk'], ['raO', 'Olasılık'], ['raF', 'Frekans'], ['raS', 'Şiddet']];
+  const zorunlu = [['raKonu', 'Risk Değerlendirme Konusu'], ['raYer', 'Yer / Ekipman'], ['raFaaliyet', 'Faaliyet'], ['raTehlike', 'Tehlike'], ['raRisk', 'Risk'], ['raO', 'Olasılık'], ['raF', 'Frekans'], ['raS', 'Şiddet']];
   const eksik = zorunlu.filter(([id]) => !v(id)).map(([, ad]) => ad);
   if (eksik.length) { document.getElementById('raHata').textContent = 'Doldurulması gereken alanlar: ' + eksik.join(', '); return; }
 
   const anahtar = _raRiskAnahtari();
   const mevcut = oku(anahtar, []) || [];
-  const bolum = v('raBolum');
+  // Risk modülündeki gibi: konu `bolum`, formdaki bölüm `altBolum`.
+  const bolum = v('raKonu');
   const kayit = {
     id: rastgeleId(),
     riskNo: _raRiskNoUret(bolum, mevcut),
     yontem: 'Fine-Kinney',
-    bolum, yer: v('raYer'), faaliyet: v('raFaaliyet'), tehlike: v('raTehlike'), risk: v('raRisk'), onlem: v('raOnlem'),
+    bolum, altBolum: v('raBolum'), yer: v('raYer'), faaliyet: v('raFaaliyet'), tehlike: v('raTehlike'), risk: v('raRisk'), onlem: v('raOnlem'),
     O: v('raO'), F: v('raF'), S: v('raS'),
     fotoOncesi: (istek.alanlar && istek.alanlar.fotoOncesi) || '',
     planlanan: v('raPlanlanan'), On: '', Fn: '', Sn: '', fotoSonrasi: '',
@@ -175,7 +180,7 @@ async function _raKaydet() {
     const sonuc = await yazVeSonucuGetir(anahtar, mevcut.concat(kayit));
     if (!sonuc.basarili) { document.getElementById('raHata').textContent = 'Kaydedilemedi (bulut yazımı başarısız). Lütfen tekrar deneyin.'; return; }
     document.getElementById('raKatman').classList.remove('acik');
-    alert(`Risk Değerlendirmesi'ne ${kayit.riskNo} numarasıyla "${bolum}" bölümüne aktarıldı.`);
+    alert(`Risk Değerlendirmesi'ne ${kayit.riskNo} numarasıyla "${bolum}" konusuna aktarıldı.`);
     if (typeof istek.sonra === 'function') istek.sonra(kayit.riskNo);
   } finally {
     dugme.disabled = false;

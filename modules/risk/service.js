@@ -30,6 +30,12 @@ function _riskiZenginlestir(risk) {
   });
 }
 
+// Formdaki "Bölüm" (altBolum) ayrı alan olmadan önce girilen kayıtlarda boştur;
+// o kayıtlarda bölüm olarak eskiden girilen ad (artık konu adı) gösterilir.
+function riskBolumGoruntu(r) {
+  return (r && (r.altBolum || r.bolum)) || '';
+}
+
 // Bölüm seçim kutusu: kalıcı (elle eklenmiş, henüz riski olmayan) bölümlerle
 // mevcut risk kayıtlarında geçen bölüm adlarını birleştirir. Bir bölümü
 // kalıcı listeden silmek mevcut risk kayıtlarındaki bolum metnini SİLMEZ —
@@ -44,9 +50,9 @@ function bolumleriGetir() {
 
 function bolumEkle(ad) {
   const temiz = (ad || '').trim();
-  if (!temiz) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };
+  if (!temiz) return { basarili: false, hata: 'Konu adı boş olamaz.' };
   if (bolumleriGetir().some(b => b.ad.toLocaleLowerCase('tr-TR') === temiz.toLocaleLowerCase('tr-TR'))) {
-    return { basarili: false, hata: 'Bu bölüm zaten var.' };
+    return { basarili: false, hata: 'Bu risk değerlendirme konusu zaten var.' };
   }
   const yeni = bolumOlustur({ ad: temiz });
   bolumEkleRepo(yeni);
@@ -58,7 +64,7 @@ function bolumEkle(ad) {
 function bolumSil(ad) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   const kayit = bolumleriTumunuGetir().find(b => b.ad === ad);
-  if (!kayit) return { basarili: false, hata: 'Bu bölüm kalıcı listede değil (risk kayıtlarından türemiş olabilir).' };
+  if (!kayit) return { basarili: false, hata: 'Bu konu kalıcı listede değil (risk kayıtlarından türemiş olabilir).' };
   bolumSilRepo(kayit.id);
   return { basarili: true };
 }
@@ -70,8 +76,8 @@ function bolumSil(ad) {
 // Risk No'lar değişmez (eski önekle kalır; yeni riskler yeni adın önekini alır).
 async function bolumYenidenAdlandir(eskiAd, yeniAd, birlestir) {
   const yeni = (yeniAd || '').trim();
-  if (!eskiAd) return { basarili: false, hata: 'Önce yeniden adlandırılacak bölümü seçin.' };
-  if (!yeni) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };
+  if (!eskiAd) return { basarili: false, hata: 'Önce yeniden adlandırılacak konuyu seçin.' };
+  if (!yeni) return { basarili: false, hata: 'Konu adı boş olamaz.' };
   if (yeni === eskiAd) return { basarili: true, guncellenen: 0 };
   const cakisan = bolumleriGetir().find(b => b.ad !== eskiAd && b.ad.toLocaleLowerCase('tr-TR') === yeni.toLocaleLowerCase('tr-TR'));
   if (cakisan && !birlestir) return { basarili: false, cakisma: cakisan.ad };
@@ -80,7 +86,7 @@ async function bolumYenidenAdlandir(eskiAd, yeniAd, birlestir) {
   const idler = riskTumunuGetir().filter(r => r.bolum === eskiAd).map(r => r.id);
   if (idler.length) {
     const sonuc = await riskBolumTopluGuncelleRepo(idler, hedefAd);
-    if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu, bölüm adı değiştirilmedi.' };
+    if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu, konu adı değiştirilmedi.' };
   }
 
   const kalicilar = bolumleriTumunuGetir();
@@ -106,7 +112,7 @@ async function bolumYenidenAdlandir(eskiAd, yeniAd, birlestir) {
 // seçilen birden çok riski tek seferde başka bir bölüme taşır.
 async function riskTopluTasi(idler, yeniBolum) {
   const bolum = (yeniBolum || '').trim();
-  if (!bolum) return { basarili: false, hata: 'Hedef bölüm seçilmedi.' };
+  if (!bolum) return { basarili: false, hata: 'Hedef konu seçilmedi.' };
   if (!idler || !idler.length) return { basarili: false, hata: 'Taşınacak risk seçilmedi.' };
   const sonuc = await riskBolumTopluGuncelleRepo(idler, bolum);
   if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
@@ -125,6 +131,7 @@ function riskleriGetir(aramaMetni, filtreler) {
     const kucuk = aramaMetni.trim().toLowerCase();
     liste = liste.filter(r =>
       r.bolum.toLowerCase().includes(kucuk) ||
+      (r.altBolum || '').toLowerCase().includes(kucuk) ||
       r.yer.toLowerCase().includes(kucuk) ||
       r.faaliyet.toLowerCase().includes(kucuk) ||
       r.tehlike.toLowerCase().includes(kucuk) ||
@@ -173,7 +180,7 @@ function riskSiralamaUygula(liste, siralama) {
 // İki risk kaydının "aynı risk" sayılması için karşılaştırılan alanlar —
 // risk no, id, tarih, durum ve fotoğraflar hariç içerik alanları. Büyük/küçük
 // harf ve boşluk farkları yok sayılır.
-const _RISK_MUKERRER_ALANLARI = ['bolum', 'yer', 'faaliyet', 'tehlike', 'risk', 'onlem', 'O', 'F', 'S', 'planlanan', 'On', 'Fn', 'Sn'];
+const _RISK_MUKERRER_ALANLARI = ['bolum', 'altBolum', 'yer', 'faaliyet', 'tehlike', 'risk', 'onlem', 'O', 'F', 'S', 'planlanan', 'On', 'Fn', 'Sn'];
 
 function riskMukerrerAnahtari(kayit) {
   return _RISK_MUKERRER_ALANLARI
@@ -252,6 +259,7 @@ function riskGuncelle(id, veriler) {
   const guncellenen = riskGuncelleRepo(id, {
     yontem: RISK_YONTEMLERI.includes(veriler.yontem) ? veriler.yontem : 'Fine-Kinney',
     bolum: veriler.bolum.trim(),
+    altBolum: (veriler.altBolum || '').trim(),
     yer: veriler.yer.trim(),
     faaliyet: veriler.faaliyet.trim(),
     tehlike: veriler.tehlike.trim(),
@@ -340,7 +348,7 @@ function riskSablonSil(id) {
 // değerlerini ve metinleri "Düzenle" ile firmaya özgü hâle getirebilir.
 function riskSablonlardanEkle(sablonIdleri, bolum, yer) {
   const temizBolum = (bolum || '').trim();
-  if (!temizBolum) return { basarili: false, hata: 'Bölüm seçiniz.' };
+  if (!temizBolum) return { basarili: false, hata: 'Risk değerlendirme konusu seçiniz.' };
   const temizYer = (yer || '').trim() || 'Genel';
 
   const tumSablonlar = riskSablonlariGetir();

@@ -14,8 +14,11 @@ let _riskFotoSonrasi = '';
 // alınan bir Excel dosyası hiç değiştirilmeden buraya içe aktarılabilir.
 // RP1/Düzey/RP2/Düzey2/Azalma hesaplanan alanlardır, içe aktarılmaz (fazladan
 // bir sütun olarak gelse bile sessizce yok sayılır).
+// "Risk Değerlendirme Konusu" sütunu olmayan eski dosyalarda konu, seçili
+// konudan ya da (seçili konu yoksa) Bölüm sütunundan alınır — bkz. içe aktarım.
 const RISK_IMPORT_KOLONLARI = [
-  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'bolum', baslik: 'Risk Değerlendirme Konusu', esanlamlar: ['Konu', 'Risk Değerlendirme Konusu Adı'] },
+  { anahtar: 'altBolum', baslik: 'Bölüm' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman', esanlamlar: ['Ekipman'] },
   { anahtar: 'faaliyet', baslik: 'Faaliyet' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
@@ -38,7 +41,8 @@ const RISK_IMPORT_KOLONLARI = [
 
 const RISK_EXPORT_KOLONLARI = [
   { anahtar: 'riskNo', baslik: 'Risk No' },
-  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'bolum', baslik: 'Risk Değerlendirme Konusu' },
+  { anahtar: 'bolumGoruntu', baslik: 'Bölüm' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
   { anahtar: 'RP1', baslik: 'RP1' },
@@ -101,7 +105,7 @@ function riskSayfasiniBaslat() {
   });
   document.getElementById('bolumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('bolumYeniBtn').addEventListener('click', async () => {
-    const ad = await metinIstemModali('Yeni bölüm adı:', '', '');
+    const ad = await metinIstemModali('Yeni risk değerlendirme konusu adı:', '', '');
     if (ad === null) return;
     const sonuc = bolumEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -112,31 +116,31 @@ function riskSayfasiniBaslat() {
   document.getElementById('bolumAdlandirBtn').addEventListener('click', async () => {
     const secim = document.getElementById('bolumFiltre');
     const eskiAd = secim.value;
-    if (!eskiAd) { alert('Önce adını değiştireceğiniz bölümü seçin.'); return; }
-    const yeniAd = await metinIstemModali(`"${eskiAd}" bölümünün yeni adı:`, eskiAd, '');
+    if (!eskiAd) { alert('Önce adını değiştireceğiniz konuyu seçin.'); return; }
+    const yeniAd = await metinIstemModali(`"${eskiAd}" konusunun yeni adı:`, eskiAd, '');
     if (yeniAd === null) return;
     const dugme = document.getElementById('bolumAdlandirBtn');
     dugme.disabled = true;
     try {
       let sonuc = await bolumYenidenAdlandir(eskiAd, yeniAd, false);
       if (sonuc.cakisma) {
-        if (!(await onayModali(`"${sonuc.cakisma}" adında bir bölüm zaten var. "${eskiAd}" bölümündeki riskler o bölümle birleştirilsin mi?`, 'Birleştir'))) return;
+        if (!(await onayModali(`"${sonuc.cakisma}" adında bir konu zaten var. "${eskiAd}" konusundaki riskler o konuyla birleştirilsin mi?`, 'Birleştir'))) return;
         sonuc = await bolumYenidenAdlandir(eskiAd, yeniAd, true);
       }
       if (!sonuc.basarili) { alert(sonuc.hata); return; }
       _bolumFiltreDoldur();
       if (sonuc.hedefAd) secim.value = sonuc.hedefAd;
       kayitlariCiz(document.getElementById('aramaKutusu').value);
-      if (sonuc.guncellenen) alert(`Bölüm adı değiştirildi; ${sonuc.guncellenen} risk kaydı yeni bölüm adını aldı.`);
+      if (sonuc.guncellenen) alert(`Konu adı değiştirildi; ${sonuc.guncellenen} risk kaydı yeni konu adını aldı.`);
     } finally {
       dugme.disabled = false;
     }
   });
   document.getElementById('bolumSilBtn').addEventListener('click', () => {
     const secim = document.getElementById('bolumFiltre');
-    if (!secim.value) { alert('Önce silinecek bölümü seçin.'); return; }
+    if (!secim.value) { alert('Önce silinecek konuyu seçin.'); return; }
     if (riskleriGetir('', { bolum: secim.value }).length) {
-      alert('Bu bölümde risk kaydı var. Kalıcı bölüm listesinden ancak hiç risk kaydı olmayan bölümler kaldırılabilir; bölüm ismi tüm risklerinden silinmedikçe listede görünmeye devam eder.');
+      alert('Bu konuda risk kaydı var. Ancak hiç risk kaydı olmayan konular silinebilir; riskleri başka konuya taşıyın veya silin.');
       return;
     }
     const sonuc = bolumSil(secim.value);
@@ -166,7 +170,7 @@ function riskSayfasiniBaslat() {
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     document.getElementById('topluTasiKatman').classList.remove('acik');
     document.getElementById('tumunuSecCheckbox').checked = false;
-    alert(`${sonuc.tasinan} risk kaydı "${yeniBolum}" bölümüne taşındı.`);
+    alert(`${sonuc.tasinan} risk kaydı "${yeniBolum}" konusuna taşındı.`);
     _bolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
@@ -178,7 +182,7 @@ function riskSayfasiniBaslat() {
     if (!silinecekler.length) { alert('Tekrar eden risk kaydı bulunamadı.'); return; }
     const ozet = Object.entries(bolumBazinda).sort((a, b) => b[1] - a[1]).slice(0, 12)
       .map(([bolum, adet]) => `• ${bolum}: ${adet}`).join('\n');
-    const dahaFazla = Object.keys(bolumBazinda).length > 12 ? `\n• ... ve ${Object.keys(bolumBazinda).length - 12} bölüm daha` : '';
+    const dahaFazla = Object.keys(bolumBazinda).length > 12 ? `\n• ... ve ${Object.keys(bolumBazinda).length - 12} konu daha` : '';
     // confirm(): bölüm listesi satır satır okunabilsin diye (onayModali satır sonlarını göstermiyor).
     const onay = confirm(
       `İçeriği birebir aynı olan ${silinecekler.length} tekrar eden risk kaydı bulundu. Her birinin ilk kaydı kalacak, kopyaları silinecek (silinenler Çöp Kutusu'na gider).\n\n${ozet}${dahaFazla}\n\nSonuçta ${kalacakSayisi} risk kaydı kalacak. Devam edilsin mi?`
@@ -212,7 +216,9 @@ function riskSayfasiniBaslat() {
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
     const bolum = document.getElementById('bolumFiltre').value;
     const dosyaAdi = bolum ? `risk_kayitlari_${bolum}.xlsx` : 'risk_kayitlari.xlsx';
-    excelDisaAktar(riskleriGetir(document.getElementById('aramaKutusu').value, { bolum }), RISK_EXPORT_KOLONLARI, dosyaAdi);
+    const liste = riskleriGetir(document.getElementById('aramaKutusu').value, { bolum })
+      .map(r => Object.assign({}, r, { bolumGoruntu: riskBolumGoruntu(r) }));
+    excelDisaAktar(liste, RISK_EXPORT_KOLONLARI, dosyaAdi);
   });
   document.getElementById('iceAktarBtn').addEventListener('click', () => {
     document.getElementById('iceAktarDosya').click();
@@ -226,7 +232,11 @@ function riskSayfasiniBaslat() {
     excelIceAktar(dosya, RISK_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
-      satirlar.forEach(satir => { satir.termin = excelTarihiNormallestir(satir.termin); });
+      const seciliKonu = document.getElementById('bolumFiltre').value;
+      satirlar.forEach(satir => {
+        satir.termin = excelTarihiNormallestir(satir.termin);
+        if (!satir.bolum) satir.bolum = seciliKonu || satir.altBolum;
+      });
       const sonuc = await riskExcelTopluEkle(satirlar);
       let mesaj = excelIceAktarOzetMesaji(sonuc);
       if (sonuc.atlanan) mesaj += `\n${sonuc.atlanan} satır zaten kayıtlı olduğu için tekrar eklenmedi.`;
@@ -342,7 +352,7 @@ function riskSayfasiniBaslat() {
   document.getElementById('sablonKonuFiltre').addEventListener('change', sablonlariCiz);
   document.getElementById('sablonYonetmelikFiltre').addEventListener('change', sablonlariCiz);
   document.getElementById('sablonBolumYeniBtn').addEventListener('click', async () => {
-    const ad = await metinIstemModali('Yeni bölüm adı:', '', '');
+    const ad = await metinIstemModali('Yeni risk değerlendirme konusu adı:', '', '');
     if (ad === null) return;
     const sonuc = bolumEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -555,7 +565,7 @@ function _bolumFiltreDoldur() {
   const seciliDeger = secim.value;
   const bolumler = bolumleriGetir();
 
-  secim.innerHTML = '<option value="">Tüm Bölümler</option>' +
+  secim.innerHTML = '<option value="">Tüm Konular</option>' +
     bolumler.map(b => `<option value="${b.ad}" ${b.ad === seciliDeger ? 'selected' : ''}>${b.ad}</option>`).join('');
 }
 
@@ -602,7 +612,7 @@ function _riskSatirHtml(r) {
       <td><input type="checkbox" data-sec data-id="${r.id}"></td>
       <td>${_riskKacir(r.riskNo)}${r.kaynak ? `<div style="font-size:10.5px; color:var(--metin-soluk); margin-top:2px;" title="Bu risk ${_riskKacir(r.kaynak.modulAdi)} modülünden aktarıldı">↩ ${_riskKacir(r.kaynak.modulAdi)}${r.kaynak.etiket ? ' ' + _riskKacir(r.kaynak.etiket) : ''}</div>` : ''}</td>
       <td>${_riskKacir(r.yontem)}</td>
-      <td>${_riskKacir(r.bolum)}</td>
+      <td>${_riskKacir(riskBolumGoruntu(r))}</td>
       <td>${_riskKacir(r.yer)}</td>
       <td>${_riskKacir(r.tehlike)}</td>
       <td>${_riskKacir(r.risk)}</td>
@@ -724,7 +734,7 @@ function ozetiCiz() {
     </div>
 
     <div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px,1fr));">
-      <div>${dagilimHtml('Bölüme Göre', ozet.bolumeGore)}</div>
+      <div>${dagilimHtml('Risk Değerlendirme Konusuna Göre', ozet.bolumeGore)}</div>
       <div>${dagilimHtml('Risk Düzeyine Göre', ozet.duzeyeGore)}</div>
       <div>${dagilimHtml('Sorumluya Göre', ozet.sorumluyaGore)}</div>
     </div>
@@ -736,7 +746,7 @@ function ozetiCiz() {
         <tbody>
           ${ozet.enYuksekRiskler.map(r => `
             <tr>
-              <td>${r.riskNo}</td><td>${r.yontem}</td><td>${r.bolum}</td><td>${r.tehlike}</td><td>${r.risk}</td>
+              <td>${r.riskNo}</td><td>${r.yontem}</td><td>${_riskKacir(riskBolumGoruntu(r))}</td><td>${r.tehlike}</td><td>${r.risk}</td>
               <td>${r.RP1}</td><td><span class="duzey-rozet duzey-${duzeySinifAdi(r.duzey1)}">${r.duzey1}</span></td>
             </tr>
           `).join('')}
@@ -815,7 +825,15 @@ function modalAc(risk) {
   yontemAlanlariniGuncelle();
   document.getElementById('durum').innerHTML = RISK_DURUMLARI.map(d => `<option ${risk && risk.durum === d ? 'selected' : ''}>${d}</option>`).join('');
 
-  document.getElementById('bolum').value = risk ? risk.bolum : document.getElementById('bolumFiltre').value;
+  // Konu seçimi kalıcı konu listesinden; yeni kayıtta üstte seçili konu gelir.
+  const konuSecim = document.getElementById('bolum');
+  const konu = risk ? risk.bolum : document.getElementById('bolumFiltre').value;
+  const konular = bolumleriGetir().map(b => b.ad);
+  if (konu && !konular.includes(konu)) konular.push(konu);
+  konuSecim.innerHTML = '<option value="">— Konu seçiniz —</option>' +
+    konular.map(k => `<option value="${_riskKacir(k)}">${_riskKacir(k)}</option>`).join('');
+  konuSecim.value = konu || '';
+  document.getElementById('altBolum').value = risk ? riskBolumGoruntu(risk) : '';
   document.getElementById('yer').value = risk ? risk.yer : '';
   document.getElementById('faaliyet').value = risk ? risk.faaliyet : '';
   document.getElementById('tehlike').value = risk ? risk.tehlike : '';
@@ -895,6 +913,7 @@ function formGonderildi(e) {
   const veriler = {
     yontem: document.getElementById('yontem').value,
     bolum: document.getElementById('bolum').value,
+    altBolum: document.getElementById('altBolum').value,
     yer: document.getElementById('yer').value,
     faaliyet: document.getElementById('faaliyet').value,
     tehlike: document.getElementById('tehlike').value,

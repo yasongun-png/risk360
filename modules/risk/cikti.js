@@ -167,7 +167,8 @@ function _riskFotoHucre(url) {
 // Kullanıcı raporu (2026-10-22): "word'de risk puanları olasılık şiddet vb
 // yok" -- rapor tablosu artık O/F/Ş, önlemler ve önlem sonrası O₂/F₂/Ş₂ ile
 // RP2 düzeyini de gösteriyor. PDF ve Word aynı sütun listesini kullanır.
-// Bölüm sütunu yalnızca tek bölüm filtrelenmemişse, fotoğraf sütunları
+// Bölüm sütunu tek konu filtrelenmemişse ya da riskler konudan farklı bir
+// bölüme (altBolum) yazılmışsa, fotoğraf sütunları
 // yalnızca raporda en az bir fotoğraf varsa eklenir (gereksiz yer kaplamasın).
 function _riskRaporOnlemMetni(r) {
   return [r.onlem, r.planlanan ? 'Planlanan: ' + r.planlanan : ''].filter(Boolean).join('\n');
@@ -179,7 +180,7 @@ function _riskRaporKolonlari(riskler, bolumFiltreli) {
   const f = (r, alan) => r.yontem === '5x5' ? '-' : deger(r[alan]);
   const kolonlar = [
     { baslik: 'No', g: 4.5, metin: r => r.riskNo },
-    !bolumFiltreli && { baslik: 'Bölüm', g: 6.5, metin: r => r.bolum },
+    (!bolumFiltreli || riskler.some(r => r.altBolum && r.altBolum !== r.bolum)) && { baslik: 'Bölüm', g: 6.5, metin: riskBolumGoruntu },
     { baslik: 'Faaliyet / Yer', g: 8, metin: r => [r.faaliyet, r.yer].filter(Boolean).join(' / ') },
     { baslik: 'Tehlike', g: 11, metin: r => r.tehlike },
     { baslik: 'Risk', g: 9, metin: r => r.risk },
@@ -841,7 +842,7 @@ async function riskPptxOlustur() {
     const s = pptx.addSlide();
     s.addText(`RİSK – ${r.riskNo}`, { x: 0.5, y: 0.3, fontSize: 18, bold: true });
     s.addText(
-      `Bölüm: ${r.bolum || '-'}\nYer: ${r.yer || '-'}\nFaaliyet: ${r.faaliyet || '-'}\nTehlike: ${r.tehlike || '-'}\n\nRisk: ${r.risk || '-'}`,
+      `Konu: ${r.bolum || '-'}\nBölüm: ${riskBolumGoruntu(r) || '-'}\nYer: ${r.yer || '-'}\nFaaliyet: ${r.faaliyet || '-'}\nTehlike: ${r.tehlike || '-'}\n\nRisk: ${r.risk || '-'}`,
       { x: 0.5, y: 1.2, w: 5.8, fontSize: 13 }
     );
     s.addText(`RP1: ${r.RP1}\n${r.duzey1}`, { x: 6.3, y: 1.0, fontSize: 14, bold: true });
@@ -879,11 +880,11 @@ function riskChecklistExcelOlustur() {
     return;
   }
   const firma = aktifFirmaGetir();
-  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Bölümler';
+  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Konular';
 
   xlsxHazirOlduğunda(() => {
     const ustBilgiSatirlari = [
-      ['BÖLÜM', bolum],
+      ['RİSK DEĞERLENDİRME KONUSU', bolum],
       ['KONTROL TARİHİ', ''],
       ['KONTROL EDEN', ''],
       ['AMAÇ', 'Mevcut risklerin sahadaki durumunun kontrolü'],
@@ -910,7 +911,7 @@ async function riskChecklistPdfOlustur() {
     return;
   }
   const firma = aktifFirmaGetir();
-  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Bölümler';
+  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Konular';
   const bugun = gunAyYil(_bugun());
 
   const html = `
@@ -942,7 +943,7 @@ async function riskChecklistPdfOlustur() {
     </div>
 
     <div class="cl-bilgi">
-      <div><b>Bölüm:</b> ${_riskCiktiKacir(bolum)}</div>
+      <div><b>Risk Değerlendirme Konusu:</b> ${_riskCiktiKacir(bolum)}</div>
       <div><b>Kontrol Tarihi:</b> ______________</div>
       <div><b>Rapor Tarihi:</b> ${bugun}</div>
     </div>

@@ -3,7 +3,7 @@
 function riskDogrula(veriler) {
   const hatalar = {};
 
-  if (!veriler.bolum || !veriler.bolum.trim()) hatalar.bolum = 'Bölüm zorunludur.';
+  if (!veriler.bolum || !veriler.bolum.trim()) hatalar.bolum = 'Risk değerlendirme konusu zorunludur.';
   if (!veriler.yer || !veriler.yer.trim()) hatalar.yer = 'Yer / Ekipman zorunludur.';
   if (!veriler.faaliyet || !veriler.faaliyet.trim()) hatalar.faaliyet = 'Faaliyet zorunludur.';
   if (!veriler.tehlike || !veriler.tehlike.trim()) hatalar.tehlike = 'Tehlike zorunludur.';

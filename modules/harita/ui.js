@@ -71,8 +71,9 @@ const HARITA_DIS_KAYNAKLAR = {
       kaynak: 'risk', kaynakId: k.id, id: 'x-risk-' + k.id, tesisId: k.haritaTesisId,
       x: Number(k.haritaX) || 0, y: Number(k.haritaY) || 0,
       tur: 'risk', altTur: '', no: k.riskNo, baslik: k.tehlike || k.risk, aciklama: k.risk,
-      kat: '', bolum: k.bolum, durum: k.durum, fotograflar: [],
-      ek: { 'Yer / Ekipman': k.yer, 'Sorumlu': k.sorumlu, 'Termin': k.termin },
+      // Risk'te konu `bolum`, formdaki bölüm `altBolum` (eski kayıtlarda boş).
+      kat: '', bolum: k.altBolum || k.bolum, durum: k.durum, fotograflar: [],
+      ek: { 'Risk Değerlendirme Konusu': k.bolum, 'Yer / Ekipman': k.yer, 'Sorumlu': k.sorumlu, 'Termin': k.termin },
       kontrolGecmisi: [], olusturmaTarihi: k.olusturmaTarihi, guncellemeTarihi: k.olusturmaTarihi
     })
   },

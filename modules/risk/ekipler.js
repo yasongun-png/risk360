@@ -66,7 +66,7 @@ function _ekipKartiHtml(ekip, ekipIndex, bolumler) {
         <span style="font-size:12px; color:var(--metin-soluk);">${uyeler.length} üye</span>
         <button type="button" class="tablo-buton sil" data-ekip-sil>Ekibi Sil</button>
       </div>
-      ${bolumler.length ? `<div style="margin-bottom:8px;"><div style="font-size:12px; color:var(--metin-soluk); margin-bottom:4px;">Kullanılacağı bölümler (hiçbiri seçilmezse tüm bölümler):</div>${bolumSecenek}</div>` : ''}
+      ${bolumler.length ? `<div style="margin-bottom:8px;"><div style="font-size:12px; color:var(--metin-soluk); margin-bottom:4px;">Kullanılacağı risk değerlendirme konuları (hiçbiri seçilmezse tüm konular):</div>${bolumSecenek}</div>` : ''}
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead><tr><th style="width:30%;">Görevi</th><th>Adı Soyadı</th><th style="width:22%;">Belge No / Unvan</th><th style="width:120px;"></th></tr></thead>

@@ -39,17 +39,17 @@
     <div id="kayitlarBolumu">
       <div style="background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); margin-bottom:14px;">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <label for="bolumFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Bölüm</label>
-          <select id="bolumFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Bölümler</option></select>
-          <button type="button" class="ikincil" id="bolumYeniBtn">+ Yeni Bölüm</button>
-          <button type="button" class="ikincil" id="bolumAdlandirBtn" title="Seçili bölümün adını değiştirir; o bölümdeki tüm riskler yeni adı alır">Bölümü Yeniden Adlandır</button>
-          <button type="button" class="ikincil" id="bolumSilBtn">Bölümü Sil</button>
+          <label for="bolumFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Risk Değerlendirme Konusu</label>
+          <select id="bolumFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Konular</option></select>
+          <button type="button" class="ikincil" id="bolumYeniBtn">+ Yeni Konu</button>
+          <button type="button" class="ikincil" id="bolumAdlandirBtn" title="Seçili konunun adını değiştirir; o konudaki tüm riskler yeni adı alır">Konuyu Yeniden Adlandır</button>
+          <button type="button" class="ikincil" id="bolumSilBtn">Konuyu Sil</button>
         </div>
-        <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;">Seçili bölüme göre aşağıdaki risk kayıtları listelenir.</p>
+        <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.</p>
       </div>
 
       <div class="arac-cubugu">
-        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Bölüm, yer, tehlike veya risk açıklamasına göre ara...">
+        <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Konu, bölüm, yer, tehlike veya risk açıklamasına göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="riskSiralama" title="Sıralama (raporlar da bu sırayla çıkar)" style="width:auto; margin:0;"></select>
           <button type="button" class="ikincil" id="hazirSablonlarBtn">Hazır Şablonlar</button>
@@ -109,7 +109,7 @@
         </div>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-        <p style="font-size:12.5px; color:var(--metin-soluk); margin:0;">Raporun sonundaki imza tablosu seçilen ekipten gelir. Bir ekibi belirli bölümlere atarsanız o bölümün raporunda otomatik seçilir; bölüm seçilmemiş ekip tüm bölümlerde kullanılabilir. Değişiklikler otomatik kaydedilir.</p>
+        <p style="font-size:12.5px; color:var(--metin-soluk); margin:0;">Raporun sonundaki imza tablosu seçilen ekipten gelir. Bir ekibi belirli risk değerlendirme konularına atarsanız o konunun raporunda otomatik seçilir; konu seçilmemiş ekip tüm konularda kullanılabilir. Değişiklikler otomatik kaydedilir.</p>
         <button type="button" class="birincil" id="ekipYeniBtn" style="width:auto;">+ Yeni Ekip</button>
       </div>
       <div id="ekipKartlari"></div>
@@ -121,11 +121,14 @@
     <div class="modal-kutu" style="max-width:640px;">
       <h3 id="modalBaslik">Yeni Risk Kaydı</h3>
       <form id="riskForm">
+        <label for="bolum">Risk Değerlendirme Konusu</label>
+        <select id="bolum"></select>
+        <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+
         <div class="form-satir-ikili">
           <div>
-            <label for="bolum">Bölüm</label>
-            <input type="text" id="bolum">
-            <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+            <label for="altBolum">Bölüm</label>
+            <input type="text" id="altBolum">
           </div>
           <div>
             <label for="yer">Yer / Ekipman</label>
@@ -245,7 +248,7 @@
 
       <div class="form-satir-ikili">
         <div>
-          <label for="sablonBolumSec">Bölüm</label>
+          <label for="sablonBolumSec">Risk Değerlendirme Konusu</label>
           <div style="display:flex; gap:6px;">
             <select id="sablonBolumSec" style="flex:1;"></select>
             <button type="button" class="ikincil" id="sablonBolumYeniBtn" style="width:auto; white-space:nowrap;">+ Yeni</button>
@@ -311,10 +314,10 @@
        bölüm seçim modalı. -->
   <div class="modal-katman" id="topluTasiKatman">
     <div class="modal-kutu" style="max-width:420px;">
-      <h3>Seçilenleri Başka Bölüme Taşı</h3>
+      <h3>Seçilenleri Başka Konuya Taşı</h3>
       <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;" id="topluTasiSayisi"></p>
 
-      <label for="topluTasiBolum">Hedef Bölüm</label>
+      <label for="topluTasiBolum">Hedef Risk Değerlendirme Konusu</label>
       <select id="topluTasiBolum"></select>
 
       <div class="modal-eylemler">
@@ -341,14 +344,14 @@
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js"></script>
-  <script src="validation.js"></script>
+  <script src="model.js?v=20261022k"></script>
+  <script src="validation.js?v=20261022k"></script>
   <script src="repository.js?v=20261022e"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261022f"></script>
-  <script src="cikti.js?v=20261022d"></script>
-  <script src="ui.js?v=20261022h"></script>
-  <script src="ekipler.js?v=20261022e"></script>
+  <script src="service.js?v=20261022k"></script>
+  <script src="cikti.js?v=20261022k"></script>
+  <script src="ui.js?v=20261022k"></script>
+  <script src="ekipler.js?v=20261022k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 
