@@ -90,6 +90,33 @@ function riskEkibiKaydet(uyeler) {
   yaz(_riskEkibiAnahtari(), uyeler);
 }
 
+// ---- Risk Değerlendirme Ekipleri (sekme) ----
+// Kullanıcı isteği: "bir sekme olarak risk değerlendirmesi ekiplerini
+// ekleyelim, birden fazla uzman hekim ve işveren vekili ekleyebileyim, özel
+// tanımlamalar yapabileyim". Birden çok ekip: { id, ad, bolumler: [], uyeler:
+// [{ gorev, adSoyad, belgeNo }] }. bolumler boşsa ekip tüm bölümlerde geçerli.
+// Önceki tek ekip (risk_ekibi) varsa ilk okumada "Risk Değerlendirme Ekibi"
+// adıyla bu listeye taşınmış gibi gösterilir (kaydedilince kalıcılaşır).
+function riskEkipleriGetir() {
+  const liste = oku(tenantAnahtar('risk_ekipleri'), null);
+  if (Array.isArray(liste)) return liste;
+  const eski = riskEkibiGetir();
+  return eski.length ? [{ id: 'ekip-eski', ad: 'Risk Değerlendirme Ekibi', bolumler: [], uyeler: eski }] : [];
+}
+
+function riskEkipleriKaydet(ekipler) {
+  yaz(tenantAnahtar('risk_ekipleri'), ekipler);
+}
+
+// Kullanıcının kendi tanımladığı ek görev adları (standart görevlere eklenir).
+function riskEkipGorevleriGetir() {
+  return oku(tenantAnahtar('risk_ekip_gorevleri'), []);
+}
+
+function riskEkipGorevleriKaydet(gorevler) {
+  yaz(tenantAnahtar('risk_ekip_gorevleri'), gorevler);
+}
+
 // ---- Bölüm listesi (henüz hiç risk kaydı olmayan bölümlerin de seçilebilir/
 // silinebilir olması için ayrı, kalıcı bir liste — bkz. uygunsuzluk modülündeki
 // Konu/Defter ile aynı desen). ----

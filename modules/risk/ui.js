@@ -169,6 +169,8 @@ function riskSayfasiniBaslat() {
   });
   document.getElementById('sekmeKayitlar').addEventListener('click', () => gorunumDegistir('kayitlar'));
   document.getElementById('sekmeOzet').addEventListener('click', () => gorunumDegistir('ozet'));
+  document.getElementById('sekmeEkipler').addEventListener('click', () => gorunumDegistir('ekipler'));
+  riskEkipleriSekmesiniBaslat();
 
   document.getElementById('yontem').addEventListener('change', yontemAlanlariniGuncelle);
   ['O', 'F', 'S'].forEach(id => document.getElementById(id).addEventListener('change', oncekiHesabiCiz));
@@ -276,8 +278,8 @@ function riskSayfasiniBaslat() {
   });
   document.getElementById('hazirlayanOnaylaBtn').addEventListener('click', async () => {
     // hazirlayanAdi artık ekip listesidir (dizi): [{ gorev, adSoyad, belgeNo }].
+    // Penceredeki değişiklikler yalnızca bu rapor içindir; ekipler sekmede kalıcı düzenlenir.
     const hazirlayanAdi = _riskEkibiFormdanOku();
-    riskEkibiKaydet(hazirlayanAdi);
     const dugme = document.getElementById('hazirlayanOnaylaBtn');
     const eskiMetin = dugme.textContent;
     dugme.disabled = true;
@@ -382,14 +384,27 @@ function hazirlayanModalAc(format) {
   document.getElementById('hazirlayanOnaylaBtn').textContent = `${{ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF'} Oluştur`;
   const personeller = personelleriGetir('', false);
   document.getElementById('riskEkibiPersonelListesi').innerHTML = personeller.map(p => `<option value="${_riskKacir(p.adSoyad)}">`).join('');
-  if (!document.getElementById('riskEkibiGorevListesi')) {
-    const dl = document.createElement('datalist');
+  let dl = document.getElementById('riskEkibiGorevListesi');
+  if (!dl) {
+    dl = document.createElement('datalist');
     dl.id = 'riskEkibiGorevListesi';
-    dl.innerHTML = RISK_EKIBI_GOREVLERI.map(g => `<option value="${g}">`).join('');
     document.body.appendChild(dl);
   }
-  const kayitli = riskEkibiGetir();
-  _riskEkibiCiz(kayitli.length ? kayitli : RISK_EKIBI_GOREVLERI.map(gorev => ({ gorev })));
+  dl.innerHTML = riskTumEkipGorevleri().map(g => `<option value="${_riskKacir(g)}">`).join('');
+
+  // Ekip seçimi: seçili bölüme atanmış ekip öne çıkar (bkz. riskRaporIcinEkipIndex).
+  const ekipler = riskEkipleriGetir();
+  const secim = document.getElementById('raporEkipSec');
+  secim.innerHTML = ekipler.map((e, i) => `<option value="${i}">${_riskKacir(e.ad || 'Adsız ekip')}${(e.bolumler || []).length ? ' — ' + _riskKacir(e.bolumler.join(', ')) : ''}</option>`).join('') +
+    '<option value="-1">Boş imza tablosu (standart görevler)</option>';
+  const varsayilan = riskRaporIcinEkipIndex(document.getElementById('bolumFiltre').value);
+  secim.value = String(varsayilan);
+  const ekibiDoldur = () => {
+    const ekip = ekipler[Number(secim.value)];
+    _riskEkibiCiz(ekip && ekip.uyeler && ekip.uyeler.length ? ekip.uyeler : RISK_EKIBI_GOREVLERI.map(gorev => ({ gorev })));
+  };
+  secim.onchange = ekibiDoldur;
+  ekibiDoldur();
   document.getElementById('hazirlayanModalKatman').classList.add('acik');
 }
 
@@ -479,10 +494,13 @@ function gorunumDegistir(gorunum) {
   _riskGorunum = gorunum;
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
   document.getElementById('sekmeOzet').classList.toggle('sekme-seciliDegil', gorunum !== 'ozet');
+  document.getElementById('sekmeEkipler').classList.toggle('sekme-seciliDegil', gorunum !== 'ekipler');
   document.getElementById('kayitlarBolumu').style.display = gorunum === 'kayitlar' ? '' : 'none';
   document.getElementById('ozetBolumu').style.display = gorunum === 'ozet' ? '' : 'none';
+  document.getElementById('ekiplerBolumu').style.display = gorunum === 'ekipler' ? '' : 'none';
 
   if (gorunum === 'kayitlar') kayitlariCiz(document.getElementById('aramaKutusu').value);
+  else if (gorunum === 'ekipler') ekipleriCiz();
   else ozetiCiz();
 }
 

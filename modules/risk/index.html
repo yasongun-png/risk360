@@ -33,6 +33,7 @@
     <div class="sekme-cubugu">
       <button type="button" id="sekmeKayitlar">Risk Kayıtları</button>
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
+      <button type="button" id="sekmeEkipler" class="sekme-seciliDegil">Risk Değerlendirme Ekipleri</button>
     </div>
 
     <div id="kayitlarBolumu">
@@ -92,6 +93,25 @@
 
     <div id="ozetBolumu" style="display:none;">
       <div id="ozetKutusu"></div>
+    </div>
+
+    <!-- Risk Değerlendirme Ekipleri (bkz. ekipler.js). Raporların imza tablosu buradan gelir. -->
+    <div id="ekiplerBolumu" style="display:none;">
+      <div style="background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); margin-bottom:14px;">
+        <div style="font-weight:700; margin-bottom:4px;">Görev Tanımları</div>
+        <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 8px;">Standart görevlere ek olarak kendi görev adlarınızı tanımlayın (ör. "Vardiya Amiri", "Bakım Şefi"). Tanımlanan görevler ekip üyesi eklerken listede çıkar.</p>
+        <div id="ekipGorevListesi" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="ekipYeniGorev" placeholder="Yeni görev adı" style="width:auto; min-width:240px; margin:0;">
+          <button type="button" class="ikincil" id="ekipGorevEkleBtn" style="width:auto;">+ Görev Tanımla</button>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <p style="font-size:12.5px; color:var(--metin-soluk); margin:0;">Raporun sonundaki imza tablosu seçilen ekipten gelir. Bir ekibi belirli bölümlere atarsanız o bölümün raporunda otomatik seçilir; bölüm seçilmemiş ekip tüm bölümlerde kullanılabilir. Değişiklikler otomatik kaydedilir.</p>
+        <button type="button" class="birincil" id="ekipYeniBtn" style="width:auto;">+ Yeni Ekip</button>
+      </div>
+      <div id="ekipKartlari"></div>
+      <div class="bos-durum" id="ekipBosDurum"></div>
     </div>
   </div>
 
@@ -263,9 +283,11 @@
     <div class="modal-kutu" style="max-width:760px;">
       <h3 id="hazirlayanBaslik">Rapor — Risk Değerlendirme Ekibi</h3>
       <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;">
-        Ekip raporun sonunda imza tablosu olarak yer alır ve bu firma için kaydedilir; bir sonraki raporda yeniden girmeniz gerekmez.
-        Boş bırakılan satırlar rapora boş imza satırı olarak basılır, istemediğiniz satırı ✕ ile silin.
+        Ekip raporun sonunda imza tablosu olarak yer alır. Aşağıdaki satırlarda yalnızca bu rapor için değişiklik yapabilirsiniz;
+        kalıcı değişiklik için "Risk Değerlendirme Ekipleri" sekmesini kullanın. Boş bırakılan satırlar boş imza satırı olarak basılır.
       </p>
+      <label for="raporEkipSec">Ekip</label>
+      <select id="raporEkipSec"></select>
       <datalist id="riskEkibiPersonelListesi"></datalist>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
@@ -319,11 +341,12 @@
   <script src="../personel/service.js"></script>
   <script src="model.js"></script>
   <script src="validation.js"></script>
-  <script src="repository.js?v=20261022c"></script>
+  <script src="repository.js?v=20261022e"></script>
   <script src="sablon-repository.js"></script>
   <script src="service.js?v=20261022d"></script>
   <script src="cikti.js?v=20261022d"></script>
-  <script src="ui.js?v=20261022d"></script>
+  <script src="ui.js?v=20261022e"></script>
+  <script src="ekipler.js?v=20261022e"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 
