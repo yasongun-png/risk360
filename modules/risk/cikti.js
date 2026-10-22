@@ -574,6 +574,177 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
   saveAs(blob, `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.docx`);
 }
 
+// ==================== EXCEL RAPORU ====================
+// Kullanıcı isteği (2026-10-22): "hazır excel olarak da yapalım risk
+// değerlendirmesini" -- PDF/Word ile aynı sütunlar (_riskRaporKolonlari),
+// puanlar sayı olarak (Excel'de süzülüp sıralanabilsin), düzey hücreleri
+// renkli, başlık her sayfada tekrar eden yatay A4 yazdırma ayarıyla.
+// İkinci sayfada Fine-Kinney / 5x5 ölçek ve düzey aralığı tabloları var.
+const _RSK_EXCEL_SAYI_SUTUNLARI = new Set(['O', 'F', 'Ş', 'RP1', 'O₂', 'F₂', 'Ş₂', 'RP2']);
+
+function _riskExcelDuzeyDolgu(etiket) {
+  return { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + _riskWordDuzeyRengi(etiket) } };
+}
+
+function _riskExcelHazir() {
+  return new Promise(resolve => exceljsHazirOlduğunda(resolve));
+}
+
+async function riskRaporuExcelOlustur(hazirlayanAdi) {
+  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const riskler = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
+  if (!riskler.length) {
+    alert('Seçili filtreler için Excel raporu oluşturulacak risk kaydı yok.');
+    return;
+  }
+  riskler.sort((a, b) => {
+    const siraFarki = riskSeviyesiSirasi(b.duzey1) - riskSeviyesiSirasi(a.duzey1);
+    if (siraFarki !== 0) return siraFarki;
+    const goreliPuan = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
+    return goreliPuan(b) - goreliPuan(a);
+  });
+  await _riskExcelHazir();
+
+  const firma = aktifFirmaGetir();
+  const bugun = gunAyYil(_bugun());
+  const ozet = riskOzetiHesapla();
+  const kolonlar = _riskRaporKolonlari(riskler, !!filtreler.bolum).filter(k => !k.foto);
+  const ince = { style: 'thin', color: { argb: 'FF94A3B8' } };
+  const kenar = { top: ince, bottom: ince, left: ince, right: ince };
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Risk Değerlendirmesi', {
+    pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.25, right: 0.25, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 }, printTitlesRow: '5:5' },
+    headerFooter: { oddFooter: '&CSayfa &P / &N' }
+  });
+  ws.columns = kolonlar.map(k => ({ width: Math.max(5, Math.round(k.yuzde * 2.1)) }));
+  const sonHarf = ws.getColumn(kolonlar.length).letter;
+
+  const baslikSatiri = (no, metin, boyut, kalin) => {
+    ws.mergeCells(`A${no}:${sonHarf}${no}`);
+    const c = ws.getCell(`A${no}`);
+    c.value = metin;
+    c.font = { size: boyut, bold: !!kalin };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  };
+  baslikSatiri(1, firma ? firma.ad : '', 12, true);
+  baslikSatiri(2, 'RİSK DEĞERLENDİRME RAPORU' + (filtreler.bolum ? ' — ' + filtreler.bolum : ''), 14, true);
+  baslikSatiri(3, `Rapor Tarihi: ${bugun}   •   Toplam: ${ozet.toplam}   •   Açık: ${ozet.acik}   •   Gecikmiş: ${ozet.gecikmis}   •   Önemli+: ${ozet.onemliVeUstu}`, 10);
+  ws.getRow(2).height = 22;
+
+  const baslik = ws.getRow(5);
+  baslik.values = kolonlar.map(k => k.baslik);
+  baslik.height = 22;
+  baslik.eachCell(c => {
+    c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    c.border = kenar;
+  });
+
+  riskler.forEach((r, i) => {
+    const satir = ws.getRow(6 + i);
+    kolonlar.forEach((k, j) => {
+      const c = satir.getCell(j + 1);
+      if (k.duzey) {
+        const etiket = k.duzey(r);
+        c.value = etiket || '-';
+        if (etiket) {
+          c.fill = _riskExcelDuzeyDolgu(etiket);
+          c.font = { bold: true, size: 9, color: { argb: etiket === 'Tolerans Gösterilemez' || etiket === 'Kritik Risk' ? 'FFFFFFFF' : 'FF111827' } };
+        }
+        c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      } else {
+        const metin = k.metin(r);
+        const sayi = Number(metin);
+        c.value = _RSK_EXCEL_SAYI_SUTUNLARI.has(k.baslik) && metin !== '-' && metin !== '' && Number.isFinite(sayi) ? sayi : metin;
+        c.font = { size: 9, bold: !!k.kalin };
+        c.alignment = { horizontal: k.ortala ? 'center' : 'left', vertical: 'middle', wrapText: true };
+      }
+      c.border = kenar;
+    });
+  });
+
+  const sonVeriSatiri = 5 + riskler.length;
+  ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: sonVeriSatiri, column: kolonlar.length } };
+  ws.views = [{ state: 'frozen', ySplit: 5 }];
+  ws.getCell(`A${sonVeriSatiri + 2}`).value = `Hazırlayan: ${hazirlayanAdi || '_____________________'}     İmza: _____________________     Tarih: ${bugun}`;
+  ws.getCell(`A${sonVeriSatiri + 2}`).font = { bold: true, size: 10 };
+  ws.getCell(`A${sonVeriSatiri + 3}`).value = 'Düzey kısaltmaları yerine tam adlar yazılmıştır. Puan sütunları sayıdır; başlıktaki filtre okları ile süzülüp sıralanabilir.';
+  ws.getCell(`A${sonVeriSatiri + 3}`).font = { italic: true, size: 8, color: { argb: 'FF4B5563' } };
+
+  // ---- Yöntem sayfası ----
+  const ys = wb.addWorksheet('Yöntem');
+  ys.columns = [{ width: 12 }, { width: 46 }, { width: 3 }, { width: 22 }, { width: 24 }, { width: 34 }];
+  let y = 1;
+  const olcekYaz = (baslikMetni, secenekler) => {
+    ys.mergeCells(`A${y}:B${y}`);
+    ys.getCell(`A${y}`).value = baslikMetni;
+    ys.getCell(`A${y}`).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ys.getCell(`A${y}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } };
+    y++;
+    secenekler.forEach(s => {
+      ys.getCell(`A${y}`).value = s.deger;
+      ys.getCell(`A${y}`).alignment = { horizontal: 'center' };
+      ys.getCell(`B${y}`).value = s.etiket.replace(/^[-\d.]+\s*-\s*/, '');
+      ['A', 'B'].forEach(h => { ys.getCell(`${h}${y}`).border = kenar; });
+      y++;
+    });
+    y++;
+  };
+  const duzeyYaz = (duzeyler) => {
+    ['Risk Puanı (RP) Aralığı', 'Risk Düzeyi', 'Gerekli Aksiyon'].forEach((h, i) => {
+      const c = ys.getCell(y, 4 + i);
+      c.value = h; c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D4ED8' } }; c.border = kenar;
+    });
+    y++;
+    duzeyler.forEach((d, i) => {
+      const ust = i === 0 ? null : duzeyler[i - 1].minExclusive;
+      const aralik = d.minExclusive === -Infinity ? `RP ≤ ${ust}` : (ust === null ? `RP > ${d.minExclusive}` : `${d.minExclusive} < RP ≤ ${ust}`);
+      ys.getCell(y, 4).value = aralik;
+      ys.getCell(y, 5).value = d.etiket;
+      ys.getCell(y, 5).fill = _riskExcelDuzeyDolgu(d.etiket);
+      ys.getCell(y, 5).font = { bold: true, color: { argb: d.etiket === 'Tolerans Gösterilemez' || d.etiket === 'Kritik Risk' ? 'FFFFFFFF' : 'FF111827' } };
+      ys.getCell(y, 6).value = d.aksiyon;
+      [4, 5, 6].forEach(k => { ys.getCell(y, k).border = kenar; });
+      y++;
+    });
+    y++;
+  };
+  const fineKinneyVarMi = riskler.some(r => r.yontem !== '5x5');
+  const matrisVarMi = riskler.some(r => r.yontem === '5x5');
+  if (fineKinneyVarMi) {
+    ys.getCell(`A${y}`).value = 'Değerlendirme Yöntemi (Fine-Kinney): RP = Olasılık (O) × Frekans (F) × Şiddet (Ş). RP2 önlemler sonrası O₂ × F₂ × Ş₂.';
+    ys.getCell(`A${y}`).font = { bold: true };
+    y += 2;
+    const duzeyBaslangic = y;
+    olcekYaz('Olasılık (O)', OLASILIK_SECENEKLERI);
+    olcekYaz('Frekans (F)', FREKANS_SECENEKLERI);
+    olcekYaz('Şiddet (Ş)', SIDDET_SECENEKLERI);
+    const sonrasi = y;
+    y = duzeyBaslangic;
+    duzeyYaz(RISK_DUZEYLERI);
+    y = Math.max(y, sonrasi);
+  }
+  if (matrisVarMi) {
+    ys.getCell(`A${y}`).value = 'Değerlendirme Yöntemi (5x5 Matris): RP = Olasılık (O) × Şiddet (Ş).';
+    ys.getCell(`A${y}`).font = { bold: true };
+    y += 2;
+    const duzeyBaslangic = y;
+    olcekYaz('Olasılık (O)', MATRIS_OLASILIK_SECENEKLERI);
+    olcekYaz('Şiddet (Ş)', MATRIS_SIDDET_SECENEKLERI);
+    const sonrasi = y;
+    y = duzeyBaslangic;
+    duzeyYaz(MATRIS_DUZEYLERI);
+    y = Math.max(y, sonrasi);
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.xlsx`);
+}
+
 // ==================== PPTX ====================
 // Eski isg platformundaki risk-defteri aracının PPTX çıktısıyla aynı kalıp:
 // kapak + genel özet + risk başına bir slayt (öncesi/sonrası fotoğraflı).

@@ -267,6 +267,7 @@ function riskSayfasiniBaslat() {
 
   document.getElementById('pdfRaporBtn').addEventListener('click', () => hazirlayanModalAc('pdf'));
   document.getElementById('wordRaporBtn').addEventListener('click', () => hazirlayanModalAc('word'));
+  document.getElementById('excelRaporBtn').addEventListener('click', () => hazirlayanModalAc('excel'));
   document.getElementById('hazirlayanModalKapatBtn').addEventListener('click', hazirlayanModalKapat);
   document.getElementById('hazirlayanPersonelSec').addEventListener('change', () => {
     if (document.getElementById('hazirlayanPersonelSec').value) document.getElementById('hazirlayanManuel').value = '';
@@ -284,11 +285,12 @@ function riskSayfasiniBaslat() {
     dugme.textContent = 'Hazırlanıyor...';
     try {
       if (_hazirlayanFormat === 'word') await riskRaporuWordOlustur(hazirlayanAdi);
+      else if (_hazirlayanFormat === 'excel') await riskRaporuExcelOlustur(hazirlayanAdi);
       else await riskRaporuPdfOlustur(hazirlayanAdi);
       hazirlayanModalKapat();
     } catch (hata) {
       console.error(hata);
-      alert((_hazirlayanFormat === 'word' ? 'Word' : 'PDF') + ' üretilemedi: ' + (hata.message || hata));
+      alert(({ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF') + ' üretilemedi: ' + (hata.message || hata));
     } finally {
       dugme.disabled = false;
       dugme.textContent = eskiMetin;
