@@ -63,6 +63,45 @@ function bolumSil(ad) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: "bölüm adını istediğimde değiştirebileyim". Kalıcı bölüm
+// listesindeki ad, o bölümdeki TÜM risklerin bolum alanı ve bölüme atanmış
+// ekiplerin bolumler listesi birlikte güncellenir. Yeni ad başka bir mevcut
+// bölümle aynıysa ancak birlestir=true ile yapılır (iki bölüm tek olur).
+// Risk No'lar değişmez (eski önekle kalır; yeni riskler yeni adın önekini alır).
+async function bolumYenidenAdlandir(eskiAd, yeniAd, birlestir) {
+  const yeni = (yeniAd || '').trim();
+  if (!eskiAd) return { basarili: false, hata: 'Önce yeniden adlandırılacak bölümü seçin.' };
+  if (!yeni) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };
+  if (yeni === eskiAd) return { basarili: true, guncellenen: 0 };
+  const cakisan = bolumleriGetir().find(b => b.ad !== eskiAd && b.ad.toLocaleLowerCase('tr-TR') === yeni.toLocaleLowerCase('tr-TR'));
+  if (cakisan && !birlestir) return { basarili: false, cakisma: cakisan.ad };
+  const hedefAd = cakisan ? cakisan.ad : yeni;
+
+  const idler = riskTumunuGetir().filter(r => r.bolum === eskiAd).map(r => r.id);
+  if (idler.length) {
+    const sonuc = await riskBolumTopluGuncelleRepo(idler, hedefAd);
+    if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu, bölüm adı değiştirilmedi.' };
+  }
+
+  const kalicilar = bolumleriTumunuGetir();
+  const hedefVar = kalicilar.some(b => b.ad === hedefAd);
+  const yeniKalicilar = kalicilar
+    .filter(b => !(b.ad === eskiAd && hedefVar))
+    .map(b => b.ad === eskiAd ? Object.assign({}, b, { ad: hedefAd }) : b);
+  if (JSON.stringify(yeniKalicilar) !== JSON.stringify(kalicilar)) _bolumListesiKaydet(yeniKalicilar);
+
+  const ekipler = riskEkipleriGetir();
+  let ekipDegisti = false;
+  const yeniEkipler = ekipler.map(e => {
+    if (!(e.bolumler || []).includes(eskiAd)) return e;
+    ekipDegisti = true;
+    return Object.assign({}, e, { bolumler: Array.from(new Set(e.bolumler.map(b => b === eskiAd ? hedefAd : b))) });
+  });
+  if (ekipDegisti) riskEkipleriKaydet(yeniEkipler);
+
+  return { basarili: true, guncellenen: idler.length, hedefAd };
+}
+
 // Kullanıcı isteği: "bölümler arasında risk taşınabilsin" -- listede
 // seçilen birden çok riski tek seferde başka bir bölüme taşır.
 async function riskTopluTasi(idler, yeniBolum) {

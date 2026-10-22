@@ -104,6 +104,29 @@ function riskSayfasiniBaslat() {
     document.getElementById('bolumFiltre').value = sonuc.bolum.ad;
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
+  document.getElementById('bolumAdlandirBtn').addEventListener('click', async () => {
+    const secim = document.getElementById('bolumFiltre');
+    const eskiAd = secim.value;
+    if (!eskiAd) { alert('Önce adını değiştireceğiniz bölümü seçin.'); return; }
+    const yeniAd = await metinIstemModali(`"${eskiAd}" bölümünün yeni adı:`, eskiAd, '');
+    if (yeniAd === null) return;
+    const dugme = document.getElementById('bolumAdlandirBtn');
+    dugme.disabled = true;
+    try {
+      let sonuc = await bolumYenidenAdlandir(eskiAd, yeniAd, false);
+      if (sonuc.cakisma) {
+        if (!(await onayModali(`"${sonuc.cakisma}" adında bir bölüm zaten var. "${eskiAd}" bölümündeki riskler o bölümle birleştirilsin mi?`, 'Birleştir'))) return;
+        sonuc = await bolumYenidenAdlandir(eskiAd, yeniAd, true);
+      }
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      _bolumFiltreDoldur();
+      if (sonuc.hedefAd) secim.value = sonuc.hedefAd;
+      kayitlariCiz(document.getElementById('aramaKutusu').value);
+      if (sonuc.guncellenen) alert(`Bölüm adı değiştirildi; ${sonuc.guncellenen} risk kaydı yeni bölüm adını aldı.`);
+    } finally {
+      dugme.disabled = false;
+    }
+  });
   document.getElementById('bolumSilBtn').addEventListener('click', () => {
     const secim = document.getElementById('bolumFiltre');
     if (!secim.value) { alert('Önce silinecek bölümü seçin.'); return; }
