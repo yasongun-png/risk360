@@ -478,7 +478,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
       <td style="white-space:nowrap;">
         ${olayId
           ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
-          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button><button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
+          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
       </td>
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
@@ -500,6 +500,25 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
 
   govde.querySelectorAll('[data-duzenle-olay]').forEach(btn => {
     btn.addEventListener('click', () => olayModalAc(olayTumunuGetir().find(o => o.id === btn.getAttribute('data-duzenle-olay'))));
+  });
+
+  // Risk Değerlendirmesi'ne aktarma (core/risk-aktar.js). Kararda yer bilgisi
+  // olmadığından toplantının bölüm/tesis/yer bilgisi kullanılır.
+  govde.querySelectorAll('[data-riske-aktar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const k = kararIdIleGetirRepo(btn.getAttribute('data-riske-aktar'));
+      if (!k) return;
+      const t = toplantiTumunuGetir().find(x => x.id === k.toplantiId) || {};
+      riskeAktarModaliAc({
+        modul: 'kurul', modulAdi: 'İSG Kurulu', id: k.id, etiket: [t.toplantiNo, k.kararNo].filter(Boolean).join(' / '),
+        alanlar: {
+          yer: t.bolum || t.tesis || t.yer || '', faaliyet: t.bolum || t.tesis || '',
+          tehlike: k.kaynakGundem || k.kararMetni,
+          planlanan: k.kararMetni, sorumlu: k.sorumlu, termin: k.termin, fotoOncesi: k.fotoOncesi
+        },
+        sonra: () => kararlariCiz()
+      });
+    });
   });
 
   govde.querySelectorAll('[data-sil]').forEach(btn => {

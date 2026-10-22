@@ -478,11 +478,31 @@ function kimyasallariCiz(aramaMetni) {
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-form="${k.id}">Form</button>
+        ${riskeAktarButonHtml('kimyasal', k.id)}
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
     `;
     govde.appendChild(satir);
   });
+
+  // Risk Değerlendirmesi'ne aktarma (core/risk-aktar.js): H kodları tehlike,
+  // P kodları ve depolama notu mevcut önlem olarak taşınır.
+  govde.querySelectorAll('[data-riske-aktar]').forEach(btn => btn.addEventListener('click', () => {
+    const k = kimyasalIdIleGetirRepo(btn.getAttribute('data-riske-aktar'));
+    if (!k) return;
+    const ozellikler = (typeof kimyasalEfektifOzellikleri === 'function' ? kimyasalEfektifOzellikleri(k).liste : []).filter(o => o !== 'Genel');
+    riskeAktarModaliAc({
+      modul: 'kimyasal', modulAdi: 'Kimyasal', id: k.id, etiket: k.kimyasalNo,
+      alanlar: {
+        yer: k.lokasyon || k.bolum,
+        faaliyet: `${k.ad} kullanımı ve depolanması`,
+        tehlike: [`${k.ad}${k.casNo ? ' (CAS ' + k.casNo + ')' : ''}`, ozellikler.length ? 'Özellikler: ' + ozellikler.join(', ') : '', (k.hKodlari || []).length ? 'H kodları: ' + k.hKodlari.join(', ') : ''].filter(Boolean).join(' - '),
+        risk: 'Kimyasal maruziyet (soluma, cilt/göz teması), yangın/patlama',
+        onlem: [(k.pKodlari || []).length ? 'P kodları: ' + k.pKodlari.join(', ') : '', k.depolamaNotu].filter(Boolean).join('\n')
+      },
+      sonra: () => kimyasallariCiz(document.getElementById('kimyasalAramaKutusu').value)
+    });
+  }));
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kimyasalModalAc(kimyasalIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {

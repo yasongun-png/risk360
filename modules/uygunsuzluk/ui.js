@@ -624,6 +624,8 @@ function _islemButonlariUret(k) {
     butonlar.push(`<button class="tablo-buton sil" data-reddet="${k.id}">Reddet</button>`);
   }
 
+  // Risk Değerlendirmesi'ne aktarma (core/risk-aktar.js).
+  butonlar.push(riskeAktarButonHtml('uygunsuzluk', k.id));
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return `<div style="display:flex; flex-wrap:wrap; gap:2px;">${butonlar.join('')}</div>`;
 }
@@ -942,6 +944,20 @@ function kayitlariCiz(aramaMetni) {
   }));
   govde.querySelectorAll('[data-konu-tasi]').forEach(btn => btn.addEventListener('click', () => {
     konuTasiModalAc(uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-konu-tasi')));
+  }));
+  govde.querySelectorAll('[data-riske-aktar]').forEach(btn => btn.addEventListener('click', () => {
+    const k = uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-riske-aktar'));
+    if (!k) return;
+    riskeAktarModaliAc({
+      modul: 'uygunsuzluk', modulAdi: 'Uygunsuzluk', id: k.id, etiket: k.aksiyonNo,
+      alanlar: {
+        yer: k.lokasyon || k.bolum, faaliyet: k.konuAdi || k.bolum,
+        tehlike: [k.baslik, k.aciklama].filter(Boolean).join(' - '),
+        risk: k.kokNeden ? 'Kök neden: ' + k.kokNeden : '',
+        planlanan: k.duzelticiFaaliyet, sorumlu: k.sorumlu, termin: k.termin, fotoOncesi: k.fotoOncesi
+      },
+      sonra: () => kayitlariCiz(document.getElementById('aramaKutusu').value)
+    });
   }));
 }
 

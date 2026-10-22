@@ -253,6 +253,8 @@ function _toIslemButonlariUret(k) {
   butonlar.push(k.aktarilanUygunsuzlukId
     ? '<span style="font-size:11px; color:#16a34a; font-weight:600;">✓ Uygunsuzluğa Aktarıldı</span>'
     : `<button class="tablo-buton" data-aktar="${k.id}">→ Uygunsuzluğa Aktar</button>`);
+  // Kullanıcı isteği: tespitin risk değerlendirmesine alınabilmesi (core/risk-aktar.js).
+  butonlar.push(riskeAktarButonHtml('tespit-oneri', k.id));
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return butonlar.join(' ');
 }
@@ -312,6 +314,15 @@ function toKayitlariCiz(aramaMetni) {
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     alert(`Uygunsuzluk kaydı oluşturuldu: ${sonuc.kayit.aksiyonNo}`);
     toKayitlariCiz(document.getElementById('aramaKutusu').value);
+  }));
+  govde.querySelectorAll('[data-riske-aktar]').forEach(btn => btn.addEventListener('click', () => {
+    const k = tespitOneriIdIleGetirRepo(btn.getAttribute('data-riske-aktar'));
+    if (!k) return;
+    riskeAktarModaliAc({
+      modul: 'tespit-oneri', modulAdi: 'Tespit-Öneri Defteri', id: k.id, etiket: k.kayitNo,
+      alanlar: { yer: k.bolum, faaliyet: k.bolum, tehlike: k.tespit, onlem: k.yapilanIslem, planlanan: k.oneri, sorumlu: k.tebligEdilen },
+      sonra: () => toKayitlariCiz(document.getElementById('aramaKutusu').value)
+    });
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { tespitOneriSil(btn.getAttribute('data-sil')); _toSicilFiltreDoldur(); _toSicilIstatistikleriCiz(); toKayitlariCiz(document.getElementById('aramaKutusu').value); }

@@ -379,6 +379,7 @@ function kayitlariCiz(aramaMetni) {
       <td>
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-rapor-word="${k.id}">Rapor Word</button>
+        ${riskeAktarButonHtml('olay-kaza', k.id)}
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
     `;
@@ -392,6 +393,28 @@ function kayitlariCiz(aramaMetni) {
   }));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu kaydı silmek istediğinize emin misiniz?', 'Sil')) { olayKaydiSil(btn.getAttribute('data-sil')); kayitlariCiz(document.getElementById('aramaKutusu').value); }
+  }));
+  // Risk Değerlendirmesi'ne aktarma (core/risk-aktar.js): kazadaki Fine-Kinney
+  // puanları ve aksiyonların düzeltici faaliyetleri forma taşınır.
+  govde.querySelectorAll('[data-riske-aktar]').forEach(btn => btn.addEventListener('click', () => {
+    const k = olayKaydiIdIleGetirRepo(btn.getAttribute('data-riske-aktar'));
+    if (!k) return;
+    const aksiyonlar = (k.aksiyonlar || []).filter(a => a.duzelticiFaaliyet || a.baslik);
+    const foto = (k.olayYeriFotograflari || []).find(f => f && f.url);
+    riskeAktarModaliAc({
+      modul: 'olay-kaza', modulAdi: k.olayTipi || 'Olay / Kaza', id: k.id, etiket: k.kayitNo,
+      alanlar: {
+        yer: k.kazaYeri || k.bolum, faaliyet: k.isTanimi || k.bolum,
+        tehlike: k.aciklama || k.analizNe || '',
+        risk: [k.yaralanmaTuru, k.potansiyelSonuc].filter(Boolean).join(' - ') || k.olayTipi || '',
+        O: k.fkO, F: k.fkF, S: k.fkS,
+        planlanan: aksiyonlar.map(a => a.duzelticiFaaliyet || a.baslik).join('\n'),
+        sorumlu: (aksiyonlar.find(a => a.sorumlu) || {}).sorumlu || '',
+        termin: (aksiyonlar.find(a => a.termin) || {}).termin || '',
+        fotoOncesi: foto ? foto.url : ''
+      },
+      sonra: () => kayitlariCiz(document.getElementById('aramaKutusu').value)
+    });
   }));
 }
 

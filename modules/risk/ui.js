@@ -600,7 +600,7 @@ let _riskTabloDinleyiciKuruldu = false;
 function _riskSatirHtml(r) {
   return `<tr>
       <td><input type="checkbox" data-sec data-id="${r.id}"></td>
-      <td>${_riskKacir(r.riskNo)}</td>
+      <td>${_riskKacir(r.riskNo)}${r.kaynak ? `<div style="font-size:10.5px; color:var(--metin-soluk); margin-top:2px;" title="Bu risk ${_riskKacir(r.kaynak.modulAdi)} modülünden aktarıldı">↩ ${_riskKacir(r.kaynak.modulAdi)}${r.kaynak.etiket ? ' ' + _riskKacir(r.kaynak.etiket) : ''}</div>` : ''}</td>
       <td>${_riskKacir(r.yontem)}</td>
       <td>${_riskKacir(r.bolum)}</td>
       <td>${_riskKacir(r.yer)}</td>
