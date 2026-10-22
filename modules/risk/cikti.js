@@ -145,106 +145,118 @@ function _riskFotoHucre(url) {
   return url ? `<img class="rsk-foto-thumb" src="${url}">` : '<div class="rsk-foto-bos"></div>';
 }
 
-function _riskSatirHtml(r) {
+// Kullanıcı raporu (2026-10-22): "word'de risk puanları olasılık şiddet vb
+// yok" -- rapor tablosu artık O/F/Ş, önlemler ve önlem sonrası O₂/F₂/Ş₂ ile
+// RP2 düzeyini de gösteriyor. PDF ve Word aynı sütun listesini kullanır.
+// Bölüm sütunu yalnızca tek bölüm filtrelenmemişse, fotoğraf sütunları
+// yalnızca raporda en az bir fotoğraf varsa eklenir (gereksiz yer kaplamasın).
+function _riskRaporOnlemMetni(r) {
+  return [r.onlem, r.planlanan ? 'Planlanan: ' + r.planlanan : ''].filter(Boolean).join('\n');
+}
+
+function _riskRaporKolonlari(riskler, bolumFiltreli) {
+  const fotoVar = riskler.some(r => r.fotoOncesi || r.fotoSonrasi);
+  const deger = v => (v === null || v === undefined || v === '') ? '-' : String(v);
+  const f = (r, alan) => r.yontem === '5x5' ? '-' : deger(r[alan]);
+  const kolonlar = [
+    { baslik: 'No', g: 4.5, metin: r => r.riskNo },
+    !bolumFiltreli && { baslik: 'Bölüm', g: 6.5, metin: r => r.bolum },
+    { baslik: 'Faaliyet / Yer', g: 8, metin: r => [r.faaliyet, r.yer].filter(Boolean).join(' / ') },
+    { baslik: 'Tehlike', g: 11, metin: r => r.tehlike },
+    { baslik: 'Risk', g: 9, metin: r => r.risk },
+    { baslik: 'O', g: 2.6, ortala: true, metin: r => deger(r.O) },
+    { baslik: 'F', g: 2.6, ortala: true, metin: r => f(r, 'F') },
+    { baslik: 'Ş', g: 2.6, ortala: true, metin: r => deger(r.S) },
+    { baslik: 'RP1', g: 3.4, ortala: true, kalin: true, metin: r => deger(r.RP1) },
+    { baslik: 'Düzey', g: 3.6, duzey: r => r.duzey1 },
+    fotoVar && { baslik: 'Öncesi', g: 5, foto: r => r.fotoOncesi },
+    { baslik: 'Önlemler', g: 17, metin: _riskRaporOnlemMetni },
+    { baslik: 'O₂', g: 2.6, ortala: true, metin: r => deger(r.On) },
+    { baslik: 'F₂', g: 2.6, ortala: true, metin: r => f(r, 'Fn') },
+    { baslik: 'Ş₂', g: 2.6, ortala: true, metin: r => deger(r.Sn) },
+    { baslik: 'RP2', g: 3.4, ortala: true, kalin: true, metin: r => deger(r.RP2) },
+    { baslik: 'Düzey₂', g: 3.6, duzey: r => r.duzey2 },
+    { baslik: 'Azalma', g: 3.6, ortala: true, metin: r => deger(r.azalma) },
+    fotoVar && { baslik: 'Sonrası', g: 5, foto: r => r.fotoSonrasi },
+    { baslik: 'Sorumlu', g: 5, metin: r => deger(r.sorumlu) },
+    { baslik: 'Termin', g: 4.5, metin: r => deger(gunAyYil(r.termin)) },
+    { baslik: 'Durum', g: 4.5, metin: r => deger(r.durumGoruntu) }
+  ].filter(Boolean);
+  const toplam = kolonlar.reduce((t, k) => t + k.g, 0);
+  kolonlar.forEach(k => { k.yuzde = Math.round(k.g / toplam * 1000) / 10; });
+  return kolonlar;
+}
+
+function _riskSatirHtml(r, kolonlar) {
+  return '<tr>' + kolonlar.map(k => {
+    if (k.duzey) return `<td>${k.duzey(r) ? _riskDuzeyRozetHtml(k.duzey(r), true) : '-'}</td>`;
+    if (k.foto) return `<td>${_riskFotoHucre(k.foto(r))}</td>`;
+    const stil = [k.ortala ? 'text-align:center;' : '', k.kalin ? 'font-weight:700;' : ''].join('');
+    return `<td${stil ? ` style="${stil}"` : ''}>${_riskCiktiKacir(k.metin(r)).replace(/\n/g, '<br>')}</td>`;
+  }).join('') + '</tr>';
+}
+
+function _riskTabloHtml(parca, kolonlar) {
   return `
-    <tr>
-      <td>${_riskCiktiKacir(r.riskNo)}</td>
-      <td>${_riskCiktiKacir(r.bolum)}</td>
-      <td>${_riskCiktiKacir(r.yer)}</td>
-      <td>${_riskCiktiKacir(r.tehlike)}</td>
-      <td>${_riskCiktiKacir(r.risk)}</td>
-      <td style="text-align:center; font-weight:700;">${r.RP1}</td>
-      <td>${_riskDuzeyRozetHtml(r.duzey1, true)}</td>
-      <td>${_riskFotoHucre(r.fotoOncesi)}</td>
-      <td>${r.RP2 !== null ? r.RP2 : '-'}</td>
-      <td>${r.azalma || '-'}</td>
-      <td>${_riskFotoHucre(r.fotoSonrasi)}</td>
-      <td>${_riskCiktiKacir(r.sorumlu) || '-'}</td>
-      <td>${_riskCiktiKacir(gunAyYil(r.termin)) || '-'}</td>
-      <td>${_riskCiktiKacir(r.durumGoruntu)}</td>
-    </tr>
+    <table class="rsk-tablo">
+      <colgroup>${kolonlar.map(k => `<col style="width:${k.yuzde}%">`).join('')}</colgroup>
+      <thead><tr>${kolonlar.map(k => `<th>${_riskCiktiKacir(k.baslik)}</th>`).join('')}</tr></thead>
+      <tbody>${parca.map(r => _riskSatirHtml(r, kolonlar)).join('')}</tbody>
+    </table>
   `;
 }
 
+// Her grup kendi içinde stillenebilsin diye kapsam bir sınıf (html2pdf her
+// grubu ayrı kopyalayıp çizdiğinden üst #id kapsamı kopyada kaybolur).
 const _RSK_PDF_STIL = `
-  #rskPdfKok{ font-family: Arial, Helvetica, sans-serif; color:#111827; background:#fff; width:100%; }
-  #rskPdfKok *{ box-sizing:border-box; }
+  .rskPdfKok{ font-family: Arial, Helvetica, sans-serif; color:#111827; background:#fff; width:100%; }
+  .rskPdfKok *{ box-sizing:border-box; }
 
-  #rskPdfKok .fa-kutu{ border-collapse:collapse; font-size:7pt; width:42mm; table-layout:fixed; }
-  #rskPdfKok .fa-kutu td{ padding:1.5px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #rskPdfKok .fa-kutu td:first-child{ font-weight:700; background:#f1f5f9; width:48%; }
+  .rskPdfKok .fa-kutu{ border-collapse:collapse; font-size:7pt; width:42mm; table-layout:fixed; }
+  .rskPdfKok .fa-kutu td{ padding:1.5px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rskPdfKok .fa-kutu td:first-child{ font-weight:700; background:#f1f5f9; width:48%; }
 
-  #rskPdfKok .rsk-kapak{ position:relative; height:185mm; max-height:185mm; display:flex; align-items:center; justify-content:center; overflow:hidden; page-break-after:always; }
-  #rskPdfKok .rsk-kapak-fa{ position:absolute; top:10mm; right:10mm; }
-  #rskPdfKok .rsk-kapak-kutu{ width:78%; border:3px solid #111827; padding:14mm; text-align:center; }
-  #rskPdfKok .rsk-kapak-kutu .rsk-firma{ font-size:12pt; font-weight:700; margin-bottom:6mm; color:#374151; }
-  #rskPdfKok .rsk-kapak-kutu h1{ margin:0 0 8mm; font-size:19pt; color:#111827; }
-  #rskPdfKok .rsk-kapak-kutu .rsk-tarih{ font-size:9pt; color:#374151; margin-top:8mm; }
+  .rskPdfKok .rsk-kapak{ position:relative; height:185mm; max-height:185mm; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .rskPdfKok .rsk-kapak-fa{ position:absolute; top:10mm; right:10mm; }
+  .rskPdfKok .rsk-kapak-kutu{ width:78%; border:3px solid #111827; padding:14mm; text-align:center; }
+  .rskPdfKok .rsk-kapak-kutu .rsk-firma{ font-size:12pt; font-weight:700; margin-bottom:6mm; color:#374151; }
+  .rskPdfKok .rsk-kapak-kutu h1{ margin:0 0 8mm; font-size:19pt; color:#111827; }
+  .rskPdfKok .rsk-kapak-kutu .rsk-tarih{ font-size:9pt; color:#374151; margin-top:8mm; }
 
-  #rskPdfKok .rsk-liste-ustbilgi{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5mm; border-bottom:2px solid #111827; padding-bottom:3mm; }
-  #rskPdfKok .rsk-liste-ustbilgi h1{ margin:0; font-size:14pt; color:#111827; }
-  #rskPdfKok .rsk-liste-istatistik{ display:flex; gap:6mm; }
-  #rskPdfKok .rsk-liste-istatistik div{ font-size:9pt; text-align:center; }
-  #rskPdfKok .rsk-liste-istatistik b{ display:block; font-size:14pt; color:#111827; }
+  .rskPdfKok .rsk-liste-ustbilgi{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5mm; border-bottom:2px solid #111827; padding-bottom:3mm; }
+  .rskPdfKok .rsk-liste-ustbilgi h1{ margin:0; font-size:14pt; color:#111827; }
+  .rskPdfKok .rsk-liste-istatistik{ display:flex; gap:6mm; }
+  .rskPdfKok .rsk-liste-istatistik div{ font-size:9pt; text-align:center; }
+  .rskPdfKok .rsk-liste-istatistik b{ display:block; font-size:14pt; color:#111827; }
 
-  #rskPdfKok .rsk-bolum{ margin-bottom:6mm; page-break-inside:avoid; }
-  #rskPdfKok .rsk-bolum h2{ margin:0 0 3mm; font-size:13pt; color:#111827; border-bottom:2px solid #111827; padding-bottom:2mm; }
+  .rskPdfKok .rsk-bolum{ margin-bottom:6mm; page-break-inside:avoid; }
+  .rskPdfKok .rsk-bolum h2{ margin:0 0 3mm; font-size:13pt; color:#111827; border-bottom:2px solid #111827; padding-bottom:2mm; }
 
-  #rskPdfKok .rsk-yontem-tablo{ border-collapse:collapse; flex:1; font-size:7.5pt; }
-  #rskPdfKok .rsk-yontem-tablo th{ background:#e5e7eb; color:#111827; padding:3px 5px; border:1px solid #94a3b8; }
-  #rskPdfKok .rsk-yontem-tablo td{ padding:2.5px 5px; border:1px solid #cbd5e1; }
-  #rskPdfKok .rsk-kisaltma-aciklama{ font-size:7pt; color:#4b5563; margin:2mm 0 3mm; line-height:1.5; }
+  .rskPdfKok .rsk-yontem-tablo{ border-collapse:collapse; flex:1; font-size:7.5pt; }
+  .rskPdfKok .rsk-yontem-tablo th{ background:#e5e7eb; color:#111827; padding:3px 5px; border:1px solid #94a3b8; }
+  .rskPdfKok .rsk-yontem-tablo td{ padding:2.5px 5px; border:1px solid #cbd5e1; }
+  .rskPdfKok .rsk-kisaltma-aciklama{ font-size:7pt; color:#4b5563; margin:2mm 0 3mm; line-height:1.5; }
 
-  #rskPdfKok table.rsk-tablo{ width:100%; border-collapse:collapse; table-layout:fixed; }
-  #rskPdfKok table.rsk-tablo th{ background:#e5e7eb; color:#111827; font-size:7.3pt; padding:3px 4px; border:1px solid #94a3b8; text-transform:uppercase; }
-  #rskPdfKok table.rsk-tablo td{ font-size:7.6pt; padding:3px 4px; border:1px solid #cbd5e1; vertical-align:middle; overflow-wrap:anywhere; }
-  #rskPdfKok table.rsk-tablo tr{ page-break-inside:avoid; }
+  .rskPdfKok table.rsk-tablo{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  .rskPdfKok table.rsk-tablo th{ background:#e5e7eb; color:#111827; font-size:6.6pt; padding:3px 2px; border:1px solid #94a3b8; text-transform:uppercase; }
+  .rskPdfKok table.rsk-tablo td{ font-size:6.8pt; padding:2px 3px; border:1px solid #cbd5e1; vertical-align:middle; overflow-wrap:anywhere; line-height:1.3; }
+  .rskPdfKok table.rsk-tablo tr{ page-break-inside:avoid; }
 
-  #rskPdfKok .rsk-foto-thumb{ width:100%; height:22mm; object-fit:cover; border:1px solid #cbd5e1; display:block; background:#fff; }
-  #rskPdfKok .rsk-foto-bos{ width:100%; height:22mm; border:1px solid #cbd5e1; background:#f3f4f6; }
+  .rskPdfKok .rsk-foto-thumb{ width:100%; height:18mm; object-fit:cover; border:1px solid #cbd5e1; display:block; background:#fff; }
+  .rskPdfKok .rsk-foto-bos{ width:100%; height:18mm; border:1px solid #cbd5e1; background:#f3f4f6; }
 
-  #rskPdfKok .rsk-imza{ margin-top:6mm; border-top:1px solid #94a3b8; padding-top:4mm; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4mm; font-size:9.5pt; page-break-inside:avoid; }
+  .rskPdfKok .rsk-imza{ margin-top:6mm; border-top:1px solid #94a3b8; padding-top:4mm; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4mm; font-size:9.5pt; page-break-inside:avoid; }
 `;
 
-function _riskTabloBasligiHtml() {
-  return `
-    <tr>
-      <th>No</th><th>Bölüm</th><th>Yer / Ekipman</th><th>Tehlike</th><th>Risk</th>
-      <th>RP1</th><th>Düzey</th><th>Öncesi</th><th>RP2</th><th>Azalma</th><th>Sonrası</th>
-      <th>Sorumlu</th><th>Termin</th><th>Durum</th>
-    </tr>
-  `;
-}
-
-// html2pdf/html2canvas bir HTML tablosunun <thead>'ini sayfa geçişlerinde
-// otomatik TEKRARLAMAZ (native PDF tablo kütüphanelerinin aksine — bu satır
-// kırılımı css/legacy modunun bir sınırlaması). Bunu aşmak için risk listesi
-// sabit sayıda satırlık parçalara bölünüp her parça kendi <thead>'i olan AYRI
-// bir <table> olarak render edilir: ilk parça mevcut akışta kalır, sonraki
-// parçalar page-break-before:always ile yeni sayfada başlar — böylece sütun
-// başlıkları her sayfada yeniden görünür.
-function _riskTabloParcalariHtml(riskler, satirBasina) {
-  const parcalar = [];
-  for (let i = 0; i < riskler.length; i += satirBasina) parcalar.push(riskler.slice(i, i + satirBasina));
-
-  return parcalar.map((parca, index) => `
-    <div class="rsk-bolum"${index > 0 ? ' style="page-break-before:always;"' : ''}>
-      <table class="rsk-tablo">
-        <colgroup>
-          <!-- Kullanıcı isteği: "düzey kolnunu buna göre daralt" -- Düzey
-               artık kısaltma (T.G. vb.) bastığından 8%'den 4%'e daraltıldı;
-               açılan yer Tehlike/Risk metin kolonlarına verildi. -->
-          <col style="width:6%"><col style="width:8%"><col style="width:9%"><col style="width:14%">
-          <col style="width:16%"><col style="width:4%"><col style="width:4%"><col style="width:6%">
-          <col style="width:4%"><col style="width:4%"><col style="width:6%"><col style="width:7%">
-          <col style="width:6%"><col style="width:6%">
-        </colgroup>
-        <thead>${_riskTabloBasligiHtml()}</thead>
-        <tbody>${parca.map(_riskSatirHtml).join('')}</tbody>
-      </table>
-    </div>
-  `).join('');
-}
+// Kullanıcı raporu (2026-10-22): "pdf boş geliyor" -- 520 riskli Bagfaş
+// analizi tek bir HTML olarak html2pdf'e verildiğinde html2canvas tek bir dev
+// tuval çizmeye çalışıyor, tarayıcının tuval boyutu sınırını aşınca tuval boş
+// dönüyor ve PDF boş sayfalardan oluşuyordu. Rapor artık gruplara bölünüyor
+// (kapak, yöntem + ilk tablo parçası, sonraki her tablo parçası) ve her grup
+// ayrı çizilip aynı PDF'e yeni sayfa olarak ekleniyor; böylece rapor boyutu
+// ne olursa olsun tek bir tuval birkaç sayfayı geçmiyor. Her parçanın kendi
+// başlık satırı olduğundan sütun başlıkları her sayfada yeniden görünür.
+const _RSK_PDF_SATIR_PARCA = 8;
 
 async function riskRaporuPdfOlustur(hazirlayanAdi) {
   const filtreler = { bolum: document.getElementById('bolumFiltre').value };
@@ -271,73 +283,93 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(_bugun());
   const ozet = riskOzetiHesapla();
+  const kolonlar = _riskRaporKolonlari(riskler, !!filtreler.bolum);
 
-  const html = `
-  <div id="rskPdfKok">
-    <style>${_RSK_PDF_STIL}</style>
+  const parcalar = [];
+  for (let i = 0; i < riskler.length; i += _RSK_PDF_SATIR_PARCA) parcalar.push(riskler.slice(i, i + _RSK_PDF_SATIR_PARCA));
 
-    <div class="rsk-kapak">
-      <div class="rsk-kapak-fa">${formAyarlariKutusuHtml('risk', null, false, null, true)}</div>
-      <div class="rsk-kapak-kutu">
-        <div class="rsk-firma">${_riskCiktiKacir(firma ? firma.ad : '')}</div>
-        <h1>RİSK DEĞERLENDİRME RAPORU${filtreler.bolum ? '<br><span style="font-size:12pt;">' + _riskCiktiKacir(filtreler.bolum) + '</span>' : ''}</h1>
-        <div class="rsk-tarih">Rapor Tarihi: ${bugun}</div>
-      </div>
-    </div>
-
-    ${_riskYontemBolumuHtml(riskler)}
-
-    <div class="rsk-liste-ustbilgi">
-      <h1>RİSK LİSTESİ</h1>
-      <div class="rsk-liste-istatistik">
-        <div><b>${ozet.toplam}</b>Toplam</div>
-        <div><b>${ozet.acik}</b>Açık</div>
-        <div><b>${ozet.gecikmis}</b>Gecikmiş</div>
-        <div><b>${ozet.onemliVeUstu}</b>Önemli+</div>
-      </div>
-    </div>
-    ${_riskDuzeyKisaltmaAciklamaHtml()}
-
-    ${_riskTabloParcalariHtml(riskler, 15)}
-
+  const imzaHtml = `
     <div class="rsk-imza">
       <div><b>Hazırlayan:</b> ${_riskCiktiKacir(hazirlayanAdi) || '_____________________'}</div>
       <div><b>İmza:</b> _____________________</div>
       <div><b>Tarih:</b> ${bugun}</div>
-    </div>
-  </div>
-  `;
+    </div>`;
+
+  const gruplar = [
+    `<div class="rsk-kapak">
+       <div class="rsk-kapak-fa">${formAyarlariKutusuHtml('risk', null, false, null, true)}</div>
+       <div class="rsk-kapak-kutu">
+         <div class="rsk-firma">${_riskCiktiKacir(firma ? firma.ad : '')}</div>
+         <h1>RİSK DEĞERLENDİRME RAPORU${filtreler.bolum ? '<br><span style="font-size:12pt;">' + _riskCiktiKacir(filtreler.bolum) + '</span>' : ''}</h1>
+         <div class="rsk-tarih">Rapor Tarihi: ${bugun}</div>
+       </div>
+     </div>`,
+    _riskYontemBolumuHtml(riskler)
+  ];
+  parcalar.forEach((parca, i) => {
+    const ustbilgi = i === 0 ? `
+      <div class="rsk-liste-ustbilgi">
+        <h1>RİSK LİSTESİ</h1>
+        <div class="rsk-liste-istatistik">
+          <div><b>${ozet.toplam}</b>Toplam</div>
+          <div><b>${ozet.acik}</b>Açık</div>
+          <div><b>${ozet.gecikmis}</b>Gecikmiş</div>
+          <div><b>${ozet.onemliVeUstu}</b>Önemli+</div>
+        </div>
+      </div>
+      ${_riskDuzeyKisaltmaAciklamaHtml()}` : '';
+    gruplar.push(ustbilgi + _riskTabloHtml(parca, kolonlar) + (i === parcalar.length - 1 ? imzaHtml : ''));
+  });
 
   const mount = document.getElementById('yazdirmaAlani');
-  mount.innerHTML = html;
+  mount.innerHTML = gruplar.map(g => `<div class="rskPdfKok"><style>${_RSK_PDF_STIL}</style>${g}</div>`).join('');
   mount.style.display = 'block';
+  const grupElemanlari = Array.from(mount.children);
 
-  const worker = html2pdf()
-    .set({
-      margin: [7, 7, 10, 7],
-      filename: `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
-      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4', compress: true },
-      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] }
-    })
-    .from(mount)
-    .toPdf();
+  const dugme = document.getElementById('pdfRaporBtn');
+  const eskiMetin = dugme ? dugme.textContent : '';
+  const ilerleme = n => { if (dugme) dugme.textContent = `PDF hazırlanıyor... ${n}/${grupElemanlari.length}`; };
+  if (dugme) dugme.disabled = true;
 
-  const pdf = await worker.get('pdf');
-  const toplamSayfa = pdf.internal.getNumberOfPages();
-  const genislik = pdf.internal.pageSize.getWidth();
-  const yukseklik = pdf.internal.pageSize.getHeight();
-  for (let i = 1; i <= toplamSayfa; i++) {
-    pdf.setPage(i);
-    pdf.setFontSize(8);
-    pdf.setTextColor(100);
-    pdf.text(`Sayfa ${i} / ${toplamSayfa}`, genislik / 2, yukseklik - 5, { align: 'center' });
+  try {
+    let worker = html2pdf()
+      .set({
+        margin: [7, 7, 10, 7],
+        filename: `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.pdf`,
+        image: { type: 'jpeg', quality: 0.92 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
+        jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4', compress: true },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] }
+      })
+      .from(grupElemanlari[0])
+      .toPdf()
+      .then(() => ilerleme(1));
+    grupElemanlari.slice(1).forEach((el, i) => {
+      worker = worker
+        .get('pdf').then(pdf => { pdf.addPage(); })
+        .from(el).toContainer().toCanvas().toPdf()
+        .then(() => ilerleme(i + 2));
+    });
+
+    const pdf = await worker.get('pdf');
+    const toplamSayfa = pdf.internal.getNumberOfPages();
+    const genislik = pdf.internal.pageSize.getWidth();
+    const yukseklik = pdf.internal.pageSize.getHeight();
+    for (let i = 1; i <= toplamSayfa; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(8);
+      pdf.setTextColor(100);
+      pdf.text(`Sayfa ${i} / ${toplamSayfa}`, genislik / 2, yukseklik - 5, { align: 'center' });
+    }
+    await worker.save();
+  } catch (hata) {
+    console.error(hata);
+    alert('PDF oluşturulamadı: ' + (hata && hata.message ? hata.message : hata));
+  } finally {
+    mount.innerHTML = '';
+    mount.style.display = 'none';
+    if (dugme) { dugme.disabled = false; dugme.textContent = eskiMetin; }
   }
-  await worker.save();
-
-  mount.innerHTML = '';
-  mount.style.display = 'none';
 }
 
 // ==================== WORD RAPORU ====================
@@ -446,28 +478,36 @@ function _riskWordYontemBolumu(riskler) {
   return cocuklar;
 }
 
-function _riskWordListesiTablosu(riskler) {
-  const basliklar = ['No', 'Bölüm', 'Yer / Ekipman', 'Tehlike', 'Risk', 'RP1', 'Düzey', 'Öncesi Foto', 'RP2', 'Azalma', 'Sonrası Foto', 'Sorumlu', 'Termin', 'Durum'];
+// Sütunlar PDF ile ortak (_riskRaporKolonlari): O/F/Ş, RP1, düzey, önlemler,
+// O₂/F₂/Ş₂, RP2, düzey₂, azalma... Word'de fotoğraf hücreleri "Var/-" yazar.
+const _RSK_WORD_TABLO_BOYUT = 13;
+
+function _riskWordKucukParagraflar(metin, opts = {}) {
+  const satirlar = String(metin ?? '').split('\n');
+  return satirlar.map(s => new docx.Paragraph({
+    alignment: opts.ortala ? docx.AlignmentType.CENTER : undefined,
+    children: [new docx.TextRun({ text: s || (satirlar.length === 1 ? '-' : ''), size: _RSK_WORD_TABLO_BOYUT, bold: !!opts.kalin })]
+  }));
+}
+
+function _riskWordListesiTablosu(riskler, bolumFiltreli) {
+  const kolonlar = _riskRaporKolonlari(riskler, bolumFiltreli);
+  const genislik = k => ({ size: k.yuzde, type: docx.WidthType.PERCENTAGE });
+  const hucre = (k, r) => {
+    if (k.duzey) {
+      const etiket = k.duzey(r);
+      const koyu = etiket === 'Tolerans Gösterilemez' || etiket === 'Kritik Risk';
+      return _riskWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: etiket ? (_RISK_DUZEY_KISALTMA[etiket] || etiket) : '-', bold: true, size: _RSK_WORD_TABLO_BOYUT, color: koyu ? 'FFFFFF' : '111827' })] }),
+        etiket ? { width: genislik(k), shading: { fill: _riskWordDuzeyRengi(etiket), color: 'auto', type: docx.ShadingType.CLEAR } } : { width: genislik(k) });
+    }
+    if (k.foto) return _riskWordHucre(_riskWordKucukParagraflar(k.foto(r) ? 'Var' : '-', { ortala: true }), { width: genislik(k) });
+    return _riskWordHucre(_riskWordKucukParagraflar(k.metin(r), { ortala: k.ortala, kalin: k.kalin }), { width: genislik(k) });
+  };
   return new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
     rows: [
-      new docx.TableRow({ tableHeader: true, children: basliklar.map(h => _riskWordBaslikHucre(h)) }),
-      ...riskler.map(r => new docx.TableRow({ children: [
-        _riskWordMetinHucre(r.riskNo),
-        _riskWordMetinHucre(r.bolum),
-        _riskWordMetinHucre(r.yer),
-        _riskWordMetinHucre(r.tehlike),
-        _riskWordMetinHucre(r.risk),
-        _riskWordMetinHucre(r.RP1),
-        _riskWordHucre(new docx.Paragraph({ children: [new docx.TextRun({ text: r.duzey1, bold: true, size: _RSK_WORD_METIN_BOYUT })] }), { shading: { fill: _riskWordDuzeyRengi(r.duzey1), color: 'auto', type: docx.ShadingType.CLEAR } }),
-        _riskWordMetinHucre(r.fotoOncesi ? 'Var' : '-'),
-        _riskWordMetinHucre(r.RP2 !== null ? r.RP2 : '-'),
-        _riskWordMetinHucre(r.azalma || '-'),
-        _riskWordMetinHucre(r.fotoSonrasi ? 'Var' : '-'),
-        _riskWordMetinHucre(r.sorumlu),
-        _riskWordMetinHucre(gunAyYil(r.termin)),
-        _riskWordMetinHucre(r.durumGoruntu)
-      ]}))
+      new docx.TableRow({ tableHeader: true, children: kolonlar.map(k => _riskWordHucre(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.baslik, bold: true, size: _RSK_WORD_TABLO_BOYUT, color: 'FFFFFF' })] }), { width: genislik(k), shading: { fill: '1D4ED8', color: 'auto', type: docx.ShadingType.CLEAR } })) }),
+      ...riskler.map(r => new docx.TableRow({ cantSplit: true, children: kolonlar.map(k => hucre(k, r)) }))
     ]
   });
 }
@@ -513,7 +553,7 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
     new docx.Paragraph({ text: 'Risk Listesi', heading: docx.HeadingLevel.HEADING_2 }),
     ozetSatiri,
     kisaltmaSatiri,
-    _riskWordListesiTablosu(riskler),
+    _riskWordListesiTablosu(riskler, !!filtreler.bolum),
     new docx.Paragraph({ text: '', spacing: { after: 300 } }),
     new docx.Paragraph({ children: [
       new docx.TextRun({ text: 'Hazırlayan: ', bold: true, size: _RSK_WORD_METIN_BOYUT }),
