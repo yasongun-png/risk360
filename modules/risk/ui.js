@@ -148,6 +148,22 @@ function riskSayfasiniBaslat() {
     _bolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
+  document.getElementById('konuGrubuDevamBtn').addEventListener('click', () => _riskKonuGrubuDegistir('devam'));
+  document.getElementById('konuGrubuTamamBtn').addEventListener('click', () => _riskKonuGrubuDegistir('tamamlanan'));
+  document.getElementById('bolumTamamlaBtn').addEventListener('click', async () => {
+    const ad = document.getElementById('bolumFiltre').value;
+    if (!ad) { alert('Önce bir risk değerlendirme konusu seçin.'); return; }
+    const tamamla = _riskKonuGrubu === 'devam';
+    const soru = tamamla
+      ? `"${ad}" risk değerlendirmesi tamamlandı olarak işaretlensin mi? Konu "Tamamlanan Değerlendirmeler" altına taşınır; kayıtları ve raporları orada açılmaya devam eder.`
+      : `"${ad}" risk değerlendirmesi yeniden "Devam Eden Değerlendirmeler" altına alınsın mı?`;
+    if (!(await onayModali(soru, tamamla ? 'Tamamlandı' : 'Geri Al'))) return;
+    const sonuc = bolumTamamlandiAyarla(ad, tamamla);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    document.getElementById('bolumFiltre').value = '';
+    _bolumFiltreDoldur();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
   // Kullanıcı isteği: "bölümler arasında risk taşınabilsin" -- listede
   // seçilen risk(ler)i tek seferde başka bir bölüme taşır.
   document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
@@ -216,7 +232,7 @@ function riskSayfasiniBaslat() {
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
     const bolum = document.getElementById('bolumFiltre').value;
     const dosyaAdi = bolum ? `risk_kayitlari_${bolum}.xlsx` : 'risk_kayitlari.xlsx';
-    const liste = riskleriGetir(document.getElementById('aramaKutusu').value, { bolum })
+    const liste = riskleriGetir(document.getElementById('aramaKutusu').value, riskListeFiltreleri())
       .map(r => Object.assign({}, r, { bolumGoruntu: riskBolumGoruntu(r) }));
     excelDisaAktar(liste, RISK_EXPORT_KOLONLARI, dosyaAdi);
   });
@@ -253,7 +269,7 @@ function riskSayfasiniBaslat() {
     dugme.textContent = 'Hazırlanıyor...';
     try {
       const bolum = document.getElementById('bolumFiltre').value;
-      const veri = await riskKayitlariniJsonaAktar(document.getElementById('aramaKutusu').value, { bolum });
+      const veri = await riskKayitlariniJsonaAktar(document.getElementById('aramaKutusu').value, riskListeFiltreleri());
       const dosyaAdi = bolum ? `risk_kayitlari_${bolum}.json` : 'risk_kayitlari.json';
       _jsonDosyaOlarakIndir(veri, dosyaAdi);
     } catch (hata) {
@@ -455,7 +471,9 @@ function hazirlayanModalKapat() {
 function _sablonBolumSecDoldur() {
   const secim = document.getElementById('sablonBolumSec');
   const seciliDeger = secim.value;
-  const bolumler = bolumleriGetir();
+  const bolumler = bolumleriGetir('devam');
+  const filtreKonusu = document.getElementById('bolumFiltre').value;
+  if (filtreKonusu && !bolumler.some(b => b.ad === filtreKonusu)) bolumler.push({ ad: filtreKonusu });
   secim.innerHTML = bolumler.map(b => `<option value="${b.ad}" ${b.ad === seciliDeger ? 'selected' : ''}>${b.ad}</option>`).join('');
   if (!secim.value && bolumler.length) secim.value = bolumler[0].ad;
 }
@@ -560,13 +578,48 @@ function _jsonDosyaOlarakIndir(veri, dosyaAdi) {
 
 // Kalıcı bölüm listesiyle risk kayıtlarında geçen bölüm adlarını birleştirip
 // filtre seçeneklerini günceller; o an seçili bölüm hâlâ mevcutsa seçimi korur.
+// Yalnızca açık gruptaki (devam eden / tamamlanan) konular listelenir.
 function _bolumFiltreDoldur() {
   const secim = document.getElementById('bolumFiltre');
   const seciliDeger = secim.value;
-  const bolumler = bolumleriGetir();
+  const bolumler = bolumleriGetir(_riskKonuGrubu);
+  const tamam = _riskKonuGrubu === 'tamamlanan';
 
   secim.innerHTML = '<option value="">Tüm Konular</option>' +
-    bolumler.map(b => `<option value="${b.ad}" ${b.ad === seciliDeger ? 'selected' : ''}>${b.ad}</option>`).join('');
+    bolumler.map(b => `<option value="${_riskKacir(b.ad)}" ${b.ad === seciliDeger ? 'selected' : ''}>${_riskKacir(b.ad)}${tamam && b.tamamlanmaTarihi ? ' (✓ ' + gunAyYil(b.tamamlanmaTarihi) + ')' : ''}</option>`).join('');
+
+  document.getElementById('konuGrubuDevamSayi').textContent = `(${bolumleriGetir('devam').length})`;
+  document.getElementById('konuGrubuTamamSayi').textContent = `(${bolumleriGetir('tamamlanan').length})`;
+}
+
+// Kullanıcı isteği (2026-10-23): analizi bitmiş konular "Tamamlanan
+// Değerlendirmeler", süren konular "Devam Eden Değerlendirmeler" altında.
+let _riskKonuGrubu = 'devam';
+
+function _riskKonuGrubuDegistir(grup) {
+  _riskKonuGrubu = grup;
+  const tamam = grup === 'tamamlanan';
+  document.getElementById('konuGrubuDevamBtn').classList.toggle('sekme-seciliDegil', tamam);
+  document.getElementById('konuGrubuTamamBtn').classList.toggle('sekme-seciliDegil', !tamam);
+  document.getElementById('bolumYeniBtn').style.display = tamam ? 'none' : '';
+  document.getElementById('bolumTamamlaBtn').textContent = tamam ? '↩ Devam Edenlere Geri Al' : '✓ Tamamlandı Olarak İşaretle';
+  document.getElementById('konuGrubuAciklama').textContent = tamam
+    ? 'Risk analizi tamamlanmış konular. Kayıtlar ve raporlar burada da açılabilir; konuyu yeniden çalışmaya açmak için "Devam Edenlere Geri Al" kullanın.'
+    : 'Risk analizi süren konular. Analizi biten konuyu seçip "Tamamlandı Olarak İşaretle" ile Tamamlanan Değerlendirmeler\'e taşıyın. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.';
+  document.getElementById('bolumFiltre').value = '';
+  _bolumFiltreDoldur();
+  kayitlariCiz(document.getElementById('aramaKutusu').value);
+}
+
+// Liste, dışa aktarım ve raporlar için ortak filtre: seçili konu ya da
+// (Tüm Konular'da) açık gruptaki tüm konular. Konusu boş eski kayıtlar
+// devam edenlerde görünür.
+function riskListeFiltreleri() {
+  const bolum = document.getElementById('bolumFiltre').value;
+  if (bolum) return { bolum };
+  const bolumler = bolumleriGetir(_riskKonuGrubu).map(b => b.ad);
+  if (_riskKonuGrubu === 'devam') bolumler.push('');
+  return { bolumler };
 }
 
 function _riskKacir(v) {
@@ -674,7 +727,7 @@ function kayitlariCiz(aramaMetni, devamMi) {
   const dahaFazla = document.getElementById('riskDahaFazla');
   const bolum = document.getElementById('bolumFiltre').value;
   const siralama = riskSiralamaDegeri();
-  const riskler = riskSiralamaUygula(riskleriGetir(aramaMetni, { bolum }), siralama);
+  const riskler = riskSiralamaUygula(riskleriGetir(aramaMetni, riskListeFiltreleri()), siralama);
   document.getElementById('riskNoOk').textContent = siralama === 'noArtan' ? '▲' : (siralama === 'noAzalan' ? '▼' : '');
   document.getElementById('tumunuSecCheckbox').checked = false;
 
@@ -684,7 +737,9 @@ function kayitlariCiz(aramaMetni, devamMi) {
     bosDurum.classList.add('gorunur');
     bosDurum.textContent = aramaMetni || bolum
       ? 'Filtrenizle eşleşen risk kaydı bulunamadı.'
-      : 'Henüz risk kaydı eklenmedi. "+ Yeni Risk" ile başlayın.';
+      : _riskKonuGrubu === 'tamamlanan'
+        ? 'Henüz tamamlanan risk değerlendirmesi yok. Devam eden bir konuyu seçip "Tamamlandı Olarak İşaretle" ile buraya taşıyabilirsiniz.'
+        : 'Henüz risk kaydı eklenmedi. "+ Yeni Risk" ile başlayın.';
     return;
   }
   bosDurum.classList.remove('gorunur');
@@ -828,7 +883,7 @@ function modalAc(risk) {
   // Konu seçimi kalıcı konu listesinden; yeni kayıtta üstte seçili konu gelir.
   const konuSecim = document.getElementById('bolum');
   const konu = risk ? risk.bolum : document.getElementById('bolumFiltre').value;
-  const konular = bolumleriGetir().map(b => b.ad);
+  const konular = bolumleriGetir('devam').map(b => b.ad);
   if (konu && !konular.includes(konu)) konular.push(konu);
   konuSecim.innerHTML = '<option value="">— Konu seçiniz —</option>' +
     konular.map(k => `<option value="${_riskKacir(k)}">${_riskKacir(k)}</option>`).join('');

@@ -143,7 +143,10 @@ function bolumOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
     ad: (veriler.ad || '').trim(),
-    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString()
+    olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
+    // Risk analizi bitmiş konu "Tamamlanan Değerlendirmeler" altında listelenir.
+    tamamlandi: !!veriler.tamamlandi,
+    tamamlanmaTarihi: veriler.tamamlanmaTarihi || ''
   };
 }
 

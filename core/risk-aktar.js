@@ -63,9 +63,12 @@ function riskeAktarButonHtml(modul, id) {
 }
 
 function _raBolumleri() {
-  const kalici = (oku(tenantAnahtar('risk_bolumleri'), []) || []).map(b => b.ad);
+  // Risk analizi tamamlanmış konular önerilmez (risk modülünde "Tamamlanan Değerlendirmeler").
+  const kalicilar = oku(tenantAnahtar('risk_bolumleri'), []) || [];
+  const tamamlanan = new Set(kalicilar.filter(b => b.tamamlandi).map(b => b.ad));
   const risklerden = (oku(_raRiskAnahtari(), []) || []).map(r => r.bolum);
-  return Array.from(new Set(kalici.concat(risklerden).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'tr'));
+  return Array.from(new Set(kalicilar.map(b => b.ad).concat(risklerden).filter(ad => ad && !tamamlanan.has(ad))))
+    .sort((a, b) => a.localeCompare(b, 'tr'));
 }
 
 function _raPuanGuncelle() {

@@ -279,7 +279,7 @@ const _RSK_PDF_STIL = `
 const _RSK_PDF_SATIR_PARCA = 8;
 
 async function riskRaporuPdfOlustur(hazirlayanAdi) {
-  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const filtreler = riskListeFiltreleri();
   const risklerHam = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!risklerHam.length) {
     alert('Seçili filtreler için PDF oluşturulacak risk kaydı yok.');
@@ -533,7 +533,7 @@ function _riskWordListesiTablosu(riskler, bolumFiltreli) {
 }
 
 async function riskRaporuWordOlustur(hazirlayanAdi) {
-  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const filtreler = riskListeFiltreleri();
   const risklerHam = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!risklerHam.length) {
     alert('Seçili filtreler için Word raporu oluşturulacak risk kaydı yok.');
@@ -611,7 +611,7 @@ function _riskExcelHazir() {
 }
 
 async function riskRaporuExcelOlustur(hazirlayanAdi) {
-  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const filtreler = riskListeFiltreleri();
   const riskler = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!riskler.length) {
     alert('Seçili filtreler için Excel raporu oluşturulacak risk kaydı yok.');
@@ -789,7 +789,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
 // kapak + genel özet + risk başına bir slayt (öncesi/sonrası fotoğraflı).
 
 async function riskPptxOlustur() {
-  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const filtreler = riskListeFiltreleri();
   const risklerHam = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!risklerHam.length) {
     alert('Seçili filtreler için sunum oluşturulacak risk kaydı yok.');
@@ -868,7 +868,7 @@ async function riskPptxOlustur() {
 // risk-defteri Checklist özelliğiyle aynı mantık.
 
 function _riskChecklistListesiHazirla() {
-  const filtreler = { bolum: document.getElementById('bolumFiltre').value };
+  const filtreler = riskListeFiltreleri();
   const riskler = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
   return riskler.slice().sort((a, b) => b.RP1 - a.RP1);
 }

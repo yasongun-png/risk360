@@ -40,12 +40,34 @@ function riskBolumGoruntu(r) {
 // mevcut risk kayıtlarında geçen bölüm adlarını birleştirir. Bir bölümü
 // kalıcı listeden silmek mevcut risk kayıtlarındaki bolum metnini SİLMEZ —
 // o bölümde hâlâ risk varsa listede görünmeye devam eder (veri kaybı olmaz).
-function bolumleriGetir() {
+// grup: 'devam' (analizi süren konular), 'tamamlanan' ya da boş (hepsi).
+function bolumleriGetir(grup) {
   const kalicilar = bolumleriTumunuGetir();
   const risklerdenGelenler = Array.from(new Set(riskTumunuGetir().map(r => r.bolum).filter(Boolean)));
   const adSeti = new Set(kalicilar.map(b => b.ad));
   risklerdenGelenler.forEach(ad => { if (!adSeti.has(ad)) { adSeti.add(ad); kalicilar.push({ id: '', ad }); } });
-  return kalicilar.slice().sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+  const liste = grup === 'tamamlanan' ? kalicilar.filter(b => b.tamamlandi)
+    : grup === 'devam' ? kalicilar.filter(b => !b.tamamlandi)
+      : kalicilar;
+  return liste.slice().sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+}
+
+// Kullanıcı isteği (2026-10-23): "risk analizleri bitmiş olanların ayrı bir
+// yerde olmasını istiyorum, devam edenler ayrı yerde". Konu kalıcı listede
+// tamamlandı olarak işaretlenir; risklerden türeyip kalıcı karşılığı olmayan
+// konu için önce kalıcı kayıt açılır. Risk kayıtlarına dokunulmaz.
+function bolumTamamlandiAyarla(ad, tamamlandi) {
+  if (!ad) return { basarili: false, hata: 'Önce bir risk değerlendirme konusu seçin.' };
+  const kalicilar = bolumleriTumunuGetir();
+  let kayit = kalicilar.find(b => b.ad === ad);
+  if (!kayit) {
+    kayit = bolumOlustur({ ad });
+    kalicilar.push(kayit);
+  }
+  kayit.tamamlandi = !!tamamlandi;
+  kayit.tamamlanmaTarihi = tamamlandi ? _bugun() : '';
+  _bolumListesiKaydet(kalicilar);
+  return { basarili: true };
 }
 
 function bolumEkle(ad) {
@@ -124,6 +146,10 @@ function riskleriGetir(aramaMetni, filtreler) {
   let liste = riskTumunuGetir().map(_riskiZenginlestir);
 
   if (f.bolum) liste = liste.filter(r => r.bolum === f.bolum);
+  else if (f.bolumler) {
+    const konuSeti = new Set(f.bolumler);
+    liste = liste.filter(r => konuSeti.has(r.bolum));
+  }
   if (f.durum) liste = liste.filter(r => r.durumGoruntu === f.durum);
   if (f.duzey) liste = liste.filter(r => r.duzey1 === f.duzey);
 

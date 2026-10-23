@@ -38,14 +38,20 @@
 
     <div id="kayitlarBolumu">
       <div style="background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); margin-bottom:14px;">
+        <!-- Kullanıcı isteği (2026-10-23): analizi bitmiş konular ayrı, devam edenler ayrı yerde. -->
+        <div class="sekme-cubugu" style="margin-bottom:10px;">
+          <button type="button" id="konuGrubuDevamBtn">Devam Eden Değerlendirmeler <span id="konuGrubuDevamSayi"></span></button>
+          <button type="button" id="konuGrubuTamamBtn" class="sekme-seciliDegil">Tamamlanan Değerlendirmeler <span id="konuGrubuTamamSayi"></span></button>
+        </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <label for="bolumFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Risk Değerlendirme Konusu</label>
           <select id="bolumFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Konular</option></select>
           <button type="button" class="ikincil" id="bolumYeniBtn">+ Yeni Konu</button>
           <button type="button" class="ikincil" id="bolumAdlandirBtn" title="Seçili konunun adını değiştirir; o konudaki tüm riskler yeni adı alır">Konuyu Yeniden Adlandır</button>
           <button type="button" class="ikincil" id="bolumSilBtn">Konuyu Sil</button>
+          <button type="button" class="ikincil" id="bolumTamamlaBtn">✓ Tamamlandı Olarak İşaretle</button>
         </div>
-        <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.</p>
+        <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;" id="konuGrubuAciklama">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.</p>
       </div>
 
       <div class="arac-cubugu">
@@ -344,13 +350,13 @@
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=20261022k"></script>
+  <script src="model.js?v=20261023a"></script>
   <script src="validation.js?v=20261022k"></script>
   <script src="repository.js?v=20261022e"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261022k"></script>
-  <script src="cikti.js?v=20261022k"></script>
-  <script src="ui.js?v=20261022k"></script>
+  <script src="service.js?v=20261023a"></script>
+  <script src="cikti.js?v=20261023a"></script>
+  <script src="ui.js?v=20261023a"></script>
   <script src="ekipler.js?v=20261022k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
