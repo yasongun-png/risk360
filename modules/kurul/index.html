@@ -63,13 +63,14 @@
           <option>Tamamlandı</option>
           <option>Gecikmiş</option>
           <option>İptal</option>
+          <option value="Pasif">Pasif (gündemden düşürülen)</option>
         </select>
         <button type="button" class="ikincil" id="kararDisaAktarBtn">Dışa Aktar</button>
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th>Karar No</th><th>Toplantı</th><th>Konu / Başlık</th><th>Karar Metni</th><th>Sorumlu</th><th>Termin</th><th>Öncelik</th><th>Durum</th></tr>
+            <tr><th>Karar No</th><th>Toplantı</th><th>Konu / Başlık</th><th>Karar Metni</th><th>Sorumlu</th><th>Termin</th><th>Öncelik</th><th>Durum</th><th></th></tr>
           </thead>
           <tbody id="kararTabloGovde"></tbody>
         </table>
@@ -197,11 +198,11 @@
   <script src="../../core/tenant.js"></script>
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js?v=5"></script>
+  <script src="model.js?v=20261023a"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
-  <script src="service.js"></script>
-  <script src="ui.js?v=3"></script>
+  <script src="service.js?v=20261023a"></script>
+  <script src="ui.js?v=20261023a"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

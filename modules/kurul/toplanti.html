@@ -316,9 +316,14 @@
           </div>
         </div>
 
+        <!-- Kullanıcı isteği (2026-10-23): yapılmasa da kararı gündemden düşürebilmek (pasif). -->
         <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:-6px;">
-          <input type="checkbox" id="kararDevrederMi" style="width:auto; margin:0;" checked> Bu karar açıkken bir sonraki toplantıya devretsin
+          <input type="checkbox" id="kararPasif" style="width:auto; margin:0;"> Pasif — karar yapılmasa da gündemden düşsün, sonraki toplantılara devretmesin
         </label>
+        <div id="kararPasifNedeniKutu" style="display:none;">
+          <label for="kararPasifNedeni">Pasife Alma Gerekçesi</label>
+          <input type="text" id="kararPasifNedeni" placeholder="Örn. Yatırım planına alındı, konu geçerliliğini yitirdi">
+        </div>
 
         <!-- Toplantı bazlı not: her toplantının notu ayrı tutulur; önceki
              toplantıların notları (ve eski tek parça aksiyon notu) salt okunur gösterilir. -->
@@ -567,12 +572,12 @@
   <script src="../../core/belge-yukle.js"></script>
   <script src="../egitim/model.js"></script>
   <script src="../../core/xlsx-bicimli.js?v=1"></script>
-  <script src="model.js?v=7"></script>
+  <script src="model.js?v=20261023a"></script>
   <script src="cikti.js?v=50"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
-  <script src="service.js?v=19"></script>
-  <script src="toplanti-ui.js?v=26"></script>
+  <script src="service.js?v=20261023a"></script>
+  <script src="toplanti-ui.js?v=20261023a"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

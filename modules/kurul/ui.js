@@ -220,10 +220,24 @@ function kararlariCiz(aramaMetni) {
       <td>${k.sorumlu}</td>
       <td>${gunAyYil(k.termin) || '-'}</td>
       <td>${k.oncelik}</td>
-      <td>${k.durumGoruntu}${k.suAndaDevredenMi ? ' <span style="font-size:10px; color:var(--metin-soluk);">(devreden)</span>' : ''}</td>
+      <td>${k.durumGoruntu}${k.suAndaDevredenMi ? ' <span style="font-size:10px; color:var(--metin-soluk);">(devreden)</span>' : ''}${k.pasif ? `<div style="font-size:11px; color:#92400e; background:#fef3c7; border-radius:6px; padding:1px 6px; display:inline-block; margin-top:2px;" title="${_kurulKacir(k.pasifNedeni || '')}">⏸ Pasif${k.pasifTarihi ? ' — ' + gunAyYil(k.pasifTarihi) : ''}</div>${k.pasifNedeni ? `<div style="font-size:11px; color:var(--metin-soluk);">${_kurulKacir(k.pasifNedeni)}</div>` : ''}` : ''}</td>
+      <td>${k.pasif ? `<button class="tablo-buton" data-aktif-et="${k.id}" title="Karar yeniden devreden kararlar arasına (gündeme) alınır">▶ Aktif Et</button>` : ''}</td>
     `;
     govde.appendChild(satir);
   });
+
+  govde.querySelectorAll('[data-aktif-et]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!(await onayModali('Bu karar yeniden aktif edilsin mi? Açık olduğu sürece sonraki toplantılarda devreden kararlar arasında görünür.', 'Aktif Et'))) return;
+      const sonuc = kararAktifEt(btn.getAttribute('data-aktif-et'));
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      kararlariCiz(document.getElementById('kararAramaKutusu').value);
+    });
+  });
+}
+
+function _kurulKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
 function ozetiCiz() {
@@ -239,6 +253,7 @@ function ozetiCiz() {
       ${kart('Kapalı Karar', ozet.kapaliKarar)}
       ${kart('Gecikmiş Karar', ozet.gecikmisKarar)}
       ${kart('Devreden Karar', ozet.devredenKarar)}
+      ${kart('Pasif Karar', ozet.pasifKarar)}
     </div>
   `;
 }

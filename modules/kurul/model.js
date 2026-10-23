@@ -6,6 +6,9 @@ const KARAR_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Tamamlandı
 // ve "Tamamlandı" olarak gösterilir (bkz. kararDurumGoster); devreden listesine girmez, kapanış tarihi atanır.
 function kararDurumGoster(durum) { return durum === 'Kapalı' ? 'Tamamlandı' : durum; }
 function kararKapaliMi(durum) { return durum === 'Kapalı' || durum === 'Tamamlandı'; }
+// Kullanıcı isteği (2026-10-23): "yapılmasa da gündemden düşebilmem için
+// kararı pasife almak". Pasif = açık ama devretmeyen karar (devrederMi: false).
+function kararPasifMi(karar) { return !!karar && karar.devrederMi === false && !kararKapaliMi(karar.durum) && karar.durum !== 'İptal'; }
 const GUNDEM_TURLERI = ['Genel', 'İş Kazası', 'Risk', 'Uygunsuzluk', 'Eğitim', 'Yasal Şart', 'Yüklenici', 'Acil Durum', 'Diğer'];
 
 // Kullanıcı isteği: "kararlar, olaylar ve önceki toplantı kararları için
@@ -237,6 +240,9 @@ function kararOlustur(veriler) {
     // uygulamadaki "devrederMi: Hayır" işaretlemesinin karşılığı. Varsayılan
     // true: işaretlenmediği sürece açık kararlar normal şekilde devreder.
     devrederMi: veriler.devrederMi !== undefined ? !!veriler.devrederMi : true,
+    // Pasife alınma tarihi ve gerekçesi (bkz. kararPasifMi).
+    pasifTarihi: veriler.pasifTarihi || '',
+    pasifNedeni: (veriler.pasifNedeni || '').trim(),
     kapanisTarihi: veriler.kapanisTarihi || '',
     kanit: (veriler.kanit || '').trim(),
     // İlerleme/aksiyon notu — durumdan bağımsız, her toplantıda güncellenip

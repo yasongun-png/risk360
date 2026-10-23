@@ -149,6 +149,7 @@ function toplantiDetaySayfasiniBaslat() {
   document.getElementById('kararModalIptalBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararForm').addEventListener('submit', kararFormGonderildi);
   document.getElementById('kararDurum').addEventListener('change', kararKapanisAlanlariniGuncelle);
+  document.getElementById('kararPasif').addEventListener('change', _kararPasifNedeniGoster);
   document.getElementById('tutanakBtn').addEventListener('click', tutanagiGoster);
   document.getElementById('kararFotoOncesiDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
@@ -447,7 +448,7 @@ function _kararFotoHucresiUret(k) {
   return parcalar.join('') || '-';
 }
 
-function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
+function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar, devredenMi) {
   const govde = document.getElementById(govdeId);
   const bosDurum = document.getElementById(bosDurumId);
   govde.innerHTML = '';
@@ -461,7 +462,9 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
 
   kararlar.forEach(k => {
     const satir = document.createElement('tr');
-    const tamamlandiRozeti = '';
+    const tamamlandiRozeti = kararPasifMi(k)
+      ? ` <span style="font-size:11px; color:#92400e; background:#fef3c7; border-radius:6px; padding:1px 6px;" title="${_ktKacir(k.pasifNedeni || 'Gündemden düşürüldü, devretmez')}">⏸ Pasif</span>`
+      : '';
     // Kullanıcı isteği: "İSG kuruluna diğer modüllerden gelen bilgileri
     // silebileyim veya yeniden düzenleyebileyim" — Olay/Kaza modülünden bir
     // olayın (örn. ramak kala) termin/sorumlu girilerek "karar-benzeri" hale
@@ -478,7 +481,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
       <td style="white-space:nowrap;">
         ${olayId
           ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
-          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
+          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${devredenMi && !kararKapaliMi(k.durum) ? `<button class="tablo-buton" data-pasif="${k.id}" title="Karar yapılmasa da gündemden düşer; sonraki toplantılara devretmez. Kurul ana sayfasındaki Kararlar sekmesinden yeniden aktif edilebilir.">⏸ Pasife Al</button>` : ''}${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
       </td>
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
@@ -527,6 +530,18 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar) {
         kararSil(btn.getAttribute('data-sil'));
         kararlariCiz();
       }
+    });
+  });
+
+  govde.querySelectorAll('[data-pasif]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const k = kararIdIleGetirRepo(btn.getAttribute('data-pasif'));
+      if (!k) return;
+      const neden = await metinIstemModali(`${k.kararNo} numaralı karar pasife alınacak: yapılmamış olsa da bu ve sonraki toplantıların gündeminden (devreden kararlardan) düşer. Kararlar sekmesinden tekrar aktif edebilirsiniz.\n\nPasife alma gerekçesi (isteğe bağlı):`, 'Örn. Yatırım planına alındı, konu geçerliliğini yitirdi', '');
+      if (neden === null) return;
+      const sonuc = kararPasifeAl(k.id, neden);
+      if (!sonuc.basarili) { alert(sonuc.hata); return; }
+      kararlariCiz();
     });
   });
 
@@ -644,7 +659,7 @@ function _kurulNotKaydetTiklandi() {
 function kararlariCiz() {
   kararIstatistikleriniCiz();
   const { devreden, yeni } = toplantiKararGruplariniGetirVeIsaretle(_toplantiId);
-  _kararTablosunuCiz('kararDevredenTabloGovde', 'kararDevredenBosDurum', 'Devreden karar bulunmamaktadır.', devreden);
+  _kararTablosunuCiz('kararDevredenTabloGovde', 'kararDevredenBosDurum', 'Devreden karar bulunmamaktadır.', devreden, true);
   _kararTablosunuCiz('kararYeniTabloGovde', 'kararYeniBosDurum', 'Bu toplantı için henüz karar eklenmedi.', yeni);
 }
 
@@ -1169,7 +1184,9 @@ function kararModalAc(karar) {
   document.getElementById('kararOyKabul').value = karar ? (karar.oyKabul != null ? karar.oyKabul : '') : katilimciSayisi;
   document.getElementById('kararOyRet').value = karar ? (karar.oyRet != null ? karar.oyRet : '') : 0;
   document.getElementById('kararOyCekimser').value = karar ? (karar.oyCekimser != null ? karar.oyCekimser : '') : 0;
-  document.getElementById('kararDevrederMi').checked = karar ? karar.devrederMi !== false : true;
+  document.getElementById('kararPasif').checked = karar ? karar.devrederMi === false : false;
+  document.getElementById('kararPasifNedeni').value = karar ? (karar.pasifNedeni || '') : '';
+  _kararPasifNedeniGoster();
   if (!karar) document.getElementById('kararOncelik').value = 'Normal';
   _kararFotoOncesi = karar ? (karar.fotoOncesi || '') : '';
   _kararFotoSonrasi = karar ? (karar.fotoSonrasi || '') : '';
@@ -1180,6 +1197,10 @@ function kararModalAc(karar) {
   kararKapanisAlanlariniGuncelle();
   temizleKararFormHatalari();
   document.getElementById('kararModalKatman').classList.add('acik');
+}
+
+function _kararPasifNedeniGoster() {
+  document.getElementById('kararPasifNedeniKutu').style.display = document.getElementById('kararPasif').checked ? '' : 'none';
 }
 
 function kararModalKapat() {
@@ -1220,7 +1241,8 @@ function kararFormGonderildi(e) {
     oyKabul: document.getElementById('kararOyKabul').value,
     oyRet: document.getElementById('kararOyRet').value,
     oyCekimser: document.getElementById('kararOyCekimser').value,
-    devrederMi: document.getElementById('kararDevrederMi').checked,
+    devrederMi: !document.getElementById('kararPasif').checked,
+    pasifNedeni: document.getElementById('kararPasifNedeni').value,
     fotoOncesi: _kararFotoOncesi,
     fotoSonrasi: _kararFotoSonrasi,
     fotografEk: _kararFotoEk,

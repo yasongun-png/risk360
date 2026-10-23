@@ -212,6 +212,8 @@ function toplantiKararGruplariniGetir(toplantiId) {
     if (k.toplantiId === toplantiId) return false;
     const eviToplanti = toplantiIdIleGetirRepo(k.toplantiId);
     if (eviToplanti && eviToplanti.tarih && toplanti.tarih && eviToplanti.tarih >= toplanti.tarih) return false;
+    // İptal edilen karar da (pasif karar gibi) gündemden düşer.
+    if (k.durum === 'İptal') return false;
     if (!kararKapaliMi(k.durum)) return k.devrederMi !== false;
     return !k.devredenTamamlandiGosterildi;
   }).concat(_olayKaynakliDevredenKararlariGetir(toplanti));
@@ -268,6 +270,24 @@ function toplantiKararlarinaVarsayilanOyUygula(toplantiId) {
   return { basarili: true, guncellenenSayisi, katilimciSayisi };
 }
 
+// Kararı tamamlanmadan gündemden düşürür (pasif) ya da yeniden devreden
+// listesine alır. Karar silinmez; durumu ve numarası değişmez.
+function kararPasifeAl(kararId, neden) {
+  const mevcut = kararIdIleGetirRepo(kararId);
+  if (!mevcut) return { basarili: false, hata: 'Karar bulunamadı.' };
+  const guncellenen = kararGuncelleRepo(kararId, { devrederMi: false, pasifTarihi: _bugun(), pasifNedeni: (neden || '').trim() });
+  _denetimEkle('karar', kararId, 'guncelle', mevcut, guncellenen);
+  return { basarili: true, karar: guncellenen };
+}
+
+function kararAktifEt(kararId) {
+  const mevcut = kararIdIleGetirRepo(kararId);
+  if (!mevcut) return { basarili: false, hata: 'Karar bulunamadı.' };
+  const guncellenen = kararGuncelleRepo(kararId, { devrederMi: true, pasifTarihi: '', pasifNedeni: '' });
+  _denetimEkle('karar', kararId, 'guncelle', mevcut, guncellenen);
+  return { basarili: true, karar: guncellenen };
+}
+
 function kararTasi(kararId, yeniToplantiId) {
   const karar = kararIdIleGetirRepo(kararId);
   if (!karar) return { basarili: false, hata: 'Karar bulunamadı.' };
@@ -284,11 +304,13 @@ function tumKararlariGetir(aramaMetni, filtreler) {
   liste = liste.map(k => Object.assign({}, k, {
     toplantiBasligi: (toplantilar.find(t => t.id === k.toplantiId) || {}).baslik || 'Silinmiş Toplantı',
     toplantiNo: (toplantilar.find(t => t.id === k.toplantiId) || {}).toplantiNo || '-',
-    suAndaDevredenMi: !kararKapaliMi(k.durum) && k.durum !== 'İptal' && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)
+    pasif: kararPasifMi(k),
+    suAndaDevredenMi: !kararKapaliMi(k.durum) && k.durum !== 'İptal' && !kararPasifMi(k) && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)
   }));
 
   if (f.toplantiId) liste = liste.filter(k => k.toplantiId === f.toplantiId);
-  if (f.durum) liste = liste.filter(k => k.durumGoruntu === f.durum);
+  if (f.durum === 'Pasif') liste = liste.filter(k => k.pasif);
+  else if (f.durum) liste = liste.filter(k => k.durumGoruntu === f.durum);
 
   if (aramaMetni) {
     const kucuk = aramaMetni.trim().toLowerCase();
@@ -384,6 +406,9 @@ function kararGuncelle(id, veriler) {
     oyRet: veriler.oyRet === '' || veriler.oyRet == null ? null : Number(veriler.oyRet),
     oyCekimser: veriler.oyCekimser === '' || veriler.oyCekimser == null ? null : Number(veriler.oyCekimser),
     devrederMi: veriler.devrederMi !== undefined ? !!veriler.devrederMi : (mevcut ? mevcut.devrederMi !== false : true),
+    ...(veriler.devrederMi === false
+      ? { pasifTarihi: (mevcut && mevcut.devrederMi === false && mevcut.pasifTarihi) || _bugun(), pasifNedeni: veriler.pasifNedeni !== undefined ? (veriler.pasifNedeni || '').trim() : ((mevcut && mevcut.pasifNedeni) || '') }
+      : veriler.devrederMi === true ? { pasifTarihi: '', pasifNedeni: '' } : {}),
     kapanisTarihi: kararKapaliMi(veriler.durum) ? (veriler.kapanisTarihi || _bugun()) : '',
     kanit: (veriler.kanit || '').trim(),
     aksiyonNotu: veriler.aksiyonNotu !== undefined ? (veriler.aksiyonNotu || '').trim() : ((mevcut && mevcut.aksiyonNotu) || ''),
@@ -1271,7 +1296,8 @@ function toplantiKararIstatistikleriHesapla(toplanti) {
     iptal: kararlar.length - gecerli.length,
     oran: gecerli.length ? (tamamlanan.length * 100) / gecerli.length : null,
     buToplantiAlinan: gecerli.filter(k => k.toplantiId === toplanti.id).length,
-    devreden: acik.filter(k => k.toplantiId !== toplanti.id).length,
+    // Pasif kararlar açık sayılır ama gündeme devretmez.
+    devreden: acik.filter(k => k.toplantiId !== toplanti.id && !kararPasifMi(k)).length,
     toplantilar: toplantilar.map(t => {
       const kt = gecerli.filter(k => k.toplantiId === t.id);
       return { toplantiNo: t.toplantiNo || '-', alinan: kt.length, tamamlanan: kt.filter(tamamlandiMi).length, acik: kt.filter(k => !tamamlandiMi(k)).length };
@@ -1419,6 +1445,7 @@ function kurulOzetiHesapla() {
     gecikmisKarar: kararlar.filter(k => k.durumGoruntu === 'Gecikmiş').length,
     // Şu anda hâlâ açık olup en son toplantıdan önce açılmış (yani otomatik
     // olarak bir sonraki toplantıya devreden) karar sayısı.
-    devredenKarar: kararlar.filter(k => !kararKapaliMi(k.durum) && k.durum !== 'İptal' && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)).length
+    devredenKarar: kararlar.filter(k => !kararKapaliMi(k.durum) && k.durum !== 'İptal' && !kararPasifMi(k) && (!enSonToplanti || k.toplantiId !== enSonToplanti.id)).length,
+    pasifKarar: kararlar.filter(kararPasifMi).length
   };
 }
