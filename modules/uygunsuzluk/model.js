@@ -3,11 +3,75 @@
 const UYGUNSUZLUK_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Kapalı', 'İptal'];
 const ONAY_DURUMLARI = ['Onay Gerekmiyor', 'Onay Bekliyor', 'Onaylandı', 'Reddedildi'];
 const RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Çok Yüksek'];
-const KAYNAK_TURLERI = ['Saha Denetimi', 'İş Kazası', 'Ramak Kala', 'Yasal Şart', 'Risk Değerlendirme', 'İSG Kurul', 'JSA (İş Güvenliği Analizi)', 'Manuel Bildirim'];
+// Kullanıcı isteği (2026-10-24): Uygunsuzluk modülünde İSG ve Çevre sekmeleri.
+// index.html?alan=cevre -> Çevre: kayıtlar ve ayarlar ayrı anahtarlarda
+// (cevre_uygunsuzluk_*) tutulur; diğer modüllerin (Olay/Kaza, Saha Denetim,
+// Kurul, Raporlar) okuduğu/yazdığı İSG kayıtlarına karışmaz. Kaynak türleri ve
+// mevzuat listesi çevreye göredir.
+const UYG_CEVRE_MODU = typeof location !== 'undefined' && new URLSearchParams(location.search).get('alan') === 'cevre';
+const UYG_ALAN_ETIKETI = UYG_CEVRE_MODU ? 'Çevre' : 'İSG';
+function uygunsuzlukAnahtari(ad) { return tenantAnahtar((UYG_CEVRE_MODU ? 'cevre_' : '') + ad); }
+
+const ISG_KAYNAK_TURLERI = ['Saha Denetimi', 'İş Kazası', 'Ramak Kala', 'Yasal Şart', 'Risk Değerlendirme', 'İSG Kurul', 'JSA (İş Güvenliği Analizi)', 'Manuel Bildirim'];
+const CEVRE_KAYNAK_TURLERI = [
+  'Saha Denetimi', 'Çevre Denetimi (Bakanlık / İl Müdürlüğü)', 'İç Denetim (ISO 14001)', 'Çevresel Olay (Dökülme / Sızıntı / Yangın)',
+  'Emisyon / Ölçüm Sonucu', 'Atıksu / Deşarj Analizi', 'Atık Yönetimi Kontrolü', 'Çevre İzni / Lisans Şartı', 'Yasal Şart',
+  'Çevresel Boyut Değerlendirmesi', 'Şikâyet (Komşu / Kamu)', 'Manuel Bildirim'
+];
+const KAYNAK_TURLERI = UYG_CEVRE_MODU ? CEVRE_KAYNAK_TURLERI : ISG_KAYNAK_TURLERI;
+
+// Çevre sekmesinin "İlgili Yasal Şartlar" listesi.
+const CEVRE_YASAL_SART_LISTESI = [
+  '2872 sayılı Çevre Kanunu',
+  '5491 sayılı Çevre Kanununda Değişiklik Yapılmasına Dair Kanun',
+  '5312 sayılı Deniz Çevresinin Petrol ve Diğer Zararlı Maddelerle Kirlenmesinde Acil Durumlarda Müdahale Kanunu',
+  'Çevre İzin ve Lisans Yönetmeliği',
+  'Çevre Denetimi Yönetmeliği',
+  'Çevre Yönetimi Hizmetleri Hakkında Yönetmelik',
+  'Çevresel Etki Değerlendirmesi (ÇED) Yönetmeliği',
+  'İdari Para Cezalarında Uygulama Usul ve Esasları (Çevre)',
+  'Atık Yönetimi Yönetmeliği',
+  'Sıfır Atık Yönetmeliği',
+  'Ambalaj Atıklarının Kontrolü Yönetmeliği',
+  'Atık Yağların Kontrolü Yönetmeliği',
+  'Bitkisel Atık Yağların Kontrolü Yönetmeliği',
+  'Atık Pil ve Akümülatörlerin Kontrolü Yönetmeliği',
+  'Atık Elektrikli ve Elektronik Eşyaların Kontrolü Yönetmeliği',
+  'Ömrünü Tamamlamış Lastiklerin Kontrolü Yönetmeliği',
+  'Tıbbi Atıkların Kontrolü Yönetmeliği',
+  'Hafriyat Toprağı, İnşaat ve Yıkıntı Atıklarının Kontrolü Yönetmeliği',
+  'Atıkların Düzenli Depolanmasına Dair Yönetmelik',
+  'Atıkların Yakılmasına İlişkin Yönetmelik',
+  'Atıktan Türetilmiş Yakıt, Ek Yakıt ve Alternatif Hammadde Tebliği',
+  'Su Kirliliği Kontrolü Yönetmeliği',
+  'Atıksu Arıtma Tesisleri Teknik Usuller Tebliği',
+  'Kentsel Atıksu Arıtımı Yönetmeliği',
+  'Atıksuların Kanalizasyon Şebekesine Deşarj Yönetmeliği (İSKİ / yerel idare)',
+  'Yüzeysel Su Kalitesi Yönetmeliği',
+  'Yeraltı Sularının Kirlenmeye ve Bozulmaya Karşı Korunması Hakkında Yönetmelik',
+  'Toprak Kirliliğinin Kontrolü ve Noktasal Kaynaklı Kirlenmiş Sahalara Dair Yönetmelik',
+  'Sanayi Kaynaklı Hava Kirliliğinin Kontrolü Yönetmeliği (SKHKKY)',
+  'Hava Kalitesi Değerlendirme ve Yönetimi Yönetmeliği',
+  'Isınmadan Kaynaklanan Hava Kirliliğinin Kontrolü Yönetmeliği',
+  'Emisyon Ölçüm Cihazları / Sürekli Emisyon İzleme Sistemleri Tebliği',
+  'Sera Gazı Emisyonlarının Takibi Hakkında Yönetmelik',
+  'Florlu Sera Gazlarına İlişkin Yönetmelik',
+  'Ozon Tabakasını İncelten Maddelere İlişkin Yönetmelik',
+  'Çevresel Gürültünün Değerlendirilmesi ve Yönetimi Yönetmeliği',
+  'Büyük Endüstriyel Kazaların Önlenmesi ve Etkilerinin Azaltılması Hakkında Yönetmelik (SEVESO)',
+  'Kimyasalların Kaydı, Değerlendirilmesi, İzni ve Kısıtlanması Hakkında Yönetmelik (KKDİK)',
+  'Zararlı Maddelerin ve Karışımların Sınıflandırılması, Etiketlenmesi ve Ambalajlanması Hakkında Yönetmelik (SEA)',
+  'Tehlikeli Maddelerin Karayoluyla Taşınması Hakkında Yönetmelik (ADR)',
+  'Gemilerden Atık Alınması ve Atıkların Kontrolü Yönetmeliği',
+  'Kıyı Kanunu ve Uygulama Yönetmeliği',
+  'İşletmeye özgü Çevre İzni / Lisans Şartları',
+  'ISO 14001 Çevre Yönetim Sistemi',
+  'ISO 50001 Enerji Yönetim Sistemi'
+];
 
 // Eski isg platformundaki ("İlgili Yasal Şartlar" çoklu seçim listesi) ile
 // birebir aynı liste — kayıtlar birden fazla mevzuata birden bağlanabilir.
-const YASAL_SART_LISTESI = [
+const ISG_YASAL_SART_LISTESI = [
   '4857 sayılı İş Kanunu',
   '6331 sayılı İş Sağlığı ve Güvenliği Kanunu',
   'Alt İşverenlik Yönetmeliği',
@@ -79,6 +143,7 @@ const YASAL_SART_LISTESI = [
   'ISO 45001 İş Sağlığı ve Güvenliği Yönetim Sistemi',
   'ISO 14001 Çevre Yönetim Sistemi'
 ];
+const YASAL_SART_LISTESI = UYG_CEVRE_MODU ? CEVRE_YASAL_SART_LISTESI : ISG_YASAL_SART_LISTESI;
 
 function bugunIso() {
   return new Date().toISOString().slice(0, 10);

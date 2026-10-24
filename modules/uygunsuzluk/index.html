@@ -40,7 +40,14 @@
     </div>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
 
-    <div class="sekme-cubugu">
+    <!-- Kullanıcı isteği (2026-10-24): İSG ve Çevre uygunsuzlukları ayrı sekmelerde;
+         Çevre = ?alan=cevre, kayıtları ayrı (bkz. model.js UYG_CEVRE_MODU). -->
+    <div class="sekme-cubugu ana-sekme-cubugu" id="uygAlanSekmeleri">
+      <button type="button" data-alan="isg" onclick="location.href='index.html'">🦺 İSG</button>
+      <button type="button" data-alan="cevre" onclick="location.href='index.html?alan=cevre'">🌿 Çevre</button>
+    </div>
+
+    <div class="sekme-cubugu alt-sekme-cubugu">
       <button type="button" id="sekmeKayitlar">Kayıtlar</button>
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
       <!-- ÇSGB Denetimi 2026-10-24'ten beri Toplantı Yönetimi'nin sekmesidir (bkz. csgb.html). -->
@@ -468,12 +475,25 @@
   <script src="../../core/eposta.js"></script>
   <!-- Bildirim Formu PDF'inin sonundaki konum krokisi için (bkz. cikti.js) -->
   <script src="../harita/repository.js"></script>
-  <script src="model.js"></script>
+  <script src="model.js?v=20261024a"></script>
   <script src="validation.js"></script>
-  <script src="repository.js?v=2"></script>
+  <script src="repository.js?v=20261024a"></script>
   <script src="service.js?v=2"></script>
-  <script src="ui.js?v=10"></script>
-  <script src="cikti.js?v=9"></script>
+  <script src="ui.js?v=20261024a"></script>
+  <script src="cikti.js?v=20261024a"></script>
+  <script>
+    // İSG / Çevre ana sekmesi ve Çevre'ye özgü başlıklar.
+    document.querySelectorAll('#uygAlanSekmeleri [data-alan]').forEach(b => {
+      b.classList.toggle('sekme-seciliDegil', (b.getAttribute('data-alan') === 'cevre') !== UYG_CEVRE_MODU);
+    });
+    if (UYG_CEVRE_MODU) {
+      document.title = 'İSG Platform - Çevre Uygunsuzlukları';
+      document.querySelector('.dashboard-ust h2').textContent = 'Uygunsuzluk · Çevre';
+      const pptxBtn = document.getElementById('kurulPptxBtn');
+      pptxBtn.textContent = '📊 Sunum (PPTX)';
+      pptxBtn.title = 'Tablodaki kutucuklarla seçtiğiniz (seçim yoksa listelenen) çevre uygunsuzluklarını PPTX sunumu yapar';
+    }
+  </script>
   <script>
     const kullanici = girisGerekliModul('uygunsuzluk');
 
@@ -489,7 +509,7 @@
         window.location.href = '../../firma-sec.html';
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
-          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' uygunsuzluk ve düzeltici/önleyici faaliyet kayıtları';
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + (UYG_CEVRE_MODU ? ' çevre uygunsuzlukları ve düzeltici/önleyici faaliyet kayıtları' : ' uygunsuzluk ve düzeltici/önleyici faaliyet kayıtları');
           document.getElementById('riskFiltre').innerHTML += RISK_SEVIYELERI.map(r => `<option>${r}</option>`).join('');
           uygunsuzlukSayfasiniBaslat();
 

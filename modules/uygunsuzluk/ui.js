@@ -395,10 +395,10 @@ async function uygunsuzlukFormunuYazdir(id) {
 
 // Toplu PDF raporunun kapak sayfasındaki serbest Konu/metin — modül içinde
 // (formAyarlariGetir'den ayrı) tenant-scoped bir ayar olarak saklanır.
-function _raporMetniAnahtari() { return tenantAnahtar('uygunsuzluk_rapor_metni'); }
+function _raporMetniAnahtari() { return uygunsuzlukAnahtari('uygunsuzluk_rapor_metni'); }
 
 function raporMetniGetir() {
-  return oku(_raporMetniAnahtari(), { konu: 'Uygunsuzluk Raporu', girisMetni: '' });
+  return oku(_raporMetniAnahtari(), { konu: UYG_CEVRE_MODU ? 'Çevre Uygunsuzluk Raporu' : 'Uygunsuzluk Raporu', girisMetni: '' });
 }
 
 function raporMetniModalAc() {
@@ -439,7 +439,7 @@ const MAIL_METNI_VARSAYILANI = [
   '{aciklama}'
 ].join('\n');
 
-function _mailMetniAnahtari() { return tenantAnahtar('uygunsuzluk_mail_metni'); }
+function _mailMetniAnahtari() { return uygunsuzlukAnahtari('uygunsuzluk_mail_metni'); }
 
 function mailMetniGetir() {
   return oku(_mailMetniAnahtari(), MAIL_METNI_VARSAYILANI);
@@ -609,7 +609,8 @@ function _islemButonlariUret(k) {
     `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`,
     `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`,
     `<button class="tablo-buton" data-imza="${k.id}"${imzaStili}>✍️ Kaşe/İmza</button>`,
-    `<a class="tablo-buton${k.haritaTesisId ? ' sil' : ''}" href="${_islemHaritaUrlUret(k)}" style="text-decoration:none;" title="${k.haritaTesisId ? 'Haritada Gör' : 'Haritada Konum Ekle'}">🗺️ Harita</a>`,
+    // Çevre sekmesinde harita ve Risk'e aktarım yok (o modüller İSG kayıtlarını okur).
+    UYG_CEVRE_MODU ? '' : `<a class="tablo-buton${k.haritaTesisId ? ' sil' : ''}" href="${_islemHaritaUrlUret(k)}" style="text-decoration:none;" title="${k.haritaTesisId ? 'Haritada Gör' : 'Haritada Konum Ekle'}">🗺️ Harita</a>`,
     // Konusu olmayan ("Tüm Konular" seçiliyken oluşturulmuş, sahipsiz)
     // kayıtları fark etmek kolay olsun diye turuncu renkte gösterilir.
     `<button class="tablo-buton" data-konu-tasi="${k.id}" style="${k.konuId ? '' : 'color:#d97706; font-weight:700;'}" title="${k.konuId ? 'Başka konuya taşı' : 'Bu kayıt hiçbir konuya atanmamış — taşımak için tıklayın'}">📁 Konu Taşı</button>`
@@ -625,7 +626,7 @@ function _islemButonlariUret(k) {
   }
 
   // Risk Değerlendirmesi'ne aktarma (core/risk-aktar.js).
-  butonlar.push(riskeAktarButonHtml('uygunsuzluk', k.id));
+  if (!UYG_CEVRE_MODU) butonlar.push(riskeAktarButonHtml('uygunsuzluk', k.id));
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return `<div style="display:flex; flex-wrap:wrap; gap:2px;">${butonlar.join('')}</div>`;
 }
@@ -730,7 +731,7 @@ const LISTE_MAIL_METNI_VARSAYILANI = [
   'Listeyi aşağıdaki bağlantıdan indirebilirsiniz.'
 ].join('\n');
 
-function _listeMailAnahtari() { return tenantAnahtar('uygunsuzluk_liste_mail'); }
+function _listeMailAnahtari() { return uygunsuzlukAnahtari('uygunsuzluk_liste_mail'); }
 
 function _listeMailAyarGetir() {
   return Object.assign({ metin: LISTE_MAIL_METNI_VARSAYILANI, kime: '', bilgi: '' }, oku(_listeMailAnahtari(), {}));
@@ -903,7 +904,8 @@ function kayitlariCiz(aramaMetni) {
     tumunuSec.checked = kutular.length > 0 && secili === kutular.length;
     tumunuSec.indeterminate = secili > 0 && secili < kutular.length;
     const btn = document.getElementById('kurulPptxBtn');
-    if (btn) btn.textContent = _usSecilenIdler.size ? `📊 Kurul Sunumu (PPTX) — ${_usSecilenIdler.size} seçili` : '📊 Kurul Sunumu (PPTX)';
+    const ad = UYG_CEVRE_MODU ? '📊 Sunum (PPTX)' : '📊 Kurul Sunumu (PPTX)';
+    if (btn) btn.textContent = _usSecilenIdler.size ? `${ad} — ${_usSecilenIdler.size} seçili` : ad;
   };
   govde.querySelectorAll('[data-us-sec]').forEach(cb => cb.addEventListener('change', () => {
     const id = cb.getAttribute('data-us-sec');
@@ -1270,6 +1272,7 @@ function kayitModalAc(kayit) {
 // atanamaz, önce "Kaydet" ile gerçek bir kayıt oluşturulmalı.
 function _konumAlaniCiz(kayit) {
   const kutu = document.getElementById('konumAlani');
+  if (UYG_CEVRE_MODU) { kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Saha Haritası şimdilik yalnızca İSG uygunsuzluklarında kullanılabilir.</div>'; return; }
   if (_bekleyenHaritaKonum && !kayit) {
     kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">📍 Haritadan seçilen konum bu kayda kaydedilince eklenecek.</div>';
     return;

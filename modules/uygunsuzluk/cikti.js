@@ -207,7 +207,7 @@ async function uygunsuzlukRaporuWordOlustur(indir = true) {
   ]);
 
   const ayirici = cerceveliKutu(70, [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(4) }, children: [metin('KAPALI UYGUNSUZLUKLAR', { bold: true, size: 32 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(4) }, children: [metin(UYG_CEVRE_MODU ? 'KAPALI ÇEVRE UYGUNSUZLUKLARI' : 'KAPALI UYGUNSUZLUKLAR', { bold: true, size: 32 })] }),
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: mm(8) }, children: [metin('Bu bölümde kapalı uygunsuzluklar yer alır.', { size: 20, color: '374151' })] }),
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [metin(`Rapor Tarihi: ${bugun}`, { size: 18, color: '374151' })] })
   ]);
@@ -236,7 +236,7 @@ async function uygunsuzlukRaporuWordOlustur(indir = true) {
         borders: { top: yok, left: yok, right: yok, bottom: koyuCizgi },
         children: [
           new docx.Paragraph({ children: [metin('İŞ SAĞLIĞI VE GÜVENLİĞİ', { bold: true, size: 28 })] }),
-          new docx.Paragraph({ children: [metin('UYGUNSUZLUK LİSTESİ', { bold: true, size: 28 })] })
+          new docx.Paragraph({ children: [metin(UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUK LİSTESİ' : 'UYGUNSUZLUK LİSTESİ', { bold: true, size: 28 })] })
         ]
       }),
       istatistikHucre(ozet.toplam, 'Toplam'),
@@ -271,7 +271,7 @@ async function uygunsuzlukRaporuWordOlustur(indir = true) {
     ]
   });
   const blob = await docx.Packer.toBlob(doc);
-  const dosyaAdi = `Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.docx`;
+  const dosyaAdi = `${UYG_CEVRE_MODU ? 'Cevre_' : ''}Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.docx`;
   if (indir) saveAs(blob, dosyaAdi);
   return { blob, dosyaAdi };
 }
@@ -576,7 +576,7 @@ async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
         <style>${_UC_KAYIT_STIL}</style>
         <div class="uc-form-ustbilgi">
           <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
-          <div class="uc-form-baslik">UYGUNSUZLUK FORMU</div>
+          <div class="uc-form-baslik">${UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUK FORMU' : 'UYGUNSUZLUK FORMU'}</div>
           <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, sayfaEtiketi)}</div>
         </div>
         ${icerikHtml}
@@ -632,7 +632,7 @@ async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
 
     <div class="uc-form-ustbilgi">
       <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
-      <div class="uc-form-baslik">UYGUNSUZLUK FORMU</div>
+      <div class="uc-form-baslik">${UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUK FORMU' : 'UYGUNSUZLUK FORMU'}</div>
       <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, `1/${UC_TOPLAM_SAYFA}`)}</div>
     </div>
 
@@ -710,7 +710,7 @@ async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
     pdf.setTextColor(100);
     pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 210 / 2, 297 - 5, { align: 'center' });
   }
-  const dosyaAdi = `Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`;
+  const dosyaAdi = `${UYG_CEVRE_MODU ? 'Cevre_' : ''}Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`;
   if (indir) pdf.save(dosyaAdi);
 
   mount.innerHTML = '';
@@ -824,7 +824,7 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     objects: [
       { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
       { text: { text: firmaAdi, options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
-      { text: { text: 'İSG Kurul Toplantısı  ·  Uygunsuzluklar  ·  ' + bugunMetni, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
+      { text: { text: (UYG_CEVRE_MODU ? 'Çevre Uygunsuzlukları  ·  ' : 'İSG Kurul Toplantısı  ·  Uygunsuzluklar  ·  ') + bugunMetni, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
     ],
     slideNumber: { x: SW - 0.7, y: SH - 0.4, w: 0.4, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle' }
   });
@@ -835,7 +835,7 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SW, h: 0.16, fill: { color: R.birincil } });
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.birincil } });
   if (logoUrl) kapak.addImage(fotoSigdirNesnesi(logoUrl, SW / 2 - 0.75, 0.85, 1.5, 1.5));
-  kapak.addText('UYGUNSUZLUKLAR', { x: 1, y: 2.75, w: SW - 2, h: 1.1, fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri' });
+  kapak.addText(UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUKLARI' : 'UYGUNSUZLUKLAR', { x: 1, y: 2.75, w: SW - 2, h: 1.1, fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri' });
   kapak.addText(firmaAdi, { x: 1, y: 3.95, w: SW - 2, fontSize: 19, color: 'BFDBFE', align: 'center', fontFace: 'Calibri' });
   kapak.addText(`${cozulmus.length} uygunsuzluk  ·  ${bugunMetni}`, { x: 1, y: 4.75, w: SW - 2, fontSize: 15, color: '93C5FD', align: 'center' });
 
@@ -895,5 +895,5 @@ async function uygunsuzlukKurulPptxOlustur(kayitlar) {
     });
   });
 
-  await pptx.writeFile({ fileName: `Uygunsuzluk_Kurul_Sunumu_${new Date().toISOString().slice(0, 10)}.pptx` });
+  await pptx.writeFile({ fileName: `${UYG_CEVRE_MODU ? 'Cevre_Uygunsuzluk_Sunumu_' : 'Uygunsuzluk_Kurul_Sunumu_'}${new Date().toISOString().slice(0, 10)}.pptx` });
 }

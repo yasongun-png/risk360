@@ -1,7 +1,13 @@
 // Uygunsuzluk/DÖF depolama katmanı. Firma bazlı izole (tenantAnahtar).
 
+// Çevre sekmesinde (bkz. model.js UYG_CEVRE_MODU) cevre_uygunsuzluk_* anahtarları.
+// Harita sayfası bu dosyayı model.js olmadan yükler; o zaman İSG anahtarı kullanılır.
+function _uygAnahtar(ad) {
+  return typeof uygunsuzlukAnahtari === 'function' ? uygunsuzlukAnahtari(ad) : tenantAnahtar(ad);
+}
+
 function _uygunsuzlukAnahtari() {
-  return tenantAnahtar('uygunsuzluk_kayitlari');
+  return _uygAnahtar('uygunsuzluk_kayitlari');
 }
 
 function uygunsuzlukTumunuGetir() {
@@ -65,7 +71,7 @@ function uygunsuzlukIdIleGetirRepo(id) {
 // ---- Uygunsuzluk Konusu / Defteri ----
 
 function _uygunsuzlukKonuAnahtari() {
-  return tenantAnahtar('uygunsuzluk_konulari');
+  return _uygAnahtar('uygunsuzluk_konulari');
 }
 
 function uygunsuzlukKonulariTumunuGetir() {
