@@ -30,7 +30,7 @@
   </div>
 
   <div class="icerik">
-    <a href="index.html" class="geri-link">← Uygunsuzluk'a Dön</a>
+    <a href="../kurul/index.html" class="geri-link">← Toplantı Yönetimine Dön</a>
     <div class="dashboard-ust" style="margin-top:14px;">
       <h2 style="margin:0;">ÇSGB Denetimi Takibi</h2>
       <button type="button" class="birincil" id="csgbYeniBtn" style="width:auto;">+ Yeni ÇSGB Denetimi</button>
@@ -193,7 +193,7 @@
         <tbody id="katListeGovde"></tbody>
       </table>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 4px;">
-        <button type="button" class="ikincil" id="katListeKurulBtn">🏛 İSG Kurulu'ndan Al</button>
+        <button type="button" class="ikincil" id="katListeKurulBtn">🏛 Toplantı Yönetiminden Al</button>
         <button type="button" class="ikincil" id="katListeYapistirBtn">📋 Outlook'tan Yapıştır</button>
         <button type="button" class="ikincil" id="katListeEkleBtn">+ Katılımcı Ekle</button>
       </div>
@@ -259,7 +259,7 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 4px;">
         <button type="button" class="ikincil" id="csgbTopKatilimciEkleBtn">+ Katılımcı Ekle</button>
         <button type="button" class="ikincil" id="csgbTopKatilimciYapistirBtn">📋 Outlook'tan Yapıştır</button>
-        <button type="button" class="ikincil" id="csgbTopKatilimciKurulBtn">🏛 İSG Kurulu'ndan Al</button>
+        <button type="button" class="ikincil" id="csgbTopKatilimciKurulBtn">🏛 Toplantı Yönetiminden Al</button>
       </div>
       <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 10px;">Buradaki değişiklik sadece bu toplantı için geçerlidir; denetimin listesi değişmez. İmzalar, Toplantı Tutanağı (Word) çıktısındaki İmza sütununa atılır.</p>
       </div>
@@ -312,9 +312,9 @@
   <script src="csgb-repository.js?v=1"></script>
   <script src="csgb-service.js?v=9"></script>
   <script src="csgb-cikti.js?v=15"></script>
-  <script src="csgb-ui.js?v=15"></script>
+  <script src="csgb-ui.js?v=16"></script>
   <script>
-    const kullanici = girisGerekliModul('uygunsuzluk');
+    const kullanici = girisGerekliModul('kurul');
 
     if (kullanici) {
       document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;

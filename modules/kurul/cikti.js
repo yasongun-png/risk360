@@ -2638,7 +2638,7 @@ function ciktiButonlariniBagla() {
       alert('PDF üretilemedi: ' + (e.message || e));
     }
   });
-  document.getElementById('btnFormAyarlari').addEventListener('click', () => formAyarlariModalAc('kurul', 'İSG Kurulu'));
+  document.getElementById('btnFormAyarlari').addEventListener('click', () => formAyarlariModalAc('kurul', 'Toplantı Yönetimi'));
 }
 
 // ==================== AKSİYON PLANI (Word / Excel) ====================

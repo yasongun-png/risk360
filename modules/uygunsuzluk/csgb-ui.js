@@ -738,8 +738,8 @@ function _csgbKatilimciButonlariniBagla(govdeId, onek) {
   });
   document.getElementById(onek + 'KurulBtn').addEventListener('click', () => {
     const { toplantiTarihi, liste } = csgbKurulKatilimcilariniGetir();
-    if (!liste.length) { alert('İSG Kurulu modülünde katılımcı / imza listesi girilmiş bir toplantı bulunamadı.'); return; }
-    birlestir(liste, `İSG Kurulu (${gunAyYil(toplantiTarihi) || 'son toplantı'})`);
+    if (!liste.length) { alert('Toplantı Yönetimi modülünde katılımcı / imza listesi girilmiş bir toplantı bulunamadı.'); return; }
+    birlestir(liste, `Toplantı Yönetimi (${gunAyYil(toplantiTarihi) || 'son toplantı'})`);
   });
 }
 

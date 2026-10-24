@@ -513,7 +513,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar, devredenMi)
       if (!k) return;
       const t = toplantiTumunuGetir().find(x => x.id === k.toplantiId) || {};
       riskeAktarModaliAc({
-        modul: 'kurul', modulAdi: 'İSG Kurulu', id: k.id, etiket: [t.toplantiNo, k.kararNo].filter(Boolean).join(' / '),
+        modul: 'kurul', modulAdi: 'Toplantı Yönetimi', id: k.id, etiket: [t.toplantiNo, k.kararNo].filter(Boolean).join(' / '),
         alanlar: {
           yer: t.bolum || t.tesis || t.yer || '', faaliyet: t.bolum || t.tesis || '',
           tehlike: k.kaynakGundem || k.kararMetni,

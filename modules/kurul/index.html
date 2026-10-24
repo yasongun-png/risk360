@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="İSG Platform">
 <link rel="icon" href="../../assets/icons/favicon-32.png">
-<title>İSG Platform - İSG Kurulu</title>
+<title>İSG Platform - Toplantı Yönetimi</title>
 <link rel="stylesheet" href="../../assets/style.css">
 </head>
 <body>
@@ -24,7 +24,7 @@
 
   <div class="icerik">
     <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
-    <h2 style="margin-top:14px;">İSG Kurulu</h2>
+    <h2 style="margin-top:14px;">Toplantı Yönetimi</h2>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
 
     <div class="sekme-cubugu">
@@ -32,6 +32,8 @@
       <button type="button" id="sekmeKararlar" class="sekme-seciliDegil">Tüm Kararlar</button>
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
       <button type="button" id="sekmeDenetim" class="sekme-seciliDegil">Denetim Kaydı</button>
+      <!-- Kullanıcı isteği (2026-10-24): ÇSGB Denetimi Uygunsuzluk'tan buraya taşındı; sayfa ve verisi aynı kaldı (../uygunsuzluk/csgb.html). -->
+      <button type="button" class="sekme-seciliDegil" onclick="location.href='../uygunsuzluk/csgb.html'">ÇSGB Denetimi</button>
     </div>
 
     <div id="toplantilarBolumu">
@@ -218,7 +220,7 @@
         window.location.href = '../../firma-sec.html';
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
-          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' İSG Kurulu toplantı ve kararları';
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' toplantıları ve kararları';
           kurulSayfasiniBaslat();
 
           const duzenlenecekId = new URLSearchParams(window.location.search).get('edit');
