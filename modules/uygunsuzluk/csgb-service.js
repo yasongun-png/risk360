@@ -67,7 +67,9 @@ function csgbDenetimGetir(id) {
 }
 
 function csgbDenetimKaydet(veriler, duzenlenenId) {
-  if (!veriler.raporTarihi && !veriler.denetimTarihi) return { basarili: false, hata: 'Rapor tarihi ya da denetim tarihi girin.' };
+  if (CSGB_KONU_MODU) {
+    if (!(veriler.ad || '').trim()) return { basarili: false, hata: 'Toplantı adını girin.' };
+  } else if (!veriler.raporTarihi && !veriler.denetimTarihi) return { basarili: false, hata: 'Rapor tarihi ya da denetim tarihi girin.' };
   const mevcut = duzenlenenId ? csgbDenetimleriTumunuGetir().find(d => d.id === duzenlenenId) : null;
   const sonGiderme = veriler.sonGidermeTarihi || csgbSonGidermeTarihiHesapla(veriler.tebligTarihi, veriler.verilenSureGun);
   const denetim = csgbDenetimOlustur(Object.assign({}, mevcut || {}, veriler, { sonGidermeTarihi: sonGiderme }));
@@ -109,8 +111,10 @@ function csgbDenetimSil(id) {
 }
 
 function csgbMaddeKaydet(veriler, duzenlenenId) {
-  if (!(veriler.baslik || '').trim()) return { basarili: false, hata: 'Uygunsuzluk metni zorunludur.' };
-  if (!veriler.denetimId) return { basarili: false, hata: 'Denetim bulunamadı.' };
+  if (CSGB_KONU_MODU) {
+    if (!(veriler.maddeKonusu || veriler.baslik || '').trim()) return { basarili: false, hata: 'Konu ya da açıklama girin.' };
+  } else if (!(veriler.baslik || '').trim()) return { basarili: false, hata: 'Uygunsuzluk metni zorunludur.' };
+  if (!veriler.denetimId) return { basarili: false, hata: CSGB_KONU_MODU ? 'Toplantı bulunamadı.' : 'Denetim bulunamadı.' };
   const mevcut = duzenlenenId ? csgbMaddeGetirRepo(duzenlenenId) : null;
   const no = String(veriler.denetimMaddeNo ?? '').trim().toLocaleLowerCase('tr');
   if (no && csgbMaddeleriTumunuGetir().some(m => m.denetimId === veriler.denetimId && m.id !== duzenlenenId && String(m.denetimMaddeNo || '').toLocaleLowerCase('tr') === no)) {
@@ -220,7 +224,7 @@ async function csgbMaddeleriIceAktar(denetimId, satirlar) {
       if (kaynak) ['baslik', 'aciklama', 'duzelticiFaaliyet', 'yasalDayanak', 'termin'].forEach(a => { if (dolu[a] === undefined && kaynak[a]) dolu[a] = kaynak[a]; });
       if (kaynak && dolu.maddeKonusu === undefined && kaynak.maddeKonusu) dolu.maddeKonusu = kaynak.maddeKonusu.split(' — ')[0] + (dolu.bolum ? ' — ' + dolu.bolum : '');
     }
-    if (!dolu.baslik) { hatalar.push(`Satır ${i + 2}: Uygunsuzluk Tanımı boş.`); return; }
+    if (CSGB_KONU_MODU ? !(dolu.baslik || dolu.maddeKonusu) : !dolu.baslik) { hatalar.push(`Satır ${i + 2}: ${CSGB_KONU_MODU ? 'Konu ve Açıklama' : 'Uygunsuzluk Tanımı'} boş.`); return; }
     liste.push(csgbMaddeOlustur(Object.assign({}, dolu, { denetimId, denetimMaddeNo: no })));
     eklenen++;
   });

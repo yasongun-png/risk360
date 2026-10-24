@@ -1,9 +1,11 @@
 // ÇSGB Denetimi depolama katmanı. Firma bazlı izole (tenantAnahtar); normal
 // uygunsuzluk kayıtlarından ayrı anahtarlar.
 
-function _csgbDenetimAnahtari() { return tenantAnahtar('uygunsuzluk_csgb_denetimleri'); }
-function _csgbMaddeAnahtari() { return tenantAnahtar('uygunsuzluk_csgb_maddeleri'); }
-function _csgbToplantiAnahtari() { return tenantAnahtar('uygunsuzluk_csgb_toplantilari'); }
+// Konu toplantıları (CSGB_KONU_MODU, bkz. csgb-model.js) kendi anahtarlarını kullanır.
+const _CSGB_ANAHTAR_ONEKI = CSGB_KONU_MODU ? 'kurul_konu_' : 'uygunsuzluk_csgb_';
+function _csgbDenetimAnahtari() { return tenantAnahtar(_CSGB_ANAHTAR_ONEKI + 'denetimleri'); }
+function _csgbMaddeAnahtari() { return tenantAnahtar(_CSGB_ANAHTAR_ONEKI + 'maddeleri'); }
+function _csgbToplantiAnahtari() { return tenantAnahtar(_CSGB_ANAHTAR_ONEKI + 'toplantilari'); }
 
 function csgbDenetimleriTumunuGetir() { return oku(_csgbDenetimAnahtari(), []); }
 function csgbMaddeleriTumunuGetir() { return oku(_csgbMaddeAnahtari(), []); }

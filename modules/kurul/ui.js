@@ -295,7 +295,7 @@ function modalAc(toplanti) {
     ? toplanti.gundem.map(g => Object.assign({}, g))
     : VARSAYILAN_GUNDEM_MADDELERI.map(baslik => gundemMaddesiOlustur({ baslik }));
 
-  document.getElementById('modalBaslik').textContent = toplanti ? 'Toplantıyı Düzenle' : 'Yeni Toplantı';
+  document.getElementById('modalBaslik').textContent = toplanti ? 'Kurul Toplantısını Düzenle' : 'Yeni Kurul Toplantısı';
   document.getElementById('toplantiNo').value = toplanti ? (toplanti.toplantiNo || '') : '';
   document.getElementById('baslik').value = toplanti ? toplanti.baslik : '';
   document.getElementById('tarih').value = toplanti ? toplanti.tarih : '';

@@ -12,8 +12,8 @@ function _csgbKacir(v) {
 // aktarımda yok sayılır.
 const CSGB_EXCEL_KOLONLARI = [
   { anahtar: 'denetimMaddeNo', baslik: 'Madde No', esanlamlar: ['Uygunsuzluk No', 'No', 'Rapor Madde No'] },
-  { anahtar: 'maddeKonusu', baslik: 'Uygunsuzluk Konusu', esanlamlar: ['Konu', 'Kısa Konu'] },
-  { anahtar: 'baslik', baslik: 'Uygunsuzluk Tanımı', esanlamlar: ['Uygunsuzluk', 'Tespit', 'Uygunsuzluk Metni'] },
+  { anahtar: 'maddeKonusu', baslik: CSGB_KONU_MODU ? 'Konu' : 'Uygunsuzluk Konusu', esanlamlar: ['Uygunsuzluk Konusu', 'Konu', 'Kısa Konu'] },
+  { anahtar: 'baslik', baslik: CSGB_KONU_MODU ? 'Açıklama' : 'Uygunsuzluk Tanımı', esanlamlar: ['Uygunsuzluk Tanımı', 'Uygunsuzluk', 'Tespit', 'Uygunsuzluk Metni', 'Açıklama'] },
   { anahtar: 'duzelticiFaaliyet', baslik: 'Tavsiye Edilen Önlemler', esanlamlar: ['Gerekli Tedbir', 'Faaliyet Önerisi', 'Alınması Gerekli Tedbir', 'Ek Açıklama'] },
   { anahtar: 'yasalDayanak', baslik: 'Mevzuat', esanlamlar: ['Yasal Dayanak', 'Mevzuat Dayanağı'] },
   { anahtar: 'bolum', baslik: 'Bölüm', esanlamlar: ['Tesis / Birim'] },
@@ -39,7 +39,7 @@ function csgbExcelDisaAktar(denetimId) {
     [{ anahtar: 'toplantiNotlari', baslik: 'Toplantı Notları' }, { anahtar: 'kanitlar', baslik: 'Kanıtlar' }],
     CSGB_EXCEL_KOLONLARI.slice(5)
   );
-  excelDisaAktar(satirlar, kolonlar, 'CSGB_Takip_' + (d ? (d.raporTarihi || d.denetimTarihi || '') : '') + '.xlsx');
+  excelDisaAktar(satirlar, kolonlar, csgbEtiketleri(d).dosyaOnEki + '_Takip_' + (d ? (d.raporTarihi || d.denetimTarihi || '') : '') + '.xlsx');
 }
 
 // ==================== TAKİP RAPORU (EXCEL, biçimli) ====================
@@ -49,7 +49,7 @@ function csgbExcelDisaAktar(denetimId) {
 async function csgbTakipRaporuExcelOlustur(denetimId) {
   const d = csgbDenetimGetir(denetimId);
   const maddeler = csgbMaddeleriniGetir(denetimId);
-  if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
+  if (!maddeler.length) { alert('Henüz madde girilmedi.'); return; }
     const toplantilar = csgbToplantilariniGetir(denetimId);
   const bugun = gunAyYil(bugunIso());
   const X = XLSX_STIL;
@@ -60,7 +60,7 @@ async function csgbTakipRaporuExcelOlustur(denetimId) {
   // ---- Takip Raporu sayfası ----
   const satirlar = [];
   const birlesik = [`A1:${sonKolon}1`];
-  satirlar.push({ hucreler: [h('ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU', X.baslik)], yukseklik: 26 });
+  satirlar.push({ hucreler: [h(csgbEtiketleri(d).raporBaslik, X.baslik)], yukseklik: 26 });
   satirlar.push({ hucreler: [] });
   // Bilgi tablosu: 2 çift / satır -> A:B etiket, C:E değer, F:G etiket, H:L değer
   const bilgi = _csgbDenetimBilgileri(d);
@@ -81,7 +81,7 @@ async function csgbTakipRaporuExcelOlustur(denetimId) {
   birlesik.push(`A${ozetR}:${sonKolon}${ozetR}`);
   satirlar.push({ hucreler: [] });
 
-  const BASLIKLAR = ['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Tavsiye Edilen Önlemler', 'Mevzuat', 'Toplantı Notları', 'Kanıtlar', 'Bölüm', 'Sorumlu', 'Termin', 'Durum', 'Tamamlanma'];
+  const BASLIKLAR = ['No', csgbEtiketleri(d).maddeKonusu, csgbEtiketleri(d).madde, 'Tavsiye Edilen Önlemler', 'Mevzuat', 'Toplantı Notları', 'Kanıtlar', 'Bölüm', 'Sorumlu', 'Termin', 'Durum', 'Tamamlanma'];
   const baslikR = satirlar.length + 1;
   satirlar.push({ hucreler: BASLIKLAR.map(b => h(b, X.tabloBaslik)), yukseklik: 22 });
   const durumStili = k => k.durum === 'Kapalı' ? X.tamam : (k.durumGoruntu === 'Gecikmiş' ? X.gecikmis : (k.durum === 'Devam Ediyor' ? X.devam : X.acik));
@@ -121,7 +121,7 @@ async function csgbTakipRaporuExcelOlustur(denetimId) {
   if (!toplantilar.length) t2.push({ hucreler: [h('Henüz takip toplantısı yapılmadı.', X.normal)] });
   const sayfa2 = xlsxSayfaXml(t2, { genislikler: [6, 12, 26, 40, 14, 15, 50], birlesik: ['A1:G1'], dondur: 3, yatay: true });
 
-  await xlsxKitapIndir(`CSGB_Aksiyon_Plani_Takip_Raporu_${bugun.replace(/\./g, '-')}.xlsx`, [
+  await xlsxKitapIndir(`${csgbEtiketleri(d).dosyaOnEki}_Aksiyon_Plani_Takip_Raporu_${bugun.replace(/\./g, '-')}.xlsx`, [
     { ad: 'Takip Raporu', xml: sayfa1, filtre: `A${baslikR}:${sonKolon}${sonR}`, baslikSatiri: baslikR },
     { ad: 'Toplantılar', xml: sayfa2 }
   ]);
@@ -220,6 +220,7 @@ function _csgbWordAraclari() {
 }
 
 function _csgbDenetimBilgileri(d) {
+  if (CSGB_KONU_MODU) return [['Toplantı', csgbDenetimBasligi(d)], ['Açıklama', d.notlar || '-']];
   return [
     ['Rapor No', d.raporNo || '-'], ['Rapor Tarihi', gunAyYil(d.raporTarihi) || '-'],
     ['Denetim Türü', d.denetimTuru || '-'], ['Denetim Tarihi', gunAyYil(d.denetimTarihi) || '-'],
@@ -234,7 +235,7 @@ function _csgbDenetimBilgileri(d) {
 async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
   const d = csgbDenetimGetir(denetimId);
   const maddeler = csgbMaddeleriniGetir(denetimId);
-  if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
+  if (!maddeler.length) { alert('Henüz madde girilmedi.'); return; }
   const w = _csgbWordAraclari();
   const bugun = gunAyYil(bugunIso());
   const SAYFA_GEN = w.mm(297 - 20);
@@ -259,7 +260,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
     ], SUTUN[7])
   ] });
 
-  const BASLIKLAR = ['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Toplantı Notları', 'Kanıtlar', 'Termin', 'Sorumlu', 'Durum'];
+  const BASLIKLAR = ['No', csgbEtiketleri(d).maddeKonusu, csgbEtiketleri(d).madde, 'Toplantı Notları', 'Kanıtlar', 'Termin', 'Sorumlu', 'Durum'];
   const anaTablo = new docx.Table({
     width: { size: SAYFA_GEN, type: docx.WidthType.DXA },
     columnWidths: SUTUN,
@@ -274,7 +275,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
   // Firma adı Word/PDF çıktılarına yazılmaz (kullanıcı isteği).
   const ilkBolum = [
     new docx.Paragraph({ spacing: { after: w.mm(3) }, border: { bottom: { style: docx.BorderStyle.SINGLE, size: 12, color: '111827', space: 4 } },
-      children: [w.metin('ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU', { bold: true, size: 28 })] }),
+      children: [w.metin(csgbEtiketleri(d).raporBaslik, { bold: true, size: 28 })] }),
     w.bilgiTablosu(_csgbDenetimBilgileri(d), SAYFA_GEN),
     new docx.Paragraph({ spacing: { before: w.mm(3), after: w.mm(3) }, children: [w.metin(ozetMetni, { bold: true, size: 18 })] }),
     anaTablo,
@@ -321,7 +322,7 @@ async function csgbTakipRaporuWordOlustur(denetimId, tamMetinEki) {
 
   const doc = new docx.Document({ styles: { default: { document: { run: { font: 'Arial', size: 16 } } } }, sections: bolumler });
   const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `CSGB_Takip_Raporu_${bugun.replace(/\./g, '-')}.docx`);
+  saveAs(blob, `${csgbEtiketleri(d).dosyaOnEki}_Takip_Raporu_${bugun.replace(/\./g, '-')}.docx`);
 }
 
 // ==================== TAKİP RAPORU (PDF, tıklanabilir) ====================
@@ -334,7 +335,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
   if (!window.jspdf || typeof html2canvas === 'undefined') { alert('PDF kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).'); return; }
   const d = csgbDenetimGetir(denetimId);
   const maddeler = csgbMaddeleriniGetir(denetimId);
-  if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
+  if (!maddeler.length) { alert('Henüz madde girilmedi.'); return; }
   const bugun = gunAyYil(bugunIso());
   const toplantilar = csgbToplantilariniGetir(denetimId);
   const K = _csgbKacir;
@@ -385,10 +386,10 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
     // ---- Ana tablo sayfaları ----
     const SUTUN = [5, 12, 30, 25, 8, 7, 8, 5];
     const tabloBasi = () => `<table class="cp-tablo"><colgroup>${SUTUN.map(y => `<col style="width:${y}%">`).join('')}</colgroup>
-      <thead><tr>${['No', 'Uygunsuzluk Konusu', 'Uygunsuzluk', 'Toplantı Notları', 'Kanıt', 'Termin', 'Sorumlu', 'Durum'].map(b => `<th>${b}</th>`).join('')}</tr></thead><tbody></tbody></table>`;
+      <thead><tr>${['No', csgbEtiketleri(d).maddeKonusu, csgbEtiketleri(d).madde, 'Toplantı Notları', 'Kanıt', 'Termin', 'Sorumlu', 'Durum'].map(b => `<th>${b}</th>`).join('')}</tr></thead><tbody></tbody></table>`;
     let ic = yeniSayfa();
     ic.innerHTML = `
-      <div style="font-size:19px; font-weight:bold; border-bottom:2px solid #111827; padding-bottom:4px; margin-bottom:8px;">ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU</div>
+      <div style="font-size:19px; font-weight:bold; border-bottom:2px solid #111827; padding-bottom:4px; margin-bottom:8px;">${K(csgbEtiketleri(d).raporBaslik)}</div>
       <table class="cp-bilgi">${_csgbDenetimBilgileri(d).reduce((a, c, i, arr) => i % 2 ? a : a + `<tr><td>${K(c[0])}</td><td>${K(c[1])}</td><td>${K((arr[i + 1] || ['', ''])[0])}</td><td>${K((arr[i + 1] || ['', ''])[1])}</td></tr>`, '')}</table>
       <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">Toplam ${maddeler.length} madde · Tamamlanan ${d.kapaliSayisi} · Açık ${d.acikSayisi} · Gecikmiş ${d.gecikmisSayisi} · İlerleme %${d.ilerlemeYuzde} · Takip toplantısı ${toplantilar.length}</div>
       <div style="font-size:10.5px; color:#1d4ed8; margin-bottom:6px;">Maddenin satırına tıklayarak tam metnine (tavsiye edilen önlemler, mevzuat, tüm toplantı notları ve kanıtlar) gidebilirsiniz.</div>
@@ -467,7 +468,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
 
     // ---- Alt bilgi ----
     sayfalar.forEach((s, i) => {
-      s.querySelector('.cp-alt').innerHTML = `<span>ÇSGB Denetimi Aksiyon Planı Takip Raporu · ${bugun}</span><span>Sayfa ${i + 1} / ${sayfalar.length}</span>`;
+      s.querySelector('.cp-alt').innerHTML = `<span>${K(csgbEtiketleri(d).altBilgi)} Takip Raporu · ${bugun}</span><span>Sayfa ${i + 1} / ${sayfalar.length}</span>`;
     });
 
     // ---- PDF ----
@@ -486,7 +487,7 @@ async function csgbTakipRaporuPdfOlustur(denetimId) {
       s.querySelectorAll('tr.cp-satir').forEach(tr => { const id = tr.getAttribute('data-madde'); if (ekKonum[id] !== undefined) bag(tr, ekKonum[id]); });
       s.querySelectorAll('[data-geri]').forEach(el => { const id = el.getAttribute('data-geri'); if (satirKonum[id] !== undefined) bag(el, satirKonum[id]); });
     }
-    pdf.save(`CSGB_Takip_Raporu_${bugun.replace(/\./g, '-')}.pdf`);
+    pdf.save(`${csgbEtiketleri(d).dosyaOnEki}_Takip_Raporu_${bugun.replace(/\./g, '-')}.pdf`);
   } finally {
     kap.remove();
   }
@@ -505,7 +506,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   const t = toplantiId ? csgbToplantilariTumunuGetir().find(x => x.id === toplantiId) : null;
   const toplantiNo = t ? csgbToplantiNo(t) : 0;
   const maddeler = csgbMaddeleriniGetir(denetimId);
-  if (!maddeler.length) { alert('Bu denetimde henüz madde yok.'); return; }
+  if (!maddeler.length) { alert('Henüz madde girilmedi.'); return; }
   const gundem = maddeler.filter(k => (k.durum !== 'Kapalı' && k.durum !== 'İptal') || (t && (t.maddeNotlari[k.id] || '').trim()));
   const tamamlananlar = maddeler.filter(k => k.durum === 'Kapalı');
 
@@ -540,7 +541,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     objects: [
       { rect: { x: 0, y: SH - 0.4, w: '100%', h: 0.4, fill: { color: R.baslik } } },
       { text: { text: firmaAdi, options: { x: 0.4, y: SH - 0.4, w: 7.5, h: 0.4, fontSize: 10, color: 'CBD5E1', valign: 'middle', fontFace: 'Calibri' } } },
-      { text: { text: (toplantiNo ? toplantiNo + '. ' : '') + 'ÇSGB Denetimi Aksiyon Planı Takip Toplantısı  ·  ' + toplantiTarihi, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
+      { text: { text: (toplantiNo ? toplantiNo + '. ' : '') + csgbEtiketleri(d).altBilgi + ' Takip Toplantısı  ·  ' + toplantiTarihi, options: { x: 6.6, y: SH - 0.4, w: 6.2, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle', fontFace: 'Calibri' } } }
     ],
     slideNumber: { x: SW - 0.7, y: SH - 0.4, w: 0.4, h: 0.4, fontSize: 10, color: 'CBD5E1', align: 'right', valign: 'middle' }
   });
@@ -552,10 +553,10 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   kapak.addShape(pptx.ShapeType.rect, { x: 0, y: SH - 0.16, w: SW, h: 0.16, fill: { color: R.vurgu } });
   kapak.addShape(pptx.ShapeType.rect, { x: SW / 2 - 1.2, y: 3.78, w: 2.4, h: 0.05, fill: { color: R.vurgu } });
   if (logoUrl) kapak.addImage(_csgbFotoSigdir(logoUrl, SW / 2 - 0.75, 0.7, 1.5, 1.5));
-  kapak.addText('ÇSGB DENETİMİ AKSİYON PLANI TAKİP TOPLANTISI', { x: 0.8, y: 2.45, w: SW - 1.6, h: 1.3, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', fit: 'shrink' });
+  kapak.addText(csgbEtiketleri(d).toplantiBaslik, { x: 0.8, y: 2.45, w: SW - 1.6, h: 1.3, fontSize: 32, bold: true, color: 'FFFFFF', align: 'center', fontFace: 'Calibri', fit: 'shrink' });
   kapak.addText(firmaAdi, { x: 1, y: 3.92, w: SW - 2, fontSize: 19, color: 'CCFBF1', align: 'center', fontFace: 'Calibri' });
   kapak.addText(`${csgbDenetimBasligi(d)}${d.raporNo ? '  ·  Rapor No: ' + d.raporNo : ''}`, { x: 1, y: 4.5, w: SW - 2, fontSize: 15, color: '99F6E4', align: 'center' });
-  kapak.addText(`${toplantiNo ? toplantiNo + '. Takip Toplantısı  ·  ' : 'Sıradaki Takip Toplantısı  ·  '}Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: 'FDE68A', align: 'center' });
+  kapak.addText(`${toplantiNo ? toplantiNo + '. ' + (CSGB_KONU_MODU ? 'Toplantı' : 'Takip Toplantısı') + '  ·  ' : 'Sıradaki ' + (CSGB_KONU_MODU ? 'Toplantı' : 'Takip Toplantısı') + '  ·  '}Toplantı Tarihi: ${toplantiTarihi}`, { x: 1, y: 5.05, w: SW - 2, fontSize: 15, color: 'FDE68A', align: 'center' });
 
   // Genel durum
   const oz = pptx.addSlide({ masterName: MASTER });
@@ -573,9 +574,9 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   oz.addShape(pptx.ShapeType.roundRect, { x: M, y: 3.5, w: SW - 2 * M, h: 0.32, rectRadius: 0.16, fill: { color: R.cizgi }, line: { type: 'none' } });
   if (d.ilerlemeYuzde > 0) oz.addShape(pptx.ShapeType.roundRect, { x: M, y: 3.5, w: (SW - 2 * M) * d.ilerlemeYuzde / 100, h: 0.32, rectRadius: 0.16, fill: { color: '16A34A' }, line: { type: 'none' } });
   const bilgi = [
-    ['Rapor No / Tarihi', `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}`],
+    ...(CSGB_KONU_MODU ? [['Açıklama', d.notlar || '-']] : [['Rapor No / Tarihi', `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}`],
     ['Tebliğ / Verilen Süre', `${gunAyYil(d.tebligTarihi) || '-'} / ${d.verilenSureGun ? d.verilenSureGun + ' gün' : '-'}`],
-    ['Son Giderme Tarihi', (gunAyYil(d.sonGidermeTarihi) || '-') + (d.kalanGun === null || d.kalanGun === undefined ? '' : (d.kalanGun < 0 ? `  (${-d.kalanGun} gün geçti)` : `  (${d.kalanGun} gün kaldı)`))],
+    ['Son Giderme Tarihi', (gunAyYil(d.sonGidermeTarihi) || '-') + (d.kalanGun === null || d.kalanGun === undefined ? '' : (d.kalanGun < 0 ? `  (${-d.kalanGun} gün geçti)` : `  (${d.kalanGun} gün kaldı)`))]]),
     ['Bu Toplantının Gündemi', `${gundem.length} madde`]
   ];
   oz.addTable(bilgi.map(([e, v]) => [
@@ -630,7 +631,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     sl.addShape(pptx.ShapeType.rect, { x: 0.22, y: 0.5, w: 0.07, h: 0.62, fill: { color: '16A34A' } });
     sl.addText('TAMAMLANAN MADDELER', { x: M, y: 0.42, w: 11.8, h: 0.28, fontSize: 11, bold: true, color: '15803D', charSpacing: 1 });
     sl.addText(`${tamamlananlar.length} madde tamamlandı`, { x: M, y: 0.68, w: 12.2, h: 0.55, fontSize: 22, bold: true, color: R.baslik });
-    const bas = ['No', 'Uygunsuzluk Konusu', 'Sorumlu', 'Tamamlanma'].map(s => ({ text: s, options: { bold: true, color: 'FFFFFF', fill: { color: R.baslik } } }));
+    const bas = ['No', csgbEtiketleri(d).maddeKonusu, 'Sorumlu', 'Tamamlanma'].map(s => ({ text: s, options: { bold: true, color: 'FFFFFF', fill: { color: R.baslik } } }));
     sl.addTable([bas, ...tamamlananlar.slice(i, i + 12).map(k => [
       { text: k.denetimMaddeNo || '-', options: { bold: true } },
       { text: k.maddeKonusu || kisalt(k.baslik, 90) },
@@ -639,7 +640,7 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
     ])], { x: M, y: 1.4, w: SW - 2 * M, colW: [0.9, 7.6, 2.4, SW - 2 * M - 10.9], fontSize: 12, color: R.baslik, fill: { color: 'FFFFFF' }, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
   }
 
-  await pptx.writeFile({ fileName: `CSGB_${toplantiNo || 'Siradaki'}_Takip_Toplantisi_${toplantiTarihi.replace(/\./g, '-')}.pptx` });
+  await pptx.writeFile({ fileName: `${csgbEtiketleri(d).dosyaOnEki}_${toplantiNo || 'Siradaki'}_Takip_Toplantisi_${toplantiTarihi.replace(/\./g, '-')}.pptx` });
 }
 
 // Toplantı tutanağı: dikey A4. Bilgiler, katılımcılar (imza sütunlu),
@@ -731,11 +732,11 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId, oncekiNotlarla) {
 
   const altBaslik = s => new docx.Paragraph({ keepNext: true, spacing: { before: w.mm(5), after: w.mm(2) }, children: [w.metin(s, { bold: true, size: 20 })] });
   const children = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin('ÇSGB DENETİMİ AKSİYON PLANI TAKİP TOPLANTISI TUTANAĞI', { bold: true, size: 24 })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: w.mm(4) }, children: [w.metin(csgbEtiketleri(d).toplantiBaslik + ' TUTANAĞI', { bold: true, size: 24 })] }),
     w.bilgiTablosu([
       ['Toplantı No', String(csgbToplantiNo(t))], ['Toplantı Tarihi', gunAyYil(t.tarih)],
       ['Yer', t.yer || '-'], ['Sonraki Toplantı', gunAyYil(t.sonrakiToplantiTarihi) || '-'],
-      ['Denetim', d ? csgbDenetimBasligi(d) : '-'], ['Rapor No / Tarihi', d ? `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}` : '-'],
+      ...(CSGB_KONU_MODU ? [['Toplantı', d ? csgbDenetimBasligi(d) : '-'], ['', '']] : [['Denetim', d ? csgbDenetimBasligi(d) : '-'], ['Rapor No / Tarihi', d ? `${d.raporNo || '-'} / ${gunAyYil(d.raporTarihi) || '-'}` : '-']]),
       // Son giderme tarihi tutanakta gösterilmez (kullanıcı isteği).
       ['Durum', d ? `${maddeler.length} madde · ${d.kapaliSayisi} tamamlandı · ${d.acikSayisi} açık · ${d.gecikmisSayisi} gecikmiş` : '-'], ['', '']
     ], SAYFA_GEN),
@@ -749,5 +750,5 @@ async function csgbToplantiTutanagiWordOlustur(toplantiId, oncekiNotlarla) {
   const sayfa = { margin: { top: w.mm(15), right: w.mm(15), bottom: w.mm(15), left: w.mm(15), footer: w.mm(6) } };
   const doc = new docx.Document({ styles: { default: { document: { run: { font: 'Arial', size: 16 } } } }, sections: [{ properties: { page: sayfa }, footers: { default: w.altBilgi }, children }] });
   const blob = await docx.Packer.toBlob(doc);
-  saveAs(blob, `CSGB_${csgbToplantiNo(t)}_Takip_Toplantisi_${gunAyYil(t.tarih).replace(/\./g, '-')}${oncekiNotlarla ? '_Onceki_Notlarla' : ''}.docx`);
+  saveAs(blob, `${csgbEtiketleri(d).dosyaOnEki}_${csgbToplantiNo(t)}_Takip_Toplantisi_${gunAyYil(t.tarih).replace(/\./g, '-')}${oncekiNotlarla ? '_Onceki_Notlarla' : ''}.docx`);
 }

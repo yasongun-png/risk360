@@ -30,10 +30,7 @@
     <!-- Kullanıcı isteği (2026-10-24): Toplantı Yönetimi altında ana sekmeler —
          İSG Kurulu (bu sayfa, kendi alt sekmeleriyle) ve ÇSGB Denetimi
          (Uygunsuzluk'tan taşındı; sayfa ve verisi aynı: ../uygunsuzluk/csgb.html). -->
-    <div class="sekme-cubugu ana-sekme-cubugu">
-      <button type="button">🏛️ İSG Kurulu</button>
-      <button type="button" class="sekme-seciliDegil" onclick="location.href='../uygunsuzluk/csgb.html'">📋 ÇSGB Denetimi</button>
-    </div>
+    <div class="sekme-cubugu ana-sekme-cubugu" id="toplantiAnaSekmeler"><!-- toplanti-sekmeleri.js doldurur --></div>
 
     <div class="sekme-cubugu alt-sekme-cubugu">
       <button type="button" id="sekmeToplantilar">Toplantılar</button>
@@ -46,7 +43,7 @@
       <div class="arac-cubugu">
         <input type="text" id="aramaKutusu" class="arama-kutusu" placeholder="Toplantı no veya başlığa göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="birincil" id="yeniToplantiBtn" style="width:auto;">+ Yeni Toplantı</button>
+          <button type="button" class="birincil" id="yeniToplantiBtn" style="width:auto;">+ Yeni Kurul Toplantısı</button>
         </div>
       </div>
       <div class="tablo-scroll">
@@ -112,7 +109,7 @@
 
   <div class="modal-katman" id="modalKatman">
     <div class="modal-kutu" style="max-width:680px;">
-      <h3 id="modalBaslik">Yeni Toplantı</h3>
+      <h3 id="modalBaslik">Yeni Kurul Toplantısı</h3>
       <form id="toplantiForm">
         <label for="toplantiNo">Toplantı No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakırsanız otomatik verilir)</span></label>
         <input type="text" id="toplantiNo" placeholder="Otomatik">
@@ -210,7 +207,8 @@
   <script src="validation.js"></script>
   <script src="repository.js"></script>
   <script src="service.js?v=20261024a"></script>
-  <script src="ui.js?v=20261023a"></script>
+  <script src="ui.js?v=20261024a"></script>
+  <script src="toplanti-sekmeleri.js?v=1"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 
@@ -227,6 +225,7 @@
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' toplantıları ve kararları';
+          toplantiAnaSekmeleriniCiz('kurul');
           kurulSayfasiniBaslat();
 
           const duzenlenecekId = new URLSearchParams(window.location.search).get('edit');

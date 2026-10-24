@@ -6,7 +6,34 @@
 //  - Madde: rapordaki her madde, numarasıyla birebir (1, 2, 5.a, 5.b, 31.c).
 //  - Takip toplantısı: dönemsel toplantı; madde bazında not + durum güncellemesi.
 
-const CSGB_DENETIM_TURLERI = ['Programlı Teftiş', 'Şikâyet / İhbar', 'İş Kazası İncelemesi', 'Proje / Kampanya Denetimi', 'SEVESO / BEKRA Denetimi', 'Kontrol (Takip) Denetimi', 'Diğer'];
+// Aynı kod konu bazlı toplantılarda da çalışır (kullanıcı isteği 2026-10-24:
+// "Yeni Toplantı ... ÇSGB denetimi ile aynı mantıkla"): kurul/konu-toplanti.html
+// scriptlerden önce window.CSGB_KONU_MODU = true tanımlar. O modda "denetim"
+// kaydı toplantının kendisidir (ad zorunlu), veriler kurul_konu_* anahtarlarında
+// tutulur ve ekran/çıktı adları toplantının adından üretilir (csgbEtiketleri).
+const CSGB_KONU_MODU = typeof window !== 'undefined' && window.CSGB_KONU_MODU === true;
+
+function csgbEtiketleri(d) {
+  if (!CSGB_KONU_MODU) {
+    return {
+      maddeKonusu: 'Uygunsuzluk Konusu', madde: 'Uygunsuzluk', maddeler: 'Denetim Maddeleri', yeniMadde: 'Yeni Denetim Maddesi',
+      duzenle: 'Denetimi Düzenle', toplantilar: 'Takip Toplantıları', yeniToplanti: '+ Takip Toplantısı',
+      raporBaslik: 'ÇSGB DENETİMİ AKSİYON PLANI TAKİP RAPORU', toplantiBaslik: 'ÇSGB DENETİMİ AKSİYON PLANI TAKİP TOPLANTISI',
+      altBilgi: 'ÇSGB Denetimi Aksiyon Planı', kayit: 'Denetim', dosyaOnEki: 'CSGB'
+    };
+  }
+  const ad = ((d && d.ad) || 'Toplantı').trim();
+  const buyuk = ad.toLocaleUpperCase('tr');
+  return {
+    maddeKonusu: 'Konu', madde: 'Açıklama', maddeler: 'Gündem / Takip Maddeleri', yeniMadde: 'Yeni Madde',
+    duzenle: 'Toplantıyı Düzenle', toplantilar: ad + ' Toplantıları', yeniToplanti: '+ ' + ad + ' Toplantısı',
+    raporBaslik: buyuk + ' AKSİYON PLANI TAKİP RAPORU', toplantiBaslik: buyuk + ' TAKİP TOPLANTISI',
+    altBilgi: ad + ' Aksiyon Planı', kayit: 'Toplantı',
+    dosyaOnEki: ad.replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i').replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Toplanti'
+  };
+}
+
+const CSGB_DENETIM_TURLERI =['Programlı Teftiş', 'Şikâyet / İhbar', 'İş Kazası İncelemesi', 'Proje / Kampanya Denetimi', 'SEVESO / BEKRA Denetimi', 'Kontrol (Takip) Denetimi', 'Diğer'];
 const CSGB_DENETIM_DURUMLARI = ['Giderme Sürecinde', 'Bakanlığa Bildirildi', 'Kapandı'];
 // İçeride 'Kapalı' tutulur, ekranda/raporda "Tamamlandı" yazılır (bkz. csgbDurumEtiketi).
 const CSGB_MADDE_DURUMLARI = ['Açık', 'Devam Ediyor', 'Kapalı', 'İptal'];
