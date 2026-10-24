@@ -214,7 +214,7 @@ function toplantiKararGruplariniGetir(toplantiId) {
     if (eviToplanti && eviToplanti.tarih && toplanti.tarih && eviToplanti.tarih >= toplanti.tarih) return false;
     // İptal edilen karar da (pasif karar gibi) gündemden düşer.
     if (k.durum === 'İptal') return false;
-    if (!kararKapaliMi(k.durum)) return k.devrederMi !== false;
+    if (!kararKapaliMi(k.durum)) return !kararToplantidaPasifMi(k, toplanti.tarih);
     return !k.devredenTamamlandiGosterildi;
   }).concat(_olayKaynakliDevredenKararlariGetir(toplanti));
 
@@ -280,10 +280,22 @@ function kararPasifeAl(kararId, neden) {
   return { basarili: true, karar: guncellenen };
 }
 
+// Pasif dönemi kapatır: dönem, en son toplantıdan (tarihe göre) önce biter ki
+// aktif edilen karar o toplantının devreden kararları arasına girsin; arada
+// yapılmış toplantılar ise kararı pasif dönemdeki gibi göstermeye devam eder.
+function _kararPasifDonemiKapatAlanlari(mevcut) {
+  const alanlar = { devrederMi: true, pasifTarihi: '', pasifNedeni: '' };
+  if (!kararPasifMi(mevcut) || !mevcut.pasifTarihi) return alanlar;
+  const enSon = toplantiTumunuGetir().filter(t => t.tarih).sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
+  const bit = enSon && enSon.tarih < _bugun() ? enSon.tarih : _bugun();
+  alanlar.pasifDonemleri = (mevcut.pasifDonemleri || []).concat([{ bas: mevcut.pasifTarihi, bit, neden: mevcut.pasifNedeni || '' }]);
+  return alanlar;
+}
+
 function kararAktifEt(kararId) {
   const mevcut = kararIdIleGetirRepo(kararId);
   if (!mevcut) return { basarili: false, hata: 'Karar bulunamadı.' };
-  const guncellenen = kararGuncelleRepo(kararId, { devrederMi: true, pasifTarihi: '', pasifNedeni: '' });
+  const guncellenen = kararGuncelleRepo(kararId, _kararPasifDonemiKapatAlanlari(mevcut));
   _denetimEkle('karar', kararId, 'guncelle', mevcut, guncellenen);
   return { basarili: true, karar: guncellenen };
 }
@@ -408,7 +420,7 @@ function kararGuncelle(id, veriler) {
     devrederMi: veriler.devrederMi !== undefined ? !!veriler.devrederMi : (mevcut ? mevcut.devrederMi !== false : true),
     ...(veriler.devrederMi === false
       ? { pasifTarihi: (mevcut && mevcut.devrederMi === false && mevcut.pasifTarihi) || _bugun(), pasifNedeni: veriler.pasifNedeni !== undefined ? (veriler.pasifNedeni || '').trim() : ((mevcut && mevcut.pasifNedeni) || '') }
-      : veriler.devrederMi === true ? { pasifTarihi: '', pasifNedeni: '' } : {}),
+      : veriler.devrederMi === true ? (mevcut ? _kararPasifDonemiKapatAlanlari(mevcut) : { pasifTarihi: '', pasifNedeni: '' }) : {}),
     kapanisTarihi: kararKapaliMi(veriler.durum) ? (veriler.kapanisTarihi || _bugun()) : '',
     kanit: (veriler.kanit || '').trim(),
     aksiyonNotu: veriler.aksiyonNotu !== undefined ? (veriler.aksiyonNotu || '').trim() : ((mevcut && mevcut.aksiyonNotu) || ''),
@@ -1297,7 +1309,7 @@ function toplantiKararIstatistikleriHesapla(toplanti) {
     oran: gecerli.length ? (tamamlanan.length * 100) / gecerli.length : null,
     buToplantiAlinan: gecerli.filter(k => k.toplantiId === toplanti.id).length,
     // Pasif kararlar açık sayılır ama gündeme devretmez.
-    devreden: acik.filter(k => k.toplantiId !== toplanti.id && !kararPasifMi(k)).length,
+    devreden: acik.filter(k => k.toplantiId !== toplanti.id && !kararToplantidaPasifMi(k, toplanti.tarih)).length,
     toplantilar: toplantilar.map(t => {
       const kt = gecerli.filter(k => k.toplantiId === t.id);
       return { toplantiNo: t.toplantiNo || '-', alinan: kt.length, tamamlanan: kt.filter(tamamlandiMi).length, acik: kt.filter(k => !tamamlandiMi(k)).length };

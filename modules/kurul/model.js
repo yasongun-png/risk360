@@ -9,6 +9,15 @@ function kararKapaliMi(durum) { return durum === 'Kapalı' || durum === 'Tamamla
 // Kullanıcı isteği (2026-10-23): "yapılmasa da gündemden düşebilmem için
 // kararı pasife almak". Pasif = açık ama devretmeyen karar (devrederMi: false).
 function kararPasifMi(karar) { return !!karar && karar.devrederMi === false && !kararKapaliMi(karar.durum) && karar.durum !== 'İptal'; }
+// Kullanıcı isteği (2026-10-24): pasiflik geçmiş toplantıları değiştirmesin,
+// aktif edilen karar en son toplantıya dahil olsun. Karar yalnızca pasif
+// olduğu dönemde yapılan toplantılarda devretmez: şu an pasifse pasifTarihi
+// ve sonrası, eski bir pasif dönem için [bas, bit) aralığı.
+function kararToplantidaPasifMi(karar, toplantiTarihi) {
+  if (!toplantiTarihi) return kararPasifMi(karar);
+  if (kararPasifMi(karar)) return !karar.pasifTarihi || toplantiTarihi >= karar.pasifTarihi;
+  return ((karar && karar.pasifDonemleri) || []).some(d => d.bas && toplantiTarihi >= d.bas && (!d.bit || toplantiTarihi < d.bit));
+}
 const GUNDEM_TURLERI = ['Genel', 'İş Kazası', 'Risk', 'Uygunsuzluk', 'Eğitim', 'Yasal Şart', 'Yüklenici', 'Acil Durum', 'Diğer'];
 
 // Kullanıcı isteği: "kararlar, olaylar ve önceki toplantı kararları için
@@ -243,6 +252,8 @@ function kararOlustur(veriler) {
     // Pasife alınma tarihi ve gerekçesi (bkz. kararPasifMi).
     pasifTarihi: veriler.pasifTarihi || '',
     pasifNedeni: (veriler.pasifNedeni || '').trim(),
+    // Aktif edilerek kapanmış pasif dönemler [{ bas, bit, neden }] (bkz. kararToplantidaPasifMi).
+    pasifDonemleri: Array.isArray(veriler.pasifDonemleri) ? veriler.pasifDonemleri : [],
     kapanisTarihi: veriler.kapanisTarihi || '',
     kanit: (veriler.kanit || '').trim(),
     // İlerleme/aksiyon notu — durumdan bağımsız, her toplantıda güncellenip

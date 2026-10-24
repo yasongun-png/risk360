@@ -481,7 +481,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar, devredenMi)
       <td style="white-space:nowrap;">
         ${olayId
           ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
-          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${devredenMi && !kararKapaliMi(k.durum) ? `<button class="tablo-buton" data-pasif="${k.id}" title="Karar yapılmasa da gündemden düşer; sonraki toplantılara devretmez. Kurul ana sayfasındaki Kararlar sekmesinden yeniden aktif edilebilir.">⏸ Pasife Al</button>` : ''}${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
+          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${devredenMi && !kararKapaliMi(k.durum) && !kararPasifMi(k) ? `<button class="tablo-buton" data-pasif="${k.id}" title="Karar yapılmasa da gündemden düşer; sonraki toplantılara devretmez. Kurul ana sayfasındaki Kararlar sekmesinden yeniden aktif edilebilir.">⏸ Pasife Al</button>` : ''}${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
       </td>
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
