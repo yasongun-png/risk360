@@ -27,13 +27,19 @@
     <h2 style="margin-top:14px;">Toplantı Yönetimi</h2>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
 
-    <div class="sekme-cubugu">
+    <!-- Kullanıcı isteği (2026-10-24): Toplantı Yönetimi altında ana sekmeler —
+         İSG Kurulu (bu sayfa, kendi alt sekmeleriyle) ve ÇSGB Denetimi
+         (Uygunsuzluk'tan taşındı; sayfa ve verisi aynı: ../uygunsuzluk/csgb.html). -->
+    <div class="sekme-cubugu ana-sekme-cubugu">
+      <button type="button">🏛️ İSG Kurulu</button>
+      <button type="button" class="sekme-seciliDegil" onclick="location.href='../uygunsuzluk/csgb.html'">📋 ÇSGB Denetimi</button>
+    </div>
+
+    <div class="sekme-cubugu alt-sekme-cubugu">
       <button type="button" id="sekmeToplantilar">Toplantılar</button>
       <button type="button" id="sekmeKararlar" class="sekme-seciliDegil">Tüm Kararlar</button>
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
       <button type="button" id="sekmeDenetim" class="sekme-seciliDegil">Denetim Kaydı</button>
-      <!-- Kullanıcı isteği (2026-10-24): ÇSGB Denetimi Uygunsuzluk'tan buraya taşındı; sayfa ve verisi aynı kaldı (../uygunsuzluk/csgb.html). -->
-      <button type="button" class="sekme-seciliDegil" onclick="location.href='../uygunsuzluk/csgb.html'">ÇSGB Denetimi</button>
     </div>
 
     <div id="toplantilarBolumu">

@@ -368,6 +368,27 @@ table.veri-tablosu tr.row-bad td { background: #fef2f2; }
   color: var(--metin-soluk);
 }
 
+/* İki seviyeli sekmeler (ör. Toplantı Yönetimi → İSG Kurulu / ÇSGB Denetimi):
+   ana sekmeler altı çizgili ve büyük, alt sekmeler küçük. */
+.ana-sekme-cubugu {
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ana-sekme-cubugu button {
+  padding: 10px 20px;
+  font-size: 14px;
+}
+.alt-sekme-cubugu {
+  flex-wrap: wrap;
+}
+.alt-sekme-cubugu button {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  border-radius: 999px;
+}
+
 .arac-cubugu {
   display: flex;
   justify-content: space-between;
