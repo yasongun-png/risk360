@@ -71,6 +71,14 @@ function riskSilRepo(id) {
   _riskKaydet(riskTumunuGetir().filter(r => r.id !== id));
 }
 
+function riskTopluSilRepo(idler) {
+  const idSeti = new Set(idler);
+  const liste = riskTumunuGetir();
+  const kalan = liste.filter(r => !idSeti.has(r.id));
+  _riskKaydet(kalan);
+  return liste.length - kalan.length;
+}
+
 function riskIdIleGetirRepo(id) {
   return riskTumunuGetir().find(r => r.id === id) || null;
 }

@@ -336,6 +336,12 @@ function riskSil(id) {
   return { basarili: true };
 }
 
+function riskTopluSil(idler) {
+  if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
+  if (!idler || !idler.length) return { basarili: false, hata: 'Silinecek risk seçilmedi.' };
+  return { basarili: true, silinen: riskTopluSilRepo(idler) };
+}
+
 // ---- Şablonlar (sektöre göre hazır risk şablonları + kullanıcının kendi
 // kaydettiği şablonlar) ----
 // Hazır kütüphane (kaynak: 'hazir') herkese açıktır; kullanıcının kendi

@@ -190,6 +190,17 @@ function riskSayfasiniBaslat() {
     document.getElementById('topluTasiIslem').value = 'tasi';
     document.getElementById('topluTasiKatman').classList.add('acik');
   });
+  // Kullanıcı isteği: "konu içinde seçtikleri silme de ekleyelim".
+  document.getElementById('topluSilBtn').addEventListener('click', async () => {
+    const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+    if (!secililer.length) { alert('Silmek için listeden riskleri işaretleyin.'); return; }
+    if (!(await onayModali(`İşaretli ${secililer.length} risk kaydı silinsin mi?`, 'Sil'))) return;
+    const sonuc = riskTopluSil(secililer);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    alert(`${sonuc.silinen} risk kaydı silindi.`);
+    _bolumFiltreDoldur();
+    kayitlariCiz(document.getElementById('aramaKutusu').value, true);
+  });
   document.getElementById('topluTasiKapatBtn').addEventListener('click', () => {
     document.getElementById('topluTasiKatman').classList.remove('acik');
   });
