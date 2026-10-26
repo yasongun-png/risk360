@@ -413,7 +413,7 @@ function _kimMatrisKurallariniCiz() {
 
 function _kimYaziciIsaret(durum) {
   const d = _KIM_DURUM_ISARET[durum];
-  return `<span style="display:inline-block; width:18px; height:18px; line-height:18px; border-radius:50%; background:${d.renk}; color:#fff; font-weight:800; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">${d.isaret}</span>`;
+  return `<span class="kim-isaret kim-isaret-${durum}" style="display:inline-block; width:18px; height:18px; line-height:18px; border-radius:50%; background:${d.renk}; color:#fff; font-weight:800; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">${d.isaret}</span>`;
 }
 
 // Yazdırma çıktısı: kimyasallar arası matris + kullanılan kural tablosu.
@@ -422,7 +422,7 @@ function _kimDepolamaMatrisiHtml(kayitlar) {
   const basliklar = kayitlar.map(k => `<th>${_raporKacir(k.kimyasalNo)}</th>`).join('');
   const govde = kayitlar.map((satirK, i) => {
     const hucreler = kayitlar.map((sutunK, j) => {
-      if (i === j) return '<td style="background:#f1f5f9; text-align:center;">—</td>';
+      if (i === j) return '<td class="kim-kosegen" style="background:#f1f5f9; text-align:center;">—</td>';
       return `<td style="text-align:center;">${_kimYaziciIsaret(_kimCiftDurumu(satirK, sutunK, kurallar).durum)}</td>`;
     }).join('');
     const yildiz = satirK.depolamaGrubuTahminiMi ? '*' : '';
