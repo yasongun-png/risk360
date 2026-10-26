@@ -88,6 +88,17 @@ function yukleniciKisiIdIleGetirRepo(id) {
   return yukleniciKisileriTumunuGetir().find(k => k.id === id) || null;
 }
 
+// Birden çok kişiyi TEK yazımla günceller (toplu pasif/aktif): art arda yaz()
+// çağrıları ağ sırası yüzünden birbirini ezebiliyordu.
+function yukleniciKisileriTopluGuncelleRepo(idler, veriler) {
+  const set = new Set(idler);
+  const liste = yukleniciKisileriTumunuGetir();
+  let sayi = 0;
+  liste.forEach((k, i) => { if (set.has(k.id)) { liste[i] = Object.assign({}, k, _yukleniciGuncellemeIzi(veriler)); sayi++; } });
+  if (sayi) _yukleniciKisileriKaydet(liste);
+  return sayi;
+}
+
 function yukleniciAraclariTumunuGetir() {
   return oku(_yukleniciAracAnahtari(), []);
 }
@@ -101,6 +112,15 @@ function yukleniciAracEkleRepo(arac) {
   liste.push(_yukleniciEklemeIzi(arac));
   _yukleniciAraclariKaydet(liste);
   return arac;
+}
+
+function yukleniciAraclariTopluGuncelleRepo(idler, veriler) {
+  const set = new Set(idler);
+  const liste = yukleniciAraclariTumunuGetir();
+  let sayi = 0;
+  liste.forEach((a, i) => { if (set.has(a.id)) { liste[i] = Object.assign({}, a, _yukleniciGuncellemeIzi(veriler)); sayi++; } });
+  if (sayi) _yukleniciAraclariKaydet(liste);
+  return sayi;
 }
 
 function yukleniciAracGuncelleRepo(id, veriler) {

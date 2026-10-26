@@ -828,6 +828,15 @@ function yukleniciKisiPasifDurumunuDegistir(id, pasif) {
   return { basarili: true };
 }
 
+// Kullanıcı isteği: aranan firmanın elemanlarını topluca pasif/aktif yapmak.
+// secimler: [{ kind: 'personel' | 'arac', id }]
+function yukleniciKayitlariTopluPasifDurumunuDegistir(secimler, pasif) {
+  const idler = kind => secimler.filter(s => s.kind === kind).map(s => s.id);
+  const personel = yukleniciKisileriTopluGuncelleRepo(idler('personel'), { pasif: !!pasif });
+  const arac = yukleniciAraclariTopluGuncelleRepo(idler('arac'), { pasif: !!pasif });
+  return { basarili: true, personel, arac };
+}
+
 function yukleniciAracPasifDurumunuDegistir(id, pasif) {
   const arac = yukleniciAracIdIleGetirRepo(id);
   if (!arac) return { basarili: false };

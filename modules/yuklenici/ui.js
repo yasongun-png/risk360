@@ -219,6 +219,8 @@ function yukleniciSayfasiniBaslat() {
     document.querySelectorAll('#kayitTabloGovde [data-kayit-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
   document.getElementById('kayitSecilenSilBtn').addEventListener('click', kayitSecilenleriSil);
+  document.getElementById('kayitTopluPasifBtn').addEventListener('click', () => kayitlariTopluPasifYap(true));
+  document.getElementById('kayitTopluAktifBtn').addEventListener('click', () => kayitlariTopluPasifYap(false));
   document.getElementById('kayitMailEksikBtn').addEventListener('click', kayitSecilenleriMailEksik);
   document.getElementById('kayitTumExcelBtn').addEventListener('click', yukleniciTumKayitlariExcelAktar);
   document.getElementById('kayitUygunExcelBtn').addEventListener('click', yukleniciUygunKayitlariExcelAktar);
@@ -1591,6 +1593,35 @@ async function kayitSecilenleriSil() {
   const sonuc = yukleniciKayitlariToplusil(secililer);
   alert(`${sonuc.silinen} kayıt silindi.`);
   kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+}
+
+// Kullanıcı isteği: arama kutusuna firma adı yazıp o firmanın elemanlarını
+// topluca pasif/aktif yapmak. Kutucukla seçim varsa seçilenler, yoksa
+// aramayla listelenen kayıtların tümü (zaten o durumda olanlar atlanır).
+async function kayitlariTopluPasifYap(pasif) {
+  const arama = document.getElementById('kayitAramaKutusu').value;
+  const secililer = Array.from(document.querySelectorAll('#kayitTabloGovde [data-kayit-sec]:checked'))
+    .map(cb => ({ kind: cb.getAttribute('data-kind'), id: cb.getAttribute('data-id') }));
+  const listelenen = yukleniciKayitlariniGetir(arama);
+  const kaynak = secililer.length
+    ? listelenen.filter(r => secililer.some(s => s.kind === r.kind && s.id === r.id))
+    : listelenen;
+  const hedef = kaynak.filter(r => !!r.pasif !== pasif);
+  const islem = pasif ? 'pasif' : 'aktif';
+  if (!hedef.length) { alert(`Listede ${islem} yapılacak kayıt yok (hepsi zaten ${islem}).`); return; }
+
+  const firmalar = [...new Set(hedef.map(r => r.firma).filter(Boolean))];
+  const kapsam = secililer.length ? 'seçili' : (arama.trim() ? `"${arama.trim()}" aramasıyla listelenen` : 'listedeki TÜM');
+  const mesaj = `${kapsam} ${hedef.length} kayıt ${islem} yapılsın mı?\n\nFirma: ${firmalar.slice(0, 5).join(', ')}${firmalar.length > 5 ? ` ve ${firmalar.length - 5} firma daha` : ''}` +
+    `\nPersonel: ${hedef.filter(r => r.kind === 'personel').length} · Araç/Ekipman: ${hedef.filter(r => r.kind !== 'personel').length}`;
+  const onay = onayModali(mesaj, pasif ? 'Pasif Yap' : 'Aktif Yap');
+  const mesajEl = document.getElementById('omMesaj');
+  if (mesajEl) mesajEl.style.whiteSpace = 'pre-line';
+  if (!(await onay)) return;
+
+  const sonuc = yukleniciKayitlariTopluPasifDurumunuDegistir(hedef.map(r => ({ kind: r.kind, id: r.id })), pasif);
+  kayitlariCiz(arama);
+  alert(`${sonuc.personel + sonuc.arac} kayıt ${islem} yapıldı (personel ${sonuc.personel}, araç/ekipman ${sonuc.arac}).`);
 }
 
 // ==================== ÖZET ====================
