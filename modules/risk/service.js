@@ -141,6 +141,28 @@ async function riskTopluTasi(idler, yeniBolum) {
   return { basarili: true, tasinan: sonuc.sayac };
 }
 
+// Kullanıcı isteği: "kopyalama, diğer konuya da ekleme" -- seçilen riskler
+// hedef konuya yeni kayıt olarak (yeni id ve hedef konunun Risk No'suyla)
+// eklenir; asıllar yerinde kalır. Harita konumu kopyalanmaz (aynı noktada iki
+// işaret olmasın).
+async function riskTopluKopyala(idler, yeniBolum) {
+  const bolum = (yeniBolum || '').trim();
+  if (!bolum) return { basarili: false, hata: 'Hedef konu seçilmedi.' };
+  if (!idler || !idler.length) return { basarili: false, hata: 'Kopyalanacak risk seçilmedi.' };
+  const mevcut = riskTumunuGetir();
+  const idSeti = new Set(idler);
+  const kopyalar = [];
+  mevcut.filter(r => idSeti.has(r.id)).forEach(r => {
+    const riskNo = sonrakiRiskNoUret(bolum, mevcut.concat(kopyalar));
+    kopyalar.push(riskKaydiOlustur(Object.assign({}, r, {
+      id: '', riskNo, bolum, olusturmaTarihi: '', haritaTesisId: '', haritaX: '', haritaY: ''
+    })));
+  });
+  const sonuc = await riskKayitlariTopluEkleRepo(kopyalar);
+  if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
+  return { basarili: true, kopyalanan: kopyalar.length };
+}
+
 function riskleriGetir(aramaMetni, filtreler) {
   const f = filtreler || {};
   let liste = riskTumunuGetir().map(_riskiZenginlestir);

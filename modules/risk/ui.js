@@ -8,14 +8,16 @@ let _bekleyenHaritaKonum = null;
 let _riskGorunum = 'kayitlar';
 let _riskFotoOncesi = '';
 let _riskFotoSonrasi = '';
+// Taşı / Kopyala penceresi açıldığında işleme girecek risk id'leri.
+let _riskTasinacakIdler = [];
 
 // Sıra ve eşanlamlar, eski isg platformunun Risk Defteri modülüyle
 // (modules/risk_registry/model.js -> EXPORT_COLUMNS) aynı — o uygulamadan
 // alınan bir Excel dosyası hiç değiştirilmeden buraya içe aktarılabilir.
 // RP1/Düzey/RP2/Düzey2/Azalma hesaplanan alanlardır, içe aktarılmaz (fazladan
 // bir sütun olarak gelse bile sessizce yok sayılır).
-// Konu seçiliyse tüm satırlar o konuya yazılır; seçili konu yoksa
-// "Risk Değerlendirme Konusu" sütunundan, o da yoksa Bölüm'den alınır.
+// İçe aktarımda tüm satırlar açık (seçili) konuya yazılır; dosyadaki konu
+// sütunu yok sayılır, Bölüm sütunu satırın bölümü olarak kalır.
 const RISK_IMPORT_KOLONLARI = [
   { anahtar: 'bolum', baslik: 'Risk Değerlendirme Konusu', esanlamlar: ['Konu', 'Risk Değerlendirme Konusu Adı'] },
   { anahtar: 'altBolum', baslik: 'Bölüm' },
@@ -169,24 +171,45 @@ function riskSayfasiniBaslat() {
   document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
     document.querySelectorAll('#tabloGovde [data-sec]').forEach(cb => { cb.checked = e.target.checked; });
   });
+  // Kullanıcı isteği: "risk analizlerini birbirine taşıyabileyim, konunun
+  // içindeki maddeleri diğer konuya dahil etme, veya kopyalama" -- işaretli
+  // satır yoksa açık konunun TÜM maddeleri işleme girer.
   document.getElementById('topluTasiBtn').addEventListener('click', () => {
-    const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
-    if (!secililer.length) { alert('Lütfen taşımak için en az bir risk seçin.'); return; }
-    document.getElementById('topluTasiSayisi').textContent = `${secililer.length} risk kaydı taşınacak.`;
-    document.getElementById('topluTasiBolum').innerHTML = bolumleriGetir().map(b => `<option value="${b.ad}">${b.ad}</option>`).join('');
+    const acikKonu = document.getElementById('bolumFiltre').value;
+    let secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+    let aciklama = `İşaretli ${secililer.length} risk kaydı.`;
+    if (!secililer.length) {
+      if (!acikKonu) { alert('Taşımak/kopyalamak için riskleri işaretleyin ya da tüm maddelerini aktaracağınız konuyu açın.'); return; }
+      secililer = riskleriGetir('', { bolum: acikKonu }).map(r => r.id);
+      if (!secililer.length) { alert(`"${acikKonu}" konusunda risk kaydı yok.`); return; }
+      aciklama = `"${acikKonu}" konusundaki tüm maddeler (${secililer.length} risk kaydı).`;
+    }
+    _riskTasinacakIdler = secililer;
+    document.getElementById('topluTasiSayisi').textContent = aciklama;
+    document.getElementById('topluTasiBolum').innerHTML = bolumleriGetir().filter(b => b.ad !== acikKonu).map(b => `<option value="${_riskKacir(b.ad)}">${_riskKacir(b.ad)}</option>`).join('');
+    document.getElementById('topluTasiIslem').value = 'tasi';
     document.getElementById('topluTasiKatman').classList.add('acik');
   });
   document.getElementById('topluTasiKapatBtn').addEventListener('click', () => {
     document.getElementById('topluTasiKatman').classList.remove('acik');
   });
   document.getElementById('topluTasiOnaylaBtn').addEventListener('click', async () => {
-    const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
     const yeniBolum = document.getElementById('topluTasiBolum').value;
-    const sonuc = await riskTopluTasi(secililer, yeniBolum);
+    const kopyala = document.getElementById('topluTasiIslem').value === 'kopyala';
+    const dugme = document.getElementById('topluTasiOnaylaBtn');
+    dugme.disabled = true;
+    let sonuc;
+    try {
+      sonuc = kopyala ? await riskTopluKopyala(_riskTasinacakIdler, yeniBolum) : await riskTopluTasi(_riskTasinacakIdler, yeniBolum);
+    } finally {
+      dugme.disabled = false;
+    }
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     document.getElementById('topluTasiKatman').classList.remove('acik');
     document.getElementById('tumunuSecCheckbox').checked = false;
-    alert(`${sonuc.tasinan} risk kaydı "${yeniBolum}" konusuna taşındı.`);
+    alert(kopyala
+      ? `${sonuc.kopyalanan} risk kaydı "${yeniBolum}" konusuna kopyalandı (asılları yerinde duruyor).`
+      : `${sonuc.tasinan} risk kaydı "${yeniBolum}" konusuna taşındı.`);
     _bolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
@@ -249,19 +272,18 @@ function riskSayfasiniBaslat() {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
       // Kullanıcı isteği: "hangi konu açıksa ona kaydetsin, bölümlere
-      // dağıtmasın" -- konu seçiliyse dosyadaki Konu/Bölüm sütunlarına
-      // bakılmadan tüm satırlar o konuya yazılır (Bölüm sütunu yalnızca
-      // satırın bölüm bilgisi olarak kalır).
+      // dağıtmasın" + "yazdığım bölümü konu ismi olarak atamasın" -- tüm
+      // satırlar açık konuya yazılır; dosyadaki Konu/Bölüm sütunları konu
+      // belirlemez (Bölüm sütunu yalnızca satırın bölüm bilgisi olarak kalır).
       const seciliKonu = document.getElementById('bolumFiltre').value;
-      if (!seciliKonu && !(await onayModali(`Açık bir risk değerlendirme konusu yok. ${satirlar.length} satır dosyadaki "Risk Değerlendirme Konusu" (yoksa "Bölüm") sütununa göre konulara dağıtılacak. Tek bir konuya kaydetmek için önce o konuyu açın. Devam edilsin mi?`, 'Dağıtarak Aktar'))) return;
+      if (!seciliKonu) { alert('Önce içe aktaracağınız risk değerlendirme konusunu seçin (yoksa "+ Yeni Konu" ile oluşturun). Tüm satırlar o konuya eklenir.'); return; }
       satirlar.forEach(satir => {
         satir.termin = excelTarihiNormallestir(satir.termin);
-        if (seciliKonu) satir.bolum = seciliKonu;
-        else if (!satir.bolum) satir.bolum = satir.altBolum;
+        satir.bolum = seciliKonu;
       });
       const sonuc = await riskExcelTopluEkle(satirlar);
       let mesaj = excelIceAktarOzetMesaji(sonuc);
-      if (seciliKonu && sonuc.basarili) mesaj += `\nKayıtlar "${seciliKonu}" konusuna eklendi.`;
+      if (sonuc.basarili) mesaj += `\nKayıtlar "${seciliKonu}" konusuna eklendi.`;
       if (sonuc.atlanan) mesaj += `\n${sonuc.atlanan} satır zaten kayıtlı olduğu için tekrar eklenmedi.`;
       alert(mesaj);
       _bolumFiltreDoldur();

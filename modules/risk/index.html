@@ -75,7 +75,7 @@
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
           <!-- Kullanıcı isteği: "bölümler arasında risk taşınabilsin" --
                seçilen risk(ler)i tek seferde başka bir bölüme taşır. -->
-          <button type="button" class="ikincil" id="topluTasiBtn">Seçilenleri Taşı</button>
+          <button type="button" class="ikincil" id="topluTasiBtn" title="İşaretli riskleri; hiçbiri işaretli değilse açık konunun tüm maddelerini başka konuya taşır veya kopyalar">Taşı / Kopyala</button>
           <button type="button" class="ikincil" id="mukerrerTemizleBtn" title="İçeriği birebir aynı olan tekrar eden risk kayıtlarını bulur, her birinden bir tane bırakır">Mükerrerleri Temizle</button>
           <button type="button" class="birincil" id="yeniRiskBtn" style="width:auto;">+ Yeni Risk</button>
         </div>
@@ -320,11 +320,17 @@
        bölüm seçim modalı. -->
   <div class="modal-katman" id="topluTasiKatman">
     <div class="modal-kutu" style="max-width:420px;">
-      <h3>Seçilenleri Başka Konuya Taşı</h3>
+      <h3>Başka Konuya Taşı / Kopyala</h3>
       <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;" id="topluTasiSayisi"></p>
 
       <label for="topluTasiBolum">Hedef Risk Değerlendirme Konusu</label>
       <select id="topluTasiBolum"></select>
+
+      <label for="topluTasiIslem">İşlem</label>
+      <select id="topluTasiIslem">
+        <option value="tasi">Taşı (maddeler bu konudan çıkar, hedef konuya geçer)</option>
+        <option value="kopyala">Kopyala (maddeler bu konuda da kalır, hedef konuya da eklenir)</option>
+      </select>
 
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="topluTasiKapatBtn">İptal</button>
@@ -354,9 +360,9 @@
   <script src="validation.js?v=20261022k"></script>
   <script src="repository.js?v=20261022e"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261023a"></script>
+  <script src="service.js?v=20261026a"></script>
   <script src="cikti.js?v=20261023a"></script>
-  <script src="ui.js?v=20261026a"></script>
+  <script src="ui.js?v=20261026b"></script>
   <script src="ekipler.js?v=20261022k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
