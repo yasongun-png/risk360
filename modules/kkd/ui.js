@@ -333,7 +333,7 @@ function zimmetleriCiz(aramaMetni) {
       <td>${z.kondisyon}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${z.id}">Düzenle</button>
-        <button class="tablo-buton" data-form="${z.id}">Zimmet Formu</button>
+        <button class="tablo-buton" data-form="${z.id}">Zimmet Tutanağı (Word)</button>
         ${iadeButonu}
         <button class="tablo-buton sil" data-sil="${z.id}">Sil</button>
       </td>
@@ -343,7 +343,7 @@ function zimmetleriCiz(aramaMetni) {
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => zimmetModalAc(zimmetIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', async () => {
-    try { await kkdZimmetFormuPdfOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
+    try { await kkdZimmetTutanagiWordOlustur(btn.getAttribute('data-form')); } catch (hata) { console.error(hata); alert('Word üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-iade]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu KKD iade edildi olarak işaretlensin mi?', 'İşaretle')) { zimmetIadeEt(btn.getAttribute('data-iade')); zimmetleriCiz(document.getElementById('zimmetAramaKutusu').value); }
