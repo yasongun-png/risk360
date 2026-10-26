@@ -14,8 +14,8 @@ let _riskFotoSonrasi = '';
 // alınan bir Excel dosyası hiç değiştirilmeden buraya içe aktarılabilir.
 // RP1/Düzey/RP2/Düzey2/Azalma hesaplanan alanlardır, içe aktarılmaz (fazladan
 // bir sütun olarak gelse bile sessizce yok sayılır).
-// "Risk Değerlendirme Konusu" sütunu olmayan eski dosyalarda konu, seçili
-// konudan ya da (seçili konu yoksa) Bölüm sütunundan alınır — bkz. içe aktarım.
+// Konu seçiliyse tüm satırlar o konuya yazılır; seçili konu yoksa
+// "Risk Değerlendirme Konusu" sütunundan, o da yoksa Bölüm'den alınır.
 const RISK_IMPORT_KOLONLARI = [
   { anahtar: 'bolum', baslik: 'Risk Değerlendirme Konusu', esanlamlar: ['Konu', 'Risk Değerlendirme Konusu Adı'] },
   { anahtar: 'altBolum', baslik: 'Bölüm' },
@@ -248,13 +248,20 @@ function riskSayfasiniBaslat() {
     excelIceAktar(dosya, RISK_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
+      // Kullanıcı isteği: "hangi konu açıksa ona kaydetsin, bölümlere
+      // dağıtmasın" -- konu seçiliyse dosyadaki Konu/Bölüm sütunlarına
+      // bakılmadan tüm satırlar o konuya yazılır (Bölüm sütunu yalnızca
+      // satırın bölüm bilgisi olarak kalır).
       const seciliKonu = document.getElementById('bolumFiltre').value;
+      if (!seciliKonu && !(await onayModali(`Açık bir risk değerlendirme konusu yok. ${satirlar.length} satır dosyadaki "Risk Değerlendirme Konusu" (yoksa "Bölüm") sütununa göre konulara dağıtılacak. Tek bir konuya kaydetmek için önce o konuyu açın. Devam edilsin mi?`, 'Dağıtarak Aktar'))) return;
       satirlar.forEach(satir => {
         satir.termin = excelTarihiNormallestir(satir.termin);
-        if (!satir.bolum) satir.bolum = seciliKonu || satir.altBolum;
+        if (seciliKonu) satir.bolum = seciliKonu;
+        else if (!satir.bolum) satir.bolum = satir.altBolum;
       });
       const sonuc = await riskExcelTopluEkle(satirlar);
       let mesaj = excelIceAktarOzetMesaji(sonuc);
+      if (seciliKonu && sonuc.basarili) mesaj += `\nKayıtlar "${seciliKonu}" konusuna eklendi.`;
       if (sonuc.atlanan) mesaj += `\n${sonuc.atlanan} satır zaten kayıtlı olduğu için tekrar eklenmedi.`;
       alert(mesaj);
       _bolumFiltreDoldur();
