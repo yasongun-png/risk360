@@ -132,6 +132,11 @@ function kimyasalSayfasiniBaslat() {
     if (kayitlar.length < 2) { alert('Matris oluşturmak için en az 2 aktif kimyasal kaydı gerekli.'); return; }
     _raporYazdirmaAlaniniGoster(_kimDepolamaMatrisiHtml(kayitlar));
   });
+  document.getElementById('matrisWordBtn').addEventListener('click', () => {
+    const kayitlar = _kimDepolamaMatrisiKayitlariGetir();
+    if (kayitlar.length < 2) { alert('Matris oluşturmak için en az 2 aktif kimyasal kaydı gerekli.'); return; }
+    _kimDepolamaMatrisiWordOlustur(kayitlar).catch(e => alert('Word oluşturulamadı: ' + e.message));
+  });
   document.getElementById('iceAktarBtn').addEventListener('click', () => document.getElementById('iceAktarDosya').click());
   document.getElementById('iceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
@@ -441,6 +446,70 @@ function _kimDepolamaMatrisiHtml(kayitlar) {
     <div class="doc-title" style="margin-top:18px; font-size:15px;">Uyumluluk Kuralları</div>
     <table><tr><th></th>${kuralBaslik}</tr>${kuralGovde}</table>
   `;
+}
+
+// Word (.docx) çıktısı: yazdırmadakiyle aynı iki tablo, hücreler durum
+// rengiyle (yeşil/kırmızı/sarı) boyanır, işaret beyaz yazılır. A4 yatay.
+async function _kimDepolamaMatrisiWordOlustur(kayitlar) {
+  if (!window.docx) { alert('docx.js yüklenemedi.'); return; }
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, VerticalAlign, ShadingType, PageOrientation } = docx;
+  const font = 'Calibri';
+  const kurallar = kimyasalMatrisKurallariGetir();
+  const boya = (renk) => ({ fill: renk.replace('#', ''), type: ShadingType.CLEAR, color: 'auto' });
+  const metinHucre = (metin, opts = {}) => new TableCell({
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 30, bottom: 30, left: 50, right: 50 },
+    shading: opts.renk ? boya(opts.renk) : undefined,
+    children: [new Paragraph({ alignment: opts.orta ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: String(metin ?? ''), bold: !!opts.kalin, font, size: opts.boyut || 16 })] })]
+  });
+  const isaretHucre = (durum) => {
+    const d = _KIM_DURUM_ISARET[durum] || _KIM_DURUM_ISARET.U;
+    return new TableCell({
+      verticalAlign: VerticalAlign.CENTER,
+      shading: boya(d.renk),
+      children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: d.isaret, bold: true, color: 'FFFFFF', font, size: 20 })] })]
+    });
+  };
+
+  const matrisSatirlari = [
+    new TableRow({ tableHeader: true, children: [metinHucre('Kimyasal', { kalin: true }), ...kayitlar.map(k => metinHucre(k.kimyasalNo, { kalin: true, orta: true }))] }),
+    ...kayitlar.map((satirK, i) => new TableRow({
+      cantSplit: true,
+      children: [
+        metinHucre(`${satirK.kimyasalNo} — ${satirK.ad} (${satirK.depolamaGrubuEfektif}${satirK.depolamaGrubuTahminiMi ? '*' : ''})`, { kalin: true }),
+        ...kayitlar.map((sutunK, j) => i === j ? metinHucre('—', { orta: true, renk: '#E2E8F0' }) : isaretHucre(_kimCiftDurumu(satirK, sutunK, kurallar).durum))
+      ]
+    }))
+  ];
+  const kuralSatirlari = [
+    new TableRow({ tableHeader: true, children: [metinHucre(''), ...KIMYASAL_OZELLIKLERI.map(o => metinHucre(o, { kalin: true, orta: true, boyut: 13 }))] }),
+    ...KIMYASAL_OZELLIKLERI.map(a => new TableRow({
+      cantSplit: true,
+      children: [metinHucre(a, { kalin: true, boyut: 14 }), ...KIMYASAL_OZELLIKLERI.map(b => isaretHucre(kimyasalMatrisDurumu(a, b, kurallar)))]
+    }))
+  ];
+  const lejant = ['U', 'X', 'S'].flatMap(d => [
+    new TextRun({ text: ` ${_KIM_DURUM_ISARET[d].isaret} `, bold: true, color: 'FFFFFF', shading: boya(_KIM_DURUM_ISARET[d].renk), font, size: 18 }),
+    new TextRun({ text: ` ${_KIM_DURUM_ISARET[d].ad}     `, font, size: 18 })
+  ]);
+  const tahminNotu = kayitlar.some(k => k.depolamaGrubuTahminiMi)
+    ? ' "*" işaretli kimyasallarda özellikler kayıtta seçilmemiş, GHS/H kodu/addan tahmin edilmiştir.'
+    : '';
+
+  const belge = new Document({
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838, orientation: PageOrientation.LANDSCAPE }, margin: { top: 567, right: 567, bottom: 567, left: 567 } } },
+      children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: 'Kimyasal Depolama Matrisi', bold: true, font, size: 32 })] }),
+        new Paragraph({ spacing: { after: 80 }, children: lejant }),
+        new Paragraph({ spacing: { after: 160 }, children: [new TextRun({ text: `Toplam ${kayitlar.length} kimyasal; sütun başlıkları Kimyasal No'dur. Tarih: ${gunAyYil(new Date().toISOString().slice(0, 10))}.${tahminNotu}`, font, size: 16 })] }),
+        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: matrisSatirlari }),
+        new Paragraph({ pageBreakBefore: true, alignment: AlignmentType.CENTER, spacing: { after: 160 }, children: [new TextRun({ text: 'Uyumluluk Kuralları', bold: true, font, size: 28 })] }),
+        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: kuralSatirlari })
+      ]
+    }]
+  });
+  saveAs(await Packer.toBlob(belge), `Kimyasal_Depolama_Matrisi_${new Date().toISOString().slice(0, 10)}.docx`);
 }
 
 function _kimGhsHucre(k) {

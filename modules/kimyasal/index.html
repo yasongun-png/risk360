@@ -67,7 +67,7 @@
     <div id="bolum-matris" style="display:none;">
       <div class="arac-cubugu">
         <p style="color:var(--metin-soluk); font-size:13px; margin:0;">✓ birlikte depolanabilir &nbsp; ✕ birlikte depolanamaz &nbsp; ! özel önlemlerle birlikte depolanabilir. Hücreye tıklayarak değiştirebilirsiniz.</p>
-        <button type="button" class="ikincil" id="matrisYazdirBtn" style="width:auto;">Yazdır</button>
+        <button type="button" class="ikincil" id="matrisYazdirBtn" style="width:auto;">Yazdır</button><button type="button" class="ikincil" id="matrisWordBtn" style="width:auto;">Word</button>
       </div>
       <h3 style="margin:8px 0 6px; font-size:15px;">Kimyasallar Arası Matris</h3>
       <div class="tablo-scroll" id="depolamaMatrisiIcerik"></div>
@@ -244,6 +244,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="../../core/data.js?v=6"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
@@ -257,7 +259,7 @@
   <script src="repository.js"></script>
   <script src="service.js?v=20261021b"></script>
   <script src="sds-oku.js"></script>
-  <script src="ui.js?v=20261026a"></script>
+  <script src="ui.js?v=20261026b"></script>
   <script src="cikti.js"></script>
   <script>
     const kullanici = girisGerekliModul('kimyasal');
