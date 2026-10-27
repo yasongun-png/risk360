@@ -207,14 +207,11 @@ async function kkdIhlalTutanagiWordOlustur(ihlalId) {
 // Kullanıcı isteği: "kkd değerlendirme formu çok güzel ama word de ver,
 // form no larını nereye gireceğim, başlığın altındaki açıklamaları kaldır"
 // + "lacivert başlık arka planını kaldır daha sade form olsun, uygunsuzluk
-// formu gibi mesela" — modules/acil-durum/kontrol-formu-cikti.js ile aynı
-// docx.js kalıbı (imza görseli: _kfImzaGorseliVerisiGetir ile birebir aynı
-// yöntem, bu modül diğerlerinin cikti.js'ini yüklemediğinden kendi
-// önekiyle tekrarlanır); başlık lacivert dolgu YERİNE modules/uygunsuzluk
-// çıktısındaki gibi sade, dolgusuz siyah/beyaz düzen kullanılır. Doküman
-// No/Sürüm Tarihi/Sürüm No artık üst bilgide sade bir metin satırı olarak
-// basılır (kullanıcının "numuneFormAyarlariBtn" ile girdiği değerler,
-// bkz. ui.js _kkdNumuneBaslat).
+// formu gibi mesela" — 2026-10-27'de "diğer formlar gibi" isteğiyle
+// Zimmet Tutanağı düzenine geçirildi (bkz. kkdNumuneFormuWordOlustur).
+// Aşağıdaki _kkdNum* yardımcılarını İhlal Tutanağı da kullanır. Doküman
+// No/Sürüm, kullanıcının "numuneFormAyarlariBtn" ile girdiği değerlerdir
+// (bkz. ui.js _kkdNumuneBaslat).
 
 function _kkdNumImzaGorseliVerisiGetir(dataUrl, maksGenislik) {
   if (!dataUrl) return Promise.resolve(null);
@@ -294,68 +291,130 @@ async function _kkdNumFotoVerisiGetir(referans) {
   return _kkdNumImzaGorseliVerisiGetir(url, 260);
 }
 
+// Kullanıcı isteği: "numune değerlendirme formunu geliştir, görsel olarak
+// uygun hale getir diğer formlar gibi" — Zimmet Tutanağı (yukarıda) ile aynı
+// düzen: üst bilgi tablosu (Doküman No/Tarih/Sayfa), numaralı lacivert bölüm
+// başlıkları, gri etiketli bilgi tabloları, Calibri 9pt. Ek olarak elle
+// işaretlenecek değerlendirme kriterleri tablosu ve seçili sonucun ☒ ile
+// işaretlendiği sonuç satırı.
+const _KKD_NUM_KRITERLER = [
+  'Beden / kalıp uyumu (vücuda uygun oturuyor)',
+  'Konfor (uzun süreli kullanımda rahatsızlık vermiyor)',
+  'Kullanım kolaylığı (takma, çıkarma, ayarlama)',
+  'Görüş, işitme, hareket ve iletişimi kısıtlamıyor',
+  'Diğer KKD\'lerle birlikte kullanıma uygun',
+  'Saha koşullarına uygun (ısı, nem, toz, kimyasal vb.)',
+  'Dayanıklılık / deneme sonunda yıpranma durumu',
+  'CE işareti, standart ve kullanım kılavuzu mevcut',
+  'Temizlik ve bakım kolaylığı'
+];
+
 async function kkdNumuneFormuWordOlustur(numuneId) {
   const k = numuneIdIleGetir(numuneId);
   if (!k) return;
+  if (!window.docx) { alert('docx.js yüklenemedi.'); return; }
+  const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, VerticalAlign, ShadingType, HeightRule, PageNumber } = docx;
 
   const firma = aktifFirmaGetir();
   const fa = formAyarlariGetir('kkd');
-  const bugun = gunAyYil(bugunIso());
-  const dokumanSatiri = [
-    fa.dokumanNo ? `Doküman No: ${fa.dokumanNo}` : '',
-    fa.surumNo ? `Sürüm No: ${fa.surumNo}` : '',
-    fa.surumTarihi ? `Sürüm Tarihi: ${fa.surumTarihi}` : ''
-  ].filter(Boolean).join('   |   ');
+  const LACIVERT = '1F3A5F';
+  const TAM = 9866;
 
-  const cocuklar = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 60 }, children: [new docx.TextRun({ text: 'KKD NUMUNE DEĞERLENDİRME FORMU', bold: true, size: 30, color: '000000' })] }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: dokumanSatiri ? 60 : 260 }, children: [new docx.TextRun({ text: `${firma ? firma.ad : ''}   |   Düzenleme Tarihi: ${bugun}`, size: 18, color: '374151' })] })
-  ];
-  if (dokumanSatiri) {
-    cocuklar.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 260 }, children: [new docx.TextRun({ text: dokumanSatiri, size: 16, color: '6B7280' })] }));
-  }
+  const run = (text, o = {}) => new TextRun({ text: String(text ?? ''), bold: !!o.kalin, color: o.renk, size: o.boyut || 18 });
+  const hucre = (genislik, cocuklar, o = {}) => new TableCell({
+    width: { size: genislik, type: WidthType.DXA },
+    columnSpan: o.birlesik,
+    verticalAlign: o.ust ? VerticalAlign.TOP : VerticalAlign.CENTER,
+    shading: o.dolgu ? { fill: o.dolgu, type: ShadingType.CLEAR, color: 'auto' } : undefined,
+    margins: { top: 40, bottom: 40, left: 80, right: 80 },
+    children: (Array.isArray(cocuklar[0]) ? cocuklar : [cocuklar]).map(p => new Paragraph({ alignment: o.orta ? AlignmentType.CENTER : AlignmentType.LEFT, children: p }))
+  });
+  const satir = (yukseklik, hucreler, baslikMi) => new TableRow({ tableHeader: !!baslikMi, cantSplit: true, height: { value: yukseklik, rule: HeightRule.ATLEAST }, children: hucreler });
+  const tablo = (genislikler, satirlar) => new Table({ columnWidths: genislikler, width: { size: genislikler.reduce((a, b) => a + b, 0), type: WidthType.DXA }, rows: satirlar });
+  const bolumBaslik = (metin) => new Paragraph({ keepNext: true, spacing: { before: 160, after: 60 }, children: [run(metin, { kalin: true, renk: LACIVERT, boyut: 22 })] });
+  const etiket = (w, m) => hucre(w, [run(m, { kalin: true })], { dolgu: 'F2F2F2' });
+  const deger = (w, m) => hucre(w, [run(m || '')]);
+  const G4 = [1928, 3005, 2041, 2892];
+  const bilgiTablosu = (satirlar) => tablo(G4, satirlar.map(s => satir(400, [etiket(G4[0], s[0]), deger(G4[1], s[1]), etiket(G4[2], s[2]), deger(G4[3], s[3])])));
+  const metinKutusu = (metin) => tablo([TAM], [satir(1134, [hucre(TAM, String(metin || '').split('\n').map(m => [run(m)]), { ust: true })])]);
 
-  cocuklar.push(_kkdNumBaslik('Numune Bilgileri'));
-  cocuklar.push(_kkdNumBilgiTablosu([
-    ['Numune No', k.numuneNo, 'KKD Türü', k.kkdTuru || '-'],
-    ['KKD Adı', k.kkdAdi, 'Marka / Model', [k.marka, k.model].filter(Boolean).join(' / ') || '-'],
-    ['Numuneyi Gönderen Firma', k.gonderenFirma || '-', 'İlgili Kişi', k.ilgiliKisi || '-'],
-    ['İlgili Kişi Telefon', k.ilgiliKisiTel || '-', 'Deneyen Personel', k.personelAdSoyad || '-'],
-    ['Bölüm', k.bolum || '-', 'Sonuç', k.sonuc || '-'],
-    ['Deney Başlangıç', gunAyYil(k.deneyBaslangic) || '-', 'Deney Bitiş', gunAyYil(k.deneyBitis) || '-']
-  ]));
+  // Üst bilgi: başlık + Doküman No / Sürüm / Tarih / Sayfa
+  const sagBilgi = [run(`Doküman No: ${fa.dokumanNo || ''}`)];
+  if (fa.surumNo || fa.surumTarihi) sagBilgi.push(new TextRun({ break: 1 }), run(`Sürüm: ${[fa.surumNo, fa.surumTarihi].filter(Boolean).join(' / ')}`));
+  sagBilgi.push(new TextRun({ break: 1 }), run(`Tarih: ${gunAyYil(bugunIso())}`), new TextRun({ break: 1 }), new TextRun({ children: ['Sayfa: ', PageNumber.CURRENT, '/', PageNumber.TOTAL_PAGES], size: 18 }));
+  const ustBilgi = tablo([7030, 2836], [satir(1020, [
+    hucre(7030, [run('KİŞİSEL KORUYUCU DONANIM (KKD)', { kalin: true, boyut: 28 }), new TextRun({ break: 1 }), run('NUMUNE DEĞERLENDİRME FORMU', { kalin: true, boyut: 28 })], { dolgu: 'DCE6F1', orta: true }),
+    hucre(2836, sagBilgi)
+  ])]);
 
+  // 3. Değerlendirme kriterleri (sahada elle işaretlenir)
+  const GK = [567, 4762, 1077, 1077, 2383];
+  const kriterSatirlari = [satir(454, ['Sıra', 'Değerlendirme Kriteri', 'Uygun', 'Uygun Değil', 'Açıklama'].map((b, i) => hucre(GK[i], [run(b, { kalin: true, renk: 'FFFFFF' })], { dolgu: LACIVERT, orta: true })), true)];
+  _KKD_NUM_KRITERLER.forEach((m, i) => kriterSatirlari.push(satir(380, [
+    hucre(GK[0], [run(i + 1)], { orta: true }),
+    hucre(GK[1], [run(m)]),
+    hucre(GK[2], [run('☐', { boyut: 22 })], { orta: true }),
+    hucre(GK[3], [run('☐', { boyut: 22 })], { orta: true }),
+    hucre(GK[4], [run('')])
+  ])));
+
+  // 6. Sonuç: kayıttaki sonuç ☒, diğerleri ☐
+  const sonucRunlari = [];
+  NUMUNE_SONUC_SECENEKLERI.forEach((s, i) => {
+    if (i) sonucRunlari.push(run('        '));
+    sonucRunlari.push(run(k.sonuc === s ? '☒ ' : '☐ ', { boyut: 22 }), run(s, { kalin: k.sonuc === s, boyut: 20 }));
+  });
+  const sonucTablosu = tablo([1928, 7938], [satir(454, [etiket(1928, 'Nihai Sonuç'), hucre(7938, sonucRunlari)])]);
+
+  // 7. Fotoğraflar
   const [foto1, foto2] = await Promise.all([_kkdNumFotoVerisiGetir(k.foto1), _kkdNumFotoVerisiGetir(k.foto2)]);
-  if (foto1 || foto2) {
-    cocuklar.push(_kkdNumBaslik('Fotoğraflar'));
-    cocuklar.push(new docx.Paragraph({
-      spacing: { after: 200 },
-      children: [foto1, foto2].filter(Boolean).flatMap((f, i) => [
-        new docx.ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } }),
-        ...(i === 0 && foto1 && foto2 ? [new docx.TextRun({ text: '   ' })] : [])
-      ])
-    }));
-  }
+  const fotoHucre = (f, baslik) => hucre(4933, [
+    [run(baslik, { kalin: true })],
+    f ? [new ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } })] : [run('-')]
+  ], { orta: true, ust: true });
 
-  cocuklar.push(_kkdNumBaslik('Çalışan Görüşü'));
-  cocuklar.push(new docx.Paragraph({ spacing: { after: 200 }, children: [new docx.TextRun({ text: k.calisanGorusu || '-' })] }));
+  // 8. Onay (imza görseli varsa basılır, yoksa elle imza için boş alan)
+  const imzaGorselleri = await Promise.all([k.imzalar && k.imzalar.calisan, k.imzalar && k.imzalar.isgUzmani].map(im => im && im.imzaUrl ? _kkdNumImzaGorseliVerisiGetir(im.imzaUrl, 180) : null));
+  const imzaBilgi = (im, adYedek) => ({ ad: (im && im.ad) || adYedek || '', tarih: im && im.tarih ? gunAyYil(im.tarih.slice(0, 10)) : '' });
+  const calisan = imzaBilgi(k.imzalar && k.imzalar.calisan, k.personelAdSoyad);
+  const uzman = imzaBilgi(k.imzalar && k.imzalar.isgUzmani);
+  const o = (m) => hucre(4933, [run(m)], { ust: true });
+  const imzaHucre = (gorsel) => hucre(4933, [[run('İmza:')], ...(gorsel ? [[new ImageRun({ data: gorsel.veri, transformation: { width: gorsel.genislik, height: gorsel.yukseklik } })]] : [])], { ust: true });
+  const onayTablosu = tablo([4933, 4933], [
+    satir(397, [hucre(4933, [run('DENEYEN ÇALIŞAN', { kalin: true, boyut: 20 })], { dolgu: 'DCE6F1', orta: true }), hucre(4933, [run('İŞ GÜVENLİĞİ UZMANI', { kalin: true, boyut: 20 })], { dolgu: 'DCE6F1', orta: true })]),
+    satir(425, [o(`Adı Soyadı: ${calisan.ad}`), o(`Adı Soyadı: ${uzman.ad}`)]),
+    satir(425, [o(`Tarih: ${calisan.tarih}`), o(`Tarih: ${uzman.tarih}`)]),
+    satir(1134, [imzaHucre(imzaGorselleri[0]), imzaHucre(imzaGorselleri[1])])
+  ]);
 
-  cocuklar.push(_kkdNumBaslik('İG Uzmanı Değerlendirmesi'));
-  cocuklar.push(new docx.Paragraph({ spacing: { after: 240 }, children: [new docx.TextRun({ text: k.isgDegerlendirmesi || '-' })] }));
+  const govde = [
+    ustBilgi,
+    bolumBaslik('1. Numune Bilgileri'),
+    bilgiTablosu([
+      ['Numune No', k.numuneNo, 'KKD Türü', k.kkdTuru],
+      ['KKD Adı', k.kkdAdi, 'Marka / Model', [k.marka, k.model].filter(Boolean).join(' / ')],
+      ['Gönderen Firma', k.gonderenFirma, 'İlgili Kişi', k.ilgiliKisi],
+      ['İlgili Kişi Telefon', k.ilgiliKisiTel, 'İşyeri', firma ? firma.ad : '']
+    ]),
+    bolumBaslik('2. Deneme Bilgileri'),
+    bilgiTablosu([
+      ['Deneyen Personel', k.personelAdSoyad, 'Bölüm', k.bolum],
+      ['Deney Başlangıç', gunAyYil(k.deneyBaslangic), 'Deney Bitiş', gunAyYil(k.deneyBitis)]
+    ]),
+    bolumBaslik('3. Değerlendirme Kriterleri'), tablo(GK, kriterSatirlari),
+    bolumBaslik('4. Çalışan Görüşü'), metinKutusu(k.calisanGorusu),
+    bolumBaslik('5. İş Güvenliği Uzmanı Değerlendirmesi'), metinKutusu(k.isgDegerlendirmesi),
+    bolumBaslik('6. Sonuç'), sonucTablosu
+  ];
+  if (foto1 || foto2) govde.push(bolumBaslik('7. Fotoğraflar'), tablo([4933, 4933], [satir(400, [fotoHucre(foto1, 'Fotoğraf 1'), fotoHucre(foto2, 'Fotoğraf 2')])]));
+  govde.push(bolumBaslik(`${foto1 || foto2 ? 8 : 7}. Onay`), onayTablosu);
 
-  cocuklar.push(_kkdNumBaslik('Onay'));
-  cocuklar.push(new docx.Table({
-    width: { size: 100, type: docx.WidthType.PERCENTAGE },
-    rows: [new docx.TableRow({
-      height: { value: 1360, rule: docx.HeightRule.ATLEAST },
-      children: [
-        await _kkdNumImzaHucresi('Deneyen Çalışan', k.imzalar && k.imzalar.calisan, k.personelAdSoyad),
-        await _kkdNumImzaHucresi('İG Uzmanı', k.imzalar && k.imzalar.isgUzmani)
-      ]
-    })]
-  }));
-
-  const dokuman = new docx.Document({ sections: [{ properties: {}, children: cocuklar }] });
-  const blob = await docx.Packer.toBlob(dokuman);
-  saveAs(blob, `KKD_Numune_Degerlendirme_${(k.numuneNo || numuneId).replace(/[\\/]/g, '-')}.docx`);
+  const belge = new Document({
+    styles: { default: { document: { run: { font: 'Calibri', size: 18 } } } },
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, right: 1020, bottom: 850, left: 1020 } } },
+      children: govde
+    }]
+  });
+  saveAs(await Packer.toBlob(belge), `KKD_Numune_Degerlendirme_${(k.numuneNo || numuneId).replace(/[\\/]/g, '-')}.docx`);
 }
