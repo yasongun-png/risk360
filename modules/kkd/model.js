@@ -135,6 +135,31 @@ const IHLAL_ISLEMLERI = ['Sözlü Uyarı', 'Yazılı Uyarı', 'Tutanak', 'Eğiti
 // imza deseni, bkz. ui.js).
 const NUMUNE_SONUC_SECENEKLERI = ['Uygun', 'Şartlı Uygun', 'Uygun Değil'];
 
+// Kullanıcı isteği: "numune değerlendirme formunu geliştir" + "sorular
+// sistemde yok" — formdaki değerlendirme kriterleri uygulamada cevaplanır,
+// Word çıktısında işaretli basılır. Sıra değişirse eski cevaplar kayar;
+// yeni madde yalnızca SONA eklenmeli.
+const NUMUNE_KRITERLERI = [
+  'Beden / kalıp uyumu (vücuda uygun oturuyor)',
+  'Konfor (uzun süreli kullanımda rahatsızlık vermiyor)',
+  'Kullanım kolaylığı (takma, çıkarma, ayarlama)',
+  'Görüş, işitme, hareket ve iletişimi kısıtlamıyor',
+  'Diğer KKD\'lerle birlikte kullanıma uygun',
+  'Saha koşullarına uygun (ısı, nem, toz, kimyasal vb.)',
+  'Dayanıklılık / deneme sonunda yıpranma durumu',
+  'CE işareti, standart ve kullanım kılavuzu mevcut',
+  'Temizlik ve bakım kolaylığı'
+];
+const NUMUNE_KRITER_DURUMLARI = ['Uygun', 'Uygun Değil'];
+
+function numuneKriterleriNormallestir(liste) {
+  const kaynak = Array.isArray(liste) ? liste : [];
+  return NUMUNE_KRITERLERI.map((_, i) => {
+    const c = kaynak[i] || {};
+    return { durum: NUMUNE_KRITER_DURUMLARI.includes(c.durum) ? c.durum : '', aciklama: String(c.aciklama || '').trim() };
+  });
+}
+
 function _kkdSiraNoUret(onEk, mevcutListe, alanAdi) {
   let maks = 0;
   mevcutListe.forEach(item => {
@@ -301,6 +326,7 @@ function numuneKaydiOlustur(veriler) {
     calisanGorusu: (v.calisanGorusu || '').trim(),
     isgDegerlendirmesi: (v.isgDegerlendirmesi || '').trim(),
     sonuc: NUMUNE_SONUC_SECENEKLERI.includes(v.sonuc) ? v.sonuc : '',
+    kriterler: numuneKriterleriNormallestir(v.kriterler),
     // Tespit Öneri/Uygunsuzluk ile aynı kaşe/imza deseni: { calisan, isgUzmani }.
     imzalar: v.imzalar || {},
     // Kullanıcı isteği: "numune değerlendirme formlarına ikişer adet

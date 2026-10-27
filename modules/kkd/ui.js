@@ -765,6 +765,16 @@ function numuneModalAc(kayit) {
   document.getElementById('numuneCalisanGorusu').value = kayit ? kayit.calisanGorusu : '';
   document.getElementById('numuneIsgDegerlendirmesi').value = kayit ? kayit.isgDegerlendirmesi : '';
   document.getElementById('numuneSonuc').innerHTML = '<option value="">— Seçilmedi —</option>' + NUMUNE_SONUC_SECENEKLERI.map(s => `<option ${kayit && kayit.sonuc === s ? 'selected' : ''}>${s}</option>`).join('');
+  const kriterCevaplari = numuneKriterleriNormallestir(kayit && kayit.kriterler);
+  document.getElementById('numuneKriterler').innerHTML = NUMUNE_KRITERLERI.map((m, i) => `
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:6px 0; border-bottom:1px solid var(--kenarlik, #e5e7eb);">
+      <div style="flex:1 1 220px; font-size:13px;">${i + 1}. ${m}</div>
+      <select data-kriter-durum="${i}" style="width:130px; margin:0;">
+        <option value="">—</option>${NUMUNE_KRITER_DURUMLARI.map(d => `<option ${kriterCevaplari[i].durum === d ? 'selected' : ''}>${d}</option>`).join('')}
+      </select>
+      <input type="text" data-kriter-aciklama="${i}" placeholder="Açıklama" style="flex:1 1 150px; margin:0;">
+    </div>`).join('');
+  document.querySelectorAll('#numuneKriterler [data-kriter-aciklama]').forEach(el => { el.value = kriterCevaplari[+el.getAttribute('data-kriter-aciklama')].aciklama; });
 
   _numuneFoto1Url = kayit ? (kayit.foto1 || '') : '';
   _numuneFoto2Url = kayit ? (kayit.foto2 || '') : '';
@@ -805,6 +815,10 @@ function numuneFormGonderildi(e) {
     calisanGorusu: document.getElementById('numuneCalisanGorusu').value,
     isgDegerlendirmesi: document.getElementById('numuneIsgDegerlendirmesi').value,
     sonuc: document.getElementById('numuneSonuc').value,
+    kriterler: NUMUNE_KRITERLERI.map((_, i) => ({
+      durum: document.querySelector(`#numuneKriterler [data-kriter-durum="${i}"]`).value,
+      aciklama: document.querySelector(`#numuneKriterler [data-kriter-aciklama="${i}"]`).value
+    })),
     foto1: _numuneFoto1Url,
     foto2: _numuneFoto2Url
   };

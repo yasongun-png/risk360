@@ -294,21 +294,9 @@ async function _kkdNumFotoVerisiGetir(referans) {
 // Kullanıcı isteği: "numune değerlendirme formunu geliştir, görsel olarak
 // uygun hale getir diğer formlar gibi" — Zimmet Tutanağı (yukarıda) ile aynı
 // düzen: üst bilgi tablosu (Doküman No/Tarih/Sayfa), numaralı lacivert bölüm
-// başlıkları, gri etiketli bilgi tabloları, Calibri 9pt. Ek olarak elle
-// işaretlenecek değerlendirme kriterleri tablosu ve seçili sonucun ☒ ile
-// işaretlendiği sonuç satırı.
-const _KKD_NUM_KRITERLER = [
-  'Beden / kalıp uyumu (vücuda uygun oturuyor)',
-  'Konfor (uzun süreli kullanımda rahatsızlık vermiyor)',
-  'Kullanım kolaylığı (takma, çıkarma, ayarlama)',
-  'Görüş, işitme, hareket ve iletişimi kısıtlamıyor',
-  'Diğer KKD\'lerle birlikte kullanıma uygun',
-  'Saha koşullarına uygun (ısı, nem, toz, kimyasal vb.)',
-  'Dayanıklılık / deneme sonunda yıpranma durumu',
-  'CE işareti, standart ve kullanım kılavuzu mevcut',
-  'Temizlik ve bakım kolaylığı'
-];
-
+// başlıkları, gri etiketli bilgi tabloları, Calibri 9pt. Değerlendirme
+// kriterleri (model.js NUMUNE_KRITERLERI) uygulamada cevaplanır, burada ☒/☐
+// olarak basılır; seçili sonuç da ☒ ile işaretlenir.
 async function kkdNumuneFormuWordOlustur(numuneId) {
   const k = numuneIdIleGetir(numuneId);
   if (!k) return;
@@ -347,15 +335,17 @@ async function kkdNumuneFormuWordOlustur(numuneId) {
     hucre(2836, sagBilgi)
   ])]);
 
-  // 3. Değerlendirme kriterleri (sahada elle işaretlenir)
+  // 3. Değerlendirme kriterleri (uygulamada cevaplanan, boşsa elle işaretlenir)
   const GK = [567, 4762, 1077, 1077, 2383];
   const kriterSatirlari = [satir(454, ['Sıra', 'Değerlendirme Kriteri', 'Uygun', 'Uygun Değil', 'Açıklama'].map((b, i) => hucre(GK[i], [run(b, { kalin: true, renk: 'FFFFFF' })], { dolgu: LACIVERT, orta: true })), true)];
-  _KKD_NUM_KRITERLER.forEach((m, i) => kriterSatirlari.push(satir(380, [
+  const kriterCevaplari = numuneKriterleriNormallestir(k.kriterler);
+  const kutu = (dolu) => run(dolu ? '☒' : '☐', { boyut: 22, kalin: dolu });
+  NUMUNE_KRITERLERI.forEach((m, i) => kriterSatirlari.push(satir(380, [
     hucre(GK[0], [run(i + 1)], { orta: true }),
     hucre(GK[1], [run(m)]),
-    hucre(GK[2], [run('☐', { boyut: 22 })], { orta: true }),
-    hucre(GK[3], [run('☐', { boyut: 22 })], { orta: true }),
-    hucre(GK[4], [run('')])
+    hucre(GK[2], [kutu(kriterCevaplari[i].durum === 'Uygun')], { orta: true }),
+    hucre(GK[3], [kutu(kriterCevaplari[i].durum === 'Uygun Değil')], { orta: true }),
+    hucre(GK[4], [run(kriterCevaplari[i].aciklama)])
   ])));
 
   // 6. Sonuç: kayıttaki sonuç ☒, diğerleri ☐
