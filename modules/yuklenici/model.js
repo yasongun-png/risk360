@@ -191,6 +191,9 @@ function kisiOlustur(veriler) {
     // "İlk Giriş" — işaretliyse Kayıtlar/PDF'teki uygunluk metni "Eğitim Verilecek"
     // olarak görünür, diğer tüm belge kontrolleri bu durumda atlanır.
     ilkGiris: !!veriler.ilkGiris,
+    // İSG onayı: eksik evrağa rağmen İSG Onaylı Listede "Uygun" görünür
+    // (bkz. yukleniciGirebilecegiSonTarihHesapla).
+    isgOnayBypass: !!veriler.isgOnayBypass,
     // Sabit belge checklist'i: YUKLENICI_BELGE_TANIMLARI'ndaki her id için bir
     // kayıt tutar (bkz. yukleniciBosBelgeler). Şekli belge türüne göre değişir:
     // var-yok -> {deger:'Var'|'Yok'}, tarih-manuel -> {base,exp}, tarih-tehlike
@@ -526,6 +529,12 @@ function yukleniciGirebilecegiSonTarihHesapla(kisi, referansTarih) {
   }
 
   const eksik = !sgkVar || !adliVar || !saglikExp || !temelIsgExp || (secilen && secilen < bugun);
+  // Kullanıcı isteği: "kişinin butonuna tıkladığımda İSG onaylı listede uygun
+  // görünsün, eksik evrakları olsa da bypass olsun" — İSG'nin elle verdiği
+  // onay eksik evrağı geçersiz kılar (İlk Giriş/eğitim kuralı hâlâ önce gelir).
+  if (eksik && kisi.isgOnayBypass) {
+    return { sonTarih: secilen && secilen >= bugun ? secilen : '', durumMetni: 'Uygun (İSG onaylı)', uygunMu: true, ilkGiris: false, bypass: true };
+  }
   return {
     sonTarih: secilen,
     durumMetni: eksik ? 'Eksik evrak - İSG ile görüşün' : 'Uygun',

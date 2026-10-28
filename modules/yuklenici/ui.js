@@ -1539,6 +1539,7 @@ function kayitlariCiz(aramaMetni) {
         <span class="genel-rozet ${r.pasif ? 'rozet-pasif' : 'rozet-uygun'}" style="font-size:10px;">${r.pasif ? 'Pasif' : 'Aktif'}</span>
         <button class="tablo-buton" data-pasif-degistir2="${r.id}" data-kind="${r.kind}" data-yeni-pasif="${r.pasif ? 'false' : 'true'}">${r.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>
         <button class="tablo-buton" data-duzenle-kayit="${r.id}" data-kind="${r.kind}">Düzenle</button>
+        ${r.kind === 'personel' ? `<button class="tablo-buton" data-isg-onay="${r.id}" data-yeni-onay="${r.isgOnayBypass ? 'false' : 'true'}" title="${r.isgOnayBypass ? 'İSG onayını kaldırır; kişi eksik evrağa göre değerlendirilir' : 'Eksik evrağı olsa da İSG Onaylı Listede Uygun görünür'}" style="${r.isgOnayBypass ? 'background:#dcfce7; color:#15803d; border-color:#86efac;' : ''}">${r.isgOnayBypass ? '✓ İSG Onaylı' : 'İSG Onayla'}</button>` : ''}
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-mail-eksik="${r.id}" title="Bu kişinin eksiklerini mail metni olarak ver">Mail</button>` : ''}
         <button class="tablo-buton sil" data-sil-kayit="${r.id}" data-kind="${r.kind}">Sil</button>
       </td>
@@ -1550,6 +1551,14 @@ function kayitlariCiz(aramaMetni) {
     btn.addEventListener('click', () => {
       const degistir = btn.getAttribute('data-kind') === 'personel' ? yukleniciKisiPasifDurumunuDegistir : yukleniciAracPasifDurumunuDegistir;
       degistir(btn.getAttribute('data-pasif-degistir2'), btn.getAttribute('data-yeni-pasif') === 'true');
+      kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+    });
+  });
+  govde.querySelectorAll('[data-isg-onay]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const onay = btn.getAttribute('data-yeni-onay') === 'true';
+      if (onay && !(await onayModali('Bu kişi eksik evrağı olsa da İSG Onaylı Listede "Uygun" görünecek. Onaylıyor musunuz?', 'Onayla'))) return;
+      yukleniciKisiIsgOnayDegistir(btn.getAttribute('data-isg-onay'), onay);
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
     });
   });

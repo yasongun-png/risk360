@@ -821,6 +821,13 @@ function yukleniciDashboardVerisiHesapla() {
   };
 }
 
+function yukleniciKisiIsgOnayDegistir(id, onay) {
+  const kisi = yukleniciKisiIdIleGetirRepo(id);
+  if (!kisi) return { basarili: false };
+  yukleniciKisiGuncelleRepo(id, { isgOnayBypass: !!onay });
+  return { basarili: true };
+}
+
 function yukleniciKisiPasifDurumunuDegistir(id, pasif) {
   const kisi = yukleniciKisiIdIleGetirRepo(id);
   if (!kisi) return { basarili: false };
@@ -862,7 +869,7 @@ function yukleniciKayitlariniGetir(aramaMetni) {
     const firmaEgitimi = (k.belgeler || {}).firmaEgitimi || {};
     return {
       kind: 'personel', id: k.id, tur: 'Personel', firma: k.firmaAdi, kimlik: k.adSoyad,
-      uygunSayisi, toplamSayisi: tumTanimlar.length, sinif, pasif: !!k.pasif, ilkGiris: !!k.ilkGiris,
+      uygunSayisi, toplamSayisi: tumTanimlar.length, sinif, pasif: !!k.pasif, ilkGiris: !!k.ilkGiris, isgOnayBypass: !!k.isgOnayBypass,
       egitmen: firmaEgitimi.egitmen || '—', kayitTarihi: (k.olusturmaTarihi || '').slice(0, 10),
       kaynak: k
     };
