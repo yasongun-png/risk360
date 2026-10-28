@@ -130,21 +130,35 @@ function _ykEksikEvrakHatirlat() {
   const kaydet = () => { try { if (anahtar) localStorage.setItem(anahtar, new Date().toISOString()); } catch (e) { /* yok say */ } };
   if (!liste.length) { kaydet(); return; }
 
+  // Kullanıcı isteği: "İSG onaylılar da listede olsun, evrak eksikti ama onay
+  // verdiniz, evrakları tamamlamak için firmayla görüşün gibi hatırlatma".
+  const onaylilar = liste.filter(x => x.kisi.isgOnayBypass);
+  const digerleri = liste.filter(x => !x.kisi.isgOnayBypass);
+  const tablo = (satirlar, ek) => `
+        <table class="veri-tablosu" style="margin:0;">
+          <thead><tr><th style="width:30px;"><input type="checkbox" data-eksik-tumu style="width:auto; margin:0;" title="Tümünü seç"></th><th>Firma</th><th>Personel</th><th>Eksik / Süresi Dolan Evrak</th></tr></thead>
+          <tbody>${satirlar.map(x => `<tr>
+            <td><input type="checkbox" data-eksik-kisi="${x.kisi.id}" style="width:auto; margin:0;"></td>
+            <td>${_ykKacir(x.kisi.firmaAdi || '-')}</td>
+            <td>${_ykKacir(x.kisi.adSoyad)}${ek(x)}</td>
+            <td style="color:#b91c1c; font-size:12px;">${x.eksikler.map(_ykKacir).join(', ')}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+
   const katman = document.createElement('div');
   katman.className = 'modal-katman acik';
   katman.innerHTML = `
     <div class="modal-kutu" style="max-width:640px;">
       <h3 style="margin-top:0;">⚠️ Haftalık Uyarı — Eksik Evrakı Olan Personel (${liste.length})</h3>
-      <div style="max-height:380px; overflow:auto; border:1px solid var(--kenarlik, #e5e7eb); border-radius:6px;">
-        <table class="veri-tablosu" style="margin:0;">
-          <thead><tr><th style="width:30px;"><input type="checkbox" data-eksik-tumu style="width:auto; margin:0;" title="Tümünü seç"></th><th>Firma</th><th>Personel</th><th>Eksik / Süresi Dolan Evrak</th></tr></thead>
-          <tbody>${liste.map(x => `<tr>
-            <td><input type="checkbox" data-eksik-kisi="${x.kisi.id}" style="width:auto; margin:0;"></td>
-            <td>${_ykKacir(x.kisi.firmaAdi || '-')}</td>
-            <td>${_ykKacir(x.kisi.adSoyad)}${x.kisi.isgOnayBypass ? ' <span style="color:#15803d; font-size:11px;">(İSG onaylı)</span>' : ''}</td>
-            <td style="color:#b91c1c; font-size:12px;">${x.eksikler.map(_ykKacir).join(', ')}</td>
-          </tr>`).join('')}</tbody>
-        </table>
+      <div style="max-height:420px; overflow:auto; border:1px solid var(--kenarlik, #e5e7eb); border-radius:6px;">
+        ${onaylilar.length ? `
+        <div style="background:#fef3c7; color:#92400e; padding:8px 10px; font-size:13px; border-bottom:1px solid #fde68a;">
+          <b>🔔 İSG onayı verilenler (${onaylilar.length}):</b> Bu kişilerin evrakı eksikti ama İSG onayı verdiniz; İSG Onaylı Listede "Uygun" görünüyorlar. Evrakları tamamlamak için firmayla görüşün.
+        </div>
+        ${tablo(onaylilar, x => `<div style="color:#92400e; font-size:11px; margin-top:2px;">Onay: ${_ykKacir(x.kisi.isgOnayVeren || 'bilinmiyor')} · ${_ykOnayZamani(x.kisi.isgOnayTarihi)}</div>`)}` : ''}
+        ${digerleri.length ? `
+        ${onaylilar.length ? `<div style="background:#fee2e2; color:#991b1b; padding:8px 10px; font-size:13px; font-weight:600;">Eksik evrakı olan diğer personel (${digerleri.length})</div>` : ''}
+        ${tablo(digerleri, () => '')}` : ''}
       </div>
       <p style="font-size:13px; color:var(--metin-soluk); margin:8px 0 0;">Artık çalışmayanları işaretleyip pasife alabilirsiniz (kayıt silinmez, istenirse tekrar aktif yapılır).</p>
       <div class="modal-eylemler">
@@ -153,9 +167,9 @@ function _ykEksikEvrakHatirlat() {
       </div>
     </div>`;
   document.body.appendChild(katman);
-  katman.querySelector('[data-eksik-tumu]').addEventListener('change', e => {
-    katman.querySelectorAll('[data-eksik-kisi]').forEach(cb => { cb.checked = e.target.checked; });
-  });
+  katman.querySelectorAll('[data-eksik-tumu]').forEach(t => t.addEventListener('change', e => {
+    e.target.closest('table').querySelectorAll('[data-eksik-kisi]').forEach(cb => { cb.checked = e.target.checked; });
+  }));
   katman.querySelector('[data-eksik-uyari-tamam]').addEventListener('click', () => { kaydet(); katman.remove(); });
   // Kullanıcı isteği: "pasife alınsın mı diye sorsun".
   katman.querySelector('[data-eksik-pasif]').addEventListener('click', async () => {
