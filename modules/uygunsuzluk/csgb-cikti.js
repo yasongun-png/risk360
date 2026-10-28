@@ -513,13 +513,20 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
   const firma = aktifFirmaGetir();
   const firmaAdi = firma ? firma.ad : '';
   const logoUrl = await fotoBuyukCoz(firma && typeof firmaLogoGetir === 'function' ? firmaLogoGetir(firma.id) : '');
-  // Her gündem maddesinin ilk fotoğraf kanıtı (yoksa sonrası/öncesi fotoğrafı) slaytta gösterilir.
-  const fotolar = {};
+  // Her gündem maddesinin ilk fotoğrafı madde slaytında küçük gösterilir.
+  // Kullanıcı isteği: "birden fazla resim varsa tam sayfa hepsi tek tek
+  // pptx de olsun" — maddenin TÜM fotoğrafları (kanıtlar + öncesi/sonrası)
+  // toplanır; 2+ fotoğraf varsa madde slaytından hemen sonra her biri tam
+  // sayfa ayrı slayt olur.
+  const tumFotolar = {};
   await Promise.all(gundem.map(async k => {
-    const ilkFoto = (k.kanitlar || []).find(x => x.tur === 'foto');
-    fotolar[k.id] = await fotoBuyukCoz(ilkFoto ? ilkFoto.ref : (k.fotoSonrasi || k.fotoOncesi || ''));
+    const refler = [...(k.kanitlar || []).filter(x => x.tur === 'foto').map(x => x.ref), k.fotoOncesi, k.fotoSonrasi].filter(Boolean);
+    const urller = await Promise.all([...new Set(refler)].map(r => _csgbZamanSinirli(fotoBuyukCoz(r), 10000)));
+    tumFotolar[k.id] = [...new Set(urller.filter(Boolean))];
   }));
-  await _csgbFotoOlculeriniHazirla(Object.values(fotolar), logoUrl);
+  const fotolar = {};
+  gundem.forEach(k => { fotolar[k.id] = tumFotolar[k.id][0] || ''; });
+  await _csgbFotoOlculeriniHazirla(Object.values(tumFotolar).flat(), logoUrl);
 
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
@@ -622,6 +629,15 @@ async function csgbToplantiPptxOlustur(denetimId, toplantiId) {
       const x = M + metinGen + 0.3, b = SW - M - x;
       sl.addShape(pptx.ShapeType.roundRect, { x: x - 0.06, y: 1.34, w: b + 0.12, h: 5.6, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
       sl.addImage(_csgbFotoSigdir(foto, x, 1.4, b, 5.48));
+    }
+
+    const hepsi = tumFotolar[k.id];
+    if (hepsi.length > 1) {
+      hepsi.forEach((url, fi) => {
+        const fs = pptx.addSlide({ masterName: MASTER });
+        fs.addText(`MADDE ${k.denetimMaddeNo || '-'}  ·  Fotoğraf ${fi + 1} / ${hepsi.length}`, { x: M, y: 0.12, w: SW - 2 * M, h: 0.36, fontSize: 13, bold: true, color: R.birincil });
+        fs.addImage(_csgbFotoSigdir(url, M, 0.55, SW - 2 * M, SH - 0.4 - 0.55 - 0.12));
+      });
     }
   });
 
