@@ -60,8 +60,17 @@ function yukleniciKisileriTumunuGetir() {
   return oku(_yukleniciKisiAnahtari(), []);
 }
 
+// Kullanıcı isteği: "ilk giriş seçildikten bir hafta sonra sorsun, ilk giriş
+// kaldırılsın mı" — İlk Giriş hangi yoldan (form, toplu ekleme, Excel)
+// işaretlenirse işaretlensin seçildiği an burada damgalanır, kaldırılınca
+// silinir (bkz. ui.js _ykIlkGirisHatirlat).
 function _yukleniciKisileriKaydet(liste) {
-  yaz(_yukleniciKisiAnahtari(), liste);
+  const simdi = new Date().toISOString();
+  yaz(_yukleniciKisiAnahtari(), liste.map(k => {
+    if (k.ilkGiris && !k.ilkGirisTarihi) return Object.assign({}, k, { ilkGirisTarihi: simdi });
+    if (!k.ilkGiris && (k.ilkGirisTarihi || k.ilkGirisSorulduTarihi)) return Object.assign({}, k, { ilkGirisTarihi: '', ilkGirisSorulduTarihi: '' });
+    return k;
+  }));
 }
 
 function yukleniciKisiEkleRepo(kisi) {

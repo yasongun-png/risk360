@@ -55,7 +55,123 @@ function _ykKayitTarihiGoster(olusturmaTarihi) {
   return formatTarihGoster((olusturmaTarihi || '').slice(0, 10));
 }
 
+// Kullanıcı isteği: "ilk giriş eğitim verilecek seçtikten bir hafta sonra
+// sorsun, ilk giriş kaldırılsın mı diye". Seçim tarihi repository.js
+// _yukleniciKisileriKaydet'te damgalanır. Liste işaretli kişilerle açılır:
+// "Kaldır" işaretlilerde İlk Giriş'i kaldırır, işaretsiz bırakılanlar ve
+// "Sonra Sor" bir hafta sonra tekrar sorulur.
+const _YK_ILK_GIRIS_GUN = 7;
+
+function _ykIlkGirisHatirlat(sonra) {
+  sonra = sonra || (() => {});
+  const simdi = Date.now();
+  const hafta = _YK_ILK_GIRIS_GUN * 86400000;
+  const tumu = yukleniciKisileriTumunuGetir();
+  // Bu özellikten önce İlk Giriş işaretlenmiş kayıtların seçim tarihi
+  // bilinmez; süre bugünden başlatılır.
+  if (tumu.some(k => k.ilkGiris && !k.ilkGirisTarihi)) _yukleniciKisileriKaydet(tumu);
+  const vadesi = yukleniciKisileriTumunuGetir().filter(k => !k.pasif && k.ilkGiris && k.ilkGirisTarihi
+    && simdi - new Date(k.ilkGirisTarihi).getTime() >= hafta
+    && (!k.ilkGirisSorulduTarihi || simdi - new Date(k.ilkGirisSorulduTarihi).getTime() >= hafta));
+  if (!vadesi.length) { sonra(); return; }
+
+  const katman = document.createElement('div');
+  katman.className = 'modal-katman acik';
+  katman.innerHTML = `
+    <div class="modal-kutu" style="max-width:520px;">
+      <h3 style="margin-top:0;">İlk Giriş — 1 hafta doldu</h3>
+      <p style="font-size:14px; margin:0 0 10px;">Aşağıdaki personelde "İlk Giriş (Eğitim Verilecek)" seçileli bir hafta geçti. İlk Giriş kaldırılsın mı?</p>
+      <div style="max-height:320px; overflow:auto; border:1px solid var(--kenarlik, #e5e7eb); border-radius:6px; padding:4px 10px;">
+        ${vadesi.map(k => `<label style="display:flex; gap:8px; align-items:center; padding:6px 0; font-weight:normal; border-bottom:1px solid var(--kenarlik, #f1f5f9);">
+          <input type="checkbox" data-ilk-giris-kisi="${k.id}" checked style="width:auto; margin:0;">
+          <span style="flex:1;">${_ykKacir(k.adSoyad)} <span style="color:var(--metin-soluk); font-size:12px;">(${_ykKacir(k.firmaAdi || '-')})</span></span>
+          <span style="color:var(--metin-soluk); font-size:12px;">${formatTarihGoster(k.ilkGirisTarihi.slice(0, 10))}</span>
+        </label>`).join('')}
+      </div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" data-ilk-giris-sonra>Sonra Sor</button>
+        <button type="button" class="birincil" data-ilk-giris-kaldir>İşaretlilerden Kaldır</button>
+      </div>
+    </div>`;
+  document.body.appendChild(katman);
+
+  const bitir = kaldir => {
+    const iz = new Date().toISOString();
+    const secili = new Set(kaldir ? Array.from(katman.querySelectorAll('[data-ilk-giris-kisi]:checked')).map(cb => cb.getAttribute('data-ilk-giris-kisi')) : []);
+    vadesi.forEach(k => yukleniciKisiGuncelleRepo(k.id, secili.has(k.id) ? { ilkGiris: false } : { ilkGirisSorulduTarihi: iz }));
+    katman.remove();
+    if (secili.size) alert(`${secili.size} personelde İlk Giriş kaldırıldı.`);
+    if (typeof kayitlariCiz === 'function' && document.getElementById('kayitAramaKutusu')) kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+    if (typeof dashboardCiz === 'function' && document.getElementById('dashToplamPersonel')) dashboardCiz();
+    sonra();
+  };
+  katman.querySelector('[data-ilk-giris-kaldir]').addEventListener('click', () => bitir(true));
+  katman.querySelector('[data-ilk-giris-sonra]').addEventListener('click', () => bitir(false));
+}
+
+// Kullanıcı isteği: "haftada bir de eksik evrakları olanların listesi uyarı
+// şeklinde çıksın" — aktif personelden (İlk Giriş hariç) geçerli belgesi
+// eksik/süresi dolmuş olanlar, eksik belge adlarıyla listelenir. Son
+// gösterim zamanı bu tarayıcıda tutulur (her kullanıcı haftada bir görür).
+function _ykEksikEvrakHatirlat() {
+  let anahtar = null;
+  try {
+    anahtar = tenantAnahtar('yuklenici_eksik_uyari_son');
+    const son = anahtar && localStorage.getItem(anahtar);
+    if (son && Date.now() - new Date(son).getTime() < _YK_ILK_GIRIS_GUN * 86400000) return;
+  } catch (e) { /* depolama yoksa her açılışta gösterilir */ }
+
+  const bugun = bugunIso();
+  const liste = yukleniciKisileriTumunuGetir().filter(k => !k.pasif && !k.ilkGiris).map(k => ({
+    kisi: k,
+    eksikler: yukleniciGecerliBelgeTanimlari(k.personelTuru).filter(b => !yukleniciBelgeUygunMu(b, (k.belgeler || {})[b.id], k.tehlikeSinifi, bugun)).map(b => b.ad)
+  })).filter(x => x.eksikler.length)
+    .sort((a, b) => _yukleniciNormalizeText(a.kisi.firmaAdi).localeCompare(_yukleniciNormalizeText(b.kisi.firmaAdi)) || _yukleniciNormalizeText(a.kisi.adSoyad).localeCompare(_yukleniciNormalizeText(b.kisi.adSoyad)));
+  const kaydet = () => { try { if (anahtar) localStorage.setItem(anahtar, new Date().toISOString()); } catch (e) { /* yok say */ } };
+  if (!liste.length) { kaydet(); return; }
+
+  const katman = document.createElement('div');
+  katman.className = 'modal-katman acik';
+  katman.innerHTML = `
+    <div class="modal-kutu" style="max-width:640px;">
+      <h3 style="margin-top:0;">⚠️ Haftalık Uyarı — Eksik Evrakı Olan Personel (${liste.length})</h3>
+      <div style="max-height:380px; overflow:auto; border:1px solid var(--kenarlik, #e5e7eb); border-radius:6px;">
+        <table class="veri-tablosu" style="margin:0;">
+          <thead><tr><th style="width:30px;"><input type="checkbox" data-eksik-tumu style="width:auto; margin:0;" title="Tümünü seç"></th><th>Firma</th><th>Personel</th><th>Eksik / Süresi Dolan Evrak</th></tr></thead>
+          <tbody>${liste.map(x => `<tr>
+            <td><input type="checkbox" data-eksik-kisi="${x.kisi.id}" style="width:auto; margin:0;"></td>
+            <td>${_ykKacir(x.kisi.firmaAdi || '-')}</td>
+            <td>${_ykKacir(x.kisi.adSoyad)}${x.kisi.isgOnayBypass ? ' <span style="color:#15803d; font-size:11px;">(İSG onaylı)</span>' : ''}</td>
+            <td style="color:#b91c1c; font-size:12px;">${x.eksikler.map(_ykKacir).join(', ')}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <p style="font-size:13px; color:var(--metin-soluk); margin:8px 0 0;">Artık çalışmayanları işaretleyip pasife alabilirsiniz (kayıt silinmez, istenirse tekrar aktif yapılır).</p>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" data-eksik-pasif>İşaretlileri Pasife Al</button>
+        <button type="button" class="birincil" data-eksik-uyari-tamam>Tamam</button>
+      </div>
+    </div>`;
+  document.body.appendChild(katman);
+  katman.querySelector('[data-eksik-tumu]').addEventListener('change', e => {
+    katman.querySelectorAll('[data-eksik-kisi]').forEach(cb => { cb.checked = e.target.checked; });
+  });
+  katman.querySelector('[data-eksik-uyari-tamam]').addEventListener('click', () => { kaydet(); katman.remove(); });
+  // Kullanıcı isteği: "pasife alınsın mı diye sorsun".
+  katman.querySelector('[data-eksik-pasif]').addEventListener('click', async () => {
+    const idler = Array.from(katman.querySelectorAll('[data-eksik-kisi]:checked')).map(cb => cb.getAttribute('data-eksik-kisi'));
+    if (!idler.length) { alert('Pasife almak için personel işaretleyin.'); return; }
+    if (!(await onayModali(`İşaretli ${idler.length} personel pasife alınsın mı?`, 'Pasife Al'))) return;
+    yukleniciKayitlariTopluPasifDurumunuDegistir(idler.map(id => ({ kind: 'personel', id })), true);
+    idler.forEach(id => { const tr = katman.querySelector(`[data-eksik-kisi="${id}"]`).closest('tr'); tr.remove(); });
+    if (typeof kayitlariCiz === 'function' && document.getElementById('kayitAramaKutusu')) kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+    if (typeof dashboardCiz === 'function' && document.getElementById('dashToplamPersonel')) dashboardCiz();
+    if (!katman.querySelector('[data-eksik-kisi]')) { kaydet(); katman.remove(); alert(`${idler.length} personel pasife alındı.`); }
+  });
+}
+
 function yukleniciSayfasiniBaslat() {
+  setTimeout(() => _ykIlkGirisHatirlat(_ykEksikEvrakHatirlat), 500);
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.addEventListener('click', () => gorunumDegistir(btn.getAttribute('data-sekme'))));
 
   document.querySelectorAll('select.yk-siralama').forEach(el => {
