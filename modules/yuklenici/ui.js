@@ -1509,6 +1509,12 @@ function ziyaretciFormGonderildi(e) {
 
 // ==================== KAYITLAR ====================
 
+function _ykOnayZamani(iso) {
+  if (!iso) return '-';
+  const t = new Date(iso);
+  return isNaN(t) ? '-' : t.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('kayitTabloGovde');
   const bosDurum = document.getElementById('kayitBosDurum');
@@ -1542,6 +1548,10 @@ function kayitlariCiz(aramaMetni) {
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-isg-onay="${r.id}" data-yeni-onay="${r.isgOnayBypass ? 'false' : 'true'}" title="${r.isgOnayBypass ? 'İSG onayını kaldırır; kişi eksik evrağa göre değerlendirilir' : 'Eksik evrağı olsa da İSG Onaylı Listede Uygun görünür'}" style="${r.isgOnayBypass ? 'background:#dcfce7; color:#15803d; border-color:#86efac;' : ''}">${r.isgOnayBypass ? '✓ İSG Onaylı' : 'İSG Onayla'}</button>` : ''}
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-mail-eksik="${r.id}" title="Bu kişinin eksiklerini mail metni olarak ver">Mail</button>` : ''}
         <button class="tablo-buton sil" data-sil-kayit="${r.id}" data-kind="${r.kind}">Sil</button>
+        ${r.kind === 'personel' && (r.isgOnayBypass || (r.isgOnayGecmisi || []).length) ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:4px;">
+          ${r.isgOnayBypass ? `<span style="color:#15803d;">İSG onayı: ${_ykKacir(r.isgOnayVeren || 'bilinmiyor')} · ${_ykOnayZamani(r.isgOnayTarihi)}</span>` : 'İSG onayı kaldırıldı'}
+          <a href="#" data-isg-onay-gecmis="${r.id}" style="margin-left:6px;">geçmiş</a>
+        </div>` : ''}
       </td>
     `;
     govde.appendChild(satir);
@@ -1554,6 +1564,14 @@ function kayitlariCiz(aramaMetni) {
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
     });
   });
+  govde.querySelectorAll('[data-isg-onay-gecmis]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    const kisi = yukleniciKisiIdIleGetirRepo(a.getAttribute('data-isg-onay-gecmis'));
+    const gecmis = (kisi && kisi.isgOnayGecmisi) || [];
+    alert(`${kisi ? kisi.adSoyad : ''} — İSG onay geçmişi\n\n` + (gecmis.length
+      ? gecmis.map(g => `${_ykOnayZamani(g.zaman)}  ${g.islem}  (${g.kim || 'bilinmiyor'})`).join('\n')
+      : 'Kayıt yok.'));
+  }));
   govde.querySelectorAll('[data-isg-onay]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const onay = btn.getAttribute('data-yeni-onay') === 'true';

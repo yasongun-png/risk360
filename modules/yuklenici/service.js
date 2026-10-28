@@ -824,7 +824,14 @@ function yukleniciDashboardVerisiHesapla() {
 function yukleniciKisiIsgOnayDegistir(id, onay) {
   const kisi = yukleniciKisiIdIleGetirRepo(id);
   if (!kisi) return { basarili: false };
-  yukleniciKisiGuncelleRepo(id, { isgOnayBypass: !!onay });
+  // Kullanıcı isteği: "kimin onayladığı, hangi tarihte onaylandığı takip
+  // edilebilsin" — son onay bilgisi + tüm onay/kaldırma geçmişi tutulur.
+  const iz = yukleniciIzBilgisi();
+  const gecmis = (Array.isArray(kisi.isgOnayGecmisi) ? kisi.isgOnayGecmisi : []).concat([{ islem: onay ? 'Onaylandı' : 'Onay kaldırıldı', kim: iz.kim, zaman: iz.zaman }]);
+  yukleniciKisiGuncelleRepo(id, Object.assign(
+    { isgOnayBypass: !!onay, isgOnayGecmisi: gecmis },
+    onay ? { isgOnayVeren: iz.kim, isgOnayTarihi: iz.zaman } : {}
+  ));
   return { basarili: true };
 }
 
@@ -869,7 +876,7 @@ function yukleniciKayitlariniGetir(aramaMetni) {
     const firmaEgitimi = (k.belgeler || {}).firmaEgitimi || {};
     return {
       kind: 'personel', id: k.id, tur: 'Personel', firma: k.firmaAdi, kimlik: k.adSoyad,
-      uygunSayisi, toplamSayisi: tumTanimlar.length, sinif, pasif: !!k.pasif, ilkGiris: !!k.ilkGiris, isgOnayBypass: !!k.isgOnayBypass,
+      uygunSayisi, toplamSayisi: tumTanimlar.length, sinif, pasif: !!k.pasif, ilkGiris: !!k.ilkGiris, isgOnayBypass: !!k.isgOnayBypass, isgOnayVeren: k.isgOnayVeren || '', isgOnayTarihi: k.isgOnayTarihi || '', isgOnayGecmisi: k.isgOnayGecmisi || [],
       egitmen: firmaEgitimi.egitmen || '—', kayitTarihi: (k.olusturmaTarihi || '').slice(0, 10),
       kaynak: k
     };
