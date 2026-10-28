@@ -153,7 +153,7 @@ function _ykEksikEvrakHatirlat() {
       <div style="max-height:420px; overflow:auto; border:1px solid var(--kenarlik, #e5e7eb); border-radius:6px;">
         ${onaylilar.length ? `
         <div style="background:#fef3c7; color:#92400e; padding:8px 10px; font-size:13px; border-bottom:1px solid #fde68a;">
-          <b>🔔 İSG onayı verilenler (${onaylilar.length}):</b> Bu kişilerin evrakı eksikti ama İSG onayı verdiniz; İSG Onaylı Listede "Uygun" görünüyorlar. Evrakları tamamlamak için firmayla görüşün.
+          <b>🔔 İSG geçici onay verilenler (${onaylilar.length}):</b> Bu kişilerin evrakı eksikti ama İSG geçici onay verdiniz; İSG Onaylı Listede "Uygun" görünüyorlar. Evrakları tamamlamak için firmayla görüşün.
         </div>
         ${tablo(onaylilar, x => `<div style="color:#92400e; font-size:11px; margin-top:2px;">Onay: ${_ykKacir(x.kisi.isgOnayVeren || 'bilinmiyor')} · ${_ykOnayZamani(x.kisi.isgOnayTarihi)}</div>`)}` : ''}
         ${digerleri.length ? `
@@ -1675,11 +1675,11 @@ function kayitlariCiz(aramaMetni) {
         <span class="genel-rozet ${r.pasif ? 'rozet-pasif' : 'rozet-uygun'}" style="font-size:10px;">${r.pasif ? 'Pasif' : 'Aktif'}</span>
         <button class="tablo-buton" data-pasif-degistir2="${r.id}" data-kind="${r.kind}" data-yeni-pasif="${r.pasif ? 'false' : 'true'}">${r.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>
         <button class="tablo-buton" data-duzenle-kayit="${r.id}" data-kind="${r.kind}">Düzenle</button>
-        ${r.kind === 'personel' ? `<button class="tablo-buton" data-isg-onay="${r.id}" data-yeni-onay="${r.isgOnayBypass ? 'false' : 'true'}" title="${r.isgOnayBypass ? 'İSG onayını kaldırır; kişi eksik evrağa göre değerlendirilir' : 'Eksik evrağı olsa da İSG Onaylı Listede Uygun görünür'}" style="${r.isgOnayBypass ? 'background:#dcfce7; color:#15803d; border-color:#86efac;' : ''}">${r.isgOnayBypass ? '✓ İSG Onaylı' : 'İSG Onayla'}</button>` : ''}
+        ${r.kind === 'personel' ? `<button class="tablo-buton" data-isg-onay="${r.id}" data-yeni-onay="${r.isgOnayBypass ? 'false' : 'true'}" title="${r.isgOnayBypass ? 'İSG geçici onayını kaldırır; kişi eksik evrağa göre değerlendirilir' : 'Eksik evrağı olsa da İSG Onaylı Listede Uygun görünür'}" style="${r.isgOnayBypass ? 'background:#dcfce7; color:#15803d; border-color:#86efac;' : ''}">${r.isgOnayBypass ? '✓ İSG Geçici Onay' : 'İSG Geçici Onay Ver'}</button>` : ''}
         ${r.kind === 'personel' ? `<button class="tablo-buton" data-mail-eksik="${r.id}" title="Bu kişinin eksiklerini mail metni olarak ver">Mail</button>` : ''}
         <button class="tablo-buton sil" data-sil-kayit="${r.id}" data-kind="${r.kind}">Sil</button>
         ${r.kind === 'personel' && (r.isgOnayBypass || (r.isgOnayGecmisi || []).length) ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:4px;">
-          ${r.isgOnayBypass ? `<span style="color:#15803d;">İSG onayı: ${_ykKacir(r.isgOnayVeren || 'bilinmiyor')} · ${_ykOnayZamani(r.isgOnayTarihi)}</span>` : 'İSG onayı kaldırıldı'}
+          ${r.isgOnayBypass ? `<span style="color:#15803d;">İSG geçici onay: ${_ykKacir(r.isgOnayVeren || 'bilinmiyor')} · ${_ykOnayZamani(r.isgOnayTarihi)}</span>` : 'İSG geçici onayı kaldırıldı'}
           <a href="#" data-isg-onay-gecmis="${r.id}" style="margin-left:6px;">geçmiş</a>
         </div>` : ''}
       </td>
@@ -1698,14 +1698,14 @@ function kayitlariCiz(aramaMetni) {
     e.preventDefault();
     const kisi = yukleniciKisiIdIleGetirRepo(a.getAttribute('data-isg-onay-gecmis'));
     const gecmis = (kisi && kisi.isgOnayGecmisi) || [];
-    alert(`${kisi ? kisi.adSoyad : ''} — İSG onay geçmişi\n\n` + (gecmis.length
+    alert(`${kisi ? kisi.adSoyad : ''} — İSG geçici onay geçmişi\n\n` + (gecmis.length
       ? gecmis.map(g => `${_ykOnayZamani(g.zaman)}  ${g.islem}  (${g.kim || 'bilinmiyor'})`).join('\n')
       : 'Kayıt yok.'));
   }));
   govde.querySelectorAll('[data-isg-onay]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const onay = btn.getAttribute('data-yeni-onay') === 'true';
-      if (onay && !(await onayModali('Bu kişi eksik evrağı olsa da İSG Onaylı Listede "Uygun" görünecek. Onaylıyor musunuz?', 'Onayla'))) return;
+      if (onay && !(await onayModali('Bu kişiye İSG geçici onay verilecek: eksik evrağı olsa da İSG Onaylı Listede "Uygun (İSG geçici onay)" görünecek. Onaylıyor musunuz?', 'Geçici Onay Ver'))) return;
       yukleniciKisiIsgOnayDegistir(btn.getAttribute('data-isg-onay'), onay);
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
     });

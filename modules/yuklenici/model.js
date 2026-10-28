@@ -533,7 +533,7 @@ function yukleniciGirebilecegiSonTarihHesapla(kisi, referansTarih) {
   // görünsün, eksik evrakları olsa da bypass olsun" — İSG'nin elle verdiği
   // onay eksik evrağı geçersiz kılar (İlk Giriş/eğitim kuralı hâlâ önce gelir).
   if (eksik && kisi.isgOnayBypass) {
-    return { sonTarih: secilen && secilen >= bugun ? secilen : '', durumMetni: 'Uygun (İSG onaylı)', uygunMu: true, ilkGiris: false, bypass: true };
+    return { sonTarih: secilen && secilen >= bugun ? secilen : '', durumMetni: 'Uygun (İSG geçici onay)', uygunMu: true, ilkGiris: false, bypass: true };
   }
   return {
     sonTarih: secilen,
