@@ -196,6 +196,7 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('kisiSiralama').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
   document.getElementById('aracSiralama').addEventListener('change', () => araclariCiz(document.getElementById('aracAramaKutusu').value));
   document.getElementById('kayitSiralama').addEventListener('change', () => kayitlariCiz(document.getElementById('kayitAramaKutusu').value));
+  document.getElementById('kayitPasifFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('kayitAramaKutusu').value));
 
   // Kullanıcı isteği: "personel ekle üst sağ boşlukta büyük buton olarak
   // dursun" — hangi sekmede olunursa olunsun tek tıkla personel eklenebilsin.
@@ -1645,10 +1646,20 @@ function _ykOnayZamani(iso) {
   return isNaN(t) ? '-' : t.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// Kullanıcı isteği: Dashboard pasifleri göstermiyor; "aktif edebilmek için
+// bir yerde görmem lazım" — Kayıtlar'da Tümü / Aktif / Pasif filtresi.
+function _ykKayitPasifFiltreUygula(liste) {
+  const el = document.getElementById('kayitPasifFiltre');
+  const f = el ? el.value : '';
+  if (f === 'aktif') return liste.filter(r => !r.pasif);
+  if (f === 'pasif') return liste.filter(r => r.pasif);
+  return liste;
+}
+
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('kayitTabloGovde');
   const bosDurum = document.getElementById('kayitBosDurum');
-  const kayitlar = _ykSirala(yukleniciKayitlariniGetir(aramaMetni), _ykSiralamaDegeri('kayitSiralama'), r => r.kaynak && r.kaynak.olusturmaTarihi, r => r.kimlik);
+  const kayitlar = _ykSirala(_ykKayitPasifFiltreUygula(yukleniciKayitlariniGetir(aramaMetni)), _ykSiralamaDegeri('kayitSiralama'), r => r.kaynak && r.kaynak.olusturmaTarihi, r => r.kimlik);
   document.getElementById('kayitTumunuSecCheckbox').checked = false;
 
   govde.innerHTML = '';
@@ -1759,7 +1770,7 @@ async function kayitlariTopluPasifYap(pasif) {
   const arama = document.getElementById('kayitAramaKutusu').value;
   const secililer = Array.from(document.querySelectorAll('#kayitTabloGovde [data-kayit-sec]:checked'))
     .map(cb => ({ kind: cb.getAttribute('data-kind'), id: cb.getAttribute('data-id') }));
-  const listelenen = yukleniciKayitlariniGetir(arama);
+  const listelenen = _ykKayitPasifFiltreUygula(yukleniciKayitlariniGetir(arama));
   const kaynak = secililer.length
     ? listelenen.filter(r => secililer.some(s => s.kind === r.kind && s.id === r.id))
     : listelenen;

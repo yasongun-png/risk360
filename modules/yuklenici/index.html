@@ -233,6 +233,11 @@
         <input type="text" id="kayitAramaKutusu" class="arama-kutusu" placeholder="Firma veya ad/kimliğe göre ara...">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <select id="kayitSiralama" class="yk-siralama" title="Sıralama" style="width:auto; margin:0;"></select>
+          <select id="kayitPasifFiltre" title="Aktif / pasif kayıtlar" style="width:auto; margin:0;">
+            <option value="">Tümü (aktif + pasif)</option>
+            <option value="aktif">Yalnız Aktifler</option>
+            <option value="pasif">Yalnız Pasifler</option>
+          </select>
           <button type="button" class="ikincil" id="kisiSablonIndirBtn">Personel Şablonu İndir</button>
           <button type="button" class="ikincil" id="kisiIceAktarBtn">Personel İçe Aktar</button>
           <input type="file" id="kisiIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
@@ -640,7 +645,7 @@
   <script src="validation.js?v=20261019c"></script>
   <script src="repository.js?v=20261028a"></script>
   <script src="service.js?v=20261030a"></script>
-  <script src="ui.js?v=20261028f"></script>
+  <script src="ui.js?v=20261030a"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js?v=20261021d"></script>
   <script src="degerlendirme.js?v=20261019f"></script>
