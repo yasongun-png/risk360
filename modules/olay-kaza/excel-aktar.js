@@ -99,6 +99,34 @@ function olaySablonIndir() {
   });
 }
 
+// Kullanıcı isteği: "Dışa Aktar da şablonla aynı sütunları versin" — dosya
+// olduğu gibi tekrar içe aktarılabilir (tarihler GG.AA.YYYY, liste bölümleri
+// şablondaki "satır satır, | ile ayrılmış" biçimde). Sonda yalnız bilgi
+// amaçlı "Fine-Kinney RP" sütunu var; içe aktarmada yok sayılır.
+function olayExcelDisaAktar(kayitlar) {
+  const tarih = d => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? d.slice(0, 10).split('-').reverse().join('.') : (d || ''));
+  const hucre = (k, kayit) => {
+    const d = kayit[k.anahtar];
+    if (k.tur === 'tarih') return tarih(d);
+    if (k.tur === 'sayi') return d == null ? '' : d;
+    if (k.anahtar === 'kronoloji') return (d || []).map(x => [x.saat, x.gelisme].join(' | ')).join('\n');
+    if (k.anahtar === 'tanikIfadeleri') return (d || []).map(x => [x.adSoyad, x.unvan, x.ifade].join(' | ')).join('\n');
+    if (k.anahtar === 'aksiyonlar') return (d || []).map(x => [x.baslik, x.duzelticiFaaliyet, x.sorumlu, tarih(x.termin), x.durum].join(' | ')).join('\n');
+    return d == null ? '' : String(d);
+  };
+  xlsxHazirOlduğunda(() => {
+    const satirlar = kayitlar.map(kayit => {
+      const rp = typeof fineKinneyPuaniHesapla === 'function' ? fineKinneyPuaniHesapla(kayit) : null;
+      return OLAY_IMPORT_KOLONLARI.map(k => hucre(k, kayit)).concat([rp == null ? '' : rp]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet([OLAY_IMPORT_KOLONLARI.map(k => k.baslik).concat(['Fine-Kinney RP']), ...satirlar]);
+    ws['!cols'] = OLAY_IMPORT_KOLONLARI.map(k => ({ wch: k.tur === 'liste' || k.anahtar === 'aciklama' ? 45 : Math.max(14, k.baslik.length + 2) })).concat([{ wch: 16 }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Olaylar');
+    XLSX.writeFile(wb, 'olay_kaza_kayitlari.xlsx');
+  });
+}
+
 function _okExcelTarih(deger) {
   if (deger === '' || deger == null) return '';
   if (typeof deger === 'number') {

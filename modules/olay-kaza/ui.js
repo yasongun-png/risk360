@@ -186,7 +186,7 @@ function olayKazaSayfasiniBaslat() {
     olaySablonIndir();
   });
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
-    excelDisaAktar(olayKayitlariniGetir('', {}), OLAY_EXPORT_KOLONLARI, 'olay_kaza_kayitlari.xlsx');
+    olayExcelDisaAktar(olayKayitlariniGetir('', {}));
   });
   document.getElementById('listeYazdirBtn').addEventListener('click', () => {
     const filtreler = {
