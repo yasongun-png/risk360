@@ -743,7 +743,13 @@ function yukleniciDashboardVerisiHesapla() {
   const bugun = bugunIso();
   // Kullanıcı isteği: "dashboard'da pasif olanları gösterme" — sayaçlar,
   // aksiyon merkezi ve firma/belge tabloları yalnızca aktif kayıtlarla.
-  const kisiler = yukleniciKisileriTumunuGetir().filter(k => !k.pasif);
+  // + "geçici görevlendirme süresi dolanları dashboard'da gösterme" — işi
+  // bitmiş geçici personel (bitiş tarihi girilmiş ve geçmiş) sayılmaz.
+  const geciciSuresiDoldu = k => {
+    const exp = ((k.belgeler || {}).geciciGorev || {}).exp;
+    return !!exp && exp < bugun && yukleniciGecerliBelgeTanimlari(k.personelTuru).some(b => b.id === 'geciciGorev');
+  };
+  const kisiler = yukleniciKisileriTumunuGetir().filter(k => !k.pasif && !geciciSuresiDoldu(k));
   const araclar = yukleniciAraclariTumunuGetir().filter(a => !a.pasif);
 
   let uygunSayisi = 0;
