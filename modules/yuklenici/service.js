@@ -741,8 +741,10 @@ function yukleniciDetayliArama(aramaMetni, belgeFiltre) {
 // yuklenici-standalone.html satır 2464-2560, 2756-2855).
 function yukleniciDashboardVerisiHesapla() {
   const bugun = bugunIso();
-  const kisiler = yukleniciKisileriTumunuGetir();
-  const araclar = yukleniciAraclariTumunuGetir();
+  // Kullanıcı isteği: "dashboard'da pasif olanları gösterme" — sayaçlar,
+  // aksiyon merkezi ve firma/belge tabloları yalnızca aktif kayıtlarla.
+  const kisiler = yukleniciKisileriTumunuGetir().filter(k => !k.pasif);
+  const araclar = yukleniciAraclariTumunuGetir().filter(a => !a.pasif);
 
   let uygunSayisi = 0;
   let uygunsuzSayisi = 0;
