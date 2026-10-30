@@ -183,7 +183,7 @@ function olayKazaSayfasiniBaslat() {
   document.getElementById('calismaSaatiTabloGovde').addEventListener('change', calismaSaatiKaydet);
 
   document.getElementById('sablonIndirBtn').addEventListener('click', () => {
-    excelSablonIndir(OLAY_IMPORT_KOLONLARI, 'olay_kaza_sablonu.xlsx');
+    olaySablonIndir();
   });
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
     excelDisaAktar(olayKayitlariniGetir('', {}), OLAY_EXPORT_KOLONLARI, 'olay_kaza_kayitlari.xlsx');
@@ -198,11 +198,9 @@ function olayKazaSayfasiniBaslat() {
   document.getElementById('iceAktarBtn').addEventListener('click', () => document.getElementById('iceAktarDosya').click());
   document.getElementById('iceAktarDosya').addEventListener('change', e => {
     const dosya = e.target.files[0];
-    excelIceAktar(dosya, OLAY_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+    olayExcelIceAktar(dosya, (sonuc, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
-      satirlar.forEach(satir => { satir.kazaTarihi = excelTarihiNormallestir(satir.kazaTarihi); });
-      const sonuc = excelToplulIceAktarSonucOzetle(satirlar, olayKaydiEkle);
       alert(excelIceAktarOzetMesaji(sonuc));
       kayitlariCiz(document.getElementById('aramaKutusu').value);
     });
@@ -265,18 +263,7 @@ function olayKazaSayfasiniBaslat() {
   gorunumDegistir('kayitlar');
 }
 
-const OLAY_IMPORT_KOLONLARI = [
-  { anahtar: 'olayTipi', baslik: 'Olay Tipi' },
-  { anahtar: 'kazaTarihi', baslik: 'Tarih' },
-  { anahtar: 'kazaSaati', baslik: 'Saat' },
-  { anahtar: 'bolum', baslik: 'Bölüm' },
-  { anahtar: 'kazaYeri', baslik: 'Kaza Yeri' },
-  { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
-  { anahtar: 'sicilNo', baslik: 'Sicil No' },
-  { anahtar: 'gorev', baslik: 'Görev' },
-  { anahtar: 'yaralanmaTuru', baslik: 'Yaralanma Türü' },
-  { anahtar: 'aciklama', baslik: 'Açıklama' }
-];
+// OLAY_IMPORT_KOLONLARI, şablon ve Excel içe aktarma: excel-aktar.js.
 
 const OLAY_EXPORT_KOLONLARI = [
   { anahtar: 'kayitNo', baslik: 'Kayıt No' },
