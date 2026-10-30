@@ -16,7 +16,10 @@ const OLAY_TIPLERI = [
 // değerler (OLAY_TIPLERI) DEĞİŞMEZ: kurul LTI/DART istatistikleri bunlara bakar.
 const OLAY_TIPI_GRUPLARI = [
   { baslik: 'Bildirim', tipler: ['Ramak Kala', 'Tehlike Bildirimi'] },
-  { baslik: 'İş Kazası', tipler: ['İlk Yardım', 'Tıbbi Tedavi', 'Kısıtlı İş / Transfer (DART)', 'Kayıp Gün (LTI)', 'Ölüm'] },
+  // Kullanıcı isteği: "iş kazasından DART'ı çıkart" — yeni kayıtta seçilemez;
+  // DART'lı eski kayıt düzenlenirken kendi değeri korunur (bkz. aşağıdaki
+  // olayTipiSecenekleriHtml), istatistikler değişmez.
+  { baslik: 'İş Kazası', tipler: ['İlk Yardım', 'Tıbbi Tedavi', 'Kayıp Gün (LTI)', 'Ölüm'] },
   { baslik: 'Hasar / Çevre', tipler: ['Maddi Hasar', 'Çevresel Olay'] },
   { baslik: 'Acil Durum', tipler: ['Yangın', 'Patlama', 'Gaz Kaçağı/Sızıntısı', 'Kimyasal Sızıntı/Dökülme', 'Doğal Afet (Deprem/Sel/Fırtına)', 'Sabotaj/Güvenlik Olayı', 'Tahliye', 'Diğer Acil Durum'] }
 ];
@@ -31,7 +34,8 @@ function olayTipiSecenekleriHtml(seciliDeger) {
   const kac = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
   const opt = t => `<option value="${kac(t)}" ${seciliDeger === t ? 'selected' : ''}>${kac(olayTipiEtiketi(t))}</option>`;
   const gruplu = new Set(OLAY_TIPI_GRUPLARI.flatMap(g => g.tipler));
-  const digerleri = OLAY_TIPLERI.filter(t => !gruplu.has(t));
+  const LISTEDEN_KALDIRILAN = ['Kısıtlı İş / Transfer (DART)'];
+  const digerleri = OLAY_TIPLERI.filter(t => !gruplu.has(t) && (!LISTEDEN_KALDIRILAN.includes(t) || seciliDeger === t));
   return OLAY_TIPI_GRUPLARI.map(g => `<optgroup label="${kac(g.baslik)}">${g.tipler.map(opt).join('')}</optgroup>`).join('')
     + (digerleri.length ? `<optgroup label="Diğer">${digerleri.map(opt).join('')}</optgroup>` : '');
 }
