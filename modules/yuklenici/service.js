@@ -322,7 +322,7 @@ function yukleniciKisiEksikBelgeleri(kisi) {
     const exp = yukleniciBelgeBitisTarihiHesapla(b, kayit, kisi.tehlikeSinifi);
     if (b.tur === 'egitim' && kayit.base && !(kayit.egitmen || '').trim() && (!exp || exp >= bugun)) satirlar.push(`${b.ad}: eğitmen bilgisi eksik`);
     else if (exp && exp < bugun) satirlar.push(`${b.ad}: süresi dolmuş (${formatTarihGoster(exp)})`);
-    else if (exp && !kayit.base && b.tur !== 'tarih-aralik') satirlar.push(`${b.ad}: veriliş tarihi girilmemiş`);
+    else if (exp && !kayit.base && b.tur !== 'tarih-aralik') satirlar.push(`${b.ad}: eksik`); // kullanıcı isteği: "veriliş tarihi girilmemiş" yerine
     else if (kayit.base && kayit.base > bugun) satirlar.push(`${b.ad}: tarihi ileri bir tarih (${formatTarihGoster(kayit.base)})`);
     else satirlar.push(`${b.ad}: yok`);
   });
