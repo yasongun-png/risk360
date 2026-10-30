@@ -372,12 +372,12 @@
   <script src="../uygunsuzluk/validation.js"></script>
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js"></script>
-  <script src="model.js?v=2"></script>
+  <script src="model.js?v=3"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
   <script src="service.js?v=2"></script>
   <script src="cikti.js?v=3"></script>
-  <script src="ui.js?v=3"></script>
+  <script src="ui.js?v=4"></script>
   <script>
     const kullanici = girisGerekliModul('olay-kaza');
 
@@ -394,7 +394,7 @@
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' olay/kaza kayıtları ve kök neden analizi';
-          document.getElementById('olayTipiFiltre').innerHTML += OLAY_TIPLERI.map(t => `<option>${t}</option>`).join('');
+          document.getElementById('olayTipiFiltre').innerHTML += olayTipiSecenekleriHtml('');
           olayKazaSayfasiniBaslat();
         });
       }

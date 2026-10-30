@@ -10,6 +10,32 @@ const OLAY_TIPLERI = [
   // sayılan tehlike kaynaklarına paralel).
   'Yangın', 'Patlama', 'Doğal Afet (Deprem/Sel/Fırtına)', 'Gaz Kaçağı/Sızıntısı', 'Kimyasal Sızıntı/Dökülme', 'Sabotaj/Güvenlik Olayı', 'Tahliye', 'Diğer Acil Durum'
 ];
+// Kullanıcı isteği: "olay tiplerini yeniden düzenle" + "ilk yardım vb. yerine
+// iş kazası diyelim, ilk yardım onun altında bir seçenek olur" — listeler
+// gruplu gösterilir, yaralanmalı tipler "İş Kazası – …" etiketiyle. Kayıtlı
+// değerler (OLAY_TIPLERI) DEĞİŞMEZ: kurul LTI/DART istatistikleri bunlara bakar.
+const OLAY_TIPI_GRUPLARI = [
+  { baslik: 'Bildirim', tipler: ['Ramak Kala', 'Tehlike Bildirimi'] },
+  { baslik: 'İş Kazası', tipler: ['İlk Yardım', 'Tıbbi Tedavi', 'Kısıtlı İş / Transfer (DART)', 'Kayıp Gün (LTI)', 'Ölüm'] },
+  { baslik: 'Hasar / Çevre', tipler: ['Maddi Hasar', 'Çevresel Olay'] },
+  { baslik: 'Acil Durum', tipler: ['Yangın', 'Patlama', 'Gaz Kaçağı/Sızıntısı', 'Kimyasal Sızıntı/Dökülme', 'Doğal Afet (Deprem/Sel/Fırtına)', 'Sabotaj/Güvenlik Olayı', 'Tahliye', 'Diğer Acil Durum'] }
+];
+
+function olayTipiEtiketi(tip) {
+  if (!tip) return '';
+  return OLAY_KISI_ZORUNLU_TIPLERI.includes(tip) ? `İş Kazası – ${tip}` : tip;
+}
+
+// <optgroup>'lu seçenek HTML'i (form ve filtre ortak).
+function olayTipiSecenekleriHtml(seciliDeger) {
+  const kac = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  const opt = t => `<option value="${kac(t)}" ${seciliDeger === t ? 'selected' : ''}>${kac(olayTipiEtiketi(t))}</option>`;
+  const gruplu = new Set(OLAY_TIPI_GRUPLARI.flatMap(g => g.tipler));
+  const digerleri = OLAY_TIPLERI.filter(t => !gruplu.has(t));
+  return OLAY_TIPI_GRUPLARI.map(g => `<optgroup label="${kac(g.baslik)}">${g.tipler.map(opt).join('')}</optgroup>`).join('')
+    + (digerleri.length ? `<optgroup label="Diğer">${digerleri.map(opt).join('')}</optgroup>` : '');
+}
+
 const YARALANMA_TURLERI = ['Kesik/Sıyrık', 'Delinme/Batma', 'Ezilme', 'Burkulma', 'Çıkık', 'Kırık', 'Kas Zorlanması', 'Düşme', 'Kayma/Takılma', 'Çarpma/Vurma', 'Sıkışma', 'Amputasyon', 'Elektrik Çarpması', 'Patlama Basıncı', 'Yanık (Termal)', 'Yanık (Kimyasal)', 'Yanık (Elektrik)', 'Kimyasal Temas', 'Göz Teması', 'Solunum Maruziyeti', 'Gaz Maruziyeti', 'Toz Maruziyeti', 'Zehirlenme', 'Boğulma', 'İşitme Hasarı', 'Titreşim Kaynaklı Yaralanma', 'Kas-İskelet Sistemi Yaralanması', 'Bel İncinmesi', 'Boyun İncinmesi', 'Omuz Yaralanması', 'Diz Yaralanması', 'Alerjik Reaksiyon', 'Enfeksiyon/Biyolojik Maruziyet', 'Bayılma', 'Isı Stresi', 'Soğuk Maruziyeti', 'Psikolojik Travma', 'Ölümcül Yaralanma', 'Diğer'];
 const OLAY_DURUMLARI = ['Açık', 'Kapalı'];
 
