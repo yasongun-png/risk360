@@ -256,6 +256,9 @@
             <label style="display:flex; align-items:center; gap:6px; font-weight:400; font-size:13px;">
               <input type="checkbox" id="gecikenlerFiltre" style="width:auto; margin:0;"> Sadece Gecikenler
             </label>
+            <button type="button" class="ikincil" id="takipSablonIndirBtn">Şablon İndir</button>
+            <button type="button" class="ikincil" id="takipIceAktarBtn">İçe Aktar</button>
+            <input type="file" id="takipIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
             <button type="button" class="ikincil" id="takipDisaAktarBtn">Dışa Aktar</button>
           </div>
         </div>
@@ -813,8 +816,8 @@
   <script src="service.js"></script>
   <script src="ui.js?v=20261027a"></script>
   <script src="cikti.js?v=20261027b"></script>
-  <script src="malzeme-talep.js?v=2"></script>
-  <script src="malzeme-talep-ui.js?v=3"></script>
+  <script src="malzeme-talep.js?v=3"></script>
+  <script src="malzeme-talep-ui.js?v=4"></script>
   <script src="malzeme-talep-cikti.js?v=5"></script>
   <script>
     const kullanici = girisGerekliModul('kkd');

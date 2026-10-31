@@ -228,7 +228,7 @@ async function kazaRaporuWordOlustur(id) {
         _okWordIkiliSatir('Mağdur', magdur, 'Görevi / Kıdemi', gorevKidem),
         _okWordIkiliSatir('Tehlikeli Madde', k.tehlikeliMadde, 'Tanık Sayısı', k.tanikSayisi ?? ''),
         ...((OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi) || k.yaralanmaTuru || k.yaralananUzuv) ? [_okWordIkiliSatir('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv)] : []),
-        _okWordIkiliSatir('Kayıp Gün', k.kayipGun ?? '', 'DART Gün', k.dartGun ?? ''),
+        _okWordTekliSatir('Kayıp Gün', k.kayipGun ?? ''),
         ...((k.fkO && k.fkF && k.fkS) ? [_okWordTekliSatir('Fine-Kinney (O/F/Ş/RP)', `O: ${k.fkO}  F: ${k.fkF}  Ş: ${k.fkS}  RP: ${_okRpRozet(fkRP)}`)] : [])
       ]
     })] },

@@ -400,7 +400,40 @@ function _mtTakipBaslat() {
     const liste = _mtTakipFiltreliListe('').map(t => Object.assign({}, t, { talepTarihiGoruntu: gunAyYil(t.talepTarihi) }));
     excelDisaAktar(liste, MALZEME_TALEP_EXPORT_KOLONLARI, 'malzeme_talepleri.xlsx');
   });
+  document.getElementById('takipSablonIndirBtn').addEventListener('click', () => excelSablonIndir(MALZEME_TALEP_IMPORT_KOLONLARI, 'malzeme_talep_sablonu.xlsx'));
+  document.getElementById('takipIceAktarBtn').addEventListener('click', () => document.getElementById('takipIceAktarDosya').click());
+  document.getElementById('takipIceAktarDosya').addEventListener('change', e => {
+    excelIceAktar(e.target.files[0], MALZEME_TALEP_IMPORT_KOLONLARI, (satirlar, hataMesaji) => {
+      e.target.value = '';
+      if (hataMesaji) { alert(hataMesaji); return; }
+      const sonuc = malzemeTalepleriniIceAktar(satirlar);
+      const liste = (baslik, satirlar) => satirlar.length
+        ? `\n\n${baslik} (${satirlar.length}):\n` + satirlar.slice(0, 10).join('\n') + (satirlar.length > 10 ? `\n... ve ${satirlar.length - 10} tane daha.` : '')
+        : '';
+      alert(`${sonuc.eklenen} talep eklendi.` + liste('Atlanan', sonuc.atlananlar) + liste('Eklenemeyen', sonuc.hatalar));
+      takipListesiniCiz(document.getElementById('takipAramaKutusu').value);
+      mtOzetiCiz();
+    });
+  });
 }
+
+// Geçmiş olurları toplu eklemek için (bkz. malzeme-talep.js malzemeTalepleriniIceAktar).
+const MALZEME_TALEP_IMPORT_KOLONLARI = [
+  { anahtar: 'belgeNo', baslik: 'Belge No' },
+  { anahtar: 'talepTarihi', baslik: 'Talep Tarihi', esanlamlar: ['Tarih'] },
+  { anahtar: 'konu', baslik: 'Konu / Özü', esanlamlar: ['Konu', 'Özü'] },
+  { anahtar: 'talepEdenBirim', baslik: 'Talep Eden Birim', esanlamlar: ['Birim'] },
+  { anahtar: 'kullanimBolumu', baslik: 'Kullanım Bölümü' },
+  { anahtar: 'aciliyet', baslik: 'Aciliyet' },
+  { anahtar: 'durum', baslik: 'Durum' },
+  { anahtar: 'aciklama', baslik: 'Açıklama' },
+  { anahtar: 'olurMetni', baslik: 'Olur Metni' },
+  { anahtar: 'malzemeler', baslik: 'Malzemeler (Ad | Miktar | Birim | Açıklama)', esanlamlar: ['Malzemeler'] },
+  { anahtar: 'mudurluk', baslik: 'Müdürlük' },
+  { anahtar: 'hitap', baslik: 'Hitap' },
+  { anahtar: 'imzaYetkilisi', baslik: 'İmza Yetkilisi' },
+  { anahtar: 'unvan', baslik: 'Unvan' }
+];
 
 const MALZEME_TALEP_EXPORT_KOLONLARI = [
   { anahtar: 'belgeNo', baslik: 'Belge No' },

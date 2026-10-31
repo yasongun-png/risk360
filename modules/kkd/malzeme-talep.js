@@ -547,6 +547,68 @@ function malzemeTalepGuncelle(id, veriler, secilenMalzemeler) {
   return { basarili: true, kayit: guncellenen };
 }
 
+// Kullanıcı isteği: "bu yıl yaptığım diğer talepleri de paylaşacağım, listede
+// görünmelerini istiyorum" — uygulama dışında hazırlanmış geçmiş olurlar
+// Excel'den toplu eklenir. Belge no zorunlu; listede zaten olan belge no
+// atlanır (mevcut kayıt ezilmez). Eski olurlarda malzeme tablosu olmayabildiği
+// için malzeme satırı zorunlu değildir; bilinmeyen miktar boş kalır. Hepsi TEK
+// yazımla kaydedilir — art arda ayrı yaz() çağrıları bulutta birbirini
+// ezebiliyor (bkz. olay-kaza olayKayitlariTopluEkleRepo).
+// Malzemeler hücresi: her satır (Alt+Enter) "Ad | Miktar | Birim | Açıklama".
+function malzemeTalepleriniIceAktar(satirlar) {
+  const liste = malzemeTalepTumunuGetir();
+  const anahtar = belgeNo => String(belgeNo || '').toLocaleLowerCase('tr-TR');
+  const sonuc = { eklenen: 0, atlananlar: [], hatalar: [] };
+  const listedeBul = (deger, secenekler) =>
+    secenekler.find(s => s.toLocaleLowerCase('tr-TR') === String(deger).trim().toLocaleLowerCase('tr-TR'));
+
+  satirlar.forEach((s, index) => {
+    if (!Object.values(s).some(d => String(d || '').trim())) return;
+    const cozulen = _malzemeTalepBelgeNoCozumle(s.belgeNo);
+    const etiket = `Satır ${index + 2}${cozulen.belgeNo ? ` (${cozulen.belgeNo})` : ''}`;
+    const talepTarihi = excelTarihiNormallestir(s.talepTarihi);
+    const durum = (s.durum || '').trim() ? listedeBul(s.durum, MALZEME_TALEP_DURUMLARI) : 'Taslak';
+    const aciliyet = (s.aciliyet || '').trim() ? listedeBul(s.aciliyet, MALZEME_TALEP_ACILIYET) : 'Normal';
+
+    if (!cozulen.belgeNo) { sonuc.hatalar.push(`${etiket}: Belge no boş.`); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(talepTarihi)) { sonuc.hatalar.push(`${etiket}: Tarih okunamadı.`); return; }
+    if (!(s.konu || '').trim()) { sonuc.hatalar.push(`${etiket}: Konu boş.`); return; }
+    if (!durum) { sonuc.hatalar.push(`${etiket}: "${s.durum}" geçerli bir durum değil.`); return; }
+    if (!aciliyet) { sonuc.hatalar.push(`${etiket}: "${s.aciliyet}" geçerli bir aciliyet değil.`); return; }
+
+    const mevcut = liste.find(t => anahtar(t.belgeNo) === anahtar(cozulen.belgeNo));
+    if (mevcut) { sonuc.atlananlar.push(`${cozulen.belgeNo} — listede zaten var: ${mevcut.konu}`); return; }
+
+    const malzemeler = _mtSatirlaraAyir(s.malzemeler).map(satir => {
+      const p = satir.split('|').map(x => x.trim());
+      const miktar = Number(String(p[1] || '').replace(',', '.'));
+      return {
+        id: rastgeleId(), malzemeId: null, ad: p[0], resmiAdi: p[0], kod: '', kategori: '',
+        birim: listedeBul(p[2] || 'Adet', MALZEME_BIRIMLERI) || p[2],
+        miktar: p[1] && Number.isFinite(miktar) ? miktar : '',
+        standartlar: [], teknikOzellikler: [], markaAlternatifleri: [], altKalemler: [], seciliAltKalemler: [],
+        kullanimAmaci: '', riskAciklamasi: '',
+        renk: '', beden: '', numara: '', marka: '', aciklama: p.slice(3).join(' | ')
+      };
+    }).filter(m => m.ad);
+
+    const olurMetni = (s.olurMetni || '').trim();
+    liste.push(malzemeTalepKaydiOlustur({
+      yil: Number(talepTarihi.slice(0, 4)),
+      siraNo: cozulen.siraNo, belgeNo: cozulen.belgeNo, ustBelgeNo: cozulen.ustBelgeNo,
+      talepTarihi, konu: s.konu, aciklama: s.aciklama,
+      uretilenMetin: olurMetni, duzenlenmisMetin: olurMetni,
+      talepEdenBirim: s.talepEdenBirim, kullanimBolumu: s.kullanimBolumu, aciliyet,
+      mudurluk: s.mudurluk, hitap: s.hitap, imzaYetkilisi: s.imzaYetkilisi, unvan: s.unvan,
+      durum, malzemeler
+    }));
+    sonuc.eklenen++;
+  });
+
+  if (sonuc.eklenen) _malzemeTalepKaydet(liste);
+  return sonuc;
+}
+
 function malzemeTalepDurumGuncelle(id, yeniDurum) {
   const guncellenen = malzemeTalepGuncelleRepo(id, { durum: yeniDurum });
   if (!guncellenen) return { basarili: false, hata: 'Kayıt bulunamadı.' };
