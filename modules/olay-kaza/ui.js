@@ -219,6 +219,7 @@ function olayKazaSayfasiniBaslat() {
   document.getElementById('bolumStdKapatBtn').addEventListener('click', bolumStandartlastirmaKapat);
   document.getElementById('bolumStdIptalBtn').addEventListener('click', bolumStandartlastirmaKapat);
   document.getElementById('bolumStdUygulaBtn').addEventListener('click', bolumStandartlastirmaUygula);
+  document.getElementById('bolumStdListeKaydetBtn').addEventListener('click', bolumStdListesiniKaydet);
   document.getElementById('jsonIceAktarBtn').addEventListener('click', () => document.getElementById('jsonIceAktarDosya').click());
   document.getElementById('jsonIceAktarDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
@@ -451,9 +452,9 @@ function kisiPersonelSecildi() {
   }
 }
 
-// Kullanıcı isteği: bölüm Firma Yönetimi > Bölümler'deki müdürlüklerden
-// seçilsin ("seçebileyim oradan") — serbest yazım kurul raporunda aynı bölümü
-// ayrı satırlara bölüyordu. Liste boşsa (ör. yeni firma) alan serbest metin
+// Kullanıcı isteği: bölüm standart listeden seçilsin ("seçebileyim oradan") —
+// serbest yazım kurul raporunda aynı bölümü ayrı satırlara bölüyordu. Liste
+// "Bölümleri Standartlaştır" penceresinde tanımlanır; boşsa alan serbest metin
 // kalır. Listede karşılığı olmayan eski bir değer "(listede yok)" diye korunur.
 function _okBolumAlaniniHazirla(deger) {
   const liste = kazaStandartBolumleri();
@@ -487,6 +488,25 @@ function _okBolumAlaniniHazirla(deger) {
 
 function bolumStandartlastirmaAc() {
   const liste = kazaStandartBolumleri();
+  const yazimlar = olayKayitlariTumunuGetir().map(k => k.bolum);
+  // Liste henüz tanımlanmamışsa kayıtlardaki yazımlardan birleştirilmiş bir
+  // öneri doldurulur — "Listeyi Kaydet"e basılana kadar kaydedilmez.
+  const alan = document.getElementById('bolumStdListe');
+  alan.value = (liste.length ? liste : kazaBolumOneriListesi(yazimlar)).join('\n');
+  document.getElementById('bolumStdOneriNotu').textContent = liste.length ? '' : 'Liste henüz kaydedilmedi; aşağıdaki öneri kayıtlardaki yazımlardan hazırlandı — düzeltip "Listeyi Kaydet"e basın.';
+  _bolumStdEslesmeleriCiz();
+  document.getElementById('bolumStdModalKatman').classList.add('acik');
+}
+
+function bolumStdListesiniKaydet() {
+  const kayitli = olayStandartBolumleriniKaydet(document.getElementById('bolumStdListe').value.split('\n'));
+  document.getElementById('bolumStdListe').value = kayitli.join('\n');
+  document.getElementById('bolumStdOneriNotu').textContent = '';
+  _bolumStdEslesmeleriCiz();
+}
+
+function _bolumStdEslesmeleriCiz() {
+  const liste = kazaStandartBolumleri();
   const govde = document.getElementById('bolumStdGovde');
   const bos = document.getElementById('bolumStdBos');
   const sayilar = new Map();
@@ -501,7 +521,7 @@ function bolumStandartlastirmaAc() {
   document.getElementById('bolumStdUygulaBtn').disabled = !liste.length || !satirlar.length;
   if (!liste.length) {
     bos.classList.add('gorunur');
-    bos.textContent = 'Firma Yönetimi > Bölümler listesi boş. Önce müdürlükleri oraya ekleyin.';
+    bos.textContent = 'Önce yukarıdaki standart bölüm listesini kaydedin.';
   } else if (!satirlar.length) {
     bos.classList.add('gorunur');
     bos.textContent = 'Tüm kayıtların bölümü zaten standart listede.';
@@ -518,7 +538,6 @@ function bolumStandartlastirmaAc() {
       </select></td>`;
     govde.appendChild(tr);
   });
-  document.getElementById('bolumStdModalKatman').classList.add('acik');
 }
 
 function bolumStandartlastirmaKapat() {
@@ -532,7 +551,7 @@ async function bolumStandartlastirmaUygula() {
   });
   const adet = Object.keys(eslesme).length;
   if (!adet) { alert('Değiştirilecek bir yazım seçmediniz.'); return; }
-  if (!(await onayModali(`${adet} farklı bölüm yazımı seçtiğiniz müdürlüklere çevrilecek. Devam edilsin mi?`, 'Uygula'))) return;
+  if (!(await onayModali(`${adet} farklı bölüm yazımı seçtiğiniz standart bölümlere çevrilecek. Devam edilsin mi?`, 'Uygula'))) return;
   const guncellenen = olayBolumleriniStandartla(eslesme);
   alert(`${guncellenen} kaydın bölümü güncellendi.`);
   bolumStandartlastirmaKapat();
@@ -984,7 +1003,7 @@ function kazaIstatistikleriniCiz() {
   const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
 
   kutu.innerHTML = `
-    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 10px;">Yıllar aynı aralık (Ocak–${kd.sonAyAdi}) için karşılaştırılmıştır. İş kazası = kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Bölümler Firma Yönetimi &gt; Bölümler listesine göre gruplanır.</p>
+    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 10px;">Yıllar aynı aralık (Ocak–${kd.sonAyAdi}) için karşılaştırılmıştır. İş kazası = kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Bölümler standart bölüm listesine göre gruplanır (🏷️ Bölümleri Standartlaştır).</p>
     ${tablo(['Gösterge', ...yilEtiketleri], [
       ['İş Kazası Sayısı', ...kd.besYil.map(y => String(y.kazaSayisi))],
       ['Kayıp Günlü Kaza', ...kd.besYil.map(y => String(y.lti))],

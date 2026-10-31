@@ -327,18 +327,15 @@ function olayAyarlariniGetir() {
 }
 
 // Kullanıcı isteği: "bölümleri standart hale getirebileceğim bir yöntem" —
-// kayıtlarda geçen her bölüm yazımı (birebir) için seçilen müdürlük (Firma
-// Yönetimi > Bölümler) yazılır. Eski yazım çoğunlukla tesis adıdır ("Sülfürik
-// asit"); kaybolmasın diye Olay Yeri boşsa oraya taşınır. Tek yazımla kaydedilir.
-// eslesme: { 'eski yazım': 'Müdürlük adı' }
+// kayıtlarda geçen her bölüm yazımı (birebir) için seçilen standart bölüm
+// yazılır. Tek yazımla kaydedilir.
+// eslesme: { 'eski yazım': 'Standart bölüm adı' }
 function olayBolumleriniStandartla(eslesme) {
   const liste = olayKayitlariTumunuGetir();
   let guncellenen = 0;
   liste.forEach(k => {
-    const eski = String(k.bolum || '').trim();
-    const yeni = eslesme[eski];
+    const yeni = eslesme[String(k.bolum || '').trim()];
     if (!yeni || yeni === k.bolum) return;
-    if (!String(k.kazaYeri || '').trim()) k.kazaYeri = eski;
     k.bolum = yeni;
     guncellenen++;
   });
@@ -346,11 +343,21 @@ function olayBolumleriniStandartla(eslesme) {
   return guncellenen;
 }
 
+// Standart bölüm listesi (bkz. core/kaza-istatistik.js kazaStandartBolumleri) —
+// boş satırlar ve tekrarlar atılır, sıra korunur.
+function olayStandartBolumleriniKaydet(bolumler) {
+  const temiz = [];
+  (bolumler || []).forEach(b => { const ad = String(b || '').trim(); if (ad && !temiz.includes(ad)) temiz.push(ad); });
+  olayAyarlariKaydetRepo(Object.assign({}, olayAyarlariGetirRepo(), { bolumler: temiz }));
+  return temiz;
+}
+
 function olayAyarlariniKaydet(veriler) {
   const mevcut = olayAyarlariGetirRepo();
   return olayAyarlariKaydetRepo({
     yillikCalismaSaati: Number(veriler.yillikCalismaSaati || 0),
-    aylikCalismaSaatleri: veriler.aylikCalismaSaatleri || mevcut.aylikCalismaSaatleri || {}
+    aylikCalismaSaatleri: veriler.aylikCalismaSaatleri || mevcut.aylikCalismaSaatleri || {},
+    bolumler: mevcut.bolumler || []
   });
 }
 
@@ -362,6 +369,7 @@ function olayCalismaSaatiYiliniKaydet(yil, ayVerileri) {
   const tumYillar = Object.assign({}, mevcut.aylikCalismaSaatleri, { [yil]: ayVerileri });
   return olayAyarlariKaydetRepo({
     yillikCalismaSaati: mevcut.yillikCalismaSaati || 0,
-    aylikCalismaSaatleri: tumYillar
+    aylikCalismaSaatleri: tumYillar,
+    bolumler: mevcut.bolumler || []
   });
 }

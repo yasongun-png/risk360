@@ -57,7 +57,7 @@
           <button type="button" class="ikincil" id="jsonIceAktarBtn">JSON İçe Aktar</button>
           <input type="file" id="jsonIceAktarDosya" accept=".json" style="display:none;">
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
-          <button type="button" class="ikincil" id="bolumStdBtn" title="Kayıtlardaki farklı bölüm yazımlarını Firma Yönetimi > Bölümler'deki müdürlüklere eşler">🏷️ Bölümleri Standartlaştır</button>
+          <button type="button" class="ikincil" id="bolumStdBtn" title="Standart bölüm listesini tanımlar, kayıtlardaki farklı bölüm yazımlarını bu listeye eşler">🏷️ Bölümleri Standartlaştır</button>
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
           <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
         </div>
@@ -112,7 +112,7 @@
             <div class="alan-hatasi" id="olayTipiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
           <div>
-            <label for="temelBolum">Bölüm <span style="color:var(--metin-soluk); font-weight:400;">(Firma Yönetimi &gt; Bölümler)</span></label>
+            <label for="temelBolum">Bölüm</label>
             <input type="text" id="temelBolum">
             <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
@@ -356,10 +356,17 @@
   <div class="modal-katman" id="bolumStdModalKatman">
     <div class="modal-kutu" style="max-width:760px;">
       <h3>Bölümleri Standartlaştır</h3>
-      <p style="font-size:13px; color:var(--metin-soluk); margin:-4px 36px 12px 0;">Kayıtlarda geçen ve standart listede olmayan bölüm yazımları aşağıda. Her biri için müdürlüğü seçip "Uygula"ya basın; o yazımı taşıyan tüm kayıtların Bölüm alanı güncellenir. Eski yazım (ör. tesis adı) kaybolmasın diye Olay Yeri boşsa oraya taşınır. Liste Firma Yönetimi &gt; Bölümler'den gelir.</p>
+      <div class="form-bolum-baslik">1. Standart bölüm listesi</div>
+      <p style="font-size:13px; color:var(--metin-soluk); margin:0 0 8px;">Her satıra bir bölüm yazın (ör. Sülfürik Asit Tesisi). Kayıt formundaki Bölüm alanı ve raporlar bu listeyi kullanır. <span id="bolumStdOneriNotu"></span></p>
+      <textarea id="bolumStdListe" rows="7"></textarea>
+      <div style="display:flex; justify-content:flex-end; margin:-6px 0 14px;">
+        <button type="button" class="ikincil" id="bolumStdListeKaydetBtn">Listeyi Kaydet</button>
+      </div>
+      <div class="form-bolum-baslik">2. Kayıtlardaki farklı yazımları eşleştir</div>
+      <p style="font-size:13px; color:var(--metin-soluk); margin:0 0 8px;">Listede olmayan yazımlar aşağıda. Her biri için standart bölümü seçip "Uygula"ya basın; o yazımı taşıyan tüm kayıtların Bölüm alanı güncellenir.</p>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Kayıtlardaki Yazım</th><th>Kayıt</th><th>Müdürlük</th></tr></thead>
+          <thead><tr><th>Kayıtlardaki Yazım</th><th>Kayıt</th><th>Standart Bölüm</th></tr></thead>
           <tbody id="bolumStdGovde"></tbody>
         </table>
       </div>
@@ -399,13 +406,13 @@
   <script src="../uygunsuzluk/validation.js"></script>
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js"></script>
-  <script src="../../core/kaza-istatistik.js?v=1"></script>
+  <script src="../../core/kaza-istatistik.js?v=2"></script>
   <script src="model.js?v=4"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
-  <script src="service.js?v=3"></script>
+  <script src="service.js?v=4"></script>
   <script src="cikti.js?v=4"></script>
-  <script src="ui.js?v=7"></script>
+  <script src="ui.js?v=8"></script>
   <script src="excel-aktar.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('olay-kaza');

@@ -7,11 +7,12 @@
 // ==================== BÖLÜM STANDARDI ====================
 // Kullanıcı isteği: kurul raporundaki "Bölüm / Birim Dağılımı" tablosunda aynı
 // bölüm farklı yazımlarla ayrı satırlara bölünüyordu ("Sülfürik asit tesisi",
-// "Sülfürik asit", "Can/an tesisi" ~ "Canan"). Kullanıcı isteği: "bunu
-// müdürlükleri kullanarak yapabiliriz" — standart liste firmanın Bölümler
-// listesidir (Firma Yönetimi > Bölümler, firma.bolumler: müdürlükler); olay
-// yeri (tesis) ayrıca Olay Yeri alanında kalır. Karşılaştırmada büyük/küçük
-// harf, noktalama ve "tesisi / bölümü / müdürlüğü" gibi ekler fark etmez.
+// "Sülfürik asit", "Can/an tesisi" ~ "Canan"). Standart bölüm listesi Olay/Kaza
+// ayarlarında (olay_kaza_ayarlari.bolumler) tutulur ve "Bölümleri
+// Standartlaştır" penceresinden düzenlenir. Firma Yönetimi > Bölümler
+// (müdürlükler) KULLANILMAZ — kullanıcı: "müdürlükler bölümlerle aynı şey
+// değil, mesela sülfürik asitin müdürlüğü yok". Karşılaştırmada büyük/küçük
+// harf, noktalama ve "tesisi / bölümü / birimi" gibi ekler fark etmez.
 const _KAZA_BOLUM_EKLERI = new Set(['tesisi', 'tesis', 'bölümü', 'bölüm', 'birimi', 'birim', 'ünitesi', 'ünite', 'müdürlüğü', 'müdürlük']);
 
 function kazaBolumAnahtari(ad) {
@@ -21,13 +22,13 @@ function kazaBolumAnahtari(ad) {
 }
 
 function kazaStandartBolumleri() {
-  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-  return firma && Array.isArray(firma.bolumler) ? firma.bolumler : [];
+  const ayarlar = oku(tenantAnahtar('olay_kaza_ayarlari'), {});
+  return Array.isArray(ayarlar.bolumler) ? ayarlar.bolumler : [];
 }
 
 // Standartlaştırma aracı için öneri: birebir eşleşme yoksa, yazımın adında
-// geçtiği tek bir müdürlük varsa onu önerir ("Canan" → "Canan Üretim
-// Müdürlüğü"); birden fazla aday varsa öneri yapmaz. Ters yön ("Servis & liman"
+// geçtiği tek bir standart bölüm varsa onu önerir ("Canan" → "Canan Üretim
+// Tesisi"); birden fazla aday varsa öneri yapmaz. Ters yön ("Servis & liman"
 // içinde "Liman") önerilmez — yanlış eşleşme riski yüksek.
 function kazaBolumOnerisi(ad, standartListe) {
   const liste = standartListe || kazaStandartBolumleri();
@@ -46,6 +47,24 @@ function kazaBolumStandartla(ad, standartListe) {
   const anahtar = kazaBolumAnahtari(ad);
   if (!anahtar) return String(ad || '').trim();
   return liste.find(s => kazaBolumAnahtari(s) === anahtar) || String(ad || '').trim();
+}
+
+// Standart liste henüz yokken başlangıç önerisi: kayıtlardaki yazımlar
+// kazaBolumAnahtari'na göre birleştirilir, her grup için en sık yazım (baş
+// harfi büyük) alınır — "Sülfürik asit tesisi" / "Sülfürik asit" tek satır olur.
+function kazaBolumOneriListesi(yazimlar) {
+  const gruplar = new Map();
+  yazimlar.forEach(y => {
+    const ad = String(y || '').trim();
+    const anahtar = kazaBolumAnahtari(ad);
+    if (!anahtar) return;
+    const g = gruplar.get(anahtar) || new Map();
+    g.set(ad, (g.get(ad) || 0) + 1);
+    gruplar.set(anahtar, g);
+  });
+  return Array.from(gruplar.values())
+    .map(g => { const ad = Array.from(g.entries()).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0]; return ad.charAt(0).toLocaleUpperCase('tr-TR') + ad.slice(1); })
+    .sort((a, b) => a.localeCompare(b, 'tr'));
 }
 
 // Kullanıcı isteği: raporlarda İngilizce ifade (LTI, DART) görünmesin — olay tipinin Türkçe gösterimi.
