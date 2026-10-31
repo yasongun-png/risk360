@@ -108,6 +108,20 @@ function yukleniciKisileriTopluGuncelleRepo(idler, veriler) {
   return sayi;
 }
 
+// Birden çok kişiye KİŞİ BAŞINA FARKLI değerleri TEK yazımla uygular
+// (Seçilenleri Toplu Düzenle). degisiklikler: [{ id, veriler }]. Her satır
+// yalnızca kendi id'siyle birebir eşleşen kayda yazılır; id'si boş ya da
+// listede bulunmayan satır varsa hiçbir şey yazılmaz (yanlış kayda
+// düşmesin) ve null döner.
+function yukleniciKisileriFarkliGuncelleRepo(degisiklikler) {
+  const liste = yukleniciKisileriTumunuGetir();
+  const indexler = degisiklikler.map(d => (d.id ? liste.findIndex(k => k.id === d.id) : -1));
+  if (indexler.some(i => i === -1)) return null;
+  degisiklikler.forEach((d, j) => { liste[indexler[j]] = Object.assign({}, liste[indexler[j]], _yukleniciGuncellemeIzi(d.veriler)); });
+  _yukleniciKisileriKaydet(liste);
+  return indexler.map(i => liste[i]);
+}
+
 function yukleniciAraclariTumunuGetir() {
   return oku(_yukleniciAracAnahtari(), []);
 }

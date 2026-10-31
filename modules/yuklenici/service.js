@@ -475,6 +475,46 @@ function yukleniciKisiGuncelle(id, veriler) {
   return { basarili: true, kisi: guncellenen };
 }
 
+// Kullanıcı isteği: "seçtiğim birden fazla kişi için aynı anda evrak
+// kontrolünü düzenleyebilmek istiyorum" — satirlar: [{ id, veriler }].
+// Sadece toplu formdaki alanlar yazılır; formda olmayan alanlar (kimlik no,
+// bölüm, görev, evraklar, sonraki kontrol, İSG onayı...) olduğu gibi kalır.
+// Belgeler mevcut belgelerin üstüne birleştirilir. Önce hepsi doğrulanır;
+// biri bile hatalıysa hiçbiri kaydedilmez. Dönüş hatalar: { satırIndex: {...} }.
+function yukleniciKisileriTopluDuzenle(satirlar) {
+  const hatalar = {};
+  const gorulen = new Set();
+  satirlar.forEach((s, i) => {
+    const d = yukleniciKisiDogrula(s.veriler);
+    const h = Object.assign({}, d.hatalar);
+    if (!s.id || gorulen.has(s.id) || !yukleniciKisiIdIleGetirRepo(s.id)) h.genel = 'Kayıt bulunamadı (silinmiş olabilir). Pencereyi kapatıp listeden tekrar seçin.';
+    gorulen.add(s.id);
+    if (Object.keys(h).length) hatalar[i] = h;
+  });
+  if (Object.keys(hatalar).length) return { basarili: false, hatalar };
+
+  const degisiklikler = satirlar.map(({ id, veriler }) => {
+    const mevcut = yukleniciKisiIdIleGetirRepo(id);
+    const firma = yukleniciFirmaIdIleGetirRepo(veriler.firmaId);
+    return { id, veriler: {
+      adSoyad: veriler.adSoyad.trim(),
+      firmaId: veriler.firmaId,
+      firmaAdi: firma ? firma.firmaAdi : (mevcut.firmaAdi || ''),
+      telefon: (veriler.telefon || '').trim(),
+      durum: veriler.durum || mevcut.durum || 'Onay Bekliyor',
+      tehlikeSinifi: _yukleniciKisiTehlikeSinifi(veriler),
+      personelTuru: YUKLENICI_PERSONEL_TURLERI.includes(veriler.personelTuru) ? veriler.personelTuru : 'teknik',
+      pasif: !!veriler.pasif,
+      ilkGiris: !!veriler.ilkGiris,
+      belgeler: Object.assign({}, mevcut.belgeler || {}, veriler.belgeler || {}),
+      notlar: (veriler.notlar || '').trim()
+    } };
+  });
+  const guncellenenler = yukleniciKisileriFarkliGuncelleRepo(degisiklikler);
+  if (!guncellenenler) return { basarili: false, hatalar: { 0: { genel: 'Kayıtlardan biri bulunamadı; hiçbir değişiklik kaydedilmedi.' } } };
+  return { basarili: true, kisiler: guncellenenler };
+}
+
 function yukleniciKisiSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   yukleniciKisiSilRepo(id);

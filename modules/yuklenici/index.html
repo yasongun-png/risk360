@@ -254,6 +254,7 @@
           <button type="button" class="ikincil" id="kayitIceAktarBtn">İçe Aktar (Diğer Uygulamadan)</button>
           <input type="file" id="kayitIceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="kayitPdfBtn" title="PDF olarak indirir">İSG Onaylı Liste</button>
+          <button type="button" class="ikincil" id="kayitTopluDuzenleBtn" title="Kutucukla seçilen en fazla 5 personelin bilgi ve evraklarını 5'li formda yan yana açar">✎ Seçilenleri Toplu Düzenle</button>
           <button type="button" class="ikincil" id="kayitMailEksikBtn" title="Seçili personelin eksik belgelerini maile yapıştırılacak düz yazı olarak verir">Mail için Eksiklikler</button>
           <button type="button" class="ikincil" id="kayitTopluPasifBtn" title="Kutucukla seçilenleri, seçim yoksa aramayla listelenen kayıtların tümünü (ör. bir firmanın tüm elemanları) pasif yapar">⏸ Toplu Pasif Yap</button>
           <button type="button" class="ikincil" id="kayitTopluAktifBtn" title="Kutucukla seçilenleri, seçim yoksa aramayla listelenen kayıtların tümünü aktif yapar">▶ Toplu Aktif Yap</button>
@@ -535,8 +536,8 @@
   <!-- BİRDEN FAZLA PERSONEL (5 FORM YAN YANA) -->
   <div class="modal-katman" id="topluKisiKatman">
     <div class="modal-kutu" style="max-width:min(2060px, 98vw); width:98vw;">
-      <h3>Birden Fazla Personel Ekle</h3>
-      <p style="font-size:13px; color:var(--metin-soluk); margin:-6px 36px 12px 0;">İstediğiniz kadar formu doldurun; boş bıraktıklarınız kaydedilmez. Kaydedilen personeller listeden tek tek düzenlenebilir.</p>
+      <h3 id="topluKisiBaslik">Birden Fazla Personel Ekle</h3>
+      <p id="topluKisiAciklama" style="font-size:13px; color:var(--metin-soluk); margin:-6px 36px 12px 0;">İstediğiniz kadar formu doldurun; boş bıraktıklarınız kaydedilmez. Kaydedilen personeller listeden tek tek düzenlenebilir.</p>
       <div style="overflow-x:auto;">
         <div id="topluKisiSutunlar" style="display:grid; grid-template-columns:repeat(5, minmax(238px, 1fr)); gap:10px; align-items:start;"></div>
       </div>
@@ -643,9 +644,9 @@
        dosyayı önbellekten alır, yeni index.html ile uyuşmaz ve sayfa çöker. -->
   <script src="model.js?v=20261028b"></script>
   <script src="validation.js?v=20261019c"></script>
-  <script src="repository.js?v=20261028a"></script>
-  <script src="service.js?v=20261030c"></script>
-  <script src="ui.js?v=20261030a"></script>
+  <script src="repository.js?v=20261030a"></script>
+  <script src="service.js?v=20261030d"></script>
+  <script src="ui.js?v=20261030b"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js?v=20261021d"></script>
   <script src="degerlendirme.js?v=20261019f"></script>

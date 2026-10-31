@@ -353,6 +353,7 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('kayitTopluPasifBtn').addEventListener('click', () => kayitlariTopluPasifYap(true));
   document.getElementById('kayitTopluAktifBtn').addEventListener('click', () => kayitlariTopluPasifYap(false));
   document.getElementById('kayitMailEksikBtn').addEventListener('click', kayitSecilenleriMailEksik);
+  document.getElementById('kayitTopluDuzenleBtn').addEventListener('click', kayitSecilenleriTopluDuzenle);
   document.getElementById('kayitTumExcelBtn').addEventListener('click', yukleniciTumKayitlariExcelAktar);
   document.getElementById('kayitUygunExcelBtn').addEventListener('click', yukleniciUygunKayitlariExcelAktar);
   document.getElementById('kayitUygunsuzExcelBtn').addEventListener('click', yukleniciUygunOlmayanKayitlariExcelAktar);
@@ -1282,68 +1283,97 @@ function _topluKisiBaslat() {
   document.getElementById('topluKisiKaydetBtn').addEventListener('click', topluKisiKaydet);
 }
 
-function _topluKisiSutunHtml(i) {
+// kisi verilirse (Seçilenleri Toplu Düzenle) sütun o kişinin mevcut
+// değerleriyle dolu gelir ve firma her sütunda ayrı gösterilir (seçilen
+// kişiler farklı firmalardan olabilir).
+function _topluKisiSutunHtml(i, kisi) {
   const hata = alan => `<div class="alan-hatasi" data-tk-hata="${alan}" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>`;
+  const k = kisi || {};
+  const tekFirma = !kisi && i > 0;
   return `
-    <div data-tk="${i}" style="border:1px solid var(--kenarlik); border-radius:10px; padding:10px; min-width:0;">
-      <div style="font-weight:700; margin-bottom:8px;">${i + 1}. Personel</div>
-      <div ${i > 0 ? 'style="display:none;"' : ''}>
-        <label>Firma${i === 0 ? ' <span style="font-weight:normal; font-size:12px; color:var(--metin-soluk);">(tüm personel bu firmaya kaydedilir)</span>' : ''}</label>
+    <div data-tk="${i}" ${kisi ? `data-tk-id="${_ykKacir(kisi.id)}"` : ''} style="border:1px solid var(--kenarlik); border-radius:10px; padding:10px; min-width:0;">
+      <div style="font-weight:700; margin-bottom:8px;">${i + 1}. Personel${kisi && kisi.personelNo ? ` <span style="font-weight:normal; font-size:12px; color:var(--metin-soluk);">(${_ykKacir(kisi.personelNo)})</span>` : ''}</div>
+      ${kisi ? `<div class="alan-hatasi" data-tk-hata="genel" style="color:var(--hata); font-size:12px; margin-bottom:6px;"></div>` : ''}
+      <div ${tekFirma ? 'style="display:none;"' : ''}>
+        <label>Firma${!kisi && i === 0 ? ' <span style="font-weight:normal; font-size:12px; color:var(--metin-soluk);">(tüm personel bu firmaya kaydedilir)</span>' : ''}</label>
         <input type="text" data-tk-alan="firmaAra" placeholder="Firma adına göre daralt..." style="margin-bottom:6px;">
         <select data-tk-alan="firmaId" size="5" style="height:auto;"></select>
         <div data-tk-alan="firmaSecili"></div>
       </div>
-      ${i > 0 ? '<label>Firma</label><div data-tk-alan="firmaEtiket" style="margin:0 0 12px; font-size:13px; font-weight:600;">1. personeldeki firma</div>' : ''}
+      ${tekFirma ? '<label>Firma</label><div data-tk-alan="firmaEtiket" style="margin:0 0 12px; font-size:13px; font-weight:600;">1. personeldeki firma</div>' : ''}
       ${hata('firmaId')}
       <label>Ad Soyad</label>
-      <input type="text" data-tk-alan="adSoyad">
+      <input type="text" data-tk-alan="adSoyad" value="${_ykKacir(k.adSoyad)}">
       ${hata('adSoyad')}
       <div class="form-satir-ikili">
-        <div><label>Telefon</label><input type="text" data-tk-alan="telefon"></div>
-        <div><label>Durum</label><select data-tk-alan="durum">${KISI_DURUMLARI.map(d => `<option>${d}</option>`).join('')}</select></div>
+        <div><label>Telefon</label><input type="text" data-tk-alan="telefon" value="${_ykKacir(k.telefon)}"></div>
+        <div><label>Durum</label><select data-tk-alan="durum">${KISI_DURUMLARI.map(d => `<option ${k.durum === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
       </div>
       <div class="form-satir-ikili">
         <div>
           <label>Tehlike Sınıfı</label>
-          <select data-tk-alan="tehlikeSinifi">${YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}">${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('')}</select>
+          <select data-tk-alan="tehlikeSinifi">${YUKLENICI_TEHLIKE_SINIFLARI.map(t => `<option value="${t}" ${k.tehlikeSinifi === t ? 'selected' : ''}>${YUKLENICI_TEHLIKE_SINIFI_ETIKETLERI[t]}</option>`).join('')}</select>
           <div data-tk-alan="tehlikeKaynak" style="font-size:11px; color:var(--metin-soluk); margin-top:-10px; margin-bottom:8px;"></div>
         </div>
-        <div><label>Personel Türü</label><select data-tk-alan="personelTuru">${YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${t === 'teknik' ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('')}</select></div>
+        <div><label>Personel Türü</label><select data-tk-alan="personelTuru">${YUKLENICI_PERSONEL_TURLERI.map(t => `<option value="${t}" ${(k.personelTuru || 'teknik') === t ? 'selected' : ''}>${YUKLENICI_PERSONEL_TURU_ETIKETLERI[t]}</option>`).join('')}</select></div>
       </div>
       <div class="form-satir-ikili">
-        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;"><input type="checkbox" data-tk-alan="pasif" style="width:auto;"> Pasif</label>
-        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;"><input type="checkbox" data-tk-alan="ilkGiris" style="width:auto;"> İlk Giriş</label>
+        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;"><input type="checkbox" data-tk-alan="pasif" style="width:auto;" ${k.pasif ? 'checked' : ''}> Pasif</label>
+        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;"><input type="checkbox" data-tk-alan="ilkGiris" style="width:auto;" ${k.ilkGiris ? 'checked' : ''}> İlk Giriş</label>
       </div>
       <div data-tk-alan="canliDurum" style="margin:10px 0;"></div>
       <div class="form-bolum-baslik">Belgeler</div>
       <div data-tk-alan="belgeler"></div>
       <label>Notlar</label>
-      <textarea data-tk-alan="notlar"></textarea>
+      <textarea data-tk-alan="notlar">${_ykKacir(k.notlar)}</textarea>
     </div>`;
 }
 
-function topluKisiAc() {
+// Toplu düzenlemede her sütunun kişi id'si (sütun sırasıyla); yeni kayıt
+// modunda null.
+let _topluKisiDuzenlenenIdler = null;
+
+function _topluKisiBasliklariniAyarla(duzenleme) {
+  document.getElementById('topluKisiBaslik').textContent = duzenleme ? 'Seçilen Personeli Toplu Düzenle' : 'Birden Fazla Personel Ekle';
+  document.getElementById('topluKisiAciklama').textContent = duzenleme
+    ? 'Seçtiğiniz personelin mevcut bilgileri ve evrakları aşağıda dolu gelir. Değiştirdikleriniz kaydedilir; dokunmadığınız alanlar olduğu gibi kalır.'
+    : 'İstediğiniz kadar formu doldurun; boş bıraktıklarınız kaydedilmez. Kaydedilen personeller listeden tek tek düzenlenebilir.';
+}
+
+// kisiler verilirse (en fazla TOPLU_KISI_FORM_SAYISI) toplu düzenleme modu.
+function topluKisiAc(kisiler) {
+  const duzenleme = Array.isArray(kisiler) && kisiler.length > 0;
   const kutu = document.getElementById('topluKisiSutunlar');
-  _topluKisiTaslaklari = Array.from({ length: TOPLU_KISI_FORM_SAYISI }, () => yukleniciBosBelgeler());
-  kutu.innerHTML = _topluKisiTaslaklari.map((_, i) => _topluKisiSutunHtml(i)).join('');
+  // Derin kopya: kaydedilmeden kapatılırsa orijinal kayıtlar bozulmasın.
+  _topluKisiTaslaklari = duzenleme
+    ? kisiler.map(k => (k.belgeler ? JSON.parse(JSON.stringify(k.belgeler)) : yukleniciBosBelgeler()))
+    : Array.from({ length: TOPLU_KISI_FORM_SAYISI }, () => yukleniciBosBelgeler());
+  _topluKisiDuzenlenenIdler = duzenleme ? kisiler.map(k => k.id) : null;
+  kutu.innerHTML = _topluKisiTaslaklari.map((_, i) => _topluKisiSutunHtml(i, duzenleme ? kisiler[i] : null)).join('');
   document.getElementById('topluKisiGenelHata').textContent = '';
+  _topluKisiBasliklariniAyarla(duzenleme);
 
   const firmalar = yukleniciFirmalariTumunuGetir();
   kutu.querySelectorAll('[data-tk]').forEach(sutun => {
     const i = Number(sutun.getAttribute('data-tk'));
     const q = ad => sutun.querySelector(`[data-tk-alan="${ad}"]`);
     const firmaSec = q('firmaId');
-    _yukleniciFirmaListesiCiz(firmaSec, firmalar, '');
+    _yukleniciFirmaListesiCiz(firmaSec, firmalar, duzenleme ? kisiler[i].firmaId : '');
     q('firmaAra').addEventListener('input', () => {
       const seciliId = firmaSec.value;
       const terim = _basligiNormallestir(q('firmaAra').value);
       _yukleniciFirmaListesiCiz(firmaSec, terim ? firmalar.filter(f => _basligiNormallestir(f.firmaAdi).includes(terim)) : firmalar, seciliId);
     });
     const belgeleriCiz = () => _topluKisiBelgeleriCiz(i);
+    if (duzenleme) {
+      // Her kişi kendi firmasında kalır; gerekirse sütunda değiştirilir.
+      firmaSec.addEventListener('change', () => _topluKisiFirmaUygula(i, firmaSec.value));
+      _topluKisiFirmaUygula(i, firmaSec.value);
+    }
     // Kullanıcı isteği: "tek firma seçimi olsun, diğerleri de aynı firmaya
     // kaydedilsin; 2-5'te firma seçimini gizle" — firma sadece 1. sütunda
     // seçilir, diğer sütunların (gizli) seçimine aynen yazılır.
-    if (i === 0) firmaSec.addEventListener('change', () => {
+    else if (i === 0) firmaSec.addEventListener('change', () => {
       _topluKisiFirmaUygula(0, firmaSec.value);
       const secili = firmalar.find(f => f.id === firmaSec.value);
       kutu.querySelectorAll('[data-tk]').forEach(diger => {
@@ -1378,6 +1408,7 @@ function topluKisiKapat() {
   document.getElementById('topluKisiKatman').classList.remove('acik');
   document.getElementById('topluKisiSutunlar').innerHTML = '';
   _topluKisiTaslaklari = [];
+  _topluKisiDuzenlenenIdler = null;
 }
 
 function _topluKisiSutunu(i) { return document.querySelector(`#topluKisiSutunlar [data-tk="${i}"]`); }
@@ -1424,6 +1455,8 @@ function topluKisiKaydet() {
   genelHata.textContent = '';
   document.querySelectorAll('#topluKisiSutunlar [data-tk-hata]').forEach(el => { el.textContent = ''; });
 
+  if (_topluKisiDuzenlenenIdler) { _topluKisiDuzenlemeyiKaydet(); return; }
+
   const dolu = _topluKisiTaslaklari.map((_, i) => ({ i, veriler: _topluKisiVerisiniOku(i) })).filter(x => _topluKisiSutunuDoluMu(x.veriler));
   if (!dolu.length) { genelHata.textContent = 'En az bir personelin ad soyadını girin (ad soyadı boş formlar dikkate alınmaz).'; return; }
 
@@ -1448,6 +1481,50 @@ function topluKisiKaydet() {
   topluKisiKapat();
   kisileriCiz(document.getElementById('kisiAramaKutusu').value);
   alert(`${kaydedilenler.length} personel kaydedildi: ${kaydedilenler.map(s => s.kisi.adSoyad).join(', ')}`);
+}
+
+// Toplu düzenlemede her sütun, açılışta kendisine bağlanan id'ye yazılır.
+// id hem _topluKisiDuzenlenenIdler'den hem sütunun data-tk-id'sinden okunup
+// karşılaştırılır; uyuşmazlık varsa (yedek değere düşmek yerine) kaydetmez.
+function _topluKisiDuzenlemeyiKaydet() {
+  const genelHata = document.getElementById('topluKisiGenelHata');
+  const satirlar = _topluKisiDuzenlenenIdler.map((id, i) => ({ i, id, sutunId: _topluKisiSutunu(i).getAttribute('data-tk-id'), veriler: _topluKisiVerisiniOku(i) }));
+  if (satirlar.some(s => !s.id || s.id !== s.sutunId)) {
+    genelHata.textContent = 'Form ile kayıtlar eşleşmedi; hiçbir değişiklik kaydedilmedi. Pencereyi kapatıp tekrar deneyin.';
+    return;
+  }
+
+  const sonuc = yukleniciKisileriTopluDuzenle(satirlar.map(s => ({ id: s.id, veriler: s.veriler })));
+  if (!sonuc.basarili) {
+    Object.keys(sonuc.hatalar).forEach(i => {
+      const sutun = _topluKisiSutunu(Number(i));
+      Object.keys(sonuc.hatalar[i]).forEach(alan => {
+        const el = sutun.querySelector(`[data-tk-hata="${alan}"]`);
+        if (el) el.textContent = sonuc.hatalar[i][alan];
+      });
+    });
+    genelHata.textContent = `${Object.keys(sonuc.hatalar).map(i => Number(i) + 1).join(', ')}. personelde sorun var. Düzeltip tekrar kaydedin (henüz hiçbiri kaydedilmedi).`;
+    return;
+  }
+
+  topluKisiKapat();
+  kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+  if (document.getElementById('bolum-kisiler').style.display !== 'none') kisileriCiz(document.getElementById('kisiAramaKutusu').value);
+  alert(`${sonuc.kisiler.length} personel güncellendi: ${sonuc.kisiler.map(k => k.adSoyad).join(', ')}`);
+}
+
+// Kullanıcı isteği: "seçtiğim birden fazla kişi için aynı anda evrak
+// kontrolünü düzenleyebilmek istiyorum ... toplam 5 kişi olabilir" —
+// Kayıtlar'da kutucukla seçilen personel (araçlar hariç) 5'li formda açılır.
+function kayitSecilenleriTopluDuzenle() {
+  const secili = Array.from(document.querySelectorAll('#kayitTabloGovde [data-kayit-sec]:checked'));
+  const idler = secili.filter(cb => cb.getAttribute('data-kind') === 'personel').map(cb => cb.getAttribute('data-id')).filter(Boolean);
+  if (!idler.length) { alert('Toplu düzenlemek için listeden en az bir personel seçin (kutucuğu işaretleyin).'); return; }
+  if (idler.length > TOPLU_KISI_FORM_SAYISI) { alert(`Aynı anda en fazla ${TOPLU_KISI_FORM_SAYISI} personel düzenlenebilir; ${idler.length} personel seçili.`); return; }
+  const kisiler = idler.map(id => yukleniciKisiIdIleGetirRepo(id));
+  if (kisiler.some(k => !k)) { alert('Seçilen kayıtlardan biri bulunamadı (silinmiş olabilir). Listeyi yenileyip tekrar seçin.'); return; }
+  if (secili.length > idler.length) alert('Araç / ekipman kayıtları toplu personel düzenlemesine dahil edilmez; yalnızca seçili personel açılıyor.');
+  topluKisiAc(kisiler);
 }
 
 // ==================== ARAÇ / EKİPMAN ====================
