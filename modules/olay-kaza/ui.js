@@ -215,6 +215,10 @@ function olayKazaSayfasiniBaslat() {
     _jsonDosyaOlarakIndir(veri, 'olay_kaza_kayitlari.json');
   });
   document.getElementById('formAyarlariBtn').addEventListener('click', () => formAyarlariModalAc('olay-kaza', 'Olay / Kaza Takibi'));
+  document.getElementById('bolumStdBtn').addEventListener('click', bolumStandartlastirmaAc);
+  document.getElementById('bolumStdKapatBtn').addEventListener('click', bolumStandartlastirmaKapat);
+  document.getElementById('bolumStdIptalBtn').addEventListener('click', bolumStandartlastirmaKapat);
+  document.getElementById('bolumStdUygulaBtn').addEventListener('click', bolumStandartlastirmaUygula);
   document.getElementById('jsonIceAktarBtn').addEventListener('click', () => document.getElementById('jsonIceAktarDosya').click());
   document.getElementById('jsonIceAktarDosya').addEventListener('change', async e => {
     const dosya = e.target.files[0];
@@ -443,8 +447,96 @@ function kisiPersonelSecildi() {
   document.getElementById('kisiGorev').value = varMi ? o.getAttribute('data-gorev') : '';
   document.getElementById('kisiIseGirisTarihi').value = varMi ? o.getAttribute('data-ise-giris') : '';
   if (varMi && !document.getElementById('temelBolum').value) {
-    document.getElementById('temelBolum').value = o.getAttribute('data-bolum');
+    _okBolumAlaniniHazirla(o.getAttribute('data-bolum'));
   }
+}
+
+// Kullanıcı isteği: bölüm Firma Yönetimi > Bölümler'deki müdürlüklerden
+// seçilsin ("seçebileyim oradan") — serbest yazım kurul raporunda aynı bölümü
+// ayrı satırlara bölüyordu. Liste boşsa (ör. yeni firma) alan serbest metin
+// kalır. Listede karşılığı olmayan eski bir değer "(listede yok)" diye korunur.
+function _okBolumAlaniniHazirla(deger) {
+  const liste = kazaStandartBolumleri();
+  const mevcut = String(deger || '').trim();
+  const eski = document.getElementById('temelBolum');
+  if (!liste.length) {
+    if (eski.tagName !== 'INPUT') {
+      const girdi = document.createElement('input');
+      girdi.type = 'text';
+      girdi.id = 'temelBolum';
+      eski.replaceWith(girdi);
+    }
+    document.getElementById('temelBolum').value = mevcut;
+    return;
+  }
+  let secim = eski;
+  if (eski.tagName !== 'SELECT') {
+    secim = document.createElement('select');
+    secim.id = 'temelBolum';
+    eski.replaceWith(secim);
+  }
+  const standart = mevcut ? kazaBolumStandartla(mevcut, liste) : '';
+  const listedeYok = standart && !liste.includes(standart);
+  secim.innerHTML = '<option value="">Seçin…</option>'
+    + liste.map(b => `<option value="${_okKacir(b)}">${_okKacir(b)}</option>`).join('')
+    + (listedeYok ? `<option value="${_okKacir(standart)}">${_okKacir(standart)} (listede yok)</option>` : '');
+  secim.value = standart;
+}
+
+// ==================== BÖLÜM STANDARTLAŞTIRMA ====================
+
+function bolumStandartlastirmaAc() {
+  const liste = kazaStandartBolumleri();
+  const govde = document.getElementById('bolumStdGovde');
+  const bos = document.getElementById('bolumStdBos');
+  const sayilar = new Map();
+  olayKayitlariTumunuGetir().forEach(k => {
+    const ad = String(k.bolum || '').trim();
+    if (ad && !liste.includes(ad)) sayilar.set(ad, (sayilar.get(ad) || 0) + 1);
+  });
+  const satirlar = Array.from(sayilar.entries()).sort((a, b) => a[0].localeCompare(b[0], 'tr'));
+
+  govde.innerHTML = '';
+  bos.classList.remove('gorunur');
+  document.getElementById('bolumStdUygulaBtn').disabled = !liste.length || !satirlar.length;
+  if (!liste.length) {
+    bos.classList.add('gorunur');
+    bos.textContent = 'Firma Yönetimi > Bölümler listesi boş. Önce müdürlükleri oraya ekleyin.';
+  } else if (!satirlar.length) {
+    bos.classList.add('gorunur');
+    bos.textContent = 'Tüm kayıtların bölümü zaten standart listede.';
+  }
+  satirlar.forEach(([ad, sayi]) => {
+    const oneri = kazaBolumOnerisi(ad, liste);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${_okKacir(ad)}</td>
+      <td>${sayi}</td>
+      <td><select data-std-eski="${_okKacir(ad)}" style="margin:0;">
+        <option value="">— Değiştirme —</option>
+        ${liste.map(b => `<option value="${_okKacir(b)}" ${b === oneri ? 'selected' : ''}>${_okKacir(b)}</option>`).join('')}
+      </select></td>`;
+    govde.appendChild(tr);
+  });
+  document.getElementById('bolumStdModalKatman').classList.add('acik');
+}
+
+function bolumStandartlastirmaKapat() {
+  document.getElementById('bolumStdModalKatman').classList.remove('acik');
+}
+
+async function bolumStandartlastirmaUygula() {
+  const eslesme = {};
+  document.querySelectorAll('#bolumStdGovde [data-std-eski]').forEach(sec => {
+    if (sec.value) eslesme[sec.getAttribute('data-std-eski')] = sec.value;
+  });
+  const adet = Object.keys(eslesme).length;
+  if (!adet) { alert('Değiştirilecek bir yazım seçmediniz.'); return; }
+  if (!(await onayModali(`${adet} farklı bölüm yazımı seçtiğiniz müdürlüklere çevrilecek. Devam edilsin mi?`, 'Uygula'))) return;
+  const guncellenen = olayBolumleriniStandartla(eslesme);
+  alert(`${guncellenen} kaydın bölümü güncellendi.`);
+  bolumStandartlastirmaKapat();
+  kayitlariCiz(document.getElementById('aramaKutusu').value);
 }
 
 function _secimDoldur(elId, secenekler, seciliDeger) {
@@ -629,7 +721,7 @@ function kayitModalAc(kayitHam) {
   _okKisiBolumleriniGuncelle();
   document.getElementById('temelKazaTarihi').value = kayit ? kayit.kazaTarihi : '';
   document.getElementById('temelKazaSaati').value = kayit ? kayit.kazaSaati : '';
-  document.getElementById('temelBolum').value = kayit ? kayit.bolum : '';
+  _okBolumAlaniniHazirla(kayit ? kayit.bolum : '');
   document.getElementById('temelKazaYeri').value = kayit ? kayit.kazaYeri : '';
   _olayFotograflari = kayit && Array.isArray(kayit.olayYeriFotograflari) ? kayit.olayYeriFotograflari.slice(0, 3) : [];
   _olayFotoOnizlemeCiz();
@@ -864,7 +956,54 @@ function calismaSaatiKaydet() {
   rcaOzetiCiz();
 }
 
+// Kullanıcı isteği: kurul raporundaki iş kazası grafikleri ve istatistikleri
+// Olay/Kaza'da da olsun — aynı hesap ve grafikler (core/kaza-istatistik.js).
+// Seçilen yıl bu yılsa Ocak–bu ay ve bugüne kadar, geçmiş bir yılsa tüm yıl.
+function kazaIstatistikleriniCiz() {
+  const secim = document.getElementById('kazaIstYil');
+  const kutu = document.getElementById('kazaIstatistikKutusu');
+  const buYil = new Date().getFullYear();
+  if (!secim.options.length) {
+    for (let y = buYil; y >= buYil - 4; y--) secim.insertAdjacentHTML('beforeend', `<option value="${y}">${y}</option>`);
+    secim.addEventListener('change', kazaIstatistikleriniCiz);
+  }
+  const yil = Number(secim.value) || buYil;
+  const sonAy = yil === buYil ? new Date().getMonth() + 1 : 12;
+  const kd = kazaIstatistikleriHesapla(yil, sonAy, yil === buYil ? bugunIso() : `${yil}-12-31`);
+  if (!kd) { kutu.innerHTML = ''; return; }
+
+  const yilEtiketleri = kd.besYil.map(y => String(y.yil));
+  const trend = _yillikTrendGrafikCiz(`Yıllara Göre İş Kazası Sayısı (Ocak–${kd.sonAyAdi})`, yilEtiketleri, kd.besYil.map(y => y.kazaSayisi), '#1d4ed8', '#c7d2e5');
+  const pasta = _ikiPastaGrafikCiz(`${kd.yil} Kaza / Yaralanma Türleri`, kd.yaralanmaTurleri, `${kd.yil} Yaralanan Uzuv`, kd.yaralananUzuvlar);
+  const resim = g => `<img src="${g.dataUrl}" alt="" style="width:100%; max-width:900px; height:auto; display:block; margin:0 auto 14px; border:1px solid var(--kenarlik); border-radius:8px;">`;
+  const tablo = (basliklar, satirlar) => `
+    <div class="tablo-scroll" style="margin-bottom:14px;"><table class="veri-tablosu">
+      <thead><tr>${basliklar.map(b => `<th>${b}</th>`).join('')}</tr></thead>
+      <tbody>${satirlar.map(s => `<tr>${s.map(h => `<td>${_okKacir(h)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
+  const kazasiz = kd.kazasizGun == null ? 'Kayıtlı iş kazası bulunmamaktadır.' : `Son iş kazası: ${gunAyYil(kd.sonKazaTarihi)} — kazasız geçen gün: ${kd.kazasizGun}`;
+
+  kutu.innerHTML = `
+    <p style="font-size:12px; color:var(--metin-soluk); margin:4px 0 10px;">Yıllar aynı aralık (Ocak–${kd.sonAyAdi}) için karşılaştırılmıştır. İş kazası = kayıp günlü kaza + kısıtlı iş / görev değişikliği + tıbbi tedavi. Bölümler Firma Yönetimi &gt; Bölümler listesine göre gruplanır.</p>
+    ${tablo(['Gösterge', ...yilEtiketleri], [
+      ['İş Kazası Sayısı', ...kd.besYil.map(y => String(y.kazaSayisi))],
+      ['Kayıp Günlü Kaza', ...kd.besYil.map(y => String(y.lti))],
+      ['Toplam İş Günü Kaybı', ...kd.besYil.map(y => String(y.toplamKayipGun))]
+    ])}
+    <p style="font-weight:700; margin:0 0 12px;">${_okKacir(kazasiz)}</p>
+    ${resim(trend)}
+    ${resim(pasta)}
+    <h4 style="margin:6px 0 8px;">Bölüm / Birim Dağılımı</h4>
+    ${kd.bolumler.length ? tablo(['Bölüm / Birim', 'Adet'], kd.bolumler.map(b => [b.etiket, String(b.sayi)])) : '<div class="bos-durum gorunur">Kayıt yok.</div>'}
+    <h4 style="margin:6px 0 8px;">${kd.yil} Yılı İş Kazaları ve Açıklamaları (Ocak–${kd.sonAyAdi})</h4>
+    ${kd.kazalarTumu.length
+      ? tablo(['Tarih', 'Tür', 'Yer / Birim', 'Kayıp Gün', 'Açıklama'], kd.kazalarTumu.map(k => [gunAyYil(k.tarih) || '-', k.tur, k.yer || '-', String(k.kayipGun), k.aciklama || 'Açıklama girilmemiş.']))
+      : '<div class="bos-durum gorunur">Bu dönemde iş kazası kaydı yok.</div>'}
+  `;
+}
+
 function rcaOzetiCiz() {
+  kazaIstatistikleriniCiz();
   calismaSaatiTablosunuCiz();
 
   const ozet = olayRCAOzetiHesapla();

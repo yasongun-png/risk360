@@ -304,7 +304,13 @@ function olayRCAOzetiHesapla() {
   return {
     toplam: kayitlar.length,
     oranlar,
-    bolumeGore: grupla(k => k.bolum),
+    // Yazım farkları (bkz. core/kaza-istatistik.js kazaBolumAnahtari) tek satırda toplanır.
+    bolumeGore: ((std, ilkYazim) => grupla(k => {
+      const ad = kazaBolumStandartla(k.bolum, std);
+      const anahtar = kazaBolumAnahtari(ad);
+      if (anahtar && !ilkYazim.has(anahtar)) ilkYazim.set(anahtar, ad);
+      return anahtar ? ilkYazim.get(anahtar) : ad;
+    }))(kazaStandartBolumleri(), new Map()),
     kisiyeGore: grupla(k => [k.sicilNo, k.adSoyad].filter(Boolean).join(' - ')),
     olayTipineGore: grupla(k => k.olayTipi),
     yaralanmaTurune: grupla(k => k.yaralanmaTuru),
@@ -318,6 +324,26 @@ function olayRCAOzetiHesapla() {
 
 function olayAyarlariniGetir() {
   return olayAyarlariGetirRepo();
+}
+
+// Kullanıcı isteği: "bölümleri standart hale getirebileceğim bir yöntem" —
+// kayıtlarda geçen her bölüm yazımı (birebir) için seçilen müdürlük (Firma
+// Yönetimi > Bölümler) yazılır. Eski yazım çoğunlukla tesis adıdır ("Sülfürik
+// asit"); kaybolmasın diye Olay Yeri boşsa oraya taşınır. Tek yazımla kaydedilir.
+// eslesme: { 'eski yazım': 'Müdürlük adı' }
+function olayBolumleriniStandartla(eslesme) {
+  const liste = olayKayitlariTumunuGetir();
+  let guncellenen = 0;
+  liste.forEach(k => {
+    const eski = String(k.bolum || '').trim();
+    const yeni = eslesme[eski];
+    if (!yeni || yeni === k.bolum) return;
+    if (!String(k.kazaYeri || '').trim()) k.kazaYeri = eski;
+    k.bolum = yeni;
+    guncellenen++;
+  });
+  if (guncellenen) _olayKaydet(liste);
+  return guncellenen;
 }
 
 function olayAyarlariniKaydet(veriler) {

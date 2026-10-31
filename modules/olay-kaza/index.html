@@ -57,6 +57,7 @@
           <button type="button" class="ikincil" id="jsonIceAktarBtn">JSON İçe Aktar</button>
           <input type="file" id="jsonIceAktarDosya" accept=".json" style="display:none;">
           <button type="button" class="ikincil" id="formAyarlariBtn">Form Ayarları</button>
+          <button type="button" class="ikincil" id="bolumStdBtn" title="Kayıtlardaki farklı bölüm yazımlarını Firma Yönetimi > Bölümler'deki müdürlüklere eşler">🏷️ Bölümleri Standartlaştır</button>
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
           <button type="button" class="birincil" id="yeniKayitBtn" style="width:auto;">+ Yeni Kayıt</button>
         </div>
@@ -73,6 +74,12 @@
     </div>
 
     <div id="bolum-rca" style="display:none;">
+      <div class="dashboard-ust">
+        <h3 style="margin:0;">İş Kazası İstatistikleri — 5 Yıllık Karşılaştırma</h3>
+        <select id="kazaIstYil" style="width:auto;"></select>
+      </div>
+      <div id="kazaIstatistikKutusu" style="margin-bottom:26px;"></div>
+
       <div class="dashboard-ust">
         <h3 style="margin:0;">Aylık Çalışma Saati (Bagfaş + Servis + Teknik toplamı)</h3>
         <select id="calismaSaatiYil" style="width:auto;"></select>
@@ -105,7 +112,7 @@
             <div class="alan-hatasi" id="olayTipiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
           <div>
-            <label for="temelBolum">Bölüm</label>
+            <label for="temelBolum">Bölüm <span style="color:var(--metin-soluk); font-weight:400;">(Firma Yönetimi &gt; Bölümler)</span></label>
             <input type="text" id="temelBolum">
             <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
@@ -345,6 +352,26 @@
     </div>
   </div>
 
+  <!-- Kullanıcı isteği: "bölümleri standart hale getirebileceğim bir yöntem" -->
+  <div class="modal-katman" id="bolumStdModalKatman">
+    <div class="modal-kutu" style="max-width:760px;">
+      <h3>Bölümleri Standartlaştır</h3>
+      <p style="font-size:13px; color:var(--metin-soluk); margin:-4px 36px 12px 0;">Kayıtlarda geçen ve standart listede olmayan bölüm yazımları aşağıda. Her biri için müdürlüğü seçip "Uygula"ya basın; o yazımı taşıyan tüm kayıtların Bölüm alanı güncellenir. Eski yazım (ör. tesis adı) kaybolmasın diye Olay Yeri boşsa oraya taşınır. Liste Firma Yönetimi &gt; Bölümler'den gelir.</p>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Kayıtlardaki Yazım</th><th>Kayıt</th><th>Müdürlük</th></tr></thead>
+          <tbody id="bolumStdGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="bolumStdBos"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="bolumStdIptalBtn">Kapat</button>
+        <button type="button" class="birincil" id="bolumStdUygulaBtn">Uygula</button>
+      </div>
+      <button type="button" class="tablo-buton" id="bolumStdKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
@@ -372,12 +399,13 @@
   <script src="../uygunsuzluk/validation.js"></script>
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js"></script>
+  <script src="../../core/kaza-istatistik.js?v=1"></script>
   <script src="model.js?v=4"></script>
   <script src="validation.js"></script>
   <script src="repository.js"></script>
-  <script src="service.js?v=2"></script>
+  <script src="service.js?v=3"></script>
   <script src="cikti.js?v=4"></script>
-  <script src="ui.js?v=6"></script>
+  <script src="ui.js?v=7"></script>
   <script src="excel-aktar.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('olay-kaza');
