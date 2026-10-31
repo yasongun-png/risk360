@@ -175,6 +175,10 @@ function olayKaydiOlustur(veriler) {
     kazaTarihi: veriler.kazaTarihi || '',
     kazaSaati: veriler.kazaSaati || '',
     bolum: (veriler.bolum || '').trim(),
+    // Kullanıcı isteği: "bir de kazanın olduğu bölüm olsun, seçmeli yine" —
+    // çalışanın bölümünden ayrı; ikisi de standart bölüm listesinden seçilir,
+    // Olay Yeri (kazaYeri) ayrıntılı serbest metin olarak kalır.
+    kazaBolumu: (veriler.kazaBolumu || '').trim(),
     kazaYeri: (veriler.kazaYeri || '').trim(),
     // Olay yeri fotoğrafları — en fazla 3 (bkz. kurul modülündeki kararFotoEk
     // ile aynı desen); kurul toplantısına "iş kazası" olarak çekilen olaylarda

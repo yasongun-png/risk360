@@ -12,10 +12,11 @@
 const OLAY_IMPORT_KOLONLARI = [
   { anahtar: 'kayitNo', baslik: 'Kayıt No', aciklama: 'Boş bırakılırsa otomatik verilir.', ornek: '' },
   { anahtar: 'olayTipi', baslik: 'Olay Tipi', zorunlu: true, aciklama: '"Listeler" sayfasındaki olay tiplerinden biri.', ornek: 'İlk Yardım' },
-  { anahtar: 'bolum', baslik: 'Bölüm', zorunlu: true, ornek: 'Üretim' },
+  { anahtar: 'bolum', baslik: 'Çalıştığı Bölüm', esanlamlar: ['Bölüm'], zorunlu: true, ornek: 'Üretim' },
   { anahtar: 'kazaTarihi', baslik: 'Tarih', zorunlu: true, tur: 'tarih', aciklama: 'GG.AA.YYYY', ornek: '15.10.2026' },
   { anahtar: 'kazaSaati', baslik: 'Saat', tur: 'saat', aciklama: 'SS:DD', ornek: '14:30' },
-  { anahtar: 'kazaYeri', baslik: 'Olay Yeri', esanlamlar: ['Kaza Yeri'], ornek: 'Paketleme hattı' },
+  { anahtar: 'kazaBolumu', baslik: 'Kazanın Olduğu Bölüm', ornek: 'Paketleme' },
+  { anahtar: 'kazaYeri', baslik: 'Olay Yeri', esanlamlar: ['Kaza Yeri'], ornek: 'Paketleme hattı 2, bobin makinesi' },
 
   { anahtar: 'adSoyad', baslik: 'Ad Soyad', esanlamlar: ['Personel'], aciklama: 'İş kazası tiplerinde zorunlu.', ornek: 'Ahmet Yılmaz' },
   { anahtar: 'sicilNo', baslik: 'Sicil No', ornek: '1234' },

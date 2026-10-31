@@ -65,7 +65,7 @@
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead>
-            <tr><th>Kayıt No</th><th>Olay Tipi</th><th>Tarih</th><th>Bölüm</th><th>Kişi</th><th>Olay Anlatımı</th><th>Yaralanma Türü</th><th>Fine-Kinney RP</th><th>Fotoğraf</th><th>Durum</th><th>İşlemler</th></tr>
+            <tr><th>Kayıt No</th><th>Olay Tipi</th><th>Tarih</th><th>Çalıştığı Bölüm</th><th>Kişi</th><th>Olay Anlatımı</th><th>Yaralanma Türü</th><th>Fine-Kinney RP</th><th>Fotoğraf</th><th>Durum</th><th>İşlemler</th></tr>
           </thead>
           <tbody id="tabloGovde"></tbody>
         </table>
@@ -112,7 +112,7 @@
             <div class="alan-hatasi" id="olayTipiHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
           <div>
-            <label for="temelBolum">Bölüm</label>
+            <label for="temelBolum">Çalıştığı Bölüm</label>
             <input type="text" id="temelBolum">
             <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
@@ -128,8 +128,16 @@
             <input type="time" id="temelKazaSaati">
           </div>
         </div>
-        <label for="temelKazaYeri">Olay Yeri</label>
-        <input type="text" id="temelKazaYeri">
+        <div class="form-satir-ikili">
+          <div>
+            <label for="temelKazaBolumu">Kazanın Olduğu Bölüm</label>
+            <input type="text" id="temelKazaBolumu">
+          </div>
+          <div>
+            <label for="temelKazaYeri">Olay Yeri <span style="color:var(--metin-soluk); font-weight:400;">(ayrıntılı)</span></label>
+            <input type="text" id="temelKazaYeri" placeholder="ör. Buhar ventili platformu merdiveni">
+          </div>
+        </div>
         </div>
 
         <div class="form-bolum-baslik katlanir" data-bolum-toggle>Olay Yeri Fotoğrafları</div>
@@ -406,14 +414,14 @@
   <script src="../uygunsuzluk/validation.js"></script>
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js"></script>
-  <script src="../../core/kaza-istatistik.js?v=2"></script>
-  <script src="model.js?v=4"></script>
-  <script src="validation.js"></script>
+  <script src="../../core/kaza-istatistik.js?v=3"></script>
+  <script src="model.js?v=5"></script>
+  <script src="validation.js?v=2"></script>
   <script src="repository.js"></script>
-  <script src="service.js?v=4"></script>
-  <script src="cikti.js?v=4"></script>
-  <script src="ui.js?v=8"></script>
-  <script src="excel-aktar.js?v=2"></script>
+  <script src="service.js?v=5"></script>
+  <script src="cikti.js?v=5"></script>
+  <script src="ui.js?v=9"></script>
+  <script src="excel-aktar.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('olay-kaza');
 

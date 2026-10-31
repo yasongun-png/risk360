@@ -225,6 +225,7 @@ async function kazaRaporuWordOlustur(id) {
       rows: [
         _okWordTekliSatir('İşyeri', firma ? firma.ad : ''),
         _okWordIkiliSatir('Kaza Yeri', k.kazaYeri, 'Kaza Tarihi / Saati', [gunAyYil(k.kazaTarihi), k.kazaSaati].filter(Boolean).join(' – ')),
+        _okWordIkiliSatir('Çalıştığı Bölüm', k.bolum, 'Kazanın Olduğu Bölüm', k.kazaBolumu),
         _okWordIkiliSatir('Mağdur', magdur, 'Görevi / Kıdemi', gorevKidem),
         _okWordIkiliSatir('Tehlikeli Madde', k.tehlikeliMadde, 'Tanık Sayısı', k.tanikSayisi ?? ''),
         ...((OLAY_KISI_ZORUNLU_TIPLERI.includes(k.olayTipi) || k.yaralanmaTuru || k.yaralananUzuv) ? [_okWordIkiliSatir('Yaralanma Türü', k.yaralanmaTuru, 'Yaralanan Bölge', k.yaralananUzuv)] : []),

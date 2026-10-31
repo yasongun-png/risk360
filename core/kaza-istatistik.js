@@ -155,9 +155,10 @@ function kazaIstatistikleriHesapla(yil, sonAy, sinirTarih) {
   };
 
   // Bölümler yazım farkı gözetmeden (kazaBolumAnahtari) gruplanır; etiket standart
-  // listedeki ad, listede yoksa en sık kullanılan yazım.
+  // listedeki ad, listede yoksa en sık kullanılan yazım. Kazanın olduğu bölüm
+  // girilmişse o, yoksa (eski kayıtlar) çalıştığı bölüm sayılır.
   const standartBolumler = kazaStandartBolumleri();
-  const bolumAdi = k => kazaBolumStandartla(k.bolum || k.kazaYeri, standartBolumler);
+  const bolumAdi = k => kazaBolumStandartla(k.kazaBolumu || k.bolum || k.kazaYeri, standartBolumler);
   const bolumDagilimi = (kayitlar, enFazla) => {
     const gruplar = new Map();
     kayitlar.forEach(k => {
@@ -185,7 +186,7 @@ function kazaIstatistikleriHesapla(yil, sonAy, sinirTarih) {
     .map(k => ({
       tarih: k.kazaTarihi || '',
       tur: kazaTipiGorunen(k.olayTipi),
-      yer: [k.bolum ? kazaBolumStandartla(k.bolum, standartBolumler) : '', k.kazaYeri].filter((v, i, a) => v && a.indexOf(v) === i).join(' / '),
+      yer: [(k.kazaBolumu || k.bolum) ? kazaBolumStandartla(k.kazaBolumu || k.bolum, standartBolumler) : '', k.kazaYeri].filter((v, i, a) => v && a.indexOf(v) === i).join(' / '),
       kayipGun: Number(k.kayipGun) || 0,
       aciklama: String((typeof olayAciklamaOnEkiTemizle === 'function' ? olayAciklamaOnEkiTemizle(k.aciklama) : k.aciklama) || k.olayOzeti || '').trim()
     }));

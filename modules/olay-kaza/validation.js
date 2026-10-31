@@ -5,7 +5,7 @@ function olayKaydiDogrula(veriler) {
 
   if (!veriler.olayTipi) hatalar.olayTipi = 'Olay tipi zorunludur.';
   if (!veriler.kazaTarihi) hatalar.kazaTarihi = 'Tarih zorunludur.';
-  if (!veriler.bolum || !veriler.bolum.trim()) hatalar.bolum = 'Bölüm zorunludur.';
+  if (!veriler.bolum || !veriler.bolum.trim()) hatalar.bolum = 'Çalıştığı bölüm zorunludur.';
   // Yaralanma içermeyen olay tiplerinde (Ramak Kala, Maddi Hasar, Çevresel
   // Olay, Yangın vb. acil durumlar) mağdur/ilgili personel olmayabilir —
   // kullanıcı isteği: "illaki kişi girmeyi zorunlu tutmasın".

@@ -305,12 +305,8 @@ function olayRCAOzetiHesapla() {
     toplam: kayitlar.length,
     oranlar,
     // Yazım farkları (bkz. core/kaza-istatistik.js kazaBolumAnahtari) tek satırda toplanır.
-    bolumeGore: ((std, ilkYazim) => grupla(k => {
-      const ad = kazaBolumStandartla(k.bolum, std);
-      const anahtar = kazaBolumAnahtari(ad);
-      if (anahtar && !ilkYazim.has(anahtar)) ilkYazim.set(anahtar, ad);
-      return anahtar ? ilkYazim.get(anahtar) : ad;
-    }))(kazaStandartBolumleri(), new Map()),
+    bolumeGore: _okBolumGrupla(grupla, k => k.bolum),
+    kazaBolumuneGore: _okBolumGrupla(grupla, k => k.kazaBolumu),
     kisiyeGore: grupla(k => [k.sicilNo, k.adSoyad].filter(Boolean).join(' - ')),
     olayTipineGore: grupla(k => k.olayTipi),
     yaralanmaTurune: grupla(k => k.yaralanmaTuru),
@@ -326,19 +322,32 @@ function olayAyarlariniGetir() {
   return olayAyarlariGetirRepo();
 }
 
+// Bölüm dağılımı: yazım farkları tek satırda, etiket standart listedeki ad.
+function _okBolumGrupla(grupla, alanFn) {
+  const std = kazaStandartBolumleri();
+  const ilkYazim = new Map();
+  return grupla(k => {
+    const ad = kazaBolumStandartla(alanFn(k), std);
+    const anahtar = kazaBolumAnahtari(ad);
+    if (anahtar && !ilkYazim.has(anahtar)) ilkYazim.set(anahtar, ad);
+    return anahtar ? ilkYazim.get(anahtar) : ad;
+  });
+}
+
 // Kullanıcı isteği: "bölümleri standart hale getirebileceğim bir yöntem" —
 // kayıtlarda geçen her bölüm yazımı (birebir) için seçilen standart bölüm
-// yazılır. Tek yazımla kaydedilir.
+// yazılır; Çalıştığı Bölüm (bolum) ve Kazanın Olduğu Bölüm (kazaBolumu)
+// birlikte. Tek yazımla kaydedilir. Dönen sayı güncellenen alan adedidir.
 // eslesme: { 'eski yazım': 'Standart bölüm adı' }
 function olayBolumleriniStandartla(eslesme) {
   const liste = olayKayitlariTumunuGetir();
   let guncellenen = 0;
-  liste.forEach(k => {
-    const yeni = eslesme[String(k.bolum || '').trim()];
-    if (!yeni || yeni === k.bolum) return;
-    k.bolum = yeni;
+  liste.forEach(k => ['bolum', 'kazaBolumu'].forEach(alan => {
+    const yeni = eslesme[String(k[alan] || '').trim()];
+    if (!yeni || yeni === k[alan]) return;
+    k[alan] = yeni;
     guncellenen++;
-  });
+  }));
   if (guncellenen) _olayKaydet(liste);
   return guncellenen;
 }

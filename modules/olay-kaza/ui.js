@@ -274,7 +274,7 @@ const OLAY_EXPORT_KOLONLARI = [
   { anahtar: 'kayitNo', baslik: 'Kayıt No' },
   { anahtar: 'olayTipi', baslik: 'Olay Tipi' },
   { anahtar: 'kazaTarihi', baslik: 'Tarih' },
-  { anahtar: 'bolum', baslik: 'Bölüm' },
+  { anahtar: 'bolum', baslik: 'Çalıştığı Bölüm' },
   { anahtar: 'adSoyad', baslik: 'Ad Soyad' },
   { anahtar: 'yaralanmaTuru', baslik: 'Yaralanma Türü' },
   { anahtar: 'fkRP', baslik: 'Fine-Kinney RP' },
@@ -456,24 +456,26 @@ function kisiPersonelSecildi() {
 // serbest yazım kurul raporunda aynı bölümü ayrı satırlara bölüyordu. Liste
 // "Bölümleri Standartlaştır" penceresinde tanımlanır; boşsa alan serbest metin
 // kalır. Listede karşılığı olmayan eski bir değer "(listede yok)" diye korunur.
-function _okBolumAlaniniHazirla(deger) {
+// elId: 'temelBolum' (Çalıştığı Bölüm) veya 'temelKazaBolumu' (Kazanın Olduğu Bölüm).
+function _okBolumAlaniniHazirla(deger, elId) {
+  const id = elId || 'temelBolum';
   const liste = kazaStandartBolumleri();
   const mevcut = String(deger || '').trim();
-  const eski = document.getElementById('temelBolum');
+  const eski = document.getElementById(id);
   if (!liste.length) {
     if (eski.tagName !== 'INPUT') {
       const girdi = document.createElement('input');
       girdi.type = 'text';
-      girdi.id = 'temelBolum';
+      girdi.id = id;
       eski.replaceWith(girdi);
     }
-    document.getElementById('temelBolum').value = mevcut;
+    document.getElementById(id).value = mevcut;
     return;
   }
   let secim = eski;
   if (eski.tagName !== 'SELECT') {
     secim = document.createElement('select');
-    secim.id = 'temelBolum';
+    secim.id = id;
     eski.replaceWith(secim);
   }
   const standart = mevcut ? kazaBolumStandartla(mevcut, liste) : '';
@@ -488,7 +490,7 @@ function _okBolumAlaniniHazirla(deger) {
 
 function bolumStandartlastirmaAc() {
   const liste = kazaStandartBolumleri();
-  const yazimlar = olayKayitlariTumunuGetir().map(k => k.bolum);
+  const yazimlar = olayKayitlariTumunuGetir().flatMap(k => [k.bolum, k.kazaBolumu]);
   // Liste henüz tanımlanmamışsa kayıtlardaki yazımlardan birleştirilmiş bir
   // öneri doldurulur — "Listeyi Kaydet"e basılana kadar kaydedilmez.
   const alan = document.getElementById('bolumStdListe');
@@ -510,10 +512,11 @@ function _bolumStdEslesmeleriCiz() {
   const govde = document.getElementById('bolumStdGovde');
   const bos = document.getElementById('bolumStdBos');
   const sayilar = new Map();
-  olayKayitlariTumunuGetir().forEach(k => {
-    const ad = String(k.bolum || '').trim();
+  // Çalıştığı Bölüm ve Kazanın Olduğu Bölüm birlikte taranır (sayı = alan adedi).
+  olayKayitlariTumunuGetir().forEach(k => [k.bolum, k.kazaBolumu].forEach(deger => {
+    const ad = String(deger || '').trim();
     if (ad && !liste.includes(ad)) sayilar.set(ad, (sayilar.get(ad) || 0) + 1);
-  });
+  }));
   const satirlar = Array.from(sayilar.entries()).sort((a, b) => a[0].localeCompare(b[0], 'tr'));
 
   govde.innerHTML = '';
@@ -553,7 +556,7 @@ async function bolumStandartlastirmaUygula() {
   if (!adet) { alert('Değiştirilecek bir yazım seçmediniz.'); return; }
   if (!(await onayModali(`${adet} farklı bölüm yazımı seçtiğiniz standart bölümlere çevrilecek. Devam edilsin mi?`, 'Uygula'))) return;
   const guncellenen = olayBolumleriniStandartla(eslesme);
-  alert(`${guncellenen} kaydın bölümü güncellendi.`);
+  alert(`${guncellenen} bölüm alanı güncellendi.`);
   bolumStandartlastirmaKapat();
   kayitlariCiz(document.getElementById('aramaKutusu').value);
 }
@@ -741,6 +744,7 @@ function kayitModalAc(kayitHam) {
   document.getElementById('temelKazaTarihi').value = kayit ? kayit.kazaTarihi : '';
   document.getElementById('temelKazaSaati').value = kayit ? kayit.kazaSaati : '';
   _okBolumAlaniniHazirla(kayit ? kayit.bolum : '');
+  _okBolumAlaniniHazirla(kayit ? kayit.kazaBolumu : '', 'temelKazaBolumu');
   document.getElementById('temelKazaYeri').value = kayit ? kayit.kazaYeri : '';
   _olayFotograflari = kayit && Array.isArray(kayit.olayYeriFotograflari) ? kayit.olayYeriFotograflari.slice(0, 3) : [];
   _olayFotoOnizlemeCiz();
@@ -848,6 +852,7 @@ async function formGonderildi(e) {
     kazaTarihi: document.getElementById('temelKazaTarihi').value,
     kazaSaati: document.getElementById('temelKazaSaati').value,
     bolum: document.getElementById('temelBolum').value,
+    kazaBolumu: document.getElementById('temelKazaBolumu').value,
     kazaYeri: document.getElementById('temelKazaYeri').value,
     olayYeriFotograflari: _olayFotograflari,
 
@@ -1058,7 +1063,8 @@ function rcaOzetiCiz() {
     </div>
 
     <div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px,1fr));">
-      <div>${dagilimHtml('Bölüme Göre', ozet.bolumeGore)}</div>
+      <div>${dagilimHtml('Çalıştığı Bölüme Göre', ozet.bolumeGore)}</div>
+      <div>${dagilimHtml('Kazanın Olduğu Bölüme Göre', ozet.kazaBolumuneGore)}</div>
       <div>${dagilimHtml('Kişiye Göre', ozet.kisiyeGore)}</div>
       <div>${dagilimHtml('Olay Tipine Göre', ozet.olayTipineGore)}</div>
       <div>${dagilimHtml('Yaralanma Türüne Göre', ozet.yaralanmaTurune)}</div>
@@ -1069,7 +1075,7 @@ function rcaOzetiCiz() {
     <div class="card-title" style="margin:20px 0 8px;"><h3 style="margin:0; font-size:14px;">En Yüksek Fine-Kinney Riskli Olaylar</h3></div>
     <div class="tablo-scroll">
       <table class="veri-tablosu">
-        <thead><tr><th>Kayıt No</th><th>Bölüm</th><th>Olay Tipi</th><th>Fine-Kinney RP</th></tr></thead>
+        <thead><tr><th>Kayıt No</th><th>Çalıştığı Bölüm</th><th>Olay Tipi</th><th>Fine-Kinney RP</th></tr></thead>
         <tbody>
           ${ozet.yuksekRiskliler.map(k => `<tr><td>${k.kayitNo}</td><td>${k.bolum}</td><td>${k.olayTipi}</td><td>${k.fkRP}</td></tr>`).join('') || '<tr><td colspan="4">Fine-Kinney puanlanmış kayıt yok.</td></tr>'}
         </tbody>
