@@ -46,7 +46,8 @@ function yukleniciTumKayitlariExcelAktar() {
         saglikExp ? formatTarihGoster(saglikExp) : 'YOK',
         isgExp ? formatTarihGoster(isgExp) : 'YOK',
         feExp ? formatTarihGoster(feExp) : 'YOK',
-        `${girisSonuc.sonTarih ? formatTarihGoster(girisSonuc.sonTarih) : '-'} | ${girisSonuc.durumMetni}`
+        // Kullanıcı isteği: PDF'teki gibi Excel'de de geçici onaylı kişi yalnızca "Uygun".
+        `${girisSonuc.sonTarih ? formatTarihGoster(girisSonuc.sonTarih) : '-'} | ${girisSonuc.bypass ? 'Uygun' : girisSonuc.durumMetni}`
       ]);
     });
 
