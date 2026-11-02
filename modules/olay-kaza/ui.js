@@ -55,6 +55,26 @@ function _olayFotoOnizlemeCiz() {
   fotoReferanslariCoz(kutu);
 }
 
+// İş Planım'a hatırlatma (core/plana-ekle.js). Bitiş: açık aksiyonların en yakın
+// termini; açıklamada açık aksiyonlar listelenir.
+function _okPlanaEkleButonu(k) {
+  if (typeof planaEkleButonHtml !== 'function') return '';
+  const acikAksiyonlar = (k.aksiyonlar || []).filter(a => a.durum !== 'Tamamlandı' && a.durum !== 'İptal');
+  const terminler = acikAksiyonlar.map(a => a.termin).filter(Boolean).sort();
+  const ozet = String((typeof olayAciklamaOnEkiTemizle === 'function' ? olayAciklamaOnEkiTemizle(k.aciklama) : k.aciklama) || k.olayOzeti || '').replace(/\s+/g, ' ').trim();
+  return planaEkleButonHtml({
+    anahtar: 'olay-kaza:' + k.id,
+    baslik: [k.kayitNo, [typeof kazaTipiGorunen === 'function' ? kazaTipiGorunen(k.olayTipi) : k.olayTipi, k.bolum].filter(Boolean).join(' / '), ozet.length > 120 ? ozet.slice(0, 117) + '…' : ozet].filter(Boolean).join(' — '),
+    aciklama: [
+      k.kazaTarihi ? 'Olay tarihi: ' + gunAyYil(k.kazaTarihi) : '',
+      k.adSoyad ? 'Kazazede: ' + k.adSoyad : '',
+      ...acikAksiyonlar.map(a => '• ' + [a.baslik, a.duzelticiFaaliyet, a.sorumlu ? 'Sorumlu: ' + a.sorumlu : '', a.termin ? 'Termin: ' + gunAyYil(a.termin) : ''].filter(Boolean).join(' — '))
+    ].filter(Boolean).join('\n'),
+    bitis: terminler[0] || '',
+    kaynak: 'Olay / Kaza' + (k.kayitNo ? ' · ' + k.kayitNo : '')
+  });
+}
+
 function okRozetSinifAdi(durum) {
   if (durum === 'Kapalı') return 'tamamlandi';
   return 'planlandi';
@@ -372,6 +392,7 @@ function kayitlariCiz(aramaMetni) {
         <button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>
         <button class="tablo-buton" data-rapor-word="${k.id}">Rapor Word</button>
         ${riskeAktarButonHtml('olay-kaza', k.id)}
+        ${_okPlanaEkleButonu(k)}
         <button class="tablo-buton sil" data-sil="${k.id}">Sil</button>
       </td>
     `;
