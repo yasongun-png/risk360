@@ -8,15 +8,22 @@ function _plKacir(v) {
 function planlayiciSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.addEventListener('click', () => _plSekmeDegistir(btn.getAttribute('data-sekme'))));
 
-  // Hızlı ekle: yazıp Enter (tarih seçiliyse o güne)
+  // Hızlı ekle: yazıp Enter. Kullanıcı isteği: başlangıç ve bitiş tarihi yanında girilsin.
+  // Tarihler eklemeden sonra korunur (aynı tarihlerle art arda iş girilebilsin).
   document.getElementById('hizliEkleForm').addEventListener('submit', e => {
     e.preventDefault();
     const baslik = document.getElementById('hizliBaslik').value;
-    const sonuc = planGoreviKaydet({ baslik, tarih: document.getElementById('hizliTarih').value });
-    if (!sonuc.basarili) { document.getElementById('hizliBaslik').focus(); return; }
+    const sonuc = planGoreviKaydet({
+      baslik,
+      baslangicTarihi: document.getElementById('hizliBaslangic').value,
+      tarih: document.getElementById('hizliTarih').value
+    });
+    document.getElementById('hizliHata').textContent = sonuc.basarili ? '' : (sonuc.hatalar.tarih || '');
+    if (!sonuc.basarili) { document.getElementById(sonuc.hatalar.tarih ? 'hizliTarih' : 'hizliBaslik').focus(); return; }
     document.getElementById('hizliBaslik').value = '';
     gorevleriCiz();
   });
+  document.getElementById('hizliBaslangic').value = bugunIso();
   document.getElementById('hizliTarih').value = bugunIso();
   document.getElementById('yeniGorevBtn').addEventListener('click', () => gorevModalAc(null));
   document.getElementById('gorevForm').addEventListener('submit', gorevFormGonderildi);
