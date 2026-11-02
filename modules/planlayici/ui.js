@@ -214,8 +214,12 @@ function _plPdfRaporHtml() {
   const liste = _plFiltreliGorevler();
   const { dolu, tamamlanan } = _plEkranGruplari(liste);
   const buAy = bugun.slice(0, 7);
-  const buAyBiten = tamamlanan.filter(g => String(g.tamamlanmaTarihi).startsWith(buAy));
-  const o = planOzetiHesapla();
+  // Kullanıcı isteği: her gün yapılan işlerin tamamlanma durumu PDF'te olmasın —
+  // her gün tamamlandıkça listeyi dolduruyordu; tamamlananlarda ve sayıda yer almaz.
+  const buAyBiten = tamamlanan.filter(g => String(g.tamamlanmaTarihi).startsWith(buAy) && g.tekrar !== 'Her gün');
+  const o = Object.assign({}, planOzetiHesapla(), {
+    buAyTamamlanan: planGorevleriGetir().filter(g => g.durum === 'Tamamlandı' && String(g.tamamlanmaTarihi).startsWith(buAy) && g.tekrar !== 'Her gün').length
+  });
   const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
   const kullanici = oturumdakiKullanici();
   const kategori = document.getElementById('kategoriFiltre').value;
