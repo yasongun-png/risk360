@@ -361,6 +361,16 @@ function formGonderildi(e) {
     return;
   }
 
+  // İş Planım'a otomatik: yeni toplantı eklenir, düzenlemede tarih güncellenir (core/plana-ekle.js).
+  if (typeof toplantiyiPlanaEkle === 'function') {
+    const t = sonuc.toplanti || toplantiIdIleGetirRepo(_duzenlenenToplantiId) || veriler;
+    toplantiyiPlanaEkle({
+      anahtar: 'kurul-toplanti:' + (t.id || _duzenlenenToplantiId),
+      ad: [t.baslik, t.toplantiNo].filter(Boolean).join(' · '), tarih: t.tarih, saat: t.saat, yer: t.yer,
+      kaynak: 'Toplantı Yönetimi' + (t.toplantiNo ? ' · ' + t.toplantiNo : ''),
+      url: location.pathname.replace(/[^/]*$/, 'toplanti.html') + '?id=' + (t.id || _duzenlenenToplantiId)
+    }, !_duzenlenenToplantiId);
+  }
   modalKapat();
   toplantilariCiz(document.getElementById('aramaKutusu').value);
 }

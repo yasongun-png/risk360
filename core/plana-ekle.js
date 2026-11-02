@@ -153,6 +153,38 @@ function planaOtomatikEkle(veri) {
   });
 }
 
+// Kaynak değiştiğinde (ör. toplantı tarihi) kullanıcının açık işini günceller.
+function planIsiniGuncelle(anahtar, alanlar) {
+  if (!tenantAnahtar('planlayici') || !anahtar) return 0;
+  const id = _peKullaniciId();
+  const veri = _pePlanVerisi();
+  let sayi = 0;
+  veri.gorevler.forEach(g => {
+    if (g.kaynakAnahtar !== anahtar || g.olusturanId !== id || g.durum === 'Tamamlandı') return;
+    Object.keys(alanlar).forEach(k => { if (alanlar[k] != null && g[k] !== alanlar[k]) { g[k] = alanlar[k]; sayi++; } });
+    if (g.baslangicTarihi && g.tarih && g.tarih < g.baslangicTarihi) g.baslangicTarihi = g.tarih;
+  });
+  if (sayi) yaz(tenantAnahtar('planlayici'), veri);
+  return sayi;
+}
+
+// Kullanıcı isteği: yeni toplantı oluşturulunca İş Planım'a otomatik eklensin —
+// başlangıç bugün, bitiş toplantı tarihi. Geçmiş tarihli (sonradan girilen)
+// toplantılar eklenmez. Tarih değişirse açık iş güncellenir.
+// veri: { anahtar, ad (toplantı adı/no), tarih, saat, yer, kaynak, url }
+function toplantiyiPlanaEkle(veri, yeniMi) {
+  const tarih = _peIsoTarih(veri.tarih);
+  if (!tarih) return;
+  const baslik = 'Toplantı: ' + (veri.ad || 'Toplantı') + ' — ' + gunAyYil(tarih) + (veri.saat ? ' ' + veri.saat : '');
+  if (!yeniMi) { planIsiniGuncelle(veri.anahtar, { tarih, baslik, saat: veri.saat || '' }); return; }
+  if (tarih < _peBugun()) return;
+  const is = planaOtomatikEkle({
+    anahtar: veri.anahtar, baslik, baslangic: _peBugun(), bitis: tarih, kaynak: veri.kaynak, url: veri.url,
+    aciklama: [veri.yer ? 'Yer: ' + veri.yer : '', 'Toplantı hazırlığı: gündem, davet, sunum, önceki kararların durumu.'].filter(Boolean).join('\n')
+  });
+  if (is && veri.saat) planIsiniGuncelle(veri.anahtar, { saat: veri.saat });
+}
+
 // Kaynak kapandığında (ör. geçici onay kaldırıldı) açık takip işini tamamlar.
 function planIsiniTamamla(anahtar) {
   if (!tenantAnahtar('planlayici') || !anahtar) return 0;
