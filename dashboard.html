@@ -75,6 +75,7 @@
       <span style="flex:1;">
         <strong style="display:block; font-size:15px; color:var(--celik-mavi-koyu);">İş Planım ve Notlarım</strong>
         <span style="font-size:12px; color:var(--metin-soluk);">Yapacağınız işleri tarihle planlayın, tamamladıkça işaretleyin; aklınıza gelenleri not alın. Yalnızca size görünür.</span>
+        <span id="planHatirlatma" style="display:block;"></span>
       </span>
       <span style="font-weight:700; color:var(--celik-mavi); white-space:nowrap;">Aç →</span>
     </a>
@@ -389,8 +390,49 @@
           `;
           grid.appendChild(kart);
         });
+        _planHatirlatmasiniGoster();
       }
       });
+    }
+
+    // Kullanıcı isteği: "hatırlatma olarak tarih geldiğinde ana ekranda
+    // görünsün" — İş Planım'daki tarihi bugün olan veya geçmiş açık işler
+    // şeritte listelenir. Panel firma verisini (buyuk_veri) dinlemediği için
+    // yalnızca planlayıcı belgesi buluttan TEK SEFERLİK okunur (yazım yok).
+    async function _planHatirlatmasiniGoster() {
+      const kutu = document.getElementById('planHatirlatma');
+      const anahtar = tenantAnahtar('planlayici');
+      if (!kutu || !anahtar) return;
+      let veri = null;
+      try {
+        if (typeof _bulutAktif !== 'undefined' && _bulutAktif && _bulutDb) {
+          const belge = await _bulutDb.collection('buyuk_veri').doc(anahtar).get();
+          veri = belge.exists ? belge.data().deger : null;
+        } else {
+          veri = oku(anahtar, null);
+        }
+      } catch (e) { console.error('İş planı hatırlatması okunamadı:', e); return; }
+      const t = new Date();
+      const bugun = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+      const isler = ((veri && veri.gorevler) || [])
+        .filter(g => g.olusturanId === kullanici.id && g.durum !== 'Tamamlandı' && g.tarih && g.tarih <= bugun)
+        .sort((a, b) => String(a.tarih).localeCompare(String(b.tarih)) || String(a.saat).localeCompare(String(b.saat)));
+      if (!isler.length) { kutu.innerHTML = ''; return; }
+      const geciken = isler.filter(g => g.tarih < bugun).length;
+      const seritt = document.getElementById('planSeridi');
+      seritt.style.borderColor = geciken ? '#fca5a5' : '#fcd34d';
+      seritt.style.background = geciken ? 'linear-gradient(90deg, #fef2f2, #ffffff)' : 'linear-gradient(90deg, #fffbeb, #ffffff)';
+      const satir = g => {
+        const gecikti = g.tarih < bugun;
+        const etiket = gecikti ? `${gunAyYil(g.tarih)} · gecikti` : ('Bugün' + (g.saat ? ' ' + g.saat : ''));
+        return `<div style="display:flex; gap:8px; align-items:baseline; font-size:13px; padding:2px 0;">
+          <span style="flex:none; font-size:11px; font-weight:700; border-radius:9px; padding:1px 8px; ${gecikti ? 'background:#fee2e2; color:#b91c1c;' : 'background:#fef3c7; color:#92400e;'}">${_dbKacir(etiket)}</span>
+          <span style="color:var(--metin); ${g.oncelik === 'Yüksek' ? 'font-weight:700;' : ''}">${g.oncelik === 'Yüksek' ? '❗ ' : ''}${_dbKacir(g.baslik)}</span>
+        </div>`;
+      };
+      kutu.innerHTML = `<div style="font-size:12px; font-weight:700; margin:8px 0 4px; color:${geciken ? '#b91c1c' : '#92400e'};">⏰ Hatırlatma: ${isler.length} iş${geciken ? ` (${geciken} gecikmiş)` : ''}</div>`
+        + isler.slice(0, 5).map(satir).join('')
+        + (isler.length > 5 ? `<div style="font-size:12px; color:var(--metin-soluk);">… ve ${isler.length - 5} iş daha</div>` : '');
     }
   </script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
