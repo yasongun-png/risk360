@@ -26,6 +26,7 @@ function planlayiciSayfasiniBaslat() {
   document.getElementById('hizliBaslangic').value = bugunIso();
   document.getElementById('hizliTarih').value = bugunIso();
   document.getElementById('yeniGorevBtn').addEventListener('click', () => gorevModalAc(null));
+  document.getElementById('planPdfBtn').addEventListener('click', planPdfIndir);
   document.getElementById('gorevForm').addEventListener('submit', gorevFormGonderildi);
   ['gorevIptalBtn', 'gorevKapatBtn'].forEach(id => document.getElementById(id).addEventListener('click', gorevModalKapat));
   document.getElementById('kategoriFiltre').addEventListener('change', gorevleriCiz);
@@ -83,16 +84,17 @@ function _plSonGunDurdur(id) {
   try { localStorage.setItem(_PL_SONGUN_ANAHTARI, JSON.stringify({ gun: bugunIso(), idler })); } catch (e) { /* yalnızca bu oturumda durur */ }
 }
 
-function gorevleriCiz() {
-  _plOzetCiz();
+// Kategori ve arama filtresine uyan işler (ekran ve PDF raporu aynı listeyi kullanır).
+function _plFiltreliGorevler() {
   const kategori = document.getElementById('kategoriFiltre').value;
   const arama = document.getElementById('gorevArama').value.trim().toLocaleLowerCase('tr-TR');
-  const tumu = planGorevleriGetir();
-  const kategoriler = [...new Set(tumu.map(g => g.kategori).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
-  const secim = document.getElementById('kategoriFiltre');
-  secim.innerHTML = '<option value="">Tüm Kategoriler</option>' + kategoriler.map(k => `<option ${k === kategori ? 'selected' : ''}>${_plKacir(k)}</option>`).join('');
-  const liste = tumu.filter(g => (!kategori || g.kategori === kategori)
+  return planGorevleriGetir().filter(g => (!kategori || g.kategori === kategori)
     && (!arama || (g.baslik + ' ' + g.aciklama).toLocaleLowerCase('tr-TR').includes(arama)));
+}
+
+// Ekrandaki gruplar (sırasıyla): termini bugün olanlar, bir defalık işlerin tarih
+// grupları, tekrarlayan iş grupları; tamamlananlar ayrı.
+function _plEkranGruplari(liste) {
   // Kullanıcı isteği: her gün / aylık / yıllık işler ayrı ayrı görünsün — tarih
   // grupları yalnızca bir defalık işler için; tekrarlayanlar kendi bölümlerinde.
   const tekrarliMi = g => g.tekrar && g.tekrar !== 'Bir defalık';
@@ -103,7 +105,6 @@ function gorevleriCiz() {
   const sonGunGrubu = { baslik: '⏰ Termini Bugün Olan İşler', renk: '#dc2626', liste: planBitiseGoreSirala(liste.filter(sonGunMu)) };
   const { gruplar } = planGorevleriGrupla(liste.filter(g => !tekrarliMi(g) && !sonGunMu(g)));
   const { tamamlanan } = planGorevleriGrupla(liste);
-  const t = g => g.tarih || g.baslangicTarihi || '';
   const tekrarGruplari = [
     { tekrar: 'Her gün', baslik: '🔁 Her Gün Yapılan İşler', renk: '#047857' },
     { tekrar: 'Her hafta', baslik: '🔁 Haftalık İşler', renk: '#0e7490' },
@@ -112,6 +113,21 @@ function gorevleriCiz() {
   ].map(gr => Object.assign(gr, {
     liste: planBitiseGoreSirala(liste.filter(g => g.durum !== 'Tamamlandı' && !sonGunMu(g) && g.tekrar === gr.tekrar))
   }));
+  return { dolu: [sonGunGrubu].concat(gruplar, tekrarGruplari).filter(gr => gr.liste.length), tamamlanan };
+}
+
+function gorevleriCiz() {
+  _plOzetCiz();
+  const kategori = document.getElementById('kategoriFiltre').value;
+  const tumu = planGorevleriGetir();
+  const kategoriler = [...new Set(tumu.map(g => g.kategori).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const secim = document.getElementById('kategoriFiltre');
+  secim.innerHTML = '<option value="">Tüm Kategoriler</option>' + kategoriler.map(k => `<option ${k === kategori ? 'selected' : ''}>${_plKacir(k)}</option>`).join('');
+  const liste = _plFiltreliGorevler();
+  const tekrarliMi = g => g.tekrar && g.tekrar !== 'Bir defalık';
+  const bugun = bugunIso();
+  const t = g => g.tarih || g.baslangicTarihi || '';
+  const { dolu, tamamlanan } = _plEkranGruplari(liste);
 
   const durdurulanlar = _plSonGunDurdurulanlar();
   const satir = g => {
@@ -149,7 +165,6 @@ function gorevleriCiz() {
     </div>`;
   };
 
-  const dolu = [sonGunGrubu].concat(gruplar, tekrarGruplari).filter(gr => gr.liste.length);
   // Tamamlananlar en altta, kapalı (tıklayınca açılır) — kullanıcı açık hâlini beğenmedi.
   document.getElementById('gorevListesi').innerHTML = (dolu.length
     ? dolu.map(gr => `<div class="pl-grup">
@@ -176,6 +191,115 @@ function gorevleriCiz() {
   kutu.querySelectorAll('[data-sil]').forEach(b => b.addEventListener('click', async () => {
     if (await onayModali('Bu iş silinsin mi?', 'Sil')) { planGoreviSil(b.getAttribute('data-sil')); gorevleriCiz(); }
   }));
+}
+
+// ==================== PDF RAPORU ====================
+// Kullanıcı isteği: "planı PDF olarak rapor olarak indirmek". Ekrandaki filtre
+// (kategori / arama) ve gruplar aynen kullanılır: açık işler + bu ay tamamlananlar.
+// html2pdf.js yalnızca ilk indirmede yüklenir (kurul modülündeki sürüm).
+function _plHtml2pdfYukle() {
+  if (window.html2pdf) return Promise.resolve();
+  return new Promise((coz, reddet) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+    s.onload = () => coz();
+    s.onerror = () => reddet(new Error('PDF kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).'));
+    document.head.appendChild(s);
+  });
+}
+
+function _plPdfRaporHtml() {
+  const K = _plKacir;
+  const bugun = bugunIso();
+  const liste = _plFiltreliGorevler();
+  const { dolu, tamamlanan } = _plEkranGruplari(liste);
+  const buAy = bugun.slice(0, 7);
+  const buAyBiten = tamamlanan.filter(g => String(g.tamamlanmaTarihi).startsWith(buAy));
+  const o = planOzetiHesapla();
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const kullanici = oturumdakiKullanici();
+  const kategori = document.getElementById('kategoriFiltre').value;
+  const arama = document.getElementById('gorevArama').value.trim();
+  // Grup başlıklarındaki simgeler PDF'te düz metin olsun.
+  const duz = b => b.replace(/^[^\p{L}]+/u, '');
+  const tarihHucresi = g => [g.baslangicTarihi ? gunAyYil(g.baslangicTarihi) : '', g.tarih ? gunAyYil(g.tarih) : ''];
+  const satir = (g, i, bitti) => {
+    const [bas, bit] = tarihHucresi(g);
+    const gecikti = !bitti && g.tarih && g.tarih < bugun;
+    const sonGun = !bitti && g.tarih === bugun;
+    const ek = [g.kategori, g.tekrar && g.tekrar !== 'Bir defalık' ? g.tekrar : '', g.kaynak ? 'Kaynak: ' + g.kaynak : ''].filter(Boolean).join(' · ');
+    return `<tr>
+      <td style="text-align:center; color:#64748b;">${i + 1}</td>
+      <td><div style="font-weight:600;">${g.oncelik === 'Yüksek' ? '<span style="color:#dc2626;">(!) </span>' : ''}${K(g.baslik)}</div>
+        ${ek ? `<div style="font-size:9.5px; color:#475569; margin-top:2px;">${K(ek)}</div>` : ''}
+        ${g.aciklama ? `<div style="font-size:9.5px; color:#334155; margin-top:2px; white-space:pre-wrap;">${K(g.aciklama)}</div>` : ''}</td>
+      <td style="text-align:center;">${bas || '-'}</td>
+      <td style="text-align:center; ${gecikti || sonGun ? 'color:#b91c1c; font-weight:700;' : ''}">${bit || '-'}${gecikti ? '<div style="font-size:9px;">gecikti</div>' : (sonGun ? '<div style="font-size:9px;">son gün</div>' : '')}</td>
+      <td style="text-align:center;">${bitti ? 'Tamamlandı' + (g.tamamlanmaTarihi ? '<div style="font-size:9px; color:#64748b;">' + gunAyYil(g.tamamlanmaTarihi) + '</div>' : '') : K(g.durum)}</td>
+      <td style="text-align:center;">${K(g.oncelik)}</td>
+    </tr>`;
+  };
+  const tablo = (baslik, renk, isler, bitti) => `
+    <div style="page-break-inside:auto; margin-top:12px;">
+      <div style="font-weight:700; font-size:12px; color:${renk}; border-bottom:2px solid ${renk}; padding-bottom:3px; margin-bottom:4px;">${K(baslik)} (${isler.length})</div>
+      <table style="width:100%; border-collapse:collapse; font-size:10.5px;">
+        <thead><tr style="background:#f1f5f9;">
+          <th style="width:28px;">#</th><th style="text-align:left;">Yapılacak İş</th><th style="width:78px;">Başlangıç</th><th style="width:78px;">Planlanan Bitiş</th><th style="width:88px;">Durum</th><th style="width:60px;">Öncelik</th>
+        </tr></thead>
+        <tbody>${isler.map((g, i) => satir(g, i, bitti)).join('')}</tbody>
+      </table>
+    </div>`;
+  const kutu = (etiket, deger, renk) => `<td style="border:1px solid #cbd5e1; padding:6px 8px; text-align:center;"><div style="font-size:9.5px; color:#64748b; text-transform:uppercase;">${etiket}</div><div style="font-size:16px; font-weight:800; color:${renk || '#0f172a'};">${deger}</div></td>`;
+  return `
+    <div style="font-family:Arial, Helvetica, sans-serif; color:#0f172a; width:100%; box-sizing:border-box; padding:4px;">
+      <style>
+        table th, table td { border:1px solid #cbd5e1; padding:4px 6px; vertical-align:top; }
+        tr { page-break-inside:avoid; }
+      </style>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:8px;"><tr>
+        <td style="border:none; padding:0;"><div style="font-size:20px; font-weight:800;">İŞ PLANI</div>
+          <div style="font-size:12px; color:#334155;">${K(firma ? firma.ad : '')}</div></td>
+        <td style="border:none; padding:0; text-align:right; font-size:11px; color:#334155;">
+          Hazırlayan: <b>${K(kullanici ? kullanici.adSoyad : '')}</b><br>Rapor tarihi: <b>${gunAyYil(bugun)}</b>
+          ${kategori || arama ? `<br>Filtre: ${K([kategori ? 'Kategori: ' + kategori : '', arama ? 'Arama: "' + arama + '"' : ''].filter(Boolean).join(', '))}` : ''}
+        </td></tr></table>
+      <table style="width:100%; border-collapse:collapse;"><tr>
+        ${kutu('Açık İş', o.acik)}${kutu('Gecikmiş', o.gecikmis, o.gecikmis ? '#b91c1c' : '')}${kutu('Bugün', o.bugun)}${kutu('Önümüzdeki 7 Gün', o.hafta)}${kutu('Bu Ay Tamamlanan', o.buAyTamamlanan, '#15803d')}
+      </tr></table>
+      ${dolu.length ? dolu.map(gr => tablo(duz(gr.baslik), gr.renk, gr.liste, false)).join('') : '<p style="margin-top:14px;">Açık iş yok.</p>'}
+      ${buAyBiten.length ? tablo('Bu Ay Tamamlanan İşler', '#15803d', buAyBiten, true) : ''}
+    </div>`;
+}
+
+async function planPdfIndir() {
+  const btn = document.getElementById('planPdfBtn');
+  const eski = btn.textContent;
+  btn.disabled = true; btn.textContent = 'PDF hazırlanıyor…';
+  try {
+    await _plHtml2pdfYukle();
+    const kutu = document.createElement('div');
+    kutu.innerHTML = _plPdfRaporHtml();
+    const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+    const dosya = `Is_Plani_${(firma && firma.ad ? firma.ad : 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}_${bugunIso()}.pdf`;
+    await html2pdf().set({
+      margin: [8, 8, 12, 8], filename: dosya,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      pagebreak: { mode: ['css', 'legacy'], avoid: 'tr' }
+    }).from(kutu.firstElementChild).toPdf().get('pdf').then(pdf => {
+      const toplam = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= toplam; i++) {
+        pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(120);
+        pdf.text(`${i} / ${toplam}`, pdf.internal.pageSize.getWidth() - 14, pdf.internal.pageSize.getHeight() - 5);
+      }
+    }).save();
+  } catch (hata) {
+    console.error(hata);
+    alert('PDF oluşturulamadı: ' + (hata.message || hata));
+  } finally {
+    btn.disabled = false; btn.textContent = eski;
+  }
 }
 
 function gorevModalAc(id) {
