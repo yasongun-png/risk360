@@ -66,16 +66,27 @@ function planGoreviSil(id) {
   planVerisiKaydet(veri);
 }
 
+// Kullanıcı isteği: "her grup kendi içinde bitiş tarihine göre sıralansın".
+// Planlanan bitiş eskiden yeniye; bitişi olmayanlar grubun sonunda (başlangıca
+// göre). Eşitlikte saat, sonra öncelik. azalan=true: en yeni bitiş üstte.
+function planBitiseGoreSirala(liste, azalan) {
+  const oncelikSira = { Yüksek: 0, Normal: 1, Düşük: 2 };
+  return liste.sort((x, y) => {
+    if (!x.tarih !== !y.tarih) return x.tarih ? -1 : 1;
+    const fark = String(x.tarih || x.baslangicTarihi || '').localeCompare(String(y.tarih || y.baslangicTarihi || ''));
+    return (azalan ? -fark : fark) || String(x.saat).localeCompare(String(y.saat)) || (oncelikSira[x.oncelik] - oncelikSira[y.oncelik]) || 0;
+  });
+}
+
 // Tarihe göre gruplama — açık işler: Gecikmiş / Bugün / Yarın / Bu Hafta (7 gün) /
-// Daha Sonra / Tarihsiz; tamamlananlar ayrı (en yeni önce).
+// Daha Sonra / Tarihsiz; tamamlananlar ayrı (bitişi en yeni olan üstte).
 function planGorevleriGrupla(liste) {
   const bugun = bugunIso();
   const gunEkle = n => { const d = new Date(bugun + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const yarin = gunEkle(1), hafta = gunEkle(7);
-  const oncelikSira = { Yüksek: 0, Normal: 1, Düşük: 2 };
   // Gruplama planlanan bitişe göre; bitiş yoksa başlangıç tarihine göre.
   const t = g => g.tarih || g.baslangicTarihi || '';
-  const sirala = a => a.sort((x, y) => t(x).localeCompare(t(y)) || String(x.saat).localeCompare(String(y.saat)) || oncelikSira[x.oncelik] - oncelikSira[y.oncelik]);
+  const sirala = a => planBitiseGoreSirala(a);
   const acik = liste.filter(g => g.durum !== 'Tamamlandı');
   const gruplar = [
     { anahtar: 'gecikmis', baslik: 'Gecikmiş', renk: 'var(--hata)', liste: acik.filter(g => g.tarih && g.tarih < bugun) },
@@ -87,8 +98,7 @@ function planGorevleriGrupla(liste) {
     { anahtar: 'tarihsiz', baslik: 'Tarihsiz / Bitişi Belirsiz', renk: '#94a3b8', liste: acik.filter(g => !g.tarih && (!g.baslangicTarihi || g.baslangicTarihi < bugun)) }
   ];
   gruplar.forEach(g => sirala(g.liste));
-  const tamamlanan = liste.filter(g => g.durum === 'Tamamlandı')
-    .sort((x, y) => String(y.tamamlanmaTarihi).localeCompare(String(x.tamamlanmaTarihi)));
+  const tamamlanan = planBitiseGoreSirala(liste.filter(g => g.durum === 'Tamamlandı'), true);
   return { gruplar, tamamlanan };
 }
 

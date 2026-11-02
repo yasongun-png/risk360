@@ -81,7 +81,7 @@ function gorevleriCiz() {
     { tekrar: 'Her ay', baslik: '🔁 Aylık İşler', renk: '#7c3aed' },
     { tekrar: 'Her yıl', baslik: '🔁 Yıllık İşler', renk: '#b45309' }
   ].map(gr => Object.assign(gr, {
-    liste: liste.filter(g => g.durum !== 'Tamamlandı' && g.tekrar === gr.tekrar).sort((a, b) => t(a).localeCompare(t(b)))
+    liste: planBitiseGoreSirala(liste.filter(g => g.durum !== 'Tamamlandı' && g.tekrar === gr.tekrar))
   }));
 
   const satir = g => {
