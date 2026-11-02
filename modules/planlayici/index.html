@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="../../assets/icons/favicon-32.png">
+<title>İSG Platform - İş Planım ve Notlarım</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .pl-hizli { display:flex; gap:8px; margin:0 0 14px; flex-wrap:wrap; }
+  .pl-hizli input[type=text] { flex:1; min-width:220px; margin:0; }
+  .pl-hizli input[type=date] { width:auto; margin:0; }
+  .pl-grup { background:var(--kart-bg); border-radius:10px; box-shadow:var(--golge); padding:10px 14px; margin-bottom:12px; }
+  .pl-grup-baslik { font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.3px; margin:2px 0 6px; }
+  .pl-grup-baslik small { color:var(--metin-soluk); font-weight:600; margin-left:4px; }
+  .pl-gorev { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-top:1px solid var(--kenarlik); }
+  .pl-grup-baslik + .pl-gorev { border-top:none; }
+  .pl-gorev input[type=checkbox] { width:18px; height:18px; margin:2px 0 0; flex:none; cursor:pointer; }
+  .pl-gorev-govde { flex:1; min-width:0; cursor:pointer; }
+  .pl-gorev-baslik { font-size:14px; font-weight:600; color:var(--metin); }
+  .pl-gorev.bitti .pl-gorev-baslik { text-decoration:line-through; color:var(--metin-soluk); font-weight:400; }
+  .pl-gorev-alt { display:flex; flex-wrap:wrap; gap:6px 10px; font-size:12px; color:var(--metin-soluk); margin-top:3px; }
+  .pl-aciklama { width:100%; white-space:pre-wrap; }
+  .pl-etiket { background:#eef2ff; color:#3730a3; border-radius:10px; padding:1px 8px; font-weight:600; }
+  .pl-devam { background:#fef3c7; color:#92400e; }
+  .pl-oncelik { display:inline-block; background:var(--hata); color:#fff; border-radius:50%; width:16px; height:16px; line-height:16px; text-align:center; font-size:11px; margin-right:6px; }
+  .pl-gorev[data-oncelik="Düşük"] .pl-gorev-baslik { color:#64748b; }
+  .pl-not-izgara { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .pl-not { border:1px solid var(--kenarlik); border-radius:10px; padding:12px; box-shadow:var(--golge); cursor:pointer; display:flex; flex-direction:column; min-height:120px; }
+  .pl-not-ust { display:flex; justify-content:space-between; gap:6px; align-items:flex-start; }
+  .pl-not-metin { white-space:pre-wrap; font-size:13px; margin-top:6px; flex:1; max-height:240px; overflow:hidden; }
+  .pl-not-tarih { font-size:11px; color:var(--metin-soluk); margin-top:8px; }
+  .pl-ikon { border:none; background:none; cursor:pointer; opacity:.35; font-size:14px; padding:0 2px; }
+  .pl-ikon:hover, .pl-ikon.aktif { opacity:1; }
+  .pl-renk { display:inline-block; width:28px; height:28px; border-radius:50%; border:2px solid var(--kenarlik); margin-right:6px; cursor:pointer; position:relative; }
+  .pl-renk input { position:absolute; opacity:0; }
+  .pl-renk:has(input:checked) { border-color:var(--celik-mavi); box-shadow:0 0 0 2px #bfdbfe; }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka" role="link" title="Ana sayfaya dön" style="cursor:pointer;" onclick="location.href='../../dashboard.html'">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="../../dashboard.html" class="geri-link">← Kontrol Paneline Dön</a>
+    <h2 style="margin-top:14px;">📝 İş Planım ve Notlarım</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu">
+      <button type="button" data-sekme="isler">🗓️ İş Planı</button>
+      <button type="button" data-sekme="notlar" class="sekme-seciliDegil">🗒️ Notlar</button>
+    </div>
+
+    <div id="bolum-isler">
+      <div class="istatistik-grid" id="planOzeti" style="grid-template-columns:repeat(5, minmax(100px,1fr)); margin-bottom:14px;"></div>
+      <form class="pl-hizli" id="hizliEkleForm">
+        <input type="text" id="hizliBaslik" placeholder="Yapılacak işi yazıp Enter'a basın… (ör. Liman tatbikat raporunu hazırla)" autocomplete="off">
+        <input type="date" id="hizliTarih" title="Tarih (boş bırakılırsa tarihsiz)">
+        <button type="submit" class="ikincil">Ekle</button>
+        <button type="button" class="birincil" id="yeniGorevBtn" style="width:auto;">+ Ayrıntılı İş</button>
+      </form>
+      <div class="arac-cubugu" style="margin-bottom:10px;">
+        <input type="text" id="gorevArama" class="arama-kutusu" placeholder="İşlerde ara...">
+        <select id="kategoriFiltre" style="width:auto; margin:0;"><option value="">Tüm Kategoriler</option></select>
+      </div>
+      <div id="gorevListesi"></div>
+    </div>
+
+    <div id="bolum-notlar" style="display:none;">
+      <div class="arac-cubugu" style="margin-bottom:12px;">
+        <input type="text" id="notArama" class="arama-kutusu" placeholder="Notlarda ara...">
+        <button type="button" class="birincil" id="yeniNotBtn" style="width:auto;">+ Yeni Not</button>
+      </div>
+      <div class="pl-not-izgara" id="notIzgarasi"></div>
+      <div class="bos-durum" id="notBos"></div>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="gorevModalKatman">
+    <div class="modal-kutu" style="max-width:560px;">
+      <h3 id="gorevModalBaslik">Yeni İş</h3>
+      <form id="gorevForm">
+        <label for="gBaslik">Yapılacak İş</label>
+        <input type="text" id="gBaslik" autocomplete="off">
+        <div class="alan-hatasi" id="gBaslikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <div class="form-satir-ikili">
+          <div><label for="gTarih">Tarih</label><input type="date" id="gTarih"></div>
+          <div><label for="gSaat">Saat</label><input type="time" id="gSaat"></div>
+        </div>
+        <div class="form-satir-ikili">
+          <div><label for="gKategori">Kategori</label><input type="text" id="gKategori" list="kategoriListesi" placeholder="Seçin veya yazın"><datalist id="kategoriListesi"></datalist></div>
+          <div><label for="gOncelik">Öncelik</label><select id="gOncelik"></select></div>
+        </div>
+        <label for="gDurum">Durum</label>
+        <select id="gDurum"></select>
+        <label for="gAciklama">Açıklama / Notlar</label>
+        <textarea id="gAciklama" rows="4"></textarea>
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="gorevIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="gorevKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <div class="modal-katman" id="notModalKatman">
+    <div class="modal-kutu" style="max-width:600px;">
+      <h3 id="notModalBaslik">Yeni Not</h3>
+      <form id="notForm">
+        <label for="nBaslik">Başlık</label>
+        <input type="text" id="nBaslik" autocomplete="off">
+        <label for="nIcerik">Not</label>
+        <textarea id="nIcerik" rows="10"></textarea>
+        <div class="alan-hatasi" id="nIcerikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <label>Renk</label>
+        <div id="nRenkler" style="margin-bottom:12px;"></div>
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400;"><input type="checkbox" id="nSabit" style="width:auto; margin:0;"> Üste sabitle</label>
+        <div class="modal-eylemler">
+          <button type="button" class="ikincil" id="notIptalBtn">İptal</button>
+          <button type="submit" class="birincil">Kaydet</button>
+        </div>
+      </form>
+      <button type="button" class="tablo-buton" id="notKapatBtn" style="position:absolute; top:20px; right:24px;">✕</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js?v=6"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../../core/metin-istem.js"></script>
+  <script src="model.js?v=1"></script>
+  <script src="repository.js?v=1"></script>
+  <script src="service.js?v=1"></script>
+  <script src="ui.js?v=1"></script>
+  <script>
+    const kullanici = girisGerekliModul('planlayici');
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' için yapacağınız işler ve notlarınız — yalnızca size görünür.';
+          planlayiciSayfasiniBaslat();
+        });
+      }
+    }
+  </script>
+</body>
+</html>
