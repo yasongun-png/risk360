@@ -27,6 +27,10 @@
   .pl-gorev input[type=checkbox] { width:18px; height:18px; margin:2px 0 0; flex:none; cursor:pointer; }
   .pl-gorev-govde { flex:1; min-width:0; cursor:pointer; }
   .pl-gorev-baslik { font-size:14px; font-weight:600; color:var(--metin); }
+  .pl-gorev.pl-songun .pl-gorev-baslik { color:#b91c1c; }
+  .pl-gorev.pl-yanip { animation:pl-yanip 1s ease-in-out infinite; border-radius:8px; cursor:pointer; }
+  @keyframes pl-yanip { 0%, 100% { background:transparent; box-shadow:none; } 50% { background:#fecaca; box-shadow:0 0 0 2px #dc2626; } }
+  @media (prefers-reduced-motion: reduce) { .pl-gorev.pl-yanip { animation:none; background:#fecaca; box-shadow:0 0 0 2px #dc2626; } }
   .pl-gorev.bitti .pl-gorev-baslik { text-decoration:line-through; color:var(--metin-soluk); font-weight:400; }
   .pl-gorev-alt { display:flex; flex-wrap:wrap; gap:6px 10px; font-size:12px; color:var(--metin-soluk); margin-top:3px; }
   .pl-aciklama { width:100%; white-space:pre-wrap; }
@@ -155,7 +159,7 @@
   <script src="model.js?v=3"></script>
   <script src="repository.js?v=1"></script>
   <script src="service.js?v=4"></script>
-  <script src="ui.js?v=7"></script>
+  <script src="ui.js?v=8"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 

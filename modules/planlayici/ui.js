@@ -65,6 +65,24 @@ function _plOzetCiz() {
     kart('Önümüzdeki 7 Gün', o.hafta) + kart('Açık İş', o.acik) + kart('Bu Ay Tamamlanan', o.buAyTamamlanan, 'var(--basari)');
 }
 
+// Kullanıcı isteği: son günü gelen (planlanan bitişi bugün olan) işler sayfa
+// açılınca kırmızı yanıp sönsün, tıklayınca dursun. Durdurulanlar bu tarayıcıda
+// o gün boyunca hatırlanır; ertesi gün liste sıfırlanır.
+const _PL_SONGUN_ANAHTARI = 'isg_plan_songun_durdurulan';
+
+function _plSonGunDurdurulanlar() {
+  try {
+    const v = JSON.parse(localStorage.getItem(_PL_SONGUN_ANAHTARI) || '{}');
+    return v.gun === bugunIso() && Array.isArray(v.idler) ? v.idler : [];
+  } catch (e) { return []; }
+}
+
+function _plSonGunDurdur(id) {
+  const idler = _plSonGunDurdurulanlar();
+  if (!idler.includes(id)) idler.push(id);
+  try { localStorage.setItem(_PL_SONGUN_ANAHTARI, JSON.stringify({ gun: bugunIso(), idler })); } catch (e) { /* yalnızca bu oturumda durur */ }
+}
+
 function gorevleriCiz() {
   _plOzetCiz();
   const kategori = document.getElementById('kategoriFiltre').value;
@@ -91,6 +109,7 @@ function gorevleriCiz() {
     liste: planBitiseGoreSirala(liste.filter(g => g.durum !== 'Tamamlandı' && g.tekrar === gr.tekrar))
   }));
 
+  const durdurulanlar = _plSonGunDurdurulanlar();
   const satir = g => {
     const bitti = g.durum === 'Tamamlandı';
     const saat = g.saat ? ' ' + g.saat : '';
@@ -100,7 +119,9 @@ function gorevleriCiz() {
     ].filter(Boolean).join(' → ') + (g.baslangicTarihi || g.tarih ? saat : '');
     const baslamaEtiketi = bitti || tekrarliMi(g) ? '' : g.baslangicTarihi === bugun ? '<span class="pl-etiket pl-devam">Bugün başlıyor</span>'
       : (!bitti && g.baslangicTarihi && g.baslangicTarihi < bugun && g.durum === 'Yapılacak' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : '');
-    return `<div class="pl-gorev${bitti ? ' bitti' : ''}" data-oncelik="${g.oncelik}">
+    const sonGun = !bitti && g.tarih === bugun;
+    const yanip = sonGun && !durdurulanlar.includes(g.id);
+    return `<div class="pl-gorev${bitti ? ' bitti' : ''}${sonGun ? ' pl-songun' : ''}${yanip ? ' pl-yanip' : ''}" data-oncelik="${g.oncelik}" data-gorev="${g.id}"${yanip ? ' title="Son gün! Yanıp sönmeyi durdurmak için tıklayın."' : ''}>
       <input type="checkbox" data-tamamla="${g.id}" ${bitti ? 'checked' : ''} title="${bitti ? 'Geri al' : 'Tamamlandı işaretle'}">
       <div class="pl-gorev-govde" data-duzenle="${g.id}">
         <div class="pl-gorev-baslik">${g.oncelik === 'Yüksek' ? '<span class="pl-oncelik" title="Yüksek öncelik">!</span>' : ''}${_plKacir(g.baslik)}</div>
@@ -108,7 +129,8 @@ function gorevleriCiz() {
           ${tarih ? `<span title="Başlangıç → Planlanan bitiş">${tarih}</span>` : ''}
           ${baslamaEtiketi}
           ${!bitti && tekrarliMi(g) && g.tarih && g.tarih < bugun ? '<span class="pl-etiket" style="background:#fee2e2; color:#b91c1c;">Gecikti</span>' : ''}
-          ${!bitti && tekrarliMi(g) && t(g) === bugun ? '<span class="pl-etiket" style="background:#dbeafe; color:#1e40af;">Bugün</span>' : ''}
+          ${sonGun ? '<span class="pl-etiket" style="background:#dc2626; color:#fff;">⏰ Son gün</span>' : ''}
+          ${!bitti && !sonGun && tekrarliMi(g) && t(g) === bugun ? '<span class="pl-etiket" style="background:#dbeafe; color:#1e40af;">Bugün</span>' : ''}
           ${bitti && g.tamamlanmaTarihi ? `<span>✔ ${gunAyYil(g.tamamlanmaTarihi)}</span>` : ''}
           ${g.tekrar && g.tekrar !== 'Bir defalık' ? `<span class="pl-etiket" style="background:#ecfdf5; color:#047857;" title="Tamamlandığında bir sonraki tarih için yeniden eklenir">🔁 ${g.tekrar}</span>` : ''}
           ${g.kategori ? `<span class="pl-etiket">${_plKacir(g.kategori)}</span>` : ''}
@@ -121,16 +143,24 @@ function gorevleriCiz() {
   };
 
   const dolu = gruplar.concat(tekrarGruplari).filter(gr => gr.liste.length);
-  // Kullanıcı isteği: tamamlananlar kapalı değil, en altta açık görünsün.
+  // Tamamlananlar en altta, kapalı (tıklayınca açılır) — kullanıcı açık hâlini beğenmedi.
   document.getElementById('gorevListesi').innerHTML = (dolu.length
     ? dolu.map(gr => `<div class="pl-grup">
         <div class="pl-grup-baslik" style="color:${gr.renk};">${gr.baslik} <small>${gr.liste.length}</small></div>
         ${gr.liste.map(satir).join('')}
       </div>`).join('')
     : `<div class="bos-durum gorunur">${tumu.length ? 'Açık iş yok. 🎉' : 'Henüz iş eklemediniz. Yukarıdaki kutuya yazıp Enter\'a basın.'}</div>`)
-    + (tamamlanan.length ? `<div class="pl-grup"><div class="pl-grup-baslik" style="color:var(--basari);">✔ Tamamlanan İşler <small>${tamamlanan.length}</small></div>${tamamlanan.map(satir).join('')}</div>` : '');
+    + (tamamlanan.length ? `<details class="pl-grup"><summary class="pl-grup-baslik" style="color:var(--basari); cursor:pointer;">✔ Tamamlanan İşler <small>${tamamlanan.length}</small></summary>${tamamlanan.map(satir).join('')}</details>` : '');
 
   const kutu = document.getElementById('gorevListesi');
+  // Yanıp sönen satıra ilk tıklama yalnızca durdurur (düzenleme penceresi açılmaz);
+  // kutucuğa veya sil düğmesine tıklanırsa hem durur hem o işlem yapılır.
+  kutu.querySelectorAll('.pl-yanip').forEach(s => s.addEventListener('click', e => {
+    _plSonGunDurdur(s.getAttribute('data-gorev'));
+    s.classList.remove('pl-yanip');
+    s.removeAttribute('title');
+    if (!e.target.closest('[data-tamamla], [data-sil]')) e.stopPropagation();
+  }, { capture: true, once: true }));
   kutu.querySelectorAll('[data-tamamla]').forEach(c => c.addEventListener('change', () => { planGoreviTamamla(c.getAttribute('data-tamamla'), c.checked); gorevleriCiz(); }));
   kutu.querySelectorAll('[data-duzenle]').forEach(d => d.addEventListener('click', () => gorevModalAc(d.getAttribute('data-duzenle'))));
   kutu.querySelectorAll('[data-sil]').forEach(b => b.addEventListener('click', async () => {
