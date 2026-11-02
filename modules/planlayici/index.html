@@ -84,7 +84,7 @@
       <div class="arac-cubugu" style="margin-bottom:10px;">
         <input type="text" id="gorevArama" class="arama-kutusu" placeholder="İşlerde ara...">
         <select id="kategoriFiltre" style="width:auto; margin:0;"><option value="">Tüm Kategoriler</option></select>
-        <button type="button" class="ikincil" id="planPdfBtn" style="width:auto;" title="Ekrandaki filtreye göre açık işler ve bu ay tamamlananlar">📄 PDF Rapor İndir</button>
+        <button type="button" class="ikincil" id="planExcelBtn" style="width:auto;" title="Ekrandaki filtreye göre: Açık İşler ve Tamamlanan sayfaları">📊 Excel İndir</button>
       </div>
       <div id="gorevListesi"></div>
     </div>
@@ -159,11 +159,12 @@
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
   <script src="../../core/plana-ekle.js?v=5"></script>
+  <script src="../../core/xlsx-bicimli.js?v=1"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="model.js?v=4"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=4"></script>
-  <script src="ui.js?v=11"></script>
+  <script src="ui.js?v=12"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 

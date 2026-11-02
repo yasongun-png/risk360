@@ -26,7 +26,7 @@ function planlayiciSayfasiniBaslat() {
   document.getElementById('hizliBaslangic').value = bugunIso();
   document.getElementById('hizliTarih').value = bugunIso();
   document.getElementById('yeniGorevBtn').addEventListener('click', () => gorevModalAc(null));
-  document.getElementById('planPdfBtn').addEventListener('click', planPdfIndir);
+  document.getElementById('planExcelBtn').addEventListener('click', planExcelIndir);
   document.getElementById('gorevForm').addEventListener('submit', gorevFormGonderildi);
   ['gorevIptalBtn', 'gorevKapatBtn'].forEach(id => document.getElementById(id).addEventListener('click', gorevModalKapat));
   document.getElementById('kategoriFiltre').addEventListener('change', gorevleriCiz);
@@ -193,114 +193,93 @@ function gorevleriCiz() {
   }));
 }
 
-// ==================== PDF RAPORU ====================
-// Kullanıcı isteği: "planı PDF olarak rapor olarak indirmek". Ekrandaki filtre
-// (kategori / arama) ve gruplar aynen kullanılır: açık işler + bu ay tamamlananlar.
-// html2pdf.js yalnızca ilk indirmede yüklenir (kurul modülündeki sürüm).
-function _plHtml2pdfYukle() {
-  if (window.html2pdf) return Promise.resolve();
-  return new Promise((coz, reddet) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-    s.onload = () => coz();
-    s.onerror = () => reddet(new Error('PDF kütüphanesi yüklenemedi (internet bağlantısını kontrol edin).'));
-    document.head.appendChild(s);
-  });
-}
-
-function _plPdfRaporHtml() {
-  const K = _plKacir;
-  const bugun = bugunIso();
-  const liste = _plFiltreliGorevler();
-  const { dolu, tamamlanan } = _plEkranGruplari(liste);
-  const buAy = bugun.slice(0, 7);
-  // Kullanıcı isteği: her gün yapılan işlerin tamamlanma durumu PDF'te olmasın —
-  // her gün tamamlandıkça listeyi dolduruyordu; tamamlananlarda ve sayıda yer almaz.
-  const buAyBiten = tamamlanan.filter(g => String(g.tamamlanmaTarihi).startsWith(buAy) && g.tekrar !== 'Her gün');
-  const o = Object.assign({}, planOzetiHesapla(), {
-    buAyTamamlanan: planGorevleriGetir().filter(g => g.durum === 'Tamamlandı' && String(g.tamamlanmaTarihi).startsWith(buAy) && g.tekrar !== 'Her gün').length
-  });
-  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-  const kullanici = oturumdakiKullanici();
-  const kategori = document.getElementById('kategoriFiltre').value;
-  const arama = document.getElementById('gorevArama').value.trim();
-  // Grup başlıklarındaki simgeler PDF'te düz metin olsun.
-  const duz = b => b.replace(/^[^\p{L}]+/u, '');
-  const tarihHucresi = g => [g.baslangicTarihi ? gunAyYil(g.baslangicTarihi) : '', g.tarih ? gunAyYil(g.tarih) : ''];
-  const satir = (g, i, bitti) => {
-    const [bas, bit] = tarihHucresi(g);
-    const gecikti = !bitti && g.tarih && g.tarih < bugun;
-    const sonGun = !bitti && g.tarih === bugun;
-    const ek = [g.kategori, g.tekrar && g.tekrar !== 'Bir defalık' ? g.tekrar : '', g.kaynak ? 'Kaynak: ' + g.kaynak : ''].filter(Boolean).join(' · ');
-    return `<tr>
-      <td style="text-align:center; color:#64748b;">${i + 1}</td>
-      <td><div style="font-weight:600;">${g.oncelik === 'Yüksek' ? '<span style="color:#dc2626;">(!) </span>' : ''}${K(g.baslik)}</div>
-        ${ek ? `<div style="font-size:9.5px; color:#475569; margin-top:2px;">${K(ek)}</div>` : ''}
-        ${g.aciklama ? `<div style="font-size:9.5px; color:#334155; margin-top:2px; white-space:pre-wrap;">${K(g.aciklama)}</div>` : ''}</td>
-      <td style="text-align:center;">${bas || '-'}</td>
-      <td style="text-align:center; ${gecikti || sonGun ? 'color:#b91c1c; font-weight:700;' : ''}">${bit || '-'}${gecikti ? '<div style="font-size:9px;">gecikti</div>' : (sonGun ? '<div style="font-size:9px;">son gün</div>' : '')}</td>
-      <td style="text-align:center;">${bitti ? 'Tamamlandı' + (g.tamamlanmaTarihi ? '<div style="font-size:9px; color:#64748b;">' + gunAyYil(g.tamamlanmaTarihi) + '</div>' : '') : K(g.durum)}</td>
-      <td style="text-align:center;">${K(g.oncelik)}</td>
-    </tr>`;
-  };
-  const tablo = (baslik, renk, isler, bitti) => `
-    <div style="page-break-inside:auto; margin-top:12px;">
-      <div style="font-weight:700; font-size:12px; color:${renk}; border-bottom:2px solid ${renk}; padding-bottom:3px; margin-bottom:4px;">${K(baslik)} (${isler.length})</div>
-      <table style="width:100%; border-collapse:collapse; font-size:10.5px;">
-        <thead><tr style="background:#f1f5f9;">
-          <th style="width:28px;">#</th><th style="text-align:left;">Yapılacak İş</th><th style="width:78px;">Başlangıç</th><th style="width:78px;">Planlanan Bitiş</th><th style="width:88px;">Durum</th><th style="width:60px;">Öncelik</th>
-        </tr></thead>
-        <tbody>${isler.map((g, i) => satir(g, i, bitti)).join('')}</tbody>
-      </table>
-    </div>`;
-  const kutu = (etiket, deger, renk) => `<td style="border:1px solid #cbd5e1; padding:6px 8px; text-align:center;"><div style="font-size:9.5px; color:#64748b; text-transform:uppercase;">${etiket}</div><div style="font-size:16px; font-weight:800; color:${renk || '#0f172a'};">${deger}</div></td>`;
-  return `
-    <div style="font-family:Arial, Helvetica, sans-serif; color:#0f172a; width:100%; box-sizing:border-box; padding:4px;">
-      <style>
-        table th, table td { border:1px solid #cbd5e1; padding:4px 6px; vertical-align:top; }
-        tr { page-break-inside:avoid; }
-      </style>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:8px;"><tr>
-        <td style="border:none; padding:0;"><div style="font-size:20px; font-weight:800;">İŞ PLANI</div>
-          <div style="font-size:12px; color:#334155;">${K(firma ? firma.ad : '')}</div></td>
-        <td style="border:none; padding:0; text-align:right; font-size:11px; color:#334155;">
-          Hazırlayan: <b>${K(kullanici ? kullanici.adSoyad : '')}</b><br>Rapor tarihi: <b>${gunAyYil(bugun)}</b>
-          ${kategori || arama ? `<br>Filtre: ${K([kategori ? 'Kategori: ' + kategori : '', arama ? 'Arama: "' + arama + '"' : ''].filter(Boolean).join(', '))}` : ''}
-        </td></tr></table>
-      <table style="width:100%; border-collapse:collapse;"><tr>
-        ${kutu('Açık İş', o.acik)}${kutu('Gecikmiş', o.gecikmis, o.gecikmis ? '#b91c1c' : '')}${kutu('Bugün', o.bugun)}${kutu('Önümüzdeki 7 Gün', o.hafta)}${kutu('Bu Ay Tamamlanan', o.buAyTamamlanan, '#15803d')}
-      </tr></table>
-      ${dolu.length ? dolu.map(gr => tablo(duz(gr.baslik), gr.renk, gr.liste, false)).join('') : '<p style="margin-top:14px;">Açık iş yok.</p>'}
-      ${buAyBiten.length ? tablo('Bu Ay Tamamlanan İşler', '#15803d', buAyBiten, true) : ''}
-    </div>`;
-}
-
-async function planPdfIndir() {
-  const btn = document.getElementById('planPdfBtn');
+// ==================== EXCEL RAPORU ====================
+// Kullanıcı isteği: planı rapor olarak indirmek — önce PDF yapıldı, kullanıcı
+// "PDF yerine Excel olsa daha iyi" dedi. Biçimli xlsx (core/xlsx-bicimli.js).
+// Ekrandaki filtre (kategori / arama) ve grup sırası kullanılır.
+// Sayfa 1 "Açık İşler": gruplar sırasıyla, Grup sütunu filtrelenebilir.
+// Sayfa 2 "Tamamlanan": tamamlanma tarihine göre en yeni üstte. Her gün
+// tekrarlanan işlerin tamamlanmış kopyaları alınmaz (kullanıcı isteği; PDF'te de böyleydi).
+async function planExcelIndir() {
+  const btn = document.getElementById('planExcelBtn');
   const eski = btn.textContent;
-  btn.disabled = true; btn.textContent = 'PDF hazırlanıyor…';
+  btn.disabled = true; btn.textContent = 'Excel hazırlanıyor…';
   try {
-    await _plHtml2pdfYukle();
-    const kutu = document.createElement('div');
-    kutu.innerHTML = _plPdfRaporHtml();
+    // xlsxKitapIndir FileSaver'ın saveAs'ini kullanır; bu sayfada yüklü değil.
+    if (typeof window.saveAs !== 'function') {
+      window.saveAs = (blob, ad) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = ad;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      };
+    }
+    const X = XLSX_STIL, h = (v, s) => ({ v: v == null ? '' : v, s });
+    const bugun = bugunIso();
+    const liste = _plFiltreliGorevler();
+    const { dolu, tamamlanan } = _plEkranGruplari(liste);
+    const bitenler = tamamlanan.filter(g => g.tekrar !== 'Her gün')
+      .sort((a, b) => String(b.tamamlanmaTarihi).localeCompare(String(a.tamamlanmaTarihi)));
+    const o = planOzetiHesapla();
     const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-    const dosya = `Is_Plani_${(firma && firma.ad ? firma.ad : 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}_${bugunIso()}.pdf`;
-    await html2pdf().set({
-      margin: [8, 8, 12, 8], filename: dosya,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak: { mode: ['css', 'legacy'], avoid: 'tr' }
-    }).from(kutu.firstElementChild).toPdf().get('pdf').then(pdf => {
-      const toplam = pdf.internal.getNumberOfPages();
-      for (let i = 1; i <= toplam; i++) {
-        pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(120);
-        pdf.text(`${i} / ${toplam}`, pdf.internal.pageSize.getWidth() - 14, pdf.internal.pageSize.getHeight() - 5);
-      }
-    }).save();
+    const kullanici = oturumdakiKullanici();
+    const kategori = document.getElementById('kategoriFiltre').value;
+    const arama = document.getElementById('gorevArama').value.trim();
+    const duz = b => b.replace(/^[^\p{L}]+/u, '');
+    const tarih = t => t ? gunAyYil(t) : '';
+    const tekrarMetni = g => g.tekrar && g.tekrar !== 'Bir defalık' ? g.tekrar : '';
+
+    const sayfa = (baslik, basliklar, satirlar, genislikler) => {
+      const son = xlsxKolonHarfi(basliklar.length - 1);
+      const ust = [
+        { hucreler: [h(baslik, X.baslik)], yukseklik: 26 },
+        { hucreler: [h('Firma', X.bilgiEtiket), h(firma ? firma.ad : '', X.bilgiDeger), h('Hazırlayan', X.bilgiEtiket), h(kullanici ? kullanici.adSoyad : '', X.bilgiDeger), h('Rapor Tarihi', X.bilgiEtiket), h(gunAyYil(bugun), X.bilgiDeger)] },
+        { hucreler: [h('Özet', X.ozet), h(`Açık iş: ${o.acik} · Gecikmiş: ${o.gecikmis} · Bugün: ${o.bugun} · Önümüzdeki 7 gün: ${o.hafta} · Bu ay tamamlanan: ${bitenler.filter(g => String(g.tamamlanmaTarihi).startsWith(bugun.slice(0, 7))).length}`
+          + (kategori || arama ? ` · Filtre: ${[kategori ? 'Kategori: ' + kategori : '', arama ? 'Arama: "' + arama + '"' : ''].filter(Boolean).join(', ')}` : ''), X.ozet)] },
+        { hucreler: [] },
+        { hucreler: basliklar.map(b => h(b, X.tabloBaslik)), yukseklik: 22 }
+      ];
+      const tum = ust.concat(satirlar);
+      return {
+        xml: xlsxSayfaXml(tum, { genislikler, birlesik: [`A1:${son}1`, `B3:${son}3`], dondur: 5, filtre: `A5:${son}${Math.max(5, tum.length)}`, yatay: true }),
+        filtre: `A5:${son}${Math.max(5, tum.length)}`
+      };
+    };
+
+    // Açık işler
+    const acikBasliklar = ['Grup', 'Yapılacak İş', 'Başlangıç', 'Planlanan Bitiş', 'Durum', 'Öncelik', 'Kategori', 'Tekrar', 'Kaynak', 'Açıklama'];
+    const acikSatirlar = [];
+    dolu.forEach(gr => gr.liste.forEach(g => {
+      const gecikti = g.tarih && g.tarih < bugun, sonGun = g.tarih === bugun;
+      acikSatirlar.push({ hucreler: [
+        h(duz(gr.baslik), X.hucreKalin), h(g.baslik, g.oncelik === 'Yüksek' ? X.hucreKalin : X.hucre),
+        h(tarih(g.baslangicTarihi), X.hucreOrta),
+        h(tarih(g.tarih) + (gecikti ? ' (gecikti)' : sonGun ? ' (son gün)' : ''), gecikti || sonGun ? X.gecikmis : X.hucreOrta),
+        h(g.durum, g.durum === 'Devam Ediyor' ? X.devam : X.acik), h(g.oncelik, g.oncelik === 'Yüksek' ? X.gecikmis : X.hucre),
+        h(g.kategori, X.hucre), h(tekrarMetni(g), X.hucre), h(g.kaynak, X.hucre), h(g.aciklama, X.hucre)
+      ] });
+    }));
+    if (!acikSatirlar.length) acikSatirlar.push({ hucreler: [h('Açık iş yok.', X.hucre)] });
+    const s1 = sayfa('İŞ PLANI — AÇIK İŞLER', acikBasliklar, acikSatirlar, [22, 48, 12, 16, 13, 10, 16, 11, 28, 45]);
+
+    // Tamamlananlar
+    const bitenBasliklar = ['Yapılacak İş', 'Başlangıç', 'Planlanan Bitiş', 'Tamamlanma', 'Öncelik', 'Kategori', 'Tekrar', 'Kaynak', 'Açıklama'];
+    const bitenSatirlar = bitenler.map(g => ({ hucreler: [
+      h(g.baslik, X.hucre), h(tarih(g.baslangicTarihi), X.hucreOrta), h(tarih(g.tarih), X.hucreOrta),
+      h(tarih(g.tamamlanmaTarihi), X.tamam), h(g.oncelik, X.hucre), h(g.kategori, X.hucre),
+      h(tekrarMetni(g), X.hucre), h(g.kaynak, X.hucre), h(g.aciklama, X.hucre)
+    ] }));
+    if (!bitenSatirlar.length) bitenSatirlar.push({ hucreler: [h('Tamamlanan iş yok.', X.hucre)] });
+    const s2 = sayfa('İŞ PLANI — TAMAMLANAN İŞLER', bitenBasliklar, bitenSatirlar, [48, 12, 16, 14, 10, 16, 11, 28, 45]);
+
+    const dosya = `Is_Plani_${(firma && firma.ad ? firma.ad : 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}_${bugun}.xlsx`;
+    await xlsxKitapIndir(dosya, [
+      { ad: 'Açık İşler', xml: s1.xml, filtre: s1.filtre, baslikSatiri: 5 },
+      { ad: 'Tamamlanan', xml: s2.xml, filtre: s2.filtre, baslikSatiri: 5 }
+    ]);
   } catch (hata) {
     console.error(hata);
-    alert('PDF oluşturulamadı: ' + (hata.message || hata));
+    alert('Excel oluşturulamadı: ' + (hata.message || hata));
   } finally {
     btn.disabled = false; btn.textContent = eski;
   }
