@@ -1179,28 +1179,9 @@ async function konuBasliklariWordOlustur(notFormu = false) {
   kararBolumuEkle('BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR', yeni);
   kararBolumuEkle('ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR', devreden);
 
-  // Kullanıcı isteği: Kararlar (C/D) gibi Uygunsuzluklar da tek birleşik
-  // bölüm yerine, Kapatılan / Yeni Açılan diye AYRI iki bölüm olsun.
-  const tespitEdilenUygunsuzluklar = toplantiTespitEdilenUygunsuzluklariGetir(toplanti);
-  const kapananUygunsuzluklar = toplantiKapananUygunsuzluklariGetir(toplanti);
-
-  if (kapananUygunsuzluklar.length) {
-    bolumBasligi('KAPATILAN UYGUNSUZLUKLAR');
-    kapananUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Kapanış ${gunAyYil(k.kapanisTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `Alınan Önlem: ${k.alinanOnlem || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
-      notAlani(2);
-    });
-  }
-
-  if (tespitEdilenUygunsuzluklar.length) {
-    bolumBasligi('YENİ AÇILAN UYGUNSUZLUKLAR');
-    tespitEdilenUygunsuzluklar.forEach((k, i) => {
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${i + 1}. [Tespit ${gunAyYil(k.tespitTarihi) || '-'}] ${k.konuBasligi}`, size: METIN_BOYUT })] }));
-      children.push(new docx.Paragraph({ children: [new docx.TextRun({ text: `${k.uygunsuzluk || '-'} | Bölüm: ${k.bolum || '-'} | Durum: ${k.durum || '-'}`, size: METIN_BOYUT })], spacing: { after: MADDE_ARASI_BOSLUK } }));
-      notAlani(2);
-    });
-  }
+  // Kullanıcı isteği (Ekim 2026): Kapatılan / Yeni Açılan Uygunsuzluklar
+  // listeleri Konu Başlıkları ve Karar Not Formu'ndan çıkarıldı; yalnızca
+  // aşağıdaki sayısal değerlendirme kalır. (Kurul raporu ve PPTX'te duruyor.)
 
   // Uygunsuzlukların değerlendirmesi: yıl içinde açılan / kapatılan / tamamlama oranı.
   const usIstKb = toplantiUygunsuzlukIstatistikleriHesapla(toplanti);
