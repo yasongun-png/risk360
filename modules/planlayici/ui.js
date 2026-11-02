@@ -68,17 +68,30 @@ function gorevleriCiz() {
   secim.innerHTML = '<option value="">Tüm Kategoriler</option>' + kategoriler.map(k => `<option ${k === kategori ? 'selected' : ''}>${_plKacir(k)}</option>`).join('');
   const liste = tumu.filter(g => (!kategori || g.kategori === kategori)
     && (!arama || (g.baslik + ' ' + g.aciklama).toLocaleLowerCase('tr-TR').includes(arama)));
-  const { gruplar, tamamlanan } = planGorevleriGrupla(liste);
+  // Kullanıcı isteği: her gün / aylık / yıllık işler ayrı ayrı görünsün — tarih
+  // grupları yalnızca bir defalık işler için; tekrarlayanlar kendi bölümlerinde.
+  const tekrarliMi = g => g.tekrar && g.tekrar !== 'Bir defalık';
+  const { gruplar } = planGorevleriGrupla(liste.filter(g => !tekrarliMi(g)));
+  const { tamamlanan } = planGorevleriGrupla(liste);
+  const bugun = bugunIso();
+  const t = g => g.tarih || g.baslangicTarihi || '';
+  const tekrarGruplari = [
+    { tekrar: 'Her gün', baslik: '🔁 Her Gün Yapılan İşler', renk: '#047857' },
+    { tekrar: 'Her hafta', baslik: '🔁 Haftalık İşler', renk: '#0e7490' },
+    { tekrar: 'Her ay', baslik: '🔁 Aylık İşler', renk: '#7c3aed' },
+    { tekrar: 'Her yıl', baslik: '🔁 Yıllık İşler', renk: '#b45309' }
+  ].map(gr => Object.assign(gr, {
+    liste: liste.filter(g => g.durum !== 'Tamamlandı' && g.tekrar === gr.tekrar).sort((a, b) => t(a).localeCompare(t(b)))
+  }));
 
   const satir = g => {
     const bitti = g.durum === 'Tamamlandı';
-    const bugun = bugunIso();
     const saat = g.saat ? ' ' + g.saat : '';
     const tarih = [
       g.baslangicTarihi ? `▶ ${gunAyYil(g.baslangicTarihi)}` : '',
       g.tarih ? `🏁 ${gunAyYil(g.tarih)}` : ''
     ].filter(Boolean).join(' → ') + (g.baslangicTarihi || g.tarih ? saat : '');
-    const baslamaEtiketi = !bitti && g.baslangicTarihi === bugun ? '<span class="pl-etiket pl-devam">Bugün başlıyor</span>'
+    const baslamaEtiketi = bitti || tekrarliMi(g) ? '' : g.baslangicTarihi === bugun ? '<span class="pl-etiket pl-devam">Bugün başlıyor</span>'
       : (!bitti && g.baslangicTarihi && g.baslangicTarihi < bugun && g.durum === 'Yapılacak' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : '');
     return `<div class="pl-gorev${bitti ? ' bitti' : ''}" data-oncelik="${g.oncelik}">
       <input type="checkbox" data-tamamla="${g.id}" ${bitti ? 'checked' : ''} title="${bitti ? 'Geri al' : 'Tamamlandı işaretle'}">
@@ -87,6 +100,9 @@ function gorevleriCiz() {
         <div class="pl-gorev-alt">
           ${tarih ? `<span title="Başlangıç → Planlanan bitiş">${tarih}</span>` : ''}
           ${baslamaEtiketi}
+          ${!bitti && tekrarliMi(g) && g.tarih && g.tarih < bugun ? '<span class="pl-etiket" style="background:#fee2e2; color:#b91c1c;">Gecikti</span>' : ''}
+          ${!bitti && tekrarliMi(g) && t(g) === bugun ? '<span class="pl-etiket" style="background:#dbeafe; color:#1e40af;">Bugün</span>' : ''}
+          ${bitti && g.tamamlanmaTarihi ? `<span>✔ ${gunAyYil(g.tamamlanmaTarihi)}</span>` : ''}
           ${g.tekrar && g.tekrar !== 'Bir defalık' ? `<span class="pl-etiket" style="background:#ecfdf5; color:#047857;" title="Tamamlandığında bir sonraki tarih için yeniden eklenir">🔁 ${g.tekrar}</span>` : ''}
           ${g.kategori ? `<span class="pl-etiket">${_plKacir(g.kategori)}</span>` : ''}
           ${g.durum === 'Devam Ediyor' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : ''}
@@ -97,14 +113,15 @@ function gorevleriCiz() {
     </div>`;
   };
 
-  const dolu = gruplar.filter(gr => gr.liste.length);
+  const dolu = gruplar.concat(tekrarGruplari).filter(gr => gr.liste.length);
+  // Kullanıcı isteği: tamamlananlar kapalı değil, en altta açık görünsün.
   document.getElementById('gorevListesi').innerHTML = (dolu.length
     ? dolu.map(gr => `<div class="pl-grup">
         <div class="pl-grup-baslik" style="color:${gr.renk};">${gr.baslik} <small>${gr.liste.length}</small></div>
         ${gr.liste.map(satir).join('')}
       </div>`).join('')
     : `<div class="bos-durum gorunur">${tumu.length ? 'Açık iş yok. 🎉' : 'Henüz iş eklemediniz. Yukarıdaki kutuya yazıp Enter\'a basın.'}</div>`)
-    + (tamamlanan.length ? `<details class="pl-grup"><summary class="pl-grup-baslik" style="color:var(--basari); cursor:pointer;">Tamamlanan <small>${tamamlanan.length}</small></summary>${tamamlanan.slice(0, 50).map(satir).join('')}</details>` : '');
+    + (tamamlanan.length ? `<div class="pl-grup"><div class="pl-grup-baslik" style="color:var(--basari);">✔ Tamamlanan İşler <small>${tamamlanan.length}</small></div>${tamamlanan.map(satir).join('')}</div>` : '');
 
   const kutu = document.getElementById('gorevListesi');
   kutu.querySelectorAll('[data-tamamla]').forEach(c => c.addEventListener('change', () => { planGoreviTamamla(c.getAttribute('data-tamamla'), c.checked); gorevleriCiz(); }));
