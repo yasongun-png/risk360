@@ -70,14 +70,13 @@
 
     <!-- Kullanıcı isteği: iş planlama / not alanı. Izgaraya kart olarak değil
          tam genişlik şerit olarak eklendi (tek kart son satırı bozuyordu). -->
-    <a href="modules/planlayici/index.html" id="planSeridi" style="display:flex; align-items:center; gap:14px; text-decoration:none; color:inherit; background:linear-gradient(90deg, #eff6ff, #ffffff); border:1px solid #bfdbfe; border-radius:12px; padding:12px 18px; margin:0 0 16px; box-shadow:var(--golge);">
-      <span style="font-size:26px;">📝</span>
-      <span style="flex:1;">
-        <strong style="display:block; font-size:15px; color:var(--celik-mavi-koyu);">İş Planım ve Notlarım</strong>
-        <span style="font-size:12px; color:var(--metin-soluk);">Yapacağınız işleri tarihle planlayın, tamamladıkça işaretleyin; aklınıza gelenleri not alın. Yalnızca size görünür.</span>
-        <span id="planHatirlatma" style="display:block;"></span>
-      </span>
-      <span style="font-weight:700; color:var(--celik-mavi); white-space:nowrap;">Aç →</span>
+    <!-- Kullanıcı: "ana sayfada direkt görünmesi fazla yer kaplıyor" — tek satır;
+         hatırlatma yalnızca sayı rozeti + ilk iş, tam liste fareyle üzerine gelince. -->
+    <a href="modules/planlayici/index.html" id="planSeridi" title="Yapacağınız işleri planlayın, not alın. Yalnızca size görünür." style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; background:#f8fafc; border:1px solid #bfdbfe; border-radius:10px; padding:6px 14px; margin:0 0 12px; font-size:13px; white-space:nowrap; overflow:hidden;">
+      <span>📝</span>
+      <strong style="color:var(--celik-mavi-koyu);">İş Planım ve Notlarım</strong>
+      <span id="planHatirlatma" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;"></span>
+      <span style="font-weight:700; color:var(--celik-mavi);">Aç →</span>
     </a>
 
     <div class="modul-grid" id="modulGrid"></div>
@@ -423,21 +422,18 @@
       const geciken = isler.filter(g => g.tarih && g.tarih < bugun).length;
       const seritt = document.getElementById('planSeridi');
       seritt.style.borderColor = geciken ? '#fca5a5' : '#fcd34d';
-      seritt.style.background = geciken ? 'linear-gradient(90deg, #fef2f2, #ffffff)' : 'linear-gradient(90deg, #fffbeb, #ffffff)';
-      const satir = g => {
-        const gecikti = !!g.tarih && g.tarih < bugun;
-        const bitiyor = g.tarih === bugun;
+      seritt.style.background = geciken ? '#fef2f2' : '#fffbeb';
+      const etiketi = g => {
         const saat = g.saat ? ' ' + g.saat : '';
-        const etiket = gecikti ? `${gunAyYil(g.tarih)} · gecikti` : (bitiyor ? 'Bugün bitmeli' + saat : 'Bugün başlıyor' + saat);
-        const renk = gecikti ? 'background:#fee2e2; color:#b91c1c;' : (bitiyor ? 'background:#fef3c7; color:#92400e;' : 'background:#dbeafe; color:#1e40af;');
-        return `<div style="display:flex; gap:8px; align-items:baseline; font-size:13px; padding:2px 0;">
-          <span style="flex:none; font-size:11px; font-weight:700; border-radius:9px; padding:1px 8px; ${renk}">${_dbKacir(etiket)}</span>
-          <span style="color:var(--metin); ${g.oncelik === 'Yüksek' ? 'font-weight:700;' : ''}">${g.oncelik === 'Yüksek' ? '❗ ' : ''}${_dbKacir(g.baslik)}</span>
-        </div>`;
+        if (g.tarih && g.tarih < bugun) return `${gunAyYil(g.tarih)} gecikti`;
+        return g.tarih === bugun ? 'Bugün bitmeli' + saat : 'Bugün başlıyor' + saat;
       };
-      kutu.innerHTML = `<div style="font-size:12px; font-weight:700; margin:8px 0 4px; color:${geciken ? '#b91c1c' : '#92400e'};">⏰ Hatırlatma: ${isler.length} iş${geciken ? ` (${geciken} gecikmiş)` : ''}</div>`
-        + isler.slice(0, 5).map(satir).join('')
-        + (isler.length > 5 ? `<div style="font-size:12px; color:var(--metin-soluk);">… ve ${isler.length - 5} iş daha</div>` : '');
+      // Tam liste tarayıcı ipucunda (title) — şerit tek satır kalır.
+      seritt.title = '⏰ Hatırlatma:\n' + isler.map(g => `• ${etiketi(g)} — ${g.baslik}`).join('\n');
+      const renk = geciken ? 'background:#fee2e2; color:#b91c1c;' : 'background:#fef3c7; color:#92400e;';
+      kutu.innerHTML = `<span style="font-size:11px; font-weight:700; border-radius:9px; padding:1px 8px; ${renk}">⏰ ${isler.length} iş${geciken ? ` · ${geciken} gecikmiş` : ''}</span>`
+        + ` <span style="color:var(--metin);">${isler[0].oncelik === 'Yüksek' ? '❗ ' : ''}${_dbKacir(isler[0].baslik)}</span>`
+        + `<span style="color:var(--metin-soluk);"> · ${_dbKacir(etiketi(isler[0]))}${isler.length > 1 ? ` (+${isler.length - 1})` : ''}</span>`;
     }
   </script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>

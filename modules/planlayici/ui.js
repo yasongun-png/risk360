@@ -78,7 +78,7 @@ function gorevleriCiz() {
       g.tarih ? `🏁 ${gunAyYil(g.tarih)}` : ''
     ].filter(Boolean).join(' → ') + (g.baslangicTarihi || g.tarih ? saat : '');
     const baslamaEtiketi = !bitti && g.baslangicTarihi === bugun ? '<span class="pl-etiket pl-devam">Bugün başlıyor</span>'
-      : (!bitti && g.baslangicTarihi && g.baslangicTarihi < bugun && g.durum === 'Yapılacak' ? '<span class="pl-etiket" style="background:#fee2e2; color:#b91c1c;">Başlama tarihi geçti</span>' : '');
+      : (!bitti && g.baslangicTarihi && g.baslangicTarihi < bugun && g.durum === 'Yapılacak' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : '');
     return `<div class="pl-gorev${bitti ? ' bitti' : ''}" data-oncelik="${g.oncelik}">
       <input type="checkbox" data-tamamla="${g.id}" ${bitti ? 'checked' : ''} title="${bitti ? 'Geri al' : 'Tamamlandı işaretle'}">
       <div class="pl-gorev-govde" data-duzenle="${g.id}">
