@@ -926,16 +926,8 @@ async function _csgbToplantiKaydetTiklandi() {
     }, guncellemeler);
   } finally { btn.disabled = false; }
   if (!sonuc.basarili) { document.getElementById('csgbTopHata').textContent = sonuc.hata; return; }
-  // İş Planım'a otomatik: yeni toplantı eklenir, düzenlemede tarih güncellenir (core/plana-ekle.js).
-  if (typeof toplantiyiPlanaEkle === 'function') {
-    const dd = csgbDenetimleriTumunuGetir().find(x => x.id === _csgbAcikDenetimId) || {};
-    const ad = (CSGB_KONU_MODU ? '' : 'ÇSGB · ') + (dd.baslikGoruntu || dd.ad || dd.raporNo || '');
-    toplantiyiPlanaEkle({
-      anahtar: 'csgb-toplanti:' + sonuc.toplanti.id, ad, tarih: sonuc.toplanti.tarih, yer: sonuc.toplanti.yer,
-      kaynak: (CSGB_KONU_MODU ? 'Konu toplantısı' : 'ÇSGB denetimi') + (ad ? ' · ' + ad.replace(/^ÇSGB · /, '') : ''),
-      url: location.pathname + location.search
-    }, !_csgbToplantiId);
-  }
+  // İş Planım: gelecek toplantı yapılacaklarda, tarihi geçmiş Tamamlanan'da (core/plana-ekle.js).
+  if (typeof toplantilariPlanlaEsitle === 'function') toplantilariPlanlaEsitle();
   // Denetimin sabit listesi henüz yoksa bu toplantının katılımcıları liste olur (bir daha seçilmesin).
   const d = csgbDenetimleriTumunuGetir().find(x => x.id === _csgbAcikDenetimId);
   if (d && !csgbKatilimcilariNormallestir(d.katilimcilar).length && sonuc.toplanti.katilimcilar.length) {

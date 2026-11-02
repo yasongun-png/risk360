@@ -564,7 +564,7 @@
   <script src="../../core/data.js?v=6"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
-  <script src="../../core/plana-ekle.js?v=4"></script>
+  <script src="../../core/plana-ekle.js?v=5"></script>
   <script src="../../core/bolum-butonlari.js"></script>
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/form-ayarlari.js"></script>
@@ -595,6 +595,8 @@
         window.location.href = '../../firma-sec.html';
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          // Toplantılar İş Planım'da: planlanan → yapılacak, tamamlanan → Tamamlanan (core/plana-ekle.js).
+          toplantilariPlanlaEsitle();
           toplantiDetaySayfasiniBaslat();
           const id = new URLSearchParams(window.location.search).get('id');
           document.getElementById('duzenleLinki').href = 'index.html?edit=' + id;

@@ -168,21 +168,97 @@ function planIsiniGuncelle(anahtar, alanlar) {
   return sayi;
 }
 
-// Kullanıcı isteği: yeni toplantı oluşturulunca İş Planım'a otomatik eklensin —
-// başlangıç bugün, bitiş toplantı tarihi. Geçmiş tarihli (sonradan girilen)
-// toplantılar eklenmez. Tarih değişirse açık iş güncellenir.
-// veri: { anahtar, ad (toplantı adı/no), tarih, saat, yer, kaynak, url }
-function toplantiyiPlanaEkle(veri, yeniMi) {
-  const tarih = _peIsoTarih(veri.tarih);
-  if (!tarih) return;
-  const baslik = 'Toplantı: ' + (veri.ad || 'Toplantı') + ' — ' + gunAyYil(tarih) + (veri.saat ? ' ' + veri.saat : '');
-  if (!yeniMi) { planIsiniGuncelle(veri.anahtar, { tarih, baslik, saat: veri.saat || '' }); return; }
-  if (tarih < _peBugun()) return;
-  const is = planaOtomatikEkle({
-    anahtar: veri.anahtar, baslik, baslangic: _peBugun(), bitis: tarih, kaynak: veri.kaynak, url: veri.url,
-    aciklama: [veri.yer ? 'Yer: ' + veri.yer : '', 'Toplantı hazırlığı: gündem, davet, sunum, önceki kararların durumu.'].filter(Boolean).join('\n')
+// ==================== TOPLANTILAR ====================
+// Kullanıcı isteği: toplantılar İş Planım'da olsun — planlananlar yapılacaklarda
+// (başlangıç bugün, bitiş toplantı tarihi), tamamlananlar Tamamlanan'da.
+// Kaynaklar: Toplantı Yönetimi (kurul_toplantilari: Planlandı / Ertelendi → açık,
+// Tamamlandı → tamamlandı, İptal → açık iş silinir) ve konu / ÇSGB takip
+// toplantıları (durum alanı yok: tarihi geçmiş = yapılmış). Toplantı sayfalarında
+// ve İş Planım açılışında çalışır, sayfayı açan kullanıcının planına yazar.
+// Kullanıcının sildiği iş tekrar eklenmez (islenenKaynaklar); tarih / başlık /
+// durum değişiklikleri mevcut işe yansıtılır.
+function _peToplantiKaynaklari() {
+  const bugun = _peBugun();
+  const kok = location.pathname.replace(/modules\/[^/]+\/[^/]*$/, '');
+  const liste = [];
+  const kurul = oku(tenantAnahtar('kurul_toplantilari'), []);
+  (Array.isArray(kurul) ? kurul : []).forEach(t => {
+    if (!t || !t.tarih) return;
+    const durum = t.durum || 'Planlandı';
+    liste.push({
+      anahtar: 'kurul-toplanti:' + t.id, tarih: _peIsoTarih(t.tarih), saat: t.saat || '', yer: t.yer || '',
+      ad: [t.baslik, t.toplantiNo].filter(Boolean).join(' · ') || 'Toplantı',
+      durum: durum === 'Tamamlandı' ? 'bitti' : (durum === 'İptal' ? 'iptal' : 'acik'),
+      kaynak: 'Toplantı Yönetimi' + (t.toplantiNo ? ' · ' + t.toplantiNo : ''),
+      url: kok + 'modules/kurul/toplanti.html?id=' + t.id
+    });
   });
-  if (is && veri.saat) planIsiniGuncelle(veri.anahtar, { saat: veri.saat });
+  [['kurul_konu_', 'modules/kurul/konu-toplanti.html', 'Konu toplantısı'], ['uygunsuzluk_csgb_', 'modules/uygunsuzluk/csgb.html', 'ÇSGB takip toplantısı']].forEach(([onek, sayfa, tur]) => {
+    const toplantilar = oku(tenantAnahtar(onek + 'toplantilari'), []);
+    if (!Array.isArray(toplantilar) || !toplantilar.length) return;
+    const denetimler = oku(tenantAnahtar(onek + 'denetimleri'), []) || [];
+    toplantilar.forEach(t => {
+      if (!t || !t.tarih) return;
+      const d = denetimler.find(x => x.id === t.denetimId) || {};
+      const ad = d.ad || [d.denetimTuru, d.raporNo].filter(Boolean).join(' ') || tur;
+      const tarih = _peIsoTarih(t.tarih);
+      liste.push({
+        anahtar: 'csgb-toplanti:' + t.id, tarih, saat: '', yer: t.yer || '', ad,
+        durum: tarih <= bugun ? 'bitti' : 'acik', kaynak: tur + ' · ' + ad,
+        // Konu toplantısı sayfası hangi konunun açılacağını ?id= ile alır.
+        url: kok + sayfa + (onek === 'kurul_konu_' && t.denetimId ? '?id=' + t.denetimId : '')
+      });
+    });
+  });
+  return liste;
+}
+
+function toplantilariPlanlaEsitle() {
+  if (!tenantAnahtar('planlayici')) return 0;
+  const kullaniciId = _peKullaniciId();
+  if (!kullaniciId) return 0;
+  const bugun = _peBugun();
+  const veri = _pePlanVerisi();
+  const islenen = Array.isArray(veri.islenenKaynaklar[kullaniciId]) ? veri.islenenKaynaklar[kullaniciId] : [];
+  let degisti = 0;
+  _peToplantiKaynaklari().forEach(k => {
+    const baslik = 'Toplantı: ' + k.ad + ' — ' + gunAyYil(k.tarih) + (k.saat ? ' ' + k.saat : '');
+    const isler = veri.gorevler.filter(g => g.kaynakAnahtar === k.anahtar && g.olusturanId === kullaniciId);
+    if (k.durum === 'iptal') {
+      const once = veri.gorevler.length;
+      veri.gorevler = veri.gorevler.filter(g => !(isler.includes(g) && g.durum !== 'Tamamlandı'));
+      degisti += once - veri.gorevler.length;
+      return;
+    }
+    if (!isler.length) {
+      if (islenen.includes(k.anahtar)) return;
+      const bitti = k.durum === 'bitti';
+      veri.gorevler.push({
+        id: rastgeleId(), baslik,
+        aciklama: [k.yer ? 'Yer: ' + k.yer : '', bitti ? '' : 'Toplantı hazırlığı: gündem, davet, sunum, önceki kararların durumu.'].filter(Boolean).join('\n'),
+        baslangicTarihi: bitti || k.tarih < bugun ? k.tarih : bugun, tarih: k.tarih, saat: k.saat, oncelik: 'Normal',
+        kategori: 'Toplantı', durum: bitti ? 'Tamamlandı' : 'Yapılacak', tekrar: 'Bir defalık', sonrakiId: '',
+        tamamlanmaTarihi: bitti ? k.tarih : '',
+        kaynak: k.kaynak, kaynakUrl: k.url, kaynakAnahtar: k.anahtar,
+        olusturanId: kullaniciId, olusturmaTarihi: new Date().toISOString()
+      });
+      islenen.push(k.anahtar);
+      degisti++;
+      return;
+    }
+    isler.forEach(g => {
+      if (g.durum === 'Tamamlandı') return;
+      if (g.tarih !== k.tarih || g.baslik !== baslik || (g.saat || '') !== k.saat) {
+        g.tarih = k.tarih; g.baslik = baslik; g.saat = k.saat;
+        if (g.baslangicTarihi && g.baslangicTarihi > g.tarih) g.baslangicTarihi = g.tarih;
+        degisti++;
+      }
+      if (k.durum === 'bitti') { g.durum = 'Tamamlandı'; g.tamamlanmaTarihi = k.tarih <= bugun ? k.tarih : bugun; degisti++; }
+    });
+  });
+  veri.islenenKaynaklar[kullaniciId] = islenen;
+  if (degisti) yaz(tenantAnahtar('planlayici'), veri);
+  return degisti;
 }
 
 // Kaynak kapandığında (ör. geçici onay kaldırıldı) açık takip işini tamamlar.
