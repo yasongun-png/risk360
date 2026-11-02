@@ -29,7 +29,11 @@ function _peIsoTarih(v) {
 
 function _pePlanVerisi() {
   const v = oku(tenantAnahtar('planlayici'), null);
-  return { gorevler: (v && Array.isArray(v.gorevler)) ? v.gorevler : [], notlar: (v && Array.isArray(v.notlar)) ? v.notlar : [] };
+  return {
+    gorevler: (v && Array.isArray(v.gorevler)) ? v.gorevler : [], notlar: (v && Array.isArray(v.notlar)) ? v.notlar : [],
+    // Otomatik eklenmiş kaynaklar (kullanıcı başına) — iş silinse de tekrar eklenmez.
+    islenenKaynaklar: (v && v.islenenKaynaklar && typeof v.islenenKaynaklar === 'object') ? v.islenenKaynaklar : {}
+  };
 }
 
 function _peKullaniciId() {
@@ -110,6 +114,121 @@ function planaEkleModaliAc(veri) {
   document.getElementById('peBaslik').focus();
 }
 
+// İş Planım kaydı (planlayici/model.js planGoreviOlustur ile aynı alanlar).
+function _peIsEkle(a) {
+  const veri = _pePlanVerisi();
+  const is = {
+    id: rastgeleId(), baslik: a.baslik, aciklama: a.aciklama || '',
+    baslangicTarihi: a.baslangicTarihi || '', tarih: a.tarih || '', saat: '', oncelik: a.oncelik || 'Normal',
+    kategori: a.kategori || '', durum: 'Yapılacak', tekrar: a.tekrar || 'Bir defalık', sonrakiId: '', tamamlanmaTarihi: '',
+    kaynak: a.kaynak || '', kaynakUrl: a.kaynakUrl || '', kaynakAnahtar: a.kaynakAnahtar || '',
+    olusturanId: _peKullaniciId(), olusturmaTarihi: new Date().toISOString()
+  };
+  veri.gorevler.push(is);
+  yaz(tenantAnahtar('planlayici'), veri);
+  return is;
+}
+
+// Tarihe ay ekler; ay sonu taşmaz (31 Ocak + 1 ay = 28/29 Şubat).
+function planaAyEkle(iso, ay) {
+  const [y, a, g] = String(iso).slice(0, 10).split('-').map(Number);
+  if (!y) return '';
+  const hedef = new Date(y, a - 1 + ay, 1);
+  const son = new Date(hedef.getFullYear(), hedef.getMonth() + 1, 0).getDate();
+  hedef.setDate(Math.min(g, son));
+  return hedef.getFullYear() + '-' + String(hedef.getMonth() + 1).padStart(2, '0') + '-' + String(hedef.getDate()).padStart(2, '0');
+}
+
+// Pencere açmadan ekler (ör. İSG geçici onay verilince takip işi). Aynı
+// kaynakAnahtar ile daha önce eklenmiş iş varsa (tamamlanmış olsa bile) eklemez.
+// veri: { anahtar, baslik, aciklama, baslangic, bitis, kaynak, url, oncelik }
+function planaOtomatikEkle(veri) {
+  if (!tenantAnahtar('planlayici') || !veri.anahtar) return null;
+  const id = _peKullaniciId();
+  if (_pePlanVerisi().gorevler.some(g => g.kaynakAnahtar === veri.anahtar && g.olusturanId === id)) return null;
+  return _peIsEkle({
+    baslik: veri.baslik, aciklama: veri.aciklama, baslangicTarihi: veri.baslangic || _peBugun(),
+    tarih: _peIsoTarih(veri.bitis), oncelik: veri.oncelik, kaynak: veri.kaynak,
+    kaynakUrl: veri.url || (location.pathname + location.search), kaynakAnahtar: veri.anahtar
+  });
+}
+
+// Kaynak kapandığında (ör. geçici onay kaldırıldı) açık takip işini tamamlar.
+function planIsiniTamamla(anahtar) {
+  if (!tenantAnahtar('planlayici') || !anahtar) return 0;
+  const id = _peKullaniciId();
+  const veri = _pePlanVerisi();
+  let sayi = 0;
+  veri.gorevler.forEach(g => {
+    if (g.kaynakAnahtar === anahtar && g.olusturanId === id && g.durum !== 'Tamamlandı') {
+      g.durum = 'Tamamlandı'; g.tamamlanmaTarihi = _peBugun(); sayi++;
+    }
+  });
+  if (sayi) yaz(tenantAnahtar('planlayici'), veri);
+  return sayi;
+}
+
+// ==================== YÜKLENİCİ İSG GEÇİCİ ONAY TAKİBİ ====================
+// Kullanıcı isteği: İSG geçici onay verilen yüklenici personeli, evrakını
+// tamamlatmak için BİR AY termini ile İş Planım'a OTOMATİK eklensin (düğme yok);
+// onayı başka bir kullanıcı vermiş olsa da. Bu yüzden eşitleme hem Yüklenici
+// sayfasında (açılışta ve onay değişince) hem İş Planım açılırken çalışır ve
+// sayfayı açan kullanıcının planına yazar. Her onay (kişi + onay günü) bir kez
+// eklenir; iş tamamlanıp silinse de aynı onay için tekrar eklenmez, yeniden onay
+// verilirse yeni iş açılır. Onay kaldırılan veya pasife alınan kişinin açık işi
+// tamamlandı yapılır. Kişi verisi: modules/yuklenici (yuklenici_kisileri).
+const _PE_GECICI_ONAY_ONEK = 'yuklenici-gecici-onay:';
+
+function yukleniciGeciciOnayPlaniniEsitle() {
+  const kisiAnahtari = tenantAnahtar('yuklenici_kisileri');
+  if (!kisiAnahtari || !tenantAnahtar('planlayici')) return 0;
+  const kisiler = oku(kisiAnahtari, []);
+  if (!Array.isArray(kisiler)) return 0;
+  const kullaniciId = _peKullaniciId();
+  if (!kullaniciId) return 0;
+  const veri = _pePlanVerisi();
+  const benim = veri.gorevler.filter(g => g.olusturanId === kullaniciId && String(g.kaynakAnahtar || '').startsWith(_PE_GECICI_ONAY_ONEK));
+  const islenen = Array.isArray(veri.islenenKaynaklar[kullaniciId]) ? veri.islenenKaynaklar[kullaniciId] : [];
+  const mevcutAnahtarlar = new Set(benim.map(g => g.kaynakAnahtar).concat(islenen));
+  // Eşitleme İş Planım'da da çalıştığı için bağlantı her zaman Yüklenici sayfasına.
+  const url = location.pathname.replace(/modules\/[^/]+\/[^/]*$/, 'modules/yuklenici/index.html');
+  const gecerli = new Set();
+  let degisti = 0;
+  kisiler.forEach(k => {
+    if (!k || !k.isgOnayBypass || k.pasif) return;
+    const onayGunu = String(k.isgOnayTarihi || '').slice(0, 10);
+    const anahtar = _PE_GECICI_ONAY_ONEK + k.id + ':' + onayGunu;
+    gecerli.add(anahtar);
+    if (mevcutAnahtarlar.has(anahtar)) return;
+    const baslangic = onayGunu || _peBugun();
+    veri.gorevler.push({
+      id: rastgeleId(),
+      baslik: `Geçici onaylı yüklenici personeli: ${k.adSoyad || ''}${k.firmaAdi ? ' (' + k.firmaAdi + ')' : ''} — eksik evrakları tamamlat`,
+      aciklama: [
+        'İSG geçici onay ile "Uygun" görünüyor; evrakları tamamlanınca bu işi kapatın.',
+        k.isgOnayVeren ? 'Onaylayan: ' + k.isgOnayVeren : '',
+        onayGunu ? 'Onay tarihi: ' + gunAyYil(onayGunu) : ''
+      ].filter(Boolean).join('\n'),
+      baslangicTarihi: baslangic, tarih: planaAyEkle(baslangic, 1), saat: '', oncelik: 'Normal',
+      kategori: '', durum: 'Yapılacak', tekrar: 'Bir defalık', sonrakiId: '', tamamlanmaTarihi: '',
+      kaynak: 'Yüklenici · İSG geçici onay', kaynakUrl: url, kaynakAnahtar: anahtar,
+      olusturanId: kullaniciId, olusturmaTarihi: new Date().toISOString()
+    });
+    islenen.push(anahtar);
+    degisti++;
+  });
+  veri.islenenKaynaklar[kullaniciId] = islenen;
+  benim.forEach(g => {
+    if (g.durum !== 'Tamamlandı' && !gecerli.has(g.kaynakAnahtar)) {
+      g.durum = 'Tamamlandı'; g.tamamlanmaTarihi = _peBugun();
+      g.aciklama = (g.aciklama ? g.aciklama + '\n' : '') + 'Geçici onay kaldırıldı / kişi pasife alındı — otomatik kapatıldı.';
+      degisti++;
+    }
+  });
+  if (degisti) yaz(tenantAnahtar('planlayici'), veri);
+  return degisti;
+}
+
 function _peKaydet() {
   const v = _peAcikVeri || {};
   const baslik = document.getElementById('peBaslik').value.trim();
@@ -120,15 +239,11 @@ function _peKaydet() {
   if (!baslik) { hata.textContent = 'Yapılacak işi yazın.'; return; }
   if (bas && bit && bit < bas) { hata.textContent = 'Planlanan bitiş tarihi başlangıçtan önce olamaz.'; return; }
   if (tekrar !== 'Bir defalık' && !bas && !bit) { hata.textContent = 'Tekrarlayan iş için başlangıç veya bitiş tarihi girin.'; return; }
-  const veri = _pePlanVerisi();
-  veri.gorevler.push({
-    id: rastgeleId(), baslik, aciklama: document.getElementById('peAciklama').value.trim(),
-    baslangicTarihi: bas, tarih: bit, saat: '', oncelik: document.getElementById('peOncelik').value,
-    kategori: '', durum: 'Yapılacak', tekrar, sonrakiId: '', tamamlanmaTarihi: '',
-    kaynak: v.kaynak || '', kaynakUrl: v.url || '', kaynakAnahtar: v.anahtar || '',
-    olusturanId: _peKullaniciId(), olusturmaTarihi: new Date().toISOString()
+  _peIsEkle({
+    baslik, aciklama: document.getElementById('peAciklama').value.trim(),
+    baslangicTarihi: bas, tarih: bit, oncelik: document.getElementById('peOncelik').value, tekrar,
+    kaynak: v.kaynak, kaynakUrl: v.url, kaynakAnahtar: v.anahtar
   });
-  yaz(tenantAnahtar('planlayici'), veri);
   document.getElementById('peKatman').classList.remove('acik');
   // Aynı kaydın düğmelerini yerinde "Planımda" yap (tablo yeniden çizilmeden).
   document.querySelectorAll('[data-plan-anahtar]').forEach(b => {

@@ -638,6 +638,7 @@
   <script src="../../core/data.js?v=6"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
+  <script src="../../core/plana-ekle.js?v=3"></script>
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/metin-istem.js"></script>
   <!-- ?v= değeri: modül JS'si her değiştiğinde artırın; yoksa tarayıcı eski
@@ -646,9 +647,9 @@
   <script src="validation.js?v=20261019c"></script>
   <script src="repository.js?v=20261030a"></script>
   <script src="service.js?v=20261030d"></script>
-  <script src="ui.js?v=20261030b"></script>
+  <script src="ui.js?v=20261102a"></script>
   <script src="roboto-font.js"></script>
-  <script src="cikti.js?v=20261021d"></script>
+  <script src="cikti.js?v=20261102a"></script>
   <script src="degerlendirme.js?v=20261019f"></script>
   <script src="../../core/dokumanlar.js?v=20261019e"></script>
   <script>
@@ -669,6 +670,8 @@
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' için yüklenici firma ve personel takibi';
           document.getElementById('kisiDurumFiltre').innerHTML += KISI_DURUMLARI.map(d => `<option>${d}</option>`).join('');
           yukleniciSayfasiniBaslat();
+          // İSG geçici onaylılar İş Planım'a otomatik (core/plana-ekle.js).
+          yukleniciGeciciOnayPlaniniEsitle();
         });
       }
     }

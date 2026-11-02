@@ -158,9 +158,10 @@
   <script src="../../core/data.js?v=6"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
+  <script src="../../core/plana-ekle.js?v=3"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="model.js?v=4"></script>
-  <script src="repository.js?v=1"></script>
+  <script src="repository.js?v=2"></script>
   <script src="service.js?v=4"></script>
   <script src="ui.js?v=10"></script>
   <script>
@@ -179,6 +180,8 @@
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' için yapacağınız işler ve notlarınız — yalnızca size görünür.';
+          // Başka kullanıcı geçici onay vermiş olsa da takip işi bu planda olsun (core/plana-ekle.js).
+          yukleniciGeciciOnayPlaniniEsitle();
           planlayiciSayfasiniBaslat();
         });
       }

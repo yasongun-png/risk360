@@ -1795,6 +1795,8 @@ function kayitlariCiz(aramaMetni) {
       const onay = btn.getAttribute('data-yeni-onay') === 'true';
       if (onay && !(await onayModali('Bu kişiye İSG geçici onay verilecek: eksik evrağı olsa da İSG Onaylı Listede "Uygun (İSG geçici onay)" görünecek. Onaylıyor musunuz?', 'Geçici Onay Ver'))) return;
       yukleniciKisiIsgOnayDegistir(btn.getAttribute('data-isg-onay'), onay);
+      // İş Planım'a bir ay termini ile otomatik takip işi / onay kaldırılınca kapat (core/plana-ekle.js).
+      if (typeof yukleniciGeciciOnayPlaniniEsitle === 'function') yukleniciGeciciOnayPlaniniEsitle();
       kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
     });
   });

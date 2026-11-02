@@ -677,7 +677,9 @@ function _ykPersonelTablosuCiz(pdf, startY, satirlar) {
   const body = satirlar.map(({ kisi, sonuc }) => ([
     _yukleniciFirmaAdiNormallestir(kisi.firmaAdi),
     _yukleniciTrTitleCase(kisi.adSoyad),
-    `${sonuc.sonTarih ? formatTarihGoster(sonuc.sonTarih) : '-'} | ${sonuc.durumMetni}`
+    // Kullanıcı isteği: PDF'te "(İSG geçici onay)" yazmasın, yalnızca "Uygun"
+    // (geçici onay takibi uygulama içinde / İş Planım'da yapılır).
+    `${sonuc.sonTarih ? formatTarihGoster(sonuc.sonTarih) : '-'} | ${sonuc.bypass ? 'Uygun' : sonuc.durumMetni}`
   ]));
   return _ykPdfTabloCiz(pdf, startY, ['Firma', 'Personel', 'Girebileceği Son Tarih'], body,
     { 0: { cellWidth: 62 }, 1: { cellWidth: 62 }, 2: { cellWidth: 58 } },
