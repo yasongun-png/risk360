@@ -66,7 +66,7 @@
       <div class="istatistik-grid" id="planOzeti" style="grid-template-columns:repeat(5, minmax(100px,1fr)); margin-bottom:14px;"></div>
       <form class="pl-hizli" id="hizliEkleForm">
         <input type="text" id="hizliBaslik" placeholder="Yapılacak işi yazıp Enter'a basın… (ör. Liman tatbikat raporunu hazırla)" autocomplete="off">
-        <input type="date" id="hizliTarih" title="Tarih (boş bırakılırsa tarihsiz)">
+        <input type="date" id="hizliTarih" title="Planlanan bitiş tarihi (boş bırakılırsa tarihsiz)">
         <button type="submit" class="ikincil">Ekle</button>
         <button type="button" class="birincil" id="yeniGorevBtn" style="width:auto;">+ Ayrıntılı İş</button>
       </form>
@@ -95,9 +95,12 @@
         <input type="text" id="gBaslik" autocomplete="off">
         <div class="alan-hatasi" id="gBaslikHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
         <div class="form-satir-ikili">
-          <div><label for="gTarih">Tarih</label><input type="date" id="gTarih"></div>
-          <div><label for="gSaat">Saat</label><input type="time" id="gSaat"></div>
+          <div><label for="gBaslangic">Başlangıç Tarihi</label><input type="date" id="gBaslangic"></div>
+          <div><label for="gTarih">Planlanan Bitiş Tarihi</label><input type="date" id="gTarih"></div>
         </div>
+        <div class="alan-hatasi" id="gTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
+        <label for="gSaat">Saat <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label>
+        <input type="time" id="gSaat">
         <div class="form-satir-ikili">
           <div><label for="gKategori">Kategori</label><input type="text" id="gKategori" list="kategoriListesi" placeholder="Seçin veya yazın"><datalist id="kategoriListesi"></datalist></div>
           <div><label for="gOncelik">Öncelik</label><select id="gOncelik"></select></div>
@@ -142,10 +145,10 @@
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js?v=1"></script>
+  <script src="model.js?v=2"></script>
   <script src="repository.js?v=1"></script>
-  <script src="service.js?v=1"></script>
-  <script src="ui.js?v=1"></script>
+  <script src="service.js?v=2"></script>
+  <script src="ui.js?v=2"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 

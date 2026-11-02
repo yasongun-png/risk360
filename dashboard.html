@@ -414,19 +414,24 @@
       } catch (e) { console.error('İş planı hatırlatması okunamadı:', e); return; }
       const t = new Date();
       const bugun = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+      // Bitişi bugün/geçmiş VEYA başlangıcı bugün olan açık işler.
       const isler = ((veri && veri.gorevler) || [])
-        .filter(g => g.olusturanId === kullanici.id && g.durum !== 'Tamamlandı' && g.tarih && g.tarih <= bugun)
-        .sort((a, b) => String(a.tarih).localeCompare(String(b.tarih)) || String(a.saat).localeCompare(String(b.saat)));
+        .filter(g => g.olusturanId === kullanici.id && g.durum !== 'Tamamlandı'
+          && ((g.tarih && g.tarih <= bugun) || g.baslangicTarihi === bugun))
+        .sort((a, b) => String(a.tarih || a.baslangicTarihi).localeCompare(String(b.tarih || b.baslangicTarihi)) || String(a.saat).localeCompare(String(b.saat)));
       if (!isler.length) { kutu.innerHTML = ''; return; }
-      const geciken = isler.filter(g => g.tarih < bugun).length;
+      const geciken = isler.filter(g => g.tarih && g.tarih < bugun).length;
       const seritt = document.getElementById('planSeridi');
       seritt.style.borderColor = geciken ? '#fca5a5' : '#fcd34d';
       seritt.style.background = geciken ? 'linear-gradient(90deg, #fef2f2, #ffffff)' : 'linear-gradient(90deg, #fffbeb, #ffffff)';
       const satir = g => {
-        const gecikti = g.tarih < bugun;
-        const etiket = gecikti ? `${gunAyYil(g.tarih)} · gecikti` : ('Bugün' + (g.saat ? ' ' + g.saat : ''));
+        const gecikti = !!g.tarih && g.tarih < bugun;
+        const bitiyor = g.tarih === bugun;
+        const saat = g.saat ? ' ' + g.saat : '';
+        const etiket = gecikti ? `${gunAyYil(g.tarih)} · gecikti` : (bitiyor ? 'Bugün bitmeli' + saat : 'Bugün başlıyor' + saat);
+        const renk = gecikti ? 'background:#fee2e2; color:#b91c1c;' : (bitiyor ? 'background:#fef3c7; color:#92400e;' : 'background:#dbeafe; color:#1e40af;');
         return `<div style="display:flex; gap:8px; align-items:baseline; font-size:13px; padding:2px 0;">
-          <span style="flex:none; font-size:11px; font-weight:700; border-radius:9px; padding:1px 8px; ${gecikti ? 'background:#fee2e2; color:#b91c1c;' : 'background:#fef3c7; color:#92400e;'}">${_dbKacir(etiket)}</span>
+          <span style="flex:none; font-size:11px; font-weight:700; border-radius:9px; padding:1px 8px; ${renk}">${_dbKacir(etiket)}</span>
           <span style="color:var(--metin); ${g.oncelik === 'Yüksek' ? 'font-weight:700;' : ''}">${g.oncelik === 'Yüksek' ? '❗ ' : ''}${_dbKacir(g.baslik)}</span>
         </div>`;
       };

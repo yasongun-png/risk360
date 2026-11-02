@@ -71,13 +71,21 @@ function gorevleriCiz() {
 
   const satir = g => {
     const bitti = g.durum === 'Tamamlandı';
-    const tarih = g.tarih ? gunAyYil(g.tarih) + (g.saat ? ' ' + g.saat : '') : '';
+    const bugun = bugunIso();
+    const saat = g.saat ? ' ' + g.saat : '';
+    const tarih = [
+      g.baslangicTarihi ? `▶ ${gunAyYil(g.baslangicTarihi)}` : '',
+      g.tarih ? `🏁 ${gunAyYil(g.tarih)}` : ''
+    ].filter(Boolean).join(' → ') + (g.baslangicTarihi || g.tarih ? saat : '');
+    const baslamaEtiketi = !bitti && g.baslangicTarihi === bugun ? '<span class="pl-etiket pl-devam">Bugün başlıyor</span>'
+      : (!bitti && g.baslangicTarihi && g.baslangicTarihi < bugun && g.durum === 'Yapılacak' ? '<span class="pl-etiket" style="background:#fee2e2; color:#b91c1c;">Başlama tarihi geçti</span>' : '');
     return `<div class="pl-gorev${bitti ? ' bitti' : ''}" data-oncelik="${g.oncelik}">
       <input type="checkbox" data-tamamla="${g.id}" ${bitti ? 'checked' : ''} title="${bitti ? 'Geri al' : 'Tamamlandı işaretle'}">
       <div class="pl-gorev-govde" data-duzenle="${g.id}">
         <div class="pl-gorev-baslik">${g.oncelik === 'Yüksek' ? '<span class="pl-oncelik" title="Yüksek öncelik">!</span>' : ''}${_plKacir(g.baslik)}</div>
         <div class="pl-gorev-alt">
-          ${tarih ? `<span>📅 ${tarih}</span>` : ''}
+          ${tarih ? `<span title="Başlangıç → Planlanan bitiş">${tarih}</span>` : ''}
+          ${baslamaEtiketi}
           ${g.kategori ? `<span class="pl-etiket">${_plKacir(g.kategori)}</span>` : ''}
           ${g.durum === 'Devam Ediyor' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : ''}
           ${g.aciklama ? `<span class="pl-aciklama">${_plKacir(g.aciklama)}</span>` : ''}
@@ -110,7 +118,9 @@ function gorevModalAc(id) {
   document.getElementById('gorevModalBaslik').textContent = g ? 'İşi Düzenle' : 'Yeni İş';
   document.getElementById('gBaslik').value = g ? g.baslik : '';
   document.getElementById('gAciklama').value = g ? g.aciklama : '';
-  document.getElementById('gTarih').value = g ? g.tarih : bugunIso();
+  document.getElementById('gBaslangic').value = g ? g.baslangicTarihi || '' : bugunIso();
+  document.getElementById('gTarih').value = g ? g.tarih : '';
+  document.getElementById('gTarihHata').textContent = '';
   document.getElementById('gSaat').value = g ? g.saat : '';
   document.getElementById('gOncelik').value = g ? g.oncelik : 'Normal';
   document.getElementById('gKategori').value = g ? g.kategori : '';
@@ -129,13 +139,18 @@ function gorevFormGonderildi(e) {
   const sonuc = planGoreviKaydet({
     baslik: document.getElementById('gBaslik').value,
     aciklama: document.getElementById('gAciklama').value,
+    baslangicTarihi: document.getElementById('gBaslangic').value,
     tarih: document.getElementById('gTarih').value,
     saat: document.getElementById('gSaat').value,
     oncelik: document.getElementById('gOncelik').value,
     kategori: document.getElementById('gKategori').value,
     durum: document.getElementById('gDurum').value
   }, _plDuzenlenenGorevId);
-  if (!sonuc.basarili) { document.getElementById('gBaslikHata').textContent = sonuc.hatalar.baslik || ''; return; }
+  if (!sonuc.basarili) {
+    document.getElementById('gBaslikHata').textContent = sonuc.hatalar.baslik || '';
+    document.getElementById('gTarihHata').textContent = sonuc.hatalar.tarih || '';
+    return;
+  }
   gorevModalKapat();
   gorevleriCiz();
 }

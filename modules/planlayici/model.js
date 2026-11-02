@@ -23,6 +23,10 @@ function planGoreviOlustur(v) {
     id: v.id || rastgeleId(),
     baslik: String(v.baslik || '').trim(),
     aciklama: String(v.aciklama || '').trim(),
+    // Kullanıcı isteği: "işin başladığı tarih ve planlanan bitiş tarihi".
+    // tarih = planlanan bitiş (ilk sürümde tek tarih alanıydı; eski kayıtlarda
+    // anlamı değişmesin diye adı korundu).
+    baslangicTarihi: v.baslangicTarihi || '',
     tarih: v.tarih || '',
     saat: v.saat || '',
     oncelik: PLAN_ONCELIKLERI.includes(v.oncelik) ? v.oncelik : 'Normal',
@@ -50,6 +54,7 @@ function planNotuOlustur(v) {
 function planGoreviDogrula(v) {
   const hatalar = {};
   if (!String(v.baslik || '').trim()) hatalar.baslik = 'Yapılacak işi yazın.';
+  if (v.baslangicTarihi && v.tarih && v.tarih < v.baslangicTarihi) hatalar.tarih = 'Planlanan bitiş tarihi başlangıçtan önce olamaz.';
   return { gecerli: !Object.keys(hatalar).length, hatalar };
 }
 

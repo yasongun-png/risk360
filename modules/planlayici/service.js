@@ -45,15 +45,18 @@ function planGorevleriGrupla(liste) {
   const gunEkle = n => { const d = new Date(bugun + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const yarin = gunEkle(1), hafta = gunEkle(7);
   const oncelikSira = { Yüksek: 0, Normal: 1, Düşük: 2 };
-  const sirala = a => a.sort((x, y) => String(x.tarih).localeCompare(String(y.tarih)) || String(x.saat).localeCompare(String(y.saat)) || oncelikSira[x.oncelik] - oncelikSira[y.oncelik]);
+  // Gruplama planlanan bitişe göre; bitiş yoksa başlangıç tarihine göre.
+  const t = g => g.tarih || g.baslangicTarihi || '';
+  const sirala = a => a.sort((x, y) => t(x).localeCompare(t(y)) || String(x.saat).localeCompare(String(y.saat)) || oncelikSira[x.oncelik] - oncelikSira[y.oncelik]);
   const acik = liste.filter(g => g.durum !== 'Tamamlandı');
   const gruplar = [
     { anahtar: 'gecikmis', baslik: 'Gecikmiş', renk: 'var(--hata)', liste: acik.filter(g => g.tarih && g.tarih < bugun) },
-    { anahtar: 'bugun', baslik: 'Bugün', renk: 'var(--celik-mavi)', liste: acik.filter(g => g.tarih === bugun) },
-    { anahtar: 'yarin', baslik: 'Yarın', renk: '#0891b2', liste: acik.filter(g => g.tarih === yarin) },
-    { anahtar: 'hafta', baslik: 'Bu Hafta', renk: '#7c3aed', liste: acik.filter(g => g.tarih > yarin && g.tarih <= hafta) },
-    { anahtar: 'sonra', baslik: 'Daha Sonra', renk: '#475569', liste: acik.filter(g => g.tarih > hafta) },
-    { anahtar: 'tarihsiz', baslik: 'Tarihsiz', renk: '#94a3b8', liste: acik.filter(g => !g.tarih) }
+    { anahtar: 'bugun', baslik: 'Bugün', renk: 'var(--celik-mavi)', liste: acik.filter(g => !(g.tarih && g.tarih < bugun) && t(g) === bugun) },
+    { anahtar: 'yarin', baslik: 'Yarın', renk: '#0891b2', liste: acik.filter(g => !(g.tarih && g.tarih < bugun) && t(g) === yarin) },
+    { anahtar: 'hafta', baslik: 'Bu Hafta', renk: '#7c3aed', liste: acik.filter(g => t(g) > yarin && t(g) <= hafta) },
+    { anahtar: 'sonra', baslik: 'Daha Sonra', renk: '#475569', liste: acik.filter(g => t(g) > hafta) },
+    // Bitişi olmayan, başlangıcı geçmiş açık işler de burada (süresiz devam eden).
+    { anahtar: 'tarihsiz', baslik: 'Tarihsiz / Bitişi Belirsiz', renk: '#94a3b8', liste: acik.filter(g => !g.tarih && (!g.baslangicTarihi || g.baslangicTarihi < bugun)) }
   ];
   gruplar.forEach(g => sirala(g.liste));
   const tamamlanan = liste.filter(g => g.durum === 'Tamamlandı')
