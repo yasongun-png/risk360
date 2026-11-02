@@ -21,9 +21,37 @@ function planGoreviKaydet(veriler, id) {
     olusturanId: mevcut ? mevcut.olusturanId : _planKullaniciId()
   }));
   kayit.tamamlanmaTarihi = kayit.durum === 'Tamamlandı' ? (mevcut && mevcut.tamamlanmaTarihi) || bugunIso() : '';
+  const oncedenBitti = !!mevcut && mevcut.durum === 'Tamamlandı';
+  if (kayit.durum === 'Tamamlandı' && !oncedenBitti && kayit.tekrar !== 'Bir defalık' && !kayit.sonrakiId) {
+    // Tekrarlayan iş tamamlandı: bu kayıt geçmişte kalır, bir sonraki tekrar açık iş olarak eklenir.
+    const sonraki = _planSonrakiTekrar(kayit);
+    veri.gorevler.push(sonraki);
+    kayit.sonrakiId = sonraki.id;
+  } else if (kayit.durum !== 'Tamamlandı' && oncedenBitti && kayit.sonrakiId) {
+    // Tamamlandı geri alındı: henüz başlanmamış sonraki tekrar silinir (çift kayıt olmasın).
+    const s = veri.gorevler.find(g => g.id === kayit.sonrakiId);
+    if (s && s.durum === 'Yapılacak') veri.gorevler.splice(veri.gorevler.indexOf(s), 1);
+    kayit.sonrakiId = '';
+  }
   if (mevcut) veri.gorevler[veri.gorevler.indexOf(mevcut)] = kayit; else veri.gorevler.push(kayit);
   planVerisiKaydet(veri);
   return { basarili: true, kayit };
+}
+
+// Tarihler periyot kadar ileri alınır; gecikmiş bir tekrar tamamlandıysa bugünden
+// önceki tekrarlar atlanır (ör. 3 gün geç tamamlanan günlük iş için 3 gecikmiş kopya oluşmaz).
+function _planSonrakiTekrar(g) {
+  let bas = g.baslangicTarihi, bit = g.tarih;
+  const bugun = bugunIso();
+  for (let i = 0; i < 1000; i++) {
+    bas = planTarihIlerlet(bas, g.tekrar);
+    bit = planTarihIlerlet(bit, g.tekrar);
+    if ((bit || bas) >= bugun) break;
+  }
+  return planGoreviOlustur(Object.assign({}, g, {
+    id: undefined, baslangicTarihi: bas, tarih: bit, durum: 'Yapılacak',
+    tamamlanmaTarihi: '', sonrakiId: '', olusturmaTarihi: undefined
+  }));
 }
 
 function planGoreviTamamla(id, tamamlandi) {

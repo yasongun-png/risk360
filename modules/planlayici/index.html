@@ -99,8 +99,10 @@
           <div><label for="gTarih">Planlanan Bitiş Tarihi</label><input type="date" id="gTarih"></div>
         </div>
         <div class="alan-hatasi" id="gTarihHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
-        <label for="gSaat">Saat <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label>
-        <input type="time" id="gSaat">
+        <div class="form-satir-ikili">
+          <div><label for="gTekrar">Tekrar</label><select id="gTekrar" title="Tekrarlayan iş tamamlandığında bir sonraki tarih için otomatik yeniden eklenir"></select></div>
+          <div><label for="gSaat">Saat <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label><input type="time" id="gSaat"></div>
+        </div>
         <div class="form-satir-ikili">
           <div><label for="gKategori">Kategori</label><input type="text" id="gKategori" list="kategoriListesi" placeholder="Seçin veya yazın"><datalist id="kategoriListesi"></datalist></div>
           <div><label for="gOncelik">Öncelik</label><select id="gOncelik"></select></div>
@@ -145,10 +147,10 @@
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js?v=2"></script>
+  <script src="model.js?v=3"></script>
   <script src="repository.js?v=1"></script>
-  <script src="service.js?v=2"></script>
-  <script src="ui.js?v=3"></script>
+  <script src="service.js?v=3"></script>
+  <script src="ui.js?v=4"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 

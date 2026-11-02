@@ -26,6 +26,7 @@ function planlayiciSayfasiniBaslat() {
 
   document.getElementById('gOncelik').innerHTML = PLAN_ONCELIKLERI.map(o => `<option>${o}</option>`).join('');
   document.getElementById('gDurum').innerHTML = PLAN_DURUMLARI.map(o => `<option>${o}</option>`).join('');
+  document.getElementById('gTekrar').innerHTML = PLAN_TEKRARLARI.map(o => `<option>${o}</option>`).join('');
   document.getElementById('kategoriListesi').innerHTML = PLAN_KATEGORILERI.map(k => `<option value="${_plKacir(k)}">`).join('');
 
   document.getElementById('yeniNotBtn').addEventListener('click', () => notModalAc(null));
@@ -86,6 +87,7 @@ function gorevleriCiz() {
         <div class="pl-gorev-alt">
           ${tarih ? `<span title="Başlangıç → Planlanan bitiş">${tarih}</span>` : ''}
           ${baslamaEtiketi}
+          ${g.tekrar && g.tekrar !== 'Bir defalık' ? `<span class="pl-etiket" style="background:#ecfdf5; color:#047857;" title="Tamamlandığında bir sonraki tarih için yeniden eklenir">🔁 ${g.tekrar}</span>` : ''}
           ${g.kategori ? `<span class="pl-etiket">${_plKacir(g.kategori)}</span>` : ''}
           ${g.durum === 'Devam Ediyor' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : ''}
           ${g.aciklama ? `<span class="pl-aciklama">${_plKacir(g.aciklama)}</span>` : ''}
@@ -122,6 +124,7 @@ function gorevModalAc(id) {
   document.getElementById('gTarih').value = g ? g.tarih : '';
   document.getElementById('gTarihHata').textContent = '';
   document.getElementById('gSaat').value = g ? g.saat : '';
+  document.getElementById('gTekrar').value = (g && g.tekrar) || 'Bir defalık';
   document.getElementById('gOncelik').value = g ? g.oncelik : 'Normal';
   document.getElementById('gKategori').value = g ? g.kategori : '';
   document.getElementById('gDurum').value = g ? g.durum : 'Yapılacak';
@@ -142,6 +145,7 @@ function gorevFormGonderildi(e) {
     baslangicTarihi: document.getElementById('gBaslangic').value,
     tarih: document.getElementById('gTarih').value,
     saat: document.getElementById('gSaat').value,
+    tekrar: document.getElementById('gTekrar').value,
     oncelik: document.getElementById('gOncelik').value,
     kategori: document.getElementById('gKategori').value,
     durum: document.getElementById('gDurum').value
