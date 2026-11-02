@@ -1024,6 +1024,8 @@ function kazaIstatistikleriniCiz() {
       ? tablo(['Tarih', 'Tür', 'Yer / Birim', 'Kayıp Gün', 'Açıklama'], kd.kazalarTumu.map(k => [gunAyYil(k.tarih) || '-', k.tur, k.yer || '-', String(k.kayipGun), k.aciklama || 'Açıklama girilmemiş.']))
       : '<div class="bos-durum gorunur">Bu dönemde iş kazası kaydı yok.</div>'}
   `;
+  // OSHA / Avrupa karşılaştırmalı panel (kiyas-paneli.js)
+  kazaKiyasPaneliniCiz(yil, sonAy, yil === buYil ? bugunIso() : `${yil}-12-31`);
 }
 
 function rcaOzetiCiz() {
