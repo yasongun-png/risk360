@@ -723,6 +723,13 @@ function _riskSatirHtml(r) {
       <td>
         <button class="tablo-buton" data-duzenle="${r.id}">Düzenle</button>
         <button class="tablo-buton" data-sablon-yap="${r.id}" title="Bu kaydı hazır şablon olarak kaydet">⭐ Şablon Yap</button>
+        ${typeof planaEkleButonHtml === 'function' ? planaEkleButonHtml({
+          anahtar: 'risk:' + r.id,
+          baslik: [r.riskNo, r.planlanan || r.tehlike].filter(Boolean).join(' — '),
+          aciklama: [r.yer ? 'Yer: ' + r.yer : '', r.tehlike ? 'Tehlike: ' + r.tehlike : '', r.risk ? 'Risk: ' + r.risk : '', r.sorumlu ? 'Sorumlu: ' + r.sorumlu : ''].filter(Boolean).join('\n'),
+          bitis: r.termin,
+          kaynak: 'Risk Değerlendirmesi' + (r.riskNo ? ' · ' + r.riskNo : '')
+        }) : ''}
         <button class="tablo-buton sil" data-sil="${r.id}">Sil</button>
       </td>
     </tr>`;

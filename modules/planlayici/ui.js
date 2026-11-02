@@ -96,9 +96,13 @@ function gorevleriCiz() {
   // Kullanıcı isteği: her gün / aylık / yıllık işler ayrı ayrı görünsün — tarih
   // grupları yalnızca bir defalık işler için; tekrarlayanlar kendi bölümlerinde.
   const tekrarliMi = g => g.tekrar && g.tekrar !== 'Bir defalık';
-  const { gruplar } = planGorevleriGrupla(liste.filter(g => !tekrarliMi(g)));
-  const { tamamlanan } = planGorevleriGrupla(liste);
   const bugun = bugunIso();
+  // Kullanıcı isteği: termini (son günü) bugün olan işler en üstte ayrı grup —
+  // tekrarlayan olsun olmasın; diğer gruplarda tekrar görünmez.
+  const sonGunMu = g => g.durum !== 'Tamamlandı' && g.tarih === bugun;
+  const sonGunGrubu = { baslik: '⏰ Termini Bugün Olan İşler', renk: '#dc2626', liste: planBitiseGoreSirala(liste.filter(sonGunMu)) };
+  const { gruplar } = planGorevleriGrupla(liste.filter(g => !tekrarliMi(g) && !sonGunMu(g)));
+  const { tamamlanan } = planGorevleriGrupla(liste);
   const t = g => g.tarih || g.baslangicTarihi || '';
   const tekrarGruplari = [
     { tekrar: 'Her gün', baslik: '🔁 Her Gün Yapılan İşler', renk: '#047857' },
@@ -106,7 +110,7 @@ function gorevleriCiz() {
     { tekrar: 'Her ay', baslik: '🔁 Aylık İşler', renk: '#7c3aed' },
     { tekrar: 'Her yıl', baslik: '🔁 Yıllık İşler', renk: '#b45309' }
   ].map(gr => Object.assign(gr, {
-    liste: planBitiseGoreSirala(liste.filter(g => g.durum !== 'Tamamlandı' && g.tekrar === gr.tekrar))
+    liste: planBitiseGoreSirala(liste.filter(g => g.durum !== 'Tamamlandı' && !sonGunMu(g) && g.tekrar === gr.tekrar))
   }));
 
   const durdurulanlar = _plSonGunDurdurulanlar();
@@ -134,6 +138,9 @@ function gorevleriCiz() {
           ${bitti && g.tamamlanmaTarihi ? `<span>✔ ${gunAyYil(g.tamamlanmaTarihi)}</span>` : ''}
           ${g.tekrar && g.tekrar !== 'Bir defalık' ? `<span class="pl-etiket" style="background:#ecfdf5; color:#047857;" title="Tamamlandığında bir sonraki tarih için yeniden eklenir">🔁 ${g.tekrar}</span>` : ''}
           ${g.kategori ? `<span class="pl-etiket">${_plKacir(g.kategori)}</span>` : ''}
+          ${g.kaynak ? (g.kaynakUrl
+            ? `<a class="pl-etiket pl-kaynak" href="${_plKacir(g.kaynakUrl)}" title="Kaynağa git">📎 ${_plKacir(g.kaynak)}</a>`
+            : `<span class="pl-etiket pl-kaynak">📎 ${_plKacir(g.kaynak)}</span>`) : ''}
           ${g.durum === 'Devam Ediyor' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : ''}
           ${g.aciklama ? `<span class="pl-aciklama">${_plKacir(g.aciklama)}</span>` : ''}
         </div>
@@ -142,7 +149,7 @@ function gorevleriCiz() {
     </div>`;
   };
 
-  const dolu = gruplar.concat(tekrarGruplari).filter(gr => gr.liste.length);
+  const dolu = [sonGunGrubu].concat(gruplar, tekrarGruplari).filter(gr => gr.liste.length);
   // Tamamlananlar en altta, kapalı (tıklayınca açılır) — kullanıcı açık hâlini beğenmedi.
   document.getElementById('gorevListesi').innerHTML = (dolu.length
     ? dolu.map(gr => `<div class="pl-grup">
@@ -162,7 +169,10 @@ function gorevleriCiz() {
     if (!e.target.closest('[data-tamamla], [data-sil]')) e.stopPropagation();
   }, { capture: true, once: true }));
   kutu.querySelectorAll('[data-tamamla]').forEach(c => c.addEventListener('change', () => { planGoreviTamamla(c.getAttribute('data-tamamla'), c.checked); gorevleriCiz(); }));
-  kutu.querySelectorAll('[data-duzenle]').forEach(d => d.addEventListener('click', () => gorevModalAc(d.getAttribute('data-duzenle'))));
+  kutu.querySelectorAll('[data-duzenle]').forEach(d => d.addEventListener('click', e => {
+    if (e.target.closest('a')) return; // kaynak bağlantısı: sayfaya gider, düzenleme açılmaz
+    gorevModalAc(d.getAttribute('data-duzenle'));
+  }));
   kutu.querySelectorAll('[data-sil]').forEach(b => b.addEventListener('click', async () => {
     if (await onayModali('Bu iş silinsin mi?', 'Sil')) { planGoreviSil(b.getAttribute('data-sil')); gorevleriCiz(); }
   }));

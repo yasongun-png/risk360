@@ -627,6 +627,14 @@ function _islemButonlariUret(k) {
 
   // Risk Değerlendirmesi'ne aktarma (core/risk-aktar.js).
   if (!UYG_CEVRE_MODU) butonlar.push(riskeAktarButonHtml('uygunsuzluk', k.id));
+  // İş Planım'a hatırlatma (core/plana-ekle.js).
+  if (typeof planaEkleButonHtml === 'function') butonlar.push(planaEkleButonHtml({
+    anahtar: 'uygunsuzluk:' + k.id,
+    baslik: [k.aksiyonNo, k.baslik].filter(Boolean).join(' — '),
+    aciklama: [k.bolum ? 'Bölüm: ' + k.bolum : '', k.duzelticiFaaliyet ? 'Düzeltici faaliyet: ' + k.duzelticiFaaliyet : '', k.sorumlu ? 'Sorumlu: ' + k.sorumlu : ''].filter(Boolean).join('\n'),
+    bitis: k.termin,
+    kaynak: (UYG_CEVRE_MODU ? 'Çevre Uygunsuzluğu' : 'Uygunsuzluk') + (k.aksiyonNo ? ' · ' + k.aksiyonNo : '')
+  }));
   butonlar.push(`<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`);
   return `<div style="display:flex; flex-wrap:wrap; gap:2px;">${butonlar.join('')}</div>`;
 }

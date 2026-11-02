@@ -476,10 +476,19 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar, devredenMi)
     // (karar başka toplantıya taşınamayacağından, olayın kendi toplantısına
     // bağlı olduğundan) bu satırlarda gösterilmez.
     const olayId = k.olayKaynakli ? k.id.replace(/^olay-/, '') : null;
+    // İş Planım'a hatırlatma (core/plana-ekle.js).
+    const toplantiBilgi = toplantiIdIleGetirRepo(_toplantiId) || {};
+    const planaEkle = typeof planaEkleButonHtml === 'function' ? planaEkleButonHtml({
+      anahtar: 'kurul-karar:' + k.id,
+      baslik: [k.kararNo, k.kararMetni].filter(Boolean).join(' — '),
+      aciklama: [k.kaynakGundem ? 'Gündem: ' + k.kaynakGundem : '', k.sorumlu ? 'Sorumlu: ' + k.sorumlu : ''].filter(Boolean).join('\n'),
+      bitis: k.termin,
+      kaynak: [toplantiBilgi.baslik || 'Toplantı', toplantiBilgi.toplantiNo, toplantiBilgi.tarih ? gunAyYil(toplantiBilgi.tarih) : ''].filter(Boolean).join(' · ')
+    }) : '';
     // Kullanıcı isteği: Düzenle/Taşı/Sil düğmeleri tablonun solunda (ilk sütun).
     satir.innerHTML = `
       <td style="white-space:nowrap;">
-        ${olayId
+        ${planaEkle}${olayId
           ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
           : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${devredenMi && !kararKapaliMi(k.durum) && !kararPasifMi(k) ? `<button class="tablo-buton" data-pasif="${k.id}" title="Karar yapılmasa da gündemden düşer; sonraki toplantılara devretmez. Kurul ana sayfasındaki Kararlar sekmesinden yeniden aktif edilebilir.">⏸ Pasife Al</button>` : ''}${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
       </td>

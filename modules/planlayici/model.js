@@ -37,6 +37,10 @@ function planGoreviOlustur(v) {
     tekrar: PLAN_TEKRARLARI.includes(v.tekrar) ? v.tekrar : 'Bir defalık',
     // Tekrarlayan iş tamamlanınca oluşturulan bir sonraki tekrarın id'si (geri alınırsa silinir).
     sonrakiId: v.sonrakiId || '',
+    // Başka modülden "📝 Plana Ekle" ile gelen işlerde kaynak (bkz. core/plana-ekle.js).
+    kaynak: v.kaynak || '',
+    kaynakUrl: v.kaynakUrl || '',
+    kaynakAnahtar: v.kaynakAnahtar || '',
     tamamlanmaTarihi: v.tamamlanmaTarihi || '',
     olusturanId: v.olusturanId || '',
     olusturmaTarihi: v.olusturmaTarihi || new Date().toISOString()

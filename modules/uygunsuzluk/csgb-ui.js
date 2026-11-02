@@ -385,7 +385,13 @@ function _csgbDetayCiz(kutu) {
         <thead><tr><th>İşlemler</th><th>No</th><th>${E.maddeKonusu}</th><th>${E.madde}</th><th>Toplantı Notları</th><th>Kanıtlar</th><th>Termin</th><th>Sorumlu</th><th>Durum</th></tr></thead>
         <tbody>${maddeler.length ? maddeler.map(k => `
           <tr>
-            <td><button type="button" class="tablo-buton" data-csgb-madde-duzenle="${k.id}">Düzenle</button></td>
+            <td><button type="button" class="tablo-buton" data-csgb-madde-duzenle="${k.id}">Düzenle</button>${typeof planaEkleButonHtml === 'function' ? planaEkleButonHtml({
+              anahtar: 'csgb-madde:' + k.id,
+              baslik: [k.denetimMaddeNo ? 'Madde ' + k.denetimMaddeNo : '', k.maddeKonusu, k.baslik].filter(Boolean).join(' — '),
+              aciklama: [k.aciklama, k.sorumlu ? 'Sorumlu: ' + k.sorumlu : ''].filter(Boolean).join('\n'),
+              bitis: k.termin,
+              kaynak: CSGB_KONU_MODU ? 'Toplantı · ' + (d.baslikGoruntu || '') : (d.baslikGoruntu || 'ÇSGB Denetimi')
+            }) : ''}</td>
             <td><b>${K(k.denetimMaddeNo) || '-'}</b></td>
             <td>${K(k.maddeKonusu) || '-'}</td>
             <td style="font-size:12.5px;">${_csgbMetinHucresi(k)}</td>

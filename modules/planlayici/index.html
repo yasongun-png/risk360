@@ -28,6 +28,8 @@
   .pl-gorev-govde { flex:1; min-width:0; cursor:pointer; }
   .pl-gorev-baslik { font-size:14px; font-weight:600; color:var(--metin); }
   .pl-gorev.pl-songun .pl-gorev-baslik { color:#b91c1c; }
+  .pl-kaynak { background:#f1f5f9; color:#334155; text-decoration:none; }
+  a.pl-kaynak:hover { background:#e2e8f0; text-decoration:underline; }
   .pl-gorev.pl-yanip { animation:pl-yanip 1s ease-in-out infinite; border-radius:8px; cursor:pointer; }
   @keyframes pl-yanip { 0%, 100% { background:transparent; box-shadow:none; } 50% { background:#fecaca; box-shadow:0 0 0 2px #dc2626; } }
   @media (prefers-reduced-motion: reduce) { .pl-gorev.pl-yanip { animation:none; background:#fecaca; box-shadow:0 0 0 2px #dc2626; } }
@@ -156,10 +158,10 @@
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js?v=3"></script>
+  <script src="model.js?v=4"></script>
   <script src="repository.js?v=1"></script>
   <script src="service.js?v=4"></script>
-  <script src="ui.js?v=8"></script>
+  <script src="ui.js?v=9"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 
