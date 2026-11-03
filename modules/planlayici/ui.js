@@ -30,6 +30,7 @@ function planlayiciSayfasiniBaslat() {
   document.getElementById('gorevForm').addEventListener('submit', gorevFormGonderildi);
   ['gorevIptalBtn', 'gorevKapatBtn'].forEach(id => document.getElementById(id).addEventListener('click', gorevModalKapat));
   document.getElementById('kategoriFiltre').addEventListener('change', gorevleriCiz);
+  document.getElementById('sorumluFiltre').addEventListener('change', gorevleriCiz);
   document.getElementById('gorevArama').addEventListener('input', gorevleriCiz);
 
   document.getElementById('gOncelik').innerHTML = PLAN_ONCELIKLERI.map(o => `<option>${o}</option>`).join('');
@@ -84,12 +85,15 @@ function _plSonGunDurdur(id) {
   try { localStorage.setItem(_PL_SONGUN_ANAHTARI, JSON.stringify({ gun: bugunIso(), idler })); } catch (e) { /* yalnızca bu oturumda durur */ }
 }
 
-// Kategori ve arama filtresine uyan işler (ekran ve PDF raporu aynı listeyi kullanır).
+// Kategori, sorumlu ve arama filtresine uyan işler (ekran ve Excel raporu aynı listeyi kullanır).
+// Sorumlu filtresinde '-' = sorumlusu boş olanlar.
 function _plFiltreliGorevler() {
   const kategori = document.getElementById('kategoriFiltre').value;
+  const sorumlu = document.getElementById('sorumluFiltre').value;
   const arama = document.getElementById('gorevArama').value.trim().toLocaleLowerCase('tr-TR');
   return planGorevleriGetir().filter(g => (!kategori || g.kategori === kategori)
-    && (!arama || (g.baslik + ' ' + g.aciklama).toLocaleLowerCase('tr-TR').includes(arama)));
+    && (!sorumlu || (sorumlu === '-' ? !g.sorumlu : g.sorumlu === sorumlu))
+    && (!arama || (g.baslik + ' ' + g.aciklama + ' ' + (g.sorumlu || '')).toLocaleLowerCase('tr-TR').includes(arama)));
 }
 
 // Ekrandaki gruplar (sırasıyla): termini bugün olanlar, bir defalık işlerin tarih
@@ -123,6 +127,14 @@ function gorevleriCiz() {
   const kategoriler = [...new Set(tumu.map(g => g.kategori).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
   const secim = document.getElementById('kategoriFiltre');
   secim.innerHTML = '<option value="">Tüm Kategoriler</option>' + kategoriler.map(k => `<option ${k === kategori ? 'selected' : ''}>${_plKacir(k)}</option>`).join('');
+  const sorumluSecim = document.getElementById('sorumluFiltre');
+  const sorumlu = sorumluSecim.value;
+  const sorumlular = [...new Set(tumu.map(g => g.sorumlu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+  sorumluSecim.innerHTML = '<option value="">Tüm Sorumlular</option>'
+    + sorumlular.map(s => `<option value="${_plKacir(s)}" ${s === sorumlu ? 'selected' : ''}>${_plKacir(s)}</option>`).join('')
+    + (sorumlular.length ? `<option value="-" ${sorumlu === '-' ? 'selected' : ''}>(Sorumlu belirtilmemiş)</option>` : '');
+  sorumluSecim.style.display = sorumlular.length ? '' : 'none';
+  if (sorumlu && !sorumlular.includes(sorumlu) && sorumlu !== '-') sorumluSecim.value = '';
   const liste = _plFiltreliGorevler();
   const tekrarliMi = g => g.tekrar && g.tekrar !== 'Bir defalık';
   const bugun = bugunIso();
@@ -153,6 +165,7 @@ function gorevleriCiz() {
           ${!bitti && !sonGun && tekrarliMi(g) && t(g) === bugun ? '<span class="pl-etiket" style="background:#dbeafe; color:#1e40af;">Bugün</span>' : ''}
           ${bitti && g.tamamlanmaTarihi ? `<span>✔ ${gunAyYil(g.tamamlanmaTarihi)}</span>` : ''}
           ${g.tekrar && g.tekrar !== 'Bir defalık' ? `<span class="pl-etiket" style="background:#ecfdf5; color:#047857;" title="Tamamlandığında bir sonraki tarih için yeniden eklenir">🔁 ${g.tekrar}</span>` : ''}
+          ${g.sorumlu ? `<span class="pl-etiket pl-sorumlu" title="Sorumlu">👤 ${_plKacir(g.sorumlu)}</span>` : ''}
           ${g.kategori ? `<span class="pl-etiket">${_plKacir(g.kategori)}</span>` : ''}
           ${g.kaynak ? (g.kaynakUrl
             ? `<a class="pl-etiket pl-kaynak" href="${_plKacir(g.kaynakUrl)}" title="Kaynağa git">📎 ${_plKacir(g.kaynak)}</a>`
@@ -224,6 +237,7 @@ async function planExcelIndir() {
     const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
     const kullanici = oturumdakiKullanici();
     const kategori = document.getElementById('kategoriFiltre').value;
+    const sorumluF = document.getElementById('sorumluFiltre').value;
     const arama = document.getElementById('gorevArama').value.trim();
     const duz = b => b.replace(/^[^\p{L}]+/u, '');
     const tarih = t => t ? gunAyYil(t) : '';
@@ -235,7 +249,7 @@ async function planExcelIndir() {
         { hucreler: [h(baslik, X.baslik)], yukseklik: 26 },
         { hucreler: [h('Firma', X.bilgiEtiket), h(firma ? firma.ad : '', X.bilgiDeger), h('Hazırlayan', X.bilgiEtiket), h(kullanici ? kullanici.adSoyad : '', X.bilgiDeger), h('Rapor Tarihi', X.bilgiEtiket), h(gunAyYil(bugun), X.bilgiDeger)] },
         { hucreler: [h('Özet', X.ozet), h(`Açık iş: ${o.acik} · Gecikmiş: ${o.gecikmis} · Bugün: ${o.bugun} · Önümüzdeki 7 gün: ${o.hafta} · Bu ay tamamlanan: ${bitenler.filter(g => String(g.tamamlanmaTarihi).startsWith(bugun.slice(0, 7))).length}`
-          + (kategori || arama ? ` · Filtre: ${[kategori ? 'Kategori: ' + kategori : '', arama ? 'Arama: "' + arama + '"' : ''].filter(Boolean).join(', ')}` : ''), X.ozet)] },
+          + (kategori || sorumluF || arama ? ` · Filtre: ${[kategori ? 'Kategori: ' + kategori : '', sorumluF ? 'Sorumlu: ' + (sorumluF === '-' ? 'belirtilmemiş' : sorumluF) : '', arama ? 'Arama: "' + arama + '"' : ''].filter(Boolean).join(', ')}` : ''), X.ozet)] },
         { hucreler: [] },
         { hucreler: basliklar.map(b => h(b, X.tabloBaslik)), yukseklik: 22 }
       ];
@@ -247,30 +261,30 @@ async function planExcelIndir() {
     };
 
     // Açık işler
-    const acikBasliklar = ['Grup', 'Yapılacak İş', 'Başlangıç', 'Planlanan Bitiş', 'Durum', 'Öncelik', 'Kategori', 'Tekrar', 'Kaynak', 'Açıklama'];
+    const acikBasliklar = ['Grup', 'Yapılacak İş', 'Sorumlu', 'Başlangıç', 'Planlanan Bitiş', 'Durum', 'Öncelik', 'Kategori', 'Tekrar', 'Kaynak', 'Açıklama'];
     const acikSatirlar = [];
     dolu.forEach(gr => gr.liste.forEach(g => {
       const gecikti = g.tarih && g.tarih < bugun, sonGun = g.tarih === bugun;
       acikSatirlar.push({ hucreler: [
         h(duz(gr.baslik), X.hucreKalin), h(g.baslik, g.oncelik === 'Yüksek' ? X.hucreKalin : X.hucre),
-        h(tarih(g.baslangicTarihi), X.hucreOrta),
+        h(g.sorumlu, X.hucre), h(tarih(g.baslangicTarihi), X.hucreOrta),
         h(tarih(g.tarih) + (gecikti ? ' (gecikti)' : sonGun ? ' (son gün)' : ''), gecikti || sonGun ? X.gecikmis : X.hucreOrta),
         h(g.durum, g.durum === 'Devam Ediyor' ? X.devam : X.acik), h(g.oncelik, g.oncelik === 'Yüksek' ? X.gecikmis : X.hucre),
         h(g.kategori, X.hucre), h(tekrarMetni(g), X.hucre), h(g.kaynak, X.hucre), h(g.aciklama, X.hucre)
       ] });
     }));
     if (!acikSatirlar.length) acikSatirlar.push({ hucreler: [h('Açık iş yok.', X.hucre)] });
-    const s1 = sayfa('İŞ PLANI — AÇIK İŞLER', acikBasliklar, acikSatirlar, [22, 48, 12, 16, 13, 10, 16, 11, 28, 45]);
+    const s1 = sayfa('İŞ PLANI — AÇIK İŞLER', acikBasliklar, acikSatirlar, [22, 48, 20, 12, 16, 13, 10, 16, 11, 28, 45]);
 
     // Tamamlananlar
-    const bitenBasliklar = ['Yapılacak İş', 'Başlangıç', 'Planlanan Bitiş', 'Tamamlanma', 'Öncelik', 'Kategori', 'Tekrar', 'Kaynak', 'Açıklama'];
+    const bitenBasliklar = ['Yapılacak İş', 'Sorumlu', 'Başlangıç', 'Planlanan Bitiş', 'Tamamlanma', 'Öncelik', 'Kategori', 'Tekrar', 'Kaynak', 'Açıklama'];
     const bitenSatirlar = bitenler.map(g => ({ hucreler: [
-      h(g.baslik, X.hucre), h(tarih(g.baslangicTarihi), X.hucreOrta), h(tarih(g.tarih), X.hucreOrta),
+      h(g.baslik, X.hucre), h(g.sorumlu, X.hucre), h(tarih(g.baslangicTarihi), X.hucreOrta), h(tarih(g.tarih), X.hucreOrta),
       h(tarih(g.tamamlanmaTarihi), X.tamam), h(g.oncelik, X.hucre), h(g.kategori, X.hucre),
       h(tekrarMetni(g), X.hucre), h(g.kaynak, X.hucre), h(g.aciklama, X.hucre)
     ] }));
     if (!bitenSatirlar.length) bitenSatirlar.push({ hucreler: [h('Tamamlanan iş yok.', X.hucre)] });
-    const s2 = sayfa('İŞ PLANI — TAMAMLANAN İŞLER', bitenBasliklar, bitenSatirlar, [48, 12, 16, 14, 10, 16, 11, 28, 45]);
+    const s2 = sayfa('İŞ PLANI — TAMAMLANAN İŞLER', bitenBasliklar, bitenSatirlar, [48, 20, 12, 16, 14, 10, 16, 11, 28, 45]);
 
     const dosya = `Is_Plani_${(firma && firma.ad ? firma.ad : 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}_${bugun}.xlsx`;
     await xlsxKitapIndir(dosya, [
@@ -298,6 +312,8 @@ function gorevModalAc(id) {
   document.getElementById('gTekrar').value = (g && g.tekrar) || 'Bir defalık';
   document.getElementById('gOncelik').value = g ? g.oncelik : 'Normal';
   document.getElementById('gKategori').value = g ? g.kategori : '';
+  document.getElementById('gSorumlu').value = g ? g.sorumlu || '' : '';
+  document.getElementById('sorumluListesiKutu').innerHTML = planSorumluDatalistHtml('sorumluListesi');
   document.getElementById('gDurum').value = g ? g.durum : 'Yapılacak';
   document.getElementById('gBaslikHata').textContent = '';
   document.getElementById('gorevModalKatman').classList.add('acik');
@@ -319,6 +335,7 @@ function gorevFormGonderildi(e) {
     tekrar: document.getElementById('gTekrar').value,
     oncelik: document.getElementById('gOncelik').value,
     kategori: document.getElementById('gKategori').value,
+    sorumlu: document.getElementById('gSorumlu').value,
     durum: document.getElementById('gDurum').value
   }, _plDuzenlenenGorevId);
   if (!sonuc.basarili) {

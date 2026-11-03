@@ -38,6 +38,7 @@
   .pl-aciklama { width:100%; white-space:pre-wrap; }
   .pl-etiket { background:#eef2ff; color:#3730a3; border-radius:10px; padding:1px 8px; font-weight:600; }
   .pl-devam { background:#fef3c7; color:#92400e; }
+  .pl-sorumlu { background:#f0fdfa; color:#115e59; }
   .pl-oncelik { display:inline-block; background:var(--hata); color:#fff; border-radius:50%; width:16px; height:16px; line-height:16px; text-align:center; font-size:11px; margin-right:6px; }
   .pl-gorev[data-oncelik="Düşük"] .pl-gorev-baslik { color:#64748b; }
   .pl-not-izgara { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
@@ -84,6 +85,7 @@
       <div class="arac-cubugu" style="margin-bottom:10px;">
         <input type="text" id="gorevArama" class="arama-kutusu" placeholder="İşlerde ara...">
         <select id="kategoriFiltre" style="width:auto; margin:0;"><option value="">Tüm Kategoriler</option></select>
+        <select id="sorumluFiltre" style="width:auto; margin:0;"><option value="">Tüm Sorumlular</option></select>
         <button type="button" class="ikincil" id="planExcelBtn" style="width:auto;" title="Ekrandaki filtreye göre: Açık İşler ve Tamamlanan sayfaları">📊 Excel İndir</button>
       </div>
       <div id="gorevListesi"></div>
@@ -119,8 +121,10 @@
           <div><label for="gKategori">Kategori</label><input type="text" id="gKategori" list="kategoriListesi" placeholder="Seçin veya yazın"><datalist id="kategoriListesi"></datalist></div>
           <div><label for="gOncelik">Öncelik</label><select id="gOncelik"></select></div>
         </div>
-        <label for="gDurum">Durum</label>
-        <select id="gDurum"></select>
+        <div class="form-satir-ikili">
+          <div><label for="gSorumlu">Sorumlu</label><input type="text" id="gSorumlu" list="sorumluListesi" placeholder="Personel / kullanıcı seçin veya yazın" autocomplete="off"><div id="sorumluListesiKutu"></div></div>
+          <div><label for="gDurum">Durum</label><select id="gDurum"></select></div>
+        </div>
         <label for="gAciklama">Açıklama / Notlar</label>
         <textarea id="gAciklama" rows="4"></textarea>
         <div class="modal-eylemler">
@@ -158,13 +162,13 @@
   <script src="../../core/data.js?v=6"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
-  <script src="../../core/plana-ekle.js?v=5"></script>
+  <script src="../../core/plana-ekle.js?v=6"></script>
   <script src="../../core/xlsx-bicimli.js?v=1"></script>
   <script src="../../core/metin-istem.js"></script>
-  <script src="model.js?v=4"></script>
+  <script src="model.js?v=5"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=4"></script>
-  <script src="ui.js?v=12"></script>
+  <script src="ui.js?v=13"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 

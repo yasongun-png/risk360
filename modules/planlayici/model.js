@@ -33,6 +33,8 @@ function planGoreviOlustur(v) {
     saat: v.saat || '',
     oncelik: PLAN_ONCELIKLERI.includes(v.oncelik) ? v.oncelik : 'Normal',
     kategori: String(v.kategori || '').trim(),
+    // Kullanıcı isteği: işe sorumlu belirlemek (serbest metin; öneriler core/plana-ekle.js planSorumluOnerileri).
+    sorumlu: String(v.sorumlu || '').trim(),
     durum: PLAN_DURUMLARI.includes(v.durum) ? v.durum : 'Yapılacak',
     tekrar: PLAN_TEKRARLARI.includes(v.tekrar) ? v.tekrar : 'Bir defalık',
     // Tekrarlayan iş tamamlanınca oluşturulan bir sonraki tekrarın id'si (geri alınırsa silinir).

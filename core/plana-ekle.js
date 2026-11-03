@@ -48,6 +48,30 @@ function _peAcikPlanIsi(anahtar) {
   return _pePlanVerisi().gorevler.find(g => g.kaynakAnahtar === anahtar && g.olusturanId === id && g.durum !== 'Tamamlandı') || null;
 }
 
+// Kullanıcı isteği: işe sorumlu belirlemek. Sorumlu serbest metin; öneriler
+// firmanın aktif personeli + bu firmaya erişen kullanıcılar. İş yine yalnızca
+// ekleyen kullanıcının planında görünür (sorumlu bilgi amaçlıdır).
+function planSorumluOnerileri() {
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const oneriler = new Map();
+  const personel = tenantAnahtar('personel') ? oku(tenantAnahtar('personel'), []) : [];
+  (Array.isArray(personel) ? personel : []).forEach(p => {
+    if (p && p.adSoyad && !p.istenCikisTarihi) oneriler.set(String(p.adSoyad).trim(), [p.gorev, p.bolum].filter(Boolean).join(' · '));
+  });
+  oku('isg_kullanicilar', []).forEach(k => {
+    if (!k || !k.adSoyad || k.pasif) return;
+    const admin = typeof kullaniciAdminMi === 'function' && kullaniciAdminMi(k);
+    if (!admin && !(firma && (k.erisimFirmaIdleri || []).includes(firma.id))) return;
+    const ad = String(k.adSoyad).trim();
+    if (!oneriler.has(ad)) oneriler.set(ad, 'Kullanıcı');
+  });
+  return [...oneriler].map(([ad, aciklama]) => ({ ad, aciklama })).sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+}
+
+function planSorumluDatalistHtml(id) {
+  return `<datalist id="${id}">${planSorumluOnerileri().map(o => `<option value="${_peKacir(o.ad)}">${_peKacir(o.aciklama)}</option>`).join('')}</datalist>`;
+}
+
 function planaEkleButonHtml(veri) {
   const v = Object.assign({}, veri, { url: location.pathname + location.search });
   const mevcut = _peAcikPlanIsi(v.anahtar);
@@ -79,6 +103,9 @@ function _peModalKur() {
         <div><label for="peTekrar">Tekrar</label><select id="peTekrar">${['Bir defalık', 'Her gün', 'Her hafta', 'Her ay', 'Her yıl'].map(o => `<option>${o}</option>`).join('')}</select></div>
         <div><label for="peOncelik">Öncelik</label><select id="peOncelik">${['Düşük', 'Normal', 'Yüksek'].map(o => `<option${o === 'Normal' ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
       </div>
+      <label for="peSorumlu">Sorumlu <span style="color:var(--metin-soluk); font-weight:400;">(isteğe bağlı)</span></label>
+      <input type="text" id="peSorumlu" list="peSorumluListesi" placeholder="Personel / kullanıcı seçin veya yazın" autocomplete="off">
+      <div id="peSorumluKutu"></div>
       <label for="peAciklama">Açıklama / Notlar</label>
       <textarea id="peAciklama" rows="4"></textarea>
       <div id="peHata" style="color:var(--hata); font-size:12px; margin:-6px 0 8px;"></div>
@@ -100,7 +127,13 @@ function planaEkleModaliAc(veri) {
   const bugun = _peBugun();
   document.getElementById('peKaynak').textContent = 'Kaynak: ' + (veri.kaynak || '-');
   document.getElementById('peBaslik').value = String(veri.baslik || '').replace(/\s+/g, ' ').trim().slice(0, 300);
-  document.getElementById('peAciklama').value = String(veri.aciklama || '').trim();
+  // Modüller sorumluyu açıklamaya "Sorumlu: X" satırı olarak koyuyor; o satır sorumlu alanına taşınır.
+  let aciklama = String(veri.aciklama || '').trim();
+  const sorumluSatiri = /^Sorumlu:\s*(.+)$/m.exec(aciklama);
+  document.getElementById('peSorumlu').value = String(veri.sorumlu || (sorumluSatiri ? sorumluSatiri[1] : '')).trim();
+  if (sorumluSatiri) aciklama = aciklama.replace(sorumluSatiri[0], '').replace(/\n{2,}/g, '\n').trim();
+  document.getElementById('peSorumluKutu').innerHTML = planSorumluDatalistHtml('peSorumluListesi');
+  document.getElementById('peAciklama').value = aciklama;
   document.getElementById('peBaslangic').value = bitis && bitis < bugun ? bitis : bugun;
   document.getElementById('peBitis').value = bitis;
   document.getElementById('peTekrar').value = 'Bir defalık';
@@ -120,7 +153,7 @@ function _peIsEkle(a) {
   const is = {
     id: rastgeleId(), baslik: a.baslik, aciklama: a.aciklama || '',
     baslangicTarihi: a.baslangicTarihi || '', tarih: a.tarih || '', saat: '', oncelik: a.oncelik || 'Normal',
-    kategori: a.kategori || '', durum: 'Yapılacak', tekrar: a.tekrar || 'Bir defalık', sonrakiId: '', tamamlanmaTarihi: '',
+    kategori: a.kategori || '', sorumlu: a.sorumlu || '', durum: 'Yapılacak', tekrar: a.tekrar || 'Bir defalık', sonrakiId: '', tamamlanmaTarihi: '',
     kaynak: a.kaynak || '', kaynakUrl: a.kaynakUrl || '', kaynakAnahtar: a.kaynakAnahtar || '',
     olusturanId: _peKullaniciId(), olusturmaTarihi: new Date().toISOString()
   };
@@ -350,6 +383,7 @@ function _peKaydet() {
   _peIsEkle({
     baslik, aciklama: document.getElementById('peAciklama').value.trim(),
     baslangicTarihi: bas, tarih: bit, oncelik: document.getElementById('peOncelik').value, tekrar,
+    sorumlu: document.getElementById('peSorumlu').value.trim(),
     kaynak: v.kaynak, kaynakUrl: v.url, kaynakAnahtar: v.anahtar
   });
   document.getElementById('peKatman').classList.remove('acik');
