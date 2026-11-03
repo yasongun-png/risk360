@@ -57,6 +57,78 @@ function _ikDevirOrani(tumu, bas, son, ayrilan) {
   return ort > 0 ? Math.round(ayrilan / ort * 1000) / 10 : 0;
 }
 
+// ==================== YAZIM FARKLARI ====================
+// Kullanıcı isteği: M/V, Kapsamı gibi alanlarda "müdür / MÜDÜR", "V.Amiri /
+// Vardiya Amiri", "İş Güvenlik / İş Güvenliği Uzmanı" aynı sayılsın ve kayıtlarda
+// düzeltilsin. Anahtar: Türkçe küçük harf, harf/rakam dışı karakterler atılmış;
+// kısaltmalar _IK_ESANLAMLAR ile tam adına bağlanır. Grafikler bu anahtarla
+// gruplanır; "Yazım Farklarını Düzelt" aracı kayıtların kendisini düzeltir.
+const _IK_ESANLAMLAR = {
+  vamiri: 'Vardiya Amiri', vamir: 'Vardiya Amiri', vardiyaamiri: 'Vardiya Amiri',
+  işgüvenlik: 'İş Güvenliği Uzmanı', işgüvenliği: 'İş Güvenliği Uzmanı', işgüvenliğiuzmanı: 'İş Güvenliği Uzmanı',
+  isguzmanı: 'İş Güvenliği Uzmanı', iguzmanı: 'İş Güvenliği Uzmanı',
+  müdüry: 'Müdür Yardımcısı', müdüryrd: 'Müdür Yardımcısı', müdüryardımcısı: 'Müdür Yardımcısı'
+};
+const _IK_DUZELTME_ALANLARI = [
+  { alan: 'mv', ad: 'M/V' }, { alan: 'kapsami', ad: 'Kapsamı' },
+  { alan: 'gorev', ad: 'Görev' }, { alan: 'bolum', ad: 'Bölüm' }
+];
+
+function _ikHamAnahtar(v) {
+  return String(v || '').toLocaleLowerCase('tr-TR').replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function ikYazimAnahtari(v) {
+  const a = _ikHamAnahtar(v);
+  return _IK_ESANLAMLAR[a] ? _ikHamAnahtar(_IK_ESANLAMLAR[a]) : a;
+}
+
+function _ikBuyukHarfliMi(s) {
+  return s === s.toLocaleUpperCase('tr-TR') && s !== s.toLocaleLowerCase('tr-TR');
+}
+
+function _ikBasHarfBuyuk(s) {
+  return s.split(/(\s+)/).map(k => k.charAt(0).toLocaleUpperCase('tr-TR') + k.slice(1).toLocaleLowerCase('tr-TR')).join('');
+}
+
+// Bir grubun önerilen yazımı. Eşanlamlı grupta tablodaki tam ad; değilse en sık
+// kullanılan, tamamı küçük harf olmayan yazım (yoksa baş harfi büyütülmüş hâli).
+// Tamamı büyük harf ve 3 harften uzunsa baş harf büyük yazılır (KD, Kİ gibi kodlar kalır).
+function _ikOnerilenYazim(varyantlar) {
+  const es = varyantlar.map(v => _IK_ESANLAMLAR[_ikHamAnahtar(v.deger)]).find(Boolean);
+  if (es) return es;
+  const sirali = varyantlar.slice().sort((a, b) => b.sayi - a.sayi);
+  const aday = (sirali.find(v => v.deger !== v.deger.toLocaleLowerCase('tr-TR')) || sirali[0]).deger.replace(/\s+/g, ' ').trim();
+  if (aday === aday.toLocaleLowerCase('tr-TR')) return _ikBasHarfBuyuk(aday);
+  return _ikBuyukHarfliMi(aday) && aday.replace(/\s/g, '').length > 3 ? _ikBasHarfBuyuk(aday) : aday;
+}
+
+// Alan değerlerini gruplar: [{ anahtar, oneri, varyantlar:[{deger, sayi}], toplam }]
+function ikYazimGruplari(liste, alan) {
+  const gruplar = new Map();
+  liste.forEach(p => {
+    const deger = String(p[alan] || '').trim();
+    if (!deger) return;
+    const a = ikYazimAnahtari(deger);
+    if (!gruplar.has(a)) gruplar.set(a, new Map());
+    const g = gruplar.get(a);
+    g.set(deger, (g.get(deger) || 0) + 1);
+  });
+  return [...gruplar].map(([anahtar, m]) => {
+    const varyantlar = [...m].map(([deger, sayi]) => ({ deger, sayi })).sort((a, b) => b.sayi - a.sayi);
+    const oneri = _ikOnerilenYazim(varyantlar);
+    // fark: düzeltme önerilir — birden çok yazım var ya da tek yazım bir kısaltma (ör. "müdür y.").
+    const fark = varyantlar.length > 1 || (!!_IK_ESANLAMLAR[_ikHamAnahtar(varyantlar[0].deger)] && varyantlar[0].deger !== oneri);
+    return { anahtar, varyantlar, oneri, fark, toplam: varyantlar.reduce((t, v) => t + v.sayi, 0) };
+  });
+}
+
+// Grafik için: yazım farkları birleştirilmiş sayım.
+function _ikYazimliSay(liste, alan) {
+  return ikYazimGruplari(liste, alan).map(g => ({ etiket: g.oneri, deger: g.toplam }))
+    .sort((a, b) => b.deger - a.deger || a.etiket.localeCompare(b.etiket, 'tr'));
+}
+
 function _ikSay(liste, anahtarFn) {
   const m = new Map();
   liste.forEach(x => { const a = anahtarFn(x); m.set(a, (m.get(a) || 0) + 1); });
@@ -169,8 +241,9 @@ function ikPaneliHesapla(yil) {
     sicilDagilimi: _ikSay(aktif, sicil),
     sendikali: aktif.filter(p => p.sendikaliMi === 'EVET').length,
     lojman: aktif.filter(p => p.lojman === 'VAR').length,
-    mv: _ikSay(aktif.filter(p => p.mv), p => p.mv),
-    kapsam: _ikSay(aktif.filter(p => p.kapsami), p => p.kapsami)
+    mv: _ikYazimliSay(aktif, 'mv'),
+    kapsam: _ikYazimliSay(aktif, 'kapsami'),
+    yazimFarkiSayisi: _IK_DUZELTME_ALANLARI.reduce((t, a) => t + ikYazimGruplari(tumu, a.alan).filter(g => g.fark).length, 0)
   };
 }
 
@@ -288,8 +361,9 @@ function ikPaneliniCiz() {
       </tbody></table></details>` : ''}`);
 
   // Dağılımlar
-  const dagilimHtml = _ikBolum('👥 Personel Yapısı', 'Bugün aktif olan personele göre.',
-    `<div class="istatistik-grid ik-mini">
+  const dagilimHtml = _ikBolum('👥 Personel Yapısı', 'Bugün aktif olan personele göre. M/V ve Kapsamı grafiklerinde yazım farkları (büyük/küçük harf, kısaltma) birleştirilerek sayılır.',
+    `${h.yazimFarkiSayisi ? `<p class="ik-uyari">✏️ M/V, Kapsamı, Görev veya Bölüm alanlarında ${h.yazimFarkiSayisi} değer farklı yazımlarla girilmiş (ör. "müdür / MÜDÜR"). <button type="button" class="ikincil" data-yazim-ac style="width:auto; padding:3px 10px; margin-left:6px;">🧹 Kayıtlarda düzelt</button></p>` : ''}
+    <div class="istatistik-grid ik-mini">
       ${_ikKart('Sendikalı', _ikSayi(h.sendikali), `%${_ikSayi(_ikYuzde(h.sendikali, h.aktif.length), 1)}`)}
       ${_ikKart('Lojmanda Kalan', _ikSayi(h.lojman), `%${_ikSayi(_ikYuzde(h.lojman, h.aktif.length), 1)}`)}
       ${_ikKart('Engelli', _ikSayi(toplamEngelli), `%${_ikSayi(_ikYuzde(toplamEngelli, h.aktif.length), 1)}`)}
@@ -303,6 +377,85 @@ function ikPaneliniCiz() {
     </div>`);
 
   document.getElementById('ikIcerik').innerHTML = engelliHtml + devirHtml + egitimHtml + dagilimHtml;
+  document.querySelectorAll('[data-yazim-ac]').forEach(b => b.addEventListener('click', () => ikYazimModaliAc('mv')));
+}
+
+// ==================== YAZIM DÜZELTME ARACI ====================
+// Seçilen alanda farklı yazılmış değerleri gösterir; kullanıcı her grup için
+// doğru yazımı onaylar/değiştirir, "Düzelt" ile aktif + arşiv personelin
+// kayıtları tek yazımda güncellenir. İşaretli olmayan grup değişmez.
+
+let _ikYazimAlani = 'mv';
+
+function ikYazimModaliAc(alan) {
+  _ikYazimAlani = alan || _ikYazimAlani;
+  document.getElementById('ikYazimAlan').innerHTML = _IK_DUZELTME_ALANLARI.map(a => {
+    const n = ikYazimGruplari(personelTumunuGetir(), a.alan).filter(g => g.fark).length;
+    return `<option value="${a.alan}" ${a.alan === _ikYazimAlani ? 'selected' : ''}>${a.ad}${n ? ` (${n} farklı yazım)` : ''}</option>`;
+  }).join('');
+  document.getElementById('ikYazimSonuc').textContent = '';
+  _ikYazimListesiCiz();
+  document.getElementById('ikYazimKatman').classList.add('acik');
+}
+
+function _ikYazimListesiCiz() {
+  _ikYazimAlani = document.getElementById('ikYazimAlan').value;
+  const gruplar = ikYazimGruplari(personelTumunuGetir(), _ikYazimAlani)
+    .sort((a, b) => b.fark - a.fark || b.toplam - a.toplam);
+  const farkli = gruplar.filter(g => g.fark);
+  const tumDegerler = [...new Set(gruplar.map(g => g.oneri))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const satir = (g, i) => {
+    const coklu = g.fark;
+    return `<tr data-grup="${i}">
+      <td><input type="checkbox" data-yazim-sec ${coklu ? 'checked' : ''} style="width:auto; margin:0;"></td>
+      <td>${g.varyantlar.map(v => `<span class="ik-varyant">${_ikKacir(v.deger)} <small>${v.sayi}</small></span>`).join(' ')}</td>
+      <td>→</td>
+      <td><input type="text" data-yazim-hedef value="${_ikKacir(coklu ? g.oneri : g.varyantlar[0].deger)}" list="ikYazimDegerleri" style="margin:0; min-width:180px;"></td>
+    </tr>`;
+  };
+  document.getElementById('ikYazimListe').innerHTML = `
+    <datalist id="ikYazimDegerleri">${tumDegerler.map(d => `<option value="${_ikKacir(d)}">`).join('')}</datalist>
+    <p class="ik-aciklama" style="margin-top:8px;">${farkli.length
+      ? `${farkli.length} değer farklı yazımlarla girilmiş; önerilen yazım sağda. İstediğinizi değiştirebilirsiniz. Birbirine benzemeyen ama aynı anlama gelen değerleri (ör. bir kısaltma) birleştirmek için alttaki listeden o satırı işaretleyip sağa diğer değeri yazın.`
+      : 'Bu alanda farklı yazım bulunmadı. Yine de bir değeri başka bir değerle birleştirmek için satırı işaretleyip sağa yeni değeri yazabilirsiniz.'}</p>
+    <div style="max-height:52vh; overflow:auto;"><table class="veri-tablosu ik-tablo"><thead><tr><th></th><th>Kayıtlardaki yazım (kişi sayısı)</th><th></th><th>Düzeltilmiş yazım</th></tr></thead>
+    <tbody>${gruplar.map(satir).join('') || '<tr><td colspan="4">Bu alanda değer yok.</td></tr>'}</tbody></table></div>`;
+  document.getElementById('ikYazimListe').querySelectorAll('[data-yazim-hedef]').forEach(inp => inp.addEventListener('input', () => {
+    inp.closest('tr').querySelector('[data-yazim-sec]').checked = true;
+  }));
+  document.getElementById('ikYazimListe')._gruplar = gruplar;
+}
+
+async function _ikYazimUygula() {
+  const kutu = document.getElementById('ikYazimListe');
+  const gruplar = kutu._gruplar || [];
+  const eslesme = new Map();
+  kutu.querySelectorAll('tr[data-grup]').forEach(tr => {
+    if (!tr.querySelector('[data-yazim-sec]').checked) return;
+    const hedef = tr.querySelector('[data-yazim-hedef]').value.replace(/\s+/g, ' ').trim();
+    if (!hedef) return;
+    gruplar[Number(tr.getAttribute('data-grup'))].varyantlar.forEach(v => { if (v.deger !== hedef) eslesme.set(v.deger, hedef); });
+  });
+  const alan = _ikYazimAlani;
+  const liste = personelTumunuGetir();
+  const degisen = liste.filter(p => eslesme.has(String(p[alan] || '').trim()));
+  const sonuc = document.getElementById('ikYazimSonuc');
+  if (!degisen.length) { sonuc.textContent = 'Değişecek kayıt yok.'; return; }
+  const alanAdi = _IK_DUZELTME_ALANLARI.find(a => a.alan === alan).ad;
+  const onay = typeof onayModali === 'function'
+    ? await onayModali(`${degisen.length} personelin "${alanAdi}" alanı düzeltilecek (${eslesme.size} farklı yazım). Devam edilsin mi?`, 'Düzelt')
+    : confirm(`${degisen.length} personelin "${alanAdi}" alanı düzeltilecek. Devam edilsin mi?`);
+  if (!onay) return;
+  degisen.forEach(p => { p[alan] = eslesme.get(String(p[alan]).trim()); });
+  const btn = document.getElementById('ikYazimUygulaBtn');
+  btn.disabled = true;
+  const yazim = await yazVeSonucuGetir(tenantAnahtar('personel'), liste);
+  btn.disabled = false;
+  ikYazimModaliAc(alan); // alan listesini ve sayıları yenile (sonuç metnini temizler)
+  sonuc.textContent = yazim && yazim.basarili === false
+    ? '⚠️ Bulut kaydı başarısız oldu; değişiklik yalnızca bu cihazda. İnternet bağlantısını kontrol edip tekrar deneyin.'
+    : `✔ ${degisen.length} personel kaydı düzeltildi.`;
+  ikPaneliniCiz();
 }
 
 function ikPaneliniBaslat(firma) {
@@ -316,5 +469,9 @@ function ikPaneliniBaslat(firma) {
   secim.innerHTML = Array.from({ length: buYil - ilk + 1 }, (_, i) => buYil - i).map(y => `<option>${y}</option>`).join('');
   secim.addEventListener('change', ikPaneliniCiz);
   document.getElementById('ikYazdirBtn').addEventListener('click', () => window.print());
+  document.getElementById('ikYazimBtn').addEventListener('click', () => ikYazimModaliAc());
+  document.getElementById('ikYazimAlan').addEventListener('change', () => { document.getElementById('ikYazimSonuc').textContent = ''; _ikYazimListesiCiz(); });
+  document.getElementById('ikYazimUygulaBtn').addEventListener('click', _ikYazimUygula);
+  ['ikYazimKapatBtn', 'ikYazimKapat2Btn'].forEach(id => document.getElementById(id).addEventListener('click', () => document.getElementById('ikYazimKatman').classList.remove('acik')));
   ikPaneliniCiz();
 }
