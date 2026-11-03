@@ -432,21 +432,43 @@ function raporAcilDurumYeterlilikOzeti(firma, calisanSayisi) {
 const _RP_ENGELLI_KOTA_ORANI = 0.03;
 const _RP_ENGELLI_KOTA_ESIK_CALISAN = 50;
 
+// Kullanıcı isteği: kota her İşyeri Sicili (işveren) için ayrı hesaplansın
+// (ör. BAĞFAŞ'ta Bandırma Gübre Fabrikaları, Teknik Müteahhitlik, Servis
+// Pazarlama ayrı). Sicili girilmemiş personel kendi grubunda sayılır; hiç sicil
+// tanımlanmamış firmada sonuç eskisi gibi tek satırdır. Toplam eksik, sicillerin
+// eksiklerinin toplamıdır (bir sicildeki fazla diğerinin eksiğini kapatmaz).
+// İK panelinde de aynı hesap var (bkz. modules/personel/ik-ui.js).
+const _RP_SICILSIZ = 'İşyeri sicili belirtilmemiş';
+
 function raporEngelliCalisanOzeti() {
   const personeller = oku(tenantAnahtar('personel'), []).filter(p => !p.istenCikisTarihi);
+  const sicilAdi = p => String(p.isveren || '').trim() || _RP_SICILSIZ;
+  const adlar = [...new Set(personeller.map(sicilAdi))].sort((a, b) => (a === _RP_SICILSIZ) - (b === _RP_SICILSIZ) || a.localeCompare(b, 'tr'));
+  const siciller = adlar.map(ad => {
+    const grup = personeller.filter(p => sicilAdi(p) === ad);
+    const engelli = grup.filter(p => p.engelliMi === 'EVET').length;
+    const kapsamda = grup.length >= _RP_ENGELLI_KOTA_ESIK_CALISAN;
+    const gerekli = kapsamda ? Math.round(grup.length * _RP_ENGELLI_KOTA_ORANI) : 0;
+    return {
+      ad, calisan: grup.length, engelli, kapsamda, gerekli,
+      oranYuzde: grup.length ? Math.round((engelli / grup.length) * 1000) / 10 : 0,
+      eksik: Math.max(0, gerekli - engelli)
+    };
+  });
   const toplam = personeller.length;
   const engelliSayisi = personeller.filter(p => p.engelliMi === 'EVET').length;
-  const zorunlulukKapsaminda = toplam >= _RP_ENGELLI_KOTA_ESIK_CALISAN;
-  const gerekliSayi = zorunlulukKapsaminda ? Math.round(toplam * _RP_ENGELLI_KOTA_ORANI) : 0;
+  const eksik = siciller.reduce((t, s) => t + s.eksik, 0);
 
   return {
     toplamCalisan: toplam,
     engelliSayisi,
     oranYuzde: toplam ? Math.round((engelliSayisi / toplam) * 1000) / 10 : 0,
-    zorunlulukKapsaminda,
-    gerekliSayi,
-    eksik: Math.max(0, gerekliSayi - engelliSayisi),
-    uygun: !zorunlulukKapsaminda || engelliSayisi >= gerekliSayi
+    zorunlulukKapsaminda: siciller.some(s => s.kapsamda),
+    gerekliSayi: siciller.reduce((t, s) => t + s.gerekli, 0),
+    eksik,
+    uygun: eksik === 0,
+    siciller,
+    sicilsizVar: siciller.some(s => s.ad === _RP_SICILSIZ)
   };
 }
 

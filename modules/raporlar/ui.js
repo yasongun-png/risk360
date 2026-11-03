@@ -60,6 +60,18 @@ function _rpDevirDaimAylikTablosu(aylikListe) {
   </table></div>`;
 }
 
+// Engelli kotası, işyeri sicili başına (bkz. service.js raporEngelliCalisanOzeti).
+function _rpEngelliSicilTablosu(eng) {
+  if (!eng.siciller.length) return '';
+  const durum = s => !s.kapsamda ? 'Kapsam dışı (< 50)' : s.eksik ? s.eksik + ' kişi eksik' : 'Uygun';
+  return `<div class="tablo-scroll" style="margin-top:12px;"><table class="veri-tablosu">
+    <thead><tr><th>İşyeri Sicili</th><th>Çalışan</th><th>Gerekli (%3)</th><th>Engelli</th><th>Oran</th><th>Durum</th></tr></thead>
+    <tbody>${eng.siciller.map(s => `<tr><td><b>${_raporKacir(s.ad)}</b></td><td>${s.calisan}</td><td>${s.kapsamda ? s.gerekli : '—'}</td><td>${s.engelli}</td><td>%${s.oranYuzde.toLocaleString('tr-TR')}</td>
+      <td style="${s.kapsamda && s.eksik ? 'color:var(--hata); font-weight:700;' : s.kapsamda ? 'color:var(--basari); font-weight:700;' : 'color:var(--metin-soluk);'}">${durum(s)}</td></tr>`).join('')}</tbody>
+  </table></div>
+  ${eng.sicilsizVar && eng.siciller.length > 1 ? '<p style="font-size:12px; color:#92400e; background:#fef3c7; padding:8px 12px; border-radius:8px; margin-top:8px;">⚠️ İşyeri sicili girilmemiş personel var; bu kişiler hiçbir işverenin kotasına sayılmıyor.</p>' : ''}`;
+}
+
 function raporlarSayfasiniCiz(ozet) {
   const pe = ozet.personelEgitim, dd = ozet.devirDaim, r = ozet.risk, ok = ozet.olayKaza, u = ozet.uygunsuzluk,
     kkd = ozet.kkd, kim = ozet.kimyasal, per = ozet.periyodik, izin = ozet.isIzni,
@@ -174,7 +186,7 @@ function raporlarSayfasiniCiz(ozet) {
     <p style="margin-top:10px;"><a class="geri-link" href="../acil-durum/index.html">Vardiya bazlı uygunluk değerlendirmesini incele →</a></p>
 
     ${_rpBolumBasligi('Engelli Çalışan Kotası (İş Kanunu Md.30)')}
-    <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Özel sektörde aynı il sınırları içinde 50 ve üzeri işçi çalıştıran işyerlerinde toplam işçi sayısının en az %3'ü engelli olmalıdır (4857 sayılı İş Kanunu Md.30, Engelli ve Eski Hükümlü Çalıştırma Yönetmeliği). 50'nin altındaki işyerleri bu zorunluluk kapsamı dışındadır.</p>
+    <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Özel sektörde aynı il sınırları içinde 50 ve üzeri işçi çalıştıran işyerlerinde toplam işçi sayısının en az %3'ü engelli olmalıdır (4857 sayılı İş Kanunu Md.30, Engelli ve Eski Hükümlü Çalıştırma Yönetmeliği). 50'nin altındaki işyerleri bu zorunluluk kapsamı dışındadır. Her işyeri sicili (işveren) ayrı hesaplanır.</p>
     <div class="istatistik-grid">
       ${_rpKart('Toplam Aktif Çalışan', eng.toplamCalisan)}
       ${_rpKart('Engelli Çalışan Sayısı', eng.engelliSayisi)}
@@ -183,6 +195,7 @@ function raporlarSayfasiniCiz(ozet) {
       ${_rpKart('Gerekli Sayı (%3)', eng.gerekliSayi)}
       ${_rpKart('Eksik', eng.eksik, eng.zorunlulukKapsaminda && eng.eksik > 0)}
     </div>
+    ${_rpEngelliSicilTablosu(eng)}
 
   `;
 }
@@ -212,7 +225,9 @@ function raporOzetiYazdir(ozet, firmaAdi) {
       ${satir('Açık İş İzni / Onay Bekleyen', izin.acikSayisi + ' / ' + izin.onayBekleyen)}
       ${satir('Açık İSG Malzeme Talebi', mlz.acikSayisi)}
       ${satir('Acil Durum Ekip / İlkyardımcı Yeterliliği', (ad.uygun ? 'Uygun' : ad.toplamEksik + ' kişi eksik'))}
-      ${satir('Engelli Çalışan Kotası (%3, İş Kanunu Md.30)', eng.zorunlulukKapsaminda ? (eng.engelliSayisi + ' / ' + eng.toplamCalisan + ' (%' + eng.oranYuzde + ') — ' + (eng.uygun ? 'Uygun' : eng.eksik + ' kişi eksik')) : 'Kapsam dışı (< 50 çalışan)')}
+      ${eng.siciller.length > 1
+        ? eng.siciller.map(s => satir('Engelli Çalışan Kotası — ' + s.ad, s.kapsamda ? (s.engelli + ' / ' + s.calisan + ' (%' + s.oranYuzde + ') — ' + (s.eksik ? s.eksik + ' kişi eksik' : 'Uygun')) : 'Kapsam dışı (' + s.calisan + ' çalışan, < 50)')).join('')
+        : satir('Engelli Çalışan Kotası (%3, İş Kanunu Md.30)', eng.zorunlulukKapsaminda ? (eng.engelliSayisi + ' / ' + eng.toplamCalisan + ' (%' + eng.oranYuzde + ') — ' + (eng.uygun ? 'Uygun' : eng.eksik + ' kişi eksik')) : 'Kapsam dışı (< 50 çalışan)')}
     </table>
   `;
   _raporYazdirmaAlaniniGoster(html);
