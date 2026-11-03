@@ -373,7 +373,8 @@ function ikPaneliniCiz() {
       <div><h4>İşyeri sicili</h4>${_ikCubuklar(h.sicilDagilimi, '#0e7490')}</div>
       <div><h4>Kıdem</h4>${_ikCubuklar(h.kidemDagilimi, '#7c3aed')}</div>
       <div><h4>Bölüm</h4>${_ikCubuklar(h.bolumDagilimi.slice(0, 15), '#2563eb')}${h.bolumDagilimi.length > 15 ? `<p class="ik-not">İlk 15 bölüm gösteriliyor (toplam ${h.bolumDagilimi.length}).</p>` : ''}</div>
-      <div>${h.kapsam.length ? `<h4>Kapsamı</h4>${_ikCubuklar(h.kapsam, '#0891b2')}` : ''}${h.mv.length ? `<h4>M/V</h4>${_ikCubuklar(h.mv, '#64748b')}` : ''}</div>
+      <div>${h.kapsam.length ? `<h4>Kapsamı</h4>${_ikCubuklar(h.kapsam.slice(0, 8), '#0891b2')}${h.kapsam.length > 8 ? `<p class="ik-not">İlk 8 değer gösteriliyor (toplam ${h.kapsam.length}).</p>` : ''}` : ''}
+        ${h.mv.length ? `<h4>M/V</h4>${_ikCubuklar(h.mv.slice(0, 12), '#64748b')}${h.mv.length > 12 ? `<p class="ik-not">İlk 12 değer gösteriliyor (toplam ${h.mv.length}).</p>` : ''}` : ''}</div>
     </div>`);
 
   document.getElementById('ikIcerik').innerHTML = engelliHtml + devirHtml + egitimHtml + dagilimHtml;

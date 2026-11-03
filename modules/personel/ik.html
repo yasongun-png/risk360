@@ -44,7 +44,7 @@
   .ik-cubuk-iz { background:#f1f5f9; border-radius:5px; height:14px; overflow:hidden; }
   .ik-cubuk-iz > span { display:block; height:100%; border-radius:5px; }
   .ik-cubuk-satir b { text-align:right; }
-  .ik-aylik { display:grid; grid-template-columns:repeat(12, 1fr); gap:4px; align-items:end; }
+  .ik-aylik { display:grid; grid-template-columns:repeat(12, 1fr); gap:4px; align-items:end; padding-top:18px; }
   .ik-ay { display:flex; flex-direction:column; align-items:center; font-size:11px; }
   .ik-ay.gelecek { opacity:.35; }
   .ik-ay-cubuklar { display:flex; gap:2px; align-items:flex-end; height:120px; width:100%; justify-content:center; border-bottom:1px solid var(--kenarlik); }
@@ -64,8 +64,26 @@
     body .icerik, body .icerik * { visibility:visible !important; }
     .icerik { position:static !important; }
     .ust-cubuk, .geri-link, .ik-ust button, .ik-ust a, .ik-uyari button, .modal-katman { display:none !important; }
-    .ik-iki { grid-template-columns:1fr 1fr; }
-    .ik-bolum { box-shadow:none; border:1px solid #e2e8f0; break-inside:avoid; }
+    /* Kullanıcı isteği: PDF'te sayfa grafiklerin ortasından bölünmesin. Her ana
+       bölüm yeni sayfada başlar; grafik, kart grubu ve tablo satırı bölünmez.
+       Grid öğeleri tarayıcıda bölünmeye karşı güvenilir korunmadığı için
+       yan yana grafikler inline-block'a çevrilir (inline-block hiç bölünmez). */
+    @page { size:A4 portrait; margin:12mm; }
+    html, body { background:#fff !important; }
+    .icerik { max-width:none !important; padding:0 !important; }
+    .ik-bolum { box-shadow:none; border:1px solid #e2e8f0; break-inside:auto; break-before:page; padding:10px 12px; }
+    #ikIcerik > .ik-bolum:first-child { break-before:auto; }
+    .ik-bolum h3, .ik-bolum h4 { break-after:avoid; }
+    #ikOzet, .ik-mini, .ik-aylik, .ik-lejant, .ik-cubuklar, .ik-uyari, .ik-not, .ik-aciklama { break-inside:avoid; }
+    #ikOzet, .ik-mini { display:block !important; }
+    #ikOzet > .istatistik-kutu, .ik-mini > .istatistik-kutu { display:inline-block; vertical-align:top; width:23.5%; margin:0 1% 8px 0; box-sizing:border-box; }
+    .ik-iki { display:block !important; }
+    .ik-iki > div { display:inline-block; vertical-align:top; width:48.5%; margin-right:1.5%; box-sizing:border-box; }
+    .ik-iki > div:nth-child(2n) { margin-right:0; }
+    .tablo-scroll { overflow:visible !important; }
+    .ik-tablo tr { break-inside:avoid; }
+    .ik-tablo thead { display:table-header-group; }
+    .ik-tablo td, .ik-tablo th { white-space:normal; }
     .ik-detay { display:none; }
   }
 </style>
@@ -123,7 +141,7 @@
   <script src="../egitim/service.js?v=2"></script>
   <script src="model.js?v=2"></script>
   <script src="repository.js?v=2"></script>
-  <script src="ik-ui.js?v=2"></script>
+  <script src="ik-ui.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('personel');
 
