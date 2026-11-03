@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="../../assets/icons/favicon-32.png">
+<title>İSG Platform - İnsan Kaynakları</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .ik-ust { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .ik-ust select { width:auto; margin:0; }
+  #ikOzet { grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); margin-bottom:16px; }
+  .ik-kart-alt { display:block; font-size:11.5px; color:var(--metin-soluk); margin-top:2px; }
+  .ik-bolum { background:var(--kart-bg); border-radius:12px; box-shadow:var(--golge); padding:16px 18px; margin-bottom:16px; }
+  .ik-bolum h3 { margin:0 0 4px; font-size:17px; }
+  .ik-bolum h4 { margin:14px 0 8px; font-size:13px; color:var(--metin-soluk); text-transform:uppercase; letter-spacing:.3px; }
+  .ik-aciklama { font-size:12.5px; color:var(--metin-soluk); margin:0 0 12px; }
+  .ik-mini { grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); margin-bottom:6px; }
+  .ik-mini .istatistik-kutu b { font-size:19px; }
+  .ik-iki { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:4px 28px; }
+  .ik-tablo td.sag, .ik-tablo th.sag { text-align:right; }
+  .ik-tablo td, .ik-tablo th { white-space:nowrap; }
+  .ik-soluk, .ik-soluk td { color:var(--metin-soluk); }
+  .ik-rozet { display:inline-block; border-radius:10px; padding:1px 9px; font-weight:700; font-size:12px; }
+  .ik-rozet.yesil { background:#dcfce7; color:#166534; }
+  .ik-rozet.kirmizi { background:#fee2e2; color:#b91c1c; }
+  .ik-rozet.sari { background:#fef3c7; color:#92400e; }
+  .ik-rozet.gri { background:#f1f5f9; color:#475569; }
+  .ik-uyari { background:#fef3c7; color:#92400e; border-radius:8px; padding:8px 12px; font-size:12.5px; margin:10px 0 0; }
+  .ik-not { font-size:11.5px; color:var(--metin-soluk); margin:6px 0 0; }
+  .ik-bos { font-size:13px; color:var(--metin-soluk); }
+  .ik-detay { margin-top:12px; }
+  .ik-detay summary { cursor:pointer; font-weight:600; font-size:13.5px; color:var(--celik-mavi); padding:4px 0; }
+  .ik-detay table { margin-top:8px; }
+  .ik-cubuklar { display:flex; flex-direction:column; gap:5px; }
+  .ik-cubuk-satir { display:grid; grid-template-columns:minmax(110px, 42%) 1fr 56px; align-items:center; gap:8px; font-size:12.5px; }
+  .ik-cubuk-etiket { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ik-cubuk-iz { background:#f1f5f9; border-radius:5px; height:14px; overflow:hidden; }
+  .ik-cubuk-iz > span { display:block; height:100%; border-radius:5px; }
+  .ik-cubuk-satir b { text-align:right; }
+  .ik-aylik { display:grid; grid-template-columns:repeat(12, 1fr); gap:4px; align-items:end; }
+  .ik-ay { display:flex; flex-direction:column; align-items:center; font-size:11px; }
+  .ik-ay.gelecek { opacity:.35; }
+  .ik-ay-cubuklar { display:flex; gap:2px; align-items:flex-end; height:120px; width:100%; justify-content:center; border-bottom:1px solid var(--kenarlik); }
+  .ik-ay-cubuklar span { width:42%; max-width:16px; border-radius:3px 3px 0 0; position:relative; min-height:0; }
+  .ik-ay-cubuklar i { position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-style:normal; font-size:10px; font-weight:700; color:var(--metin); }
+  .ik-ay-cubuklar .giren, .ik-lejant i.giren { background:#16a34a; }
+  .ik-ay-cubuklar .cikan, .ik-lejant i.cikan { background:#dc2626; }
+  .ik-ay small { margin-top:3px; color:var(--metin-soluk); }
+  .ik-ay-oran { font-weight:700; color:var(--metin) !important; margin-top:0 !important; }
+  .ik-lejant { display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:var(--metin-soluk); margin-top:8px; }
+  .ik-lejant i { display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:middle; margin-right:3px; }
+  @media print {
+    .ust-cubuk, .geri-link, .ik-ust button, .ik-ust a { display:none !important; }
+    .ik-bolum { box-shadow:none; border:1px solid #e2e8f0; break-inside:avoid; }
+    .ik-detay { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka" role="link" title="Ana sayfaya dön" style="cursor:pointer;" onclick="location.href='../../dashboard.html'">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="index.html" class="geri-link">← Personel'e Dön</a>
+    <h2 style="margin-top:14px;">👥 İnsan Kaynakları</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="ik-ust">
+      <label for="ikYil" style="margin:0; font-weight:600;">Dönem (yıl)</label>
+      <select id="ikYil"></select>
+      <span style="font-size:12px; color:var(--metin-soluk);">Giriş/çıkış, devir ve eğitim saatleri seçilen yıla; engelli kotası ve personel yapısı bugüne göre.</span>
+      <button type="button" class="ikincil" id="ikYazdirBtn" style="width:auto; margin-left:auto;">🖨️ Yazdır</button>
+    </div>
+
+    <div class="istatistik-grid" id="ikOzet"></div>
+    <div id="ikIcerik"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="../../core/data.js?v=6"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js"></script>
+  <script src="../egitim/model.js?v=2"></script>
+  <script src="../egitim/repository.js?v=2"></script>
+  <script src="../egitim/service.js?v=2"></script>
+  <script src="model.js?v=2"></script>
+  <script src="repository.js?v=2"></script>
+  <script src="ik-ui.js?v=1"></script>
+  <script>
+    const kullanici = girisGerekliModul('personel');
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — personel, devir, engelli kotası ve eğitim istatistikleri';
+          ikPaneliniBaslat(aktifFirmaGetir());
+        });
+      }
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('../../sw.js'); }</script>
+</body>
+</html>
