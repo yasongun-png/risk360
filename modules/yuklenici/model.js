@@ -434,7 +434,8 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
   if (geciciKalan !== null && geciciKalan <= 30) return sorunUret('Geçici Görevlendirme yaklaşıyor', gecici.exp, false, 'Geçici Görev');
 
   // Kullanıcı isteği: MYK artık tarihsiz, basit Var/Yok.
-  if (!yukleniciBelgeVarMi(belgeGetir('myk'))) return sorunUret('MYK yok', '', true, 'MYK');
+  // Kullanıcı isteği: Diploma veya MYK'dan biri yeterli (renk ve eksik evrak maili gibi).
+  if (!yukleniciBelgeVarMi(belgeGetir('myk')) && !yukleniciBelgeVarMi(belgeGetir('diploma'))) return sorunUret('MYK veya Diploma yok', '', true, 'MYK');
 
   const firmaEgitimi = belgeGetir('firmaEgitimi');
   const feExp = yukleniciBelgeBitisTarihiHesapla(tanimGetir('firmaEgitimi'), firmaEgitimi, tehlike);
