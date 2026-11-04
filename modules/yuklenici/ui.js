@@ -62,6 +62,37 @@ function _ykKayitTarihiGoster(olusturmaTarihi) {
 // "Sonra Sor" bir hafta sonra tekrar sorulur.
 const _YK_ILK_GIRIS_GUN = 7;
 
+// Kullanıcı isteği: "ilk giriş seçilenlerde geçici görevlendirme başlangıcından
+// iki gün sonra ilk giriş otomatik kalksın". Başlangıç tarihi yoksa ya da İlk
+// Giriş bu tarihten sonra işaretlendiyse (kullanıcı bilerek seçmiştir) otomatik
+// kaldırma tarihi yoktur; o kişiler haftalık soruya kalır.
+const _YK_ILK_GIRIS_OTOMATIK_GUN = 2;
+
+function _ykIlkGirisOtomatikTarihi(k) {
+  const base = ((k.belgeler || {}).geciciGorev || {}).base;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(base || '')) return '';
+  const tarih = gunEkle(base, _YK_ILK_GIRIS_OTOMATIK_GUN);
+  return (k.ilkGirisTarihi || '').slice(0, 10) > tarih ? '' : tarih;
+}
+
+function _ykIlkGirisOtomatikKaldir() {
+  const bugun = bugunIso();
+  const tumu = yukleniciKisileriTumunuGetir();
+  const kalkacaklar = tumu.filter(k => {
+    if (k.pasif || !k.ilkGiris) return false;
+    const tarih = _ykIlkGirisOtomatikTarihi(k);
+    return tarih && tarih <= bugun;
+  });
+  if (!kalkacaklar.length) return;
+  const idler = new Set(kalkacaklar.map(k => k.id));
+  _yukleniciKisileriKaydet(tumu.map(k => idler.has(k.id) ? Object.assign({}, k, _yukleniciGuncellemeIzi({ ilkGiris: false })) : k));
+  if (typeof kayitlariCiz === 'function' && document.getElementById('kayitAramaKutusu')) kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+  if (typeof dashboardCiz === 'function' && document.getElementById('dashToplamPersonel')) dashboardCiz();
+  const adlar = kalkacaklar.slice(0, 10).map(k => k.adSoyad).join(', ');
+  const kalan = kalkacaklar.length > 10 ? ` ve ${kalkacaklar.length - 10} kişi daha` : '';
+  alert(`Geçici görevlendirme başlangıcından ${_YK_ILK_GIRIS_OTOMATIK_GUN} gün geçtiği için ${kalkacaklar.length} personelde İlk Giriş kaldırıldı: ${adlar}${kalan}.`);
+}
+
 function _ykIlkGirisHatirlat(sonra) {
   sonra = sonra || (() => {});
   const simdi = Date.now();
@@ -70,7 +101,9 @@ function _ykIlkGirisHatirlat(sonra) {
   // Bu özellikten önce İlk Giriş işaretlenmiş kayıtların seçim tarihi
   // bilinmez; süre bugünden başlatılır.
   if (tumu.some(k => k.ilkGiris && !k.ilkGirisTarihi)) _yukleniciKisileriKaydet(tumu);
+  _ykIlkGirisOtomatikKaldir();
   const vadesi = yukleniciKisileriTumunuGetir().filter(k => !k.pasif && k.ilkGiris && k.ilkGirisTarihi
+    && !_ykIlkGirisOtomatikTarihi(k)
     && simdi - new Date(k.ilkGirisTarihi).getTime() >= hafta
     && (!k.ilkGirisSorulduTarihi || simdi - new Date(k.ilkGirisSorulduTarihi).getTime() >= hafta));
   if (!vadesi.length) { sonra(); return; }
