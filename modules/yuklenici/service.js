@@ -30,7 +30,7 @@ function _kisiZenginlestir(kisi) {
   // döndürdüğü için modal açmadan "kaç belge eksik" sorusu cevapsız
   // kalıyordu — bkz. ui.js kisileriCiz "(+N diğer)" etiketi.
   const bugun = bugunIso();
-  const tanimlar = kisi.durum === 'İptal' ? [] : yukleniciGecerliBelgeTanimlari(kisi.personelTuru);
+  const tanimlar = kisi.durum === 'İptal' ? [] : yukleniciGecerliBelgeTanimlari(kisi.personelTuru, kisi.firmaId);
   const eksikBelgeSayisi = tanimlar.filter(b => !yukleniciBelgeUygunMu(b, (kisi.belgeler || {})[b.id], kisi.tehlikeSinifi, bugun)).length;
 
   return Object.assign({}, kisi, {
@@ -74,6 +74,7 @@ function yukleniciFirmaGuncelle(id, veriler) {
     eposta: (veriler.eposta || '').trim(),
     riskSeviyesi: veriler.riskSeviyesi || 'Orta',
     tehlikeSinifi: yukleniciTehlikeSinifiNormallestir(veriler.tehlikeSinifi),
+    yuksekteCalisma: !!veriler.yuksekteCalisma,
     durum: veriler.durum || 'Aktif',
     gerekliEvraklar: veriler.gerekliEvraklar || VARSAYILAN_GEREKLI_EVRAKLAR.slice(),
     evraklar: veriler.evraklar || [],
@@ -293,7 +294,7 @@ function yukleniciFirmaSil(id) {
 function yukleniciKisiEksikBelgeleri(kisi) {
   const bugun = bugunIso();
   const belgeler = kisi.belgeler || {};
-  const tanimlar = yukleniciGecerliBelgeTanimlari(kisi.personelTuru);
+  const tanimlar = yukleniciGecerliBelgeTanimlari(kisi.personelTuru, kisi.firmaId);
   const uygunMu = b => yukleniciBelgeUygunMu(b, belgeler[b.id], kisi.tehlikeSinifi, bugun);
   const satirlar = [];
   tanimlar.forEach(b => {
@@ -736,7 +737,7 @@ function yukleniciDetayliArama(aramaMetni, belgeFiltre) {
   yukleniciKisileriTumunuGetir().forEach(k => {
     if (aramaMetni && !yukleniciFuzzyEslesir(k.firmaAdi + ' ' + k.adSoyad, aramaMetni)) return;
 
-    yukleniciGecerliBelgeTanimlari(k.personelTuru).forEach(b => {
+    yukleniciGecerliBelgeTanimlari(k.personelTuru, k.firmaId).forEach(b => {
       if (belgeFiltre && belgeFiltre !== b.ad) return;
       const kayit = (k.belgeler || {})[b.id] || {};
       const uygun = yukleniciBelgeUygunMu(b, kayit, k.tehlikeSinifi, bugun);
@@ -919,7 +920,7 @@ function yukleniciKayitlariniGetir(aramaMetni) {
     // hesaplardır. Önceden ikisi de aynı (firmaEgitimi hariç) filtreyi
     // kullanıyordu, bu da eski uygulamaya göre daha düşük bir oran gösteriyordu.
     const sinif = yukleniciKisiSatirSinifiHesapla(k, bugun);
-    const tumTanimlar = yukleniciGecerliBelgeTanimlari(k.personelTuru);
+    const tumTanimlar = yukleniciGecerliBelgeTanimlari(k.personelTuru, k.firmaId);
     const uygunSayisi = tumTanimlar.filter(b => yukleniciBelgeUygunMu(b, (k.belgeler || {})[b.id], k.tehlikeSinifi, bugun)).length;
     const firmaEgitimi = (k.belgeler || {}).firmaEgitimi || {};
     return {

@@ -89,6 +89,8 @@ function firmaOlustur(veriler) {
     // bu firmanın personeline otomatik uygulanır (bkz. service.js
     // yukleniciFirmaTehlikeSinifiniPersoneleUygula, ui.js kişi formu).
     tehlikeSinifi: yukleniciTehlikeSinifiNormallestir(veriler.tehlikeSinifi),
+    // Evet ise personelde Yüksekte Çalışma Eğitimi zorunlu olur (bkz. yukleniciFormBelgeTanimlari).
+    yuksekteCalisma: !!veriler.yuksekteCalisma,
     durum: veriler.durum || 'Aktif',
     gerekliEvraklar: Array.isArray(veriler.gerekliEvraklar) ? veriler.gerekliEvraklar : VARSAYILAN_GEREKLI_EVRAKLAR.slice(),
     evraklar: Array.isArray(veriler.evraklar) ? veriler.evraklar : [],
@@ -292,14 +294,29 @@ function yukleniciBelgeTanimiGetir(id) {
   return YUKLENICI_BELGE_TANIMLARI.find(b => b.id === id) || null;
 }
 
+// Kullanıcı isteği: firmada "Yüksekte Çalışma Yapacak mı" Evet ise o firmanın
+// personelinde Yüksekte Çalışma Eğitimi zorunlu olur. Kişiye kopyalanmaz, her
+// hesapta firmadan okunur; Hayır firmalarda eğitim bilgi amaçlı kalır.
+function yukleniciFirmaYuksekteCalisirMi(firmaId) {
+  const firma = firmaId ? yukleniciFirmaIdIleGetirRepo(firmaId) : null;
+  return !!(firma && firma.yuksekteCalisma);
+}
+
+function yukleniciYuksekteEgitimiEksikMi(kisi) {
+  return yukleniciFirmaYuksekteCalisirMi(kisi.firmaId) && !yukleniciBelgeVarMi((kisi.belgeler || {}).yuksekteCalisma);
+}
+
 // Uygunluk / eksik belge hesabına giren belgeler (bilgi amaçlılar hariç).
-function yukleniciGecerliBelgeTanimlari(personelTuru) {
-  return yukleniciFormBelgeTanimlari(personelTuru).filter(b => !b.bilgiAmacli);
+function yukleniciGecerliBelgeTanimlari(personelTuru, firmaId) {
+  return yukleniciFormBelgeTanimlari(personelTuru, firmaId).filter(b => !b.bilgiAmacli);
 }
 
 // Personel formunda gösterilen belgeler (bilgi amaçlılar dahil).
-function yukleniciFormBelgeTanimlari(personelTuru) {
-  return YUKLENICI_BELGE_TANIMLARI.filter(b => !b.operatorSart || personelTuru === 'operator');
+function yukleniciFormBelgeTanimlari(personelTuru, firmaId) {
+  const yuksekteZorunlu = yukleniciFirmaYuksekteCalisirMi(firmaId);
+  return YUKLENICI_BELGE_TANIMLARI
+    .filter(b => !b.operatorSart || personelTuru === 'operator')
+    .map(b => (yuksekteZorunlu && b.id === 'yuksekteCalisma' ? Object.assign({}, b, { girisEngelleyici: true, bilgiAmacli: false }) : b));
 }
 
 function yukleniciBosBelgeler() {
@@ -388,6 +405,9 @@ function yukleniciKisiKritikSebepHesapla(kisi, referansTarih) {
   if (!yukleniciBelgeVarMi(belgeGetir('sgk'))) return sorunUret('SGK yok', '', true, 'SGK');
   if (!yukleniciBelgeVarMi(belgeGetir('adliSicil'))) return sorunUret('Adli Sicil yok', '', true, 'Adli Sicil');
   if (!yukleniciBelgeVarMi(belgeGetir('kkd'))) return sorunUret('KKD Zimmet yok', '', true, 'KKD Zimmet');
+  // "yaklaşıyor" uyarıları aşağıda erken döndüğü için onlardan önce bakılır,
+  // yoksa geçici görevi 30 günden kısa olan kişide bu engel hiç görünmezdi.
+  if (yukleniciYuksekteEgitimiEksikMi(kisi)) return sorunUret('Yüksekte Çalışma Eğitimi yok', '', true, 'Yüksekte Çalışma');
 
   const saglik = belgeGetir('saglik');
   const temelIsg = belgeGetir('temelIsg');
@@ -451,7 +471,8 @@ function yukleniciKisiSatirSinifiHesapla(kisi, referansTarih) {
   const tanimlar = yukleniciGecerliBelgeTanimlari(kisi.personelTuru).filter(b => b.id !== 'firmaEgitimi');
   if (!tanimlar.length) return 'row-bad';
   const uygunSayisi = tanimlar.filter(b => yukleniciBelgeUygunMu(b, (kisi.belgeler || {})[b.id], kisi.tehlikeSinifi, referansTarih)).length;
-  if (uygunSayisi >= 9) return 'row-ok';
+  // Eşikler kaymasın diye Yüksekte Çalışma sayıma katılmaz; zorunluysa ve yoksa yeşil olamaz.
+  if (uygunSayisi >= 9) return yukleniciYuksekteEgitimiEksikMi(kisi) ? 'row-mid' : 'row-ok';
   if (uygunSayisi >= 6) return 'row-mid';
   return 'row-bad';
 }
@@ -528,7 +549,7 @@ function yukleniciGirebilecegiSonTarihHesapla(kisi, referansTarih) {
     return { sonTarih: secilen, durumMetni: 'Eğitim Verilecek - İSG ile görüşün', uygunMu: false, ilkGiris: true };
   }
 
-  const eksik = !sgkVar || !adliVar || !saglikExp || !temelIsgExp || (secilen && secilen < bugun);
+  const eksik = !sgkVar || !adliVar || !saglikExp || !temelIsgExp || (secilen && secilen < bugun) || yukleniciYuksekteEgitimiEksikMi(kisi);
   // Kullanıcı isteği: "kişinin butonuna tıkladığımda İSG onaylı listede uygun
   // görünsün, eksik evrakları olsa da bypass olsun" — İSG'nin elle verdiği
   // onay eksik evrağı geçersiz kılar (İlk Giriş/eğitim kuralı hâlâ önce gelir).

@@ -79,7 +79,7 @@ function _yukleniciUygunOlmayanBelgelerListesi(satir) {
   if (satir.kind === 'personel') {
     const kisi = satir.kaynak;
     const belgeler = kisi.belgeler || {};
-    return yukleniciGecerliBelgeTanimlari(kisi.personelTuru)
+    return yukleniciGecerliBelgeTanimlari(kisi.personelTuru, kisi.firmaId)
       .filter(b => b.id !== 'firmaEgitimi')
       .filter(b => !yukleniciBelgeUygunMu(b, belgeler[b.id], kisi.tehlikeSinifi, bugunIso()))
       .map(b => b.ad)
