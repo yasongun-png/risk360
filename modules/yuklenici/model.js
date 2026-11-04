@@ -465,14 +465,19 @@ function yukleniciBelgeUygunMu(belgeTanimi, kayit, tehlikeSinifi, referansTarih)
 }
 
 // Eski uygulamadaki getRowClassForPersonel ile birebir: Firma Eğitimi renge
-// etki etmez, geçerli belgelerin >=9'u uygunsa yeşil (row-ok), >=6'sı
-// uygunsa sarı (row-mid), aksi halde kırmızı (row-bad).
+// etki etmez, geçerli belgelerin >=9'u uygunsa ya da hepsi tamsa yeşil (row-ok),
+// >=6'sı uygunsa sarı (row-mid), aksi halde kırmızı (row-bad).
 function yukleniciKisiSatirSinifiHesapla(kisi, referansTarih) {
   const tanimlar = yukleniciGecerliBelgeTanimlari(kisi.personelTuru).filter(b => b.id !== 'firmaEgitimi');
   if (!tanimlar.length) return 'row-bad';
-  const uygunSayisi = tanimlar.filter(b => yukleniciBelgeUygunMu(b, (kisi.belgeler || {})[b.id], kisi.tehlikeSinifi, referansTarih)).length;
+  const uygunMu = b => yukleniciBelgeUygunMu(b, (kisi.belgeler || {})[b.id], kisi.tehlikeSinifi, referansTarih);
+  const uygunSayisi = tanimlar.filter(uygunMu).length;
+  // Kullanıcı isteği: sözleşmeler firmaya taşınınca teknik personelde en fazla
+  // 8 belge kaldı ve >=9 eşiğine hiç ulaşılamıyordu; belgeleri tam olan
+  // (Diploma/MYK'dan biri yeterli) yeşil olur, tek eksiği olan sarı kalır.
+  const hepsiUygun = tanimlar.every(b => uygunMu(b) || (b.karsilikliId && uygunMu(tanimlar.find(t => t.id === b.karsilikliId))));
   // Eşikler kaymasın diye Yüksekte Çalışma sayıma katılmaz; zorunluysa ve yoksa yeşil olamaz.
-  if (uygunSayisi >= 9) return yukleniciYuksekteEgitimiEksikMi(kisi) ? 'row-mid' : 'row-ok';
+  if (uygunSayisi >= 9 || hepsiUygun) return yukleniciYuksekteEgitimiEksikMi(kisi) ? 'row-mid' : 'row-ok';
   if (uygunSayisi >= 6) return 'row-mid';
   return 'row-bad';
 }
