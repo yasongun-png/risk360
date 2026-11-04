@@ -34,9 +34,12 @@
   @keyframes pl-yanip { 0%, 100% { background:transparent; box-shadow:none; } 50% { background:#fecaca; box-shadow:0 0 0 2px #dc2626; } }
   .pl-gorev.pl-yanip.pl-sari { animation-name:pl-yanip-sari; }
   @keyframes pl-yanip-sari { 0%, 100% { background:transparent; box-shadow:none; } 50% { background:#fef08a; box-shadow:0 0 0 2px #eab308; } }
+  .pl-gorev.pl-yanip.pl-mavi { animation-name:pl-yanip-mavi; }
+  @keyframes pl-yanip-mavi { 0%, 100% { background:transparent; box-shadow:none; } 50% { background:#bfdbfe; box-shadow:0 0 0 2px #2563eb; } }
   @media (prefers-reduced-motion: reduce) {
     .pl-gorev.pl-yanip { animation:none; background:#fecaca; box-shadow:0 0 0 2px #dc2626; }
     .pl-gorev.pl-yanip.pl-sari { animation:none; background:#fef08a; box-shadow:0 0 0 2px #eab308; }
+    .pl-gorev.pl-yanip.pl-mavi { animation:none; background:#bfdbfe; box-shadow:0 0 0 2px #2563eb; }
   }
   .pl-gorev.bitti .pl-gorev-baslik { text-decoration:line-through; color:var(--metin-soluk); font-weight:400; }
   .pl-gorev-alt { display:flex; flex-wrap:wrap; gap:6px 10px; font-size:12px; color:var(--metin-soluk); margin-top:3px; }
@@ -173,7 +176,7 @@
   <script src="model.js?v=5"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=4"></script>
-  <script src="ui.js?v=14"></script>
+  <script src="ui.js?v=15"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 
