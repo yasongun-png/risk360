@@ -69,7 +69,8 @@ function _plOzetCiz() {
 
 // Kullanıcı isteği: son günü gelen (planlanan bitişi bugün olan) işler sayfa
 // açılınca kırmızı yanıp sönsün, tıklayınca dursun. Durdurulanlar bu tarayıcıda
-// o gün boyunca hatırlanır; ertesi gün liste sıfırlanır.
+// o gün boyunca hatırlanır; ertesi gün liste sıfırlanır (son iki gündeki sarı
+// yanıp sönme de aynı listeyi kullanır, ertesi gün yeniden başlar).
 const _PL_SONGUN_ANAHTARI = 'isg_plan_songun_durdurulan';
 
 function _plSonGunDurdurulanlar() {
@@ -152,8 +153,13 @@ function gorevleriCiz() {
     const baslamaEtiketi = bitti || tekrarliMi(g) ? '' : g.baslangicTarihi === bugun ? '<span class="pl-etiket pl-devam">Bugün başlıyor</span>'
       : (!bitti && g.baslangicTarihi && g.baslangicTarihi < bugun && g.durum === 'Yapılacak' ? '<span class="pl-etiket pl-devam">Devam ediyor</span>' : '');
     const sonGun = !bitti && g.tarih === bugun;
-    const yanip = sonGun && !durdurulanlar.includes(g.id);
-    return `<div class="pl-gorev${bitti ? ' bitti' : ''}${sonGun ? ' pl-songun' : ''}${yanip ? ' pl-yanip' : ''}" data-oncelik="${g.oncelik}" data-gorev="${g.id}"${yanip ? ' title="Son gün! Yanıp sönmeyi durdurmak için tıklayın."' : ''}>
+    // Kullanıcı isteği: termine iki gün kala sarı yanıp sönsün, son gün kırmızı.
+    // "Her gün" işlerde hariç: bir sonraki tarihleri hep yarın olduğundan sürekli yanardı.
+    const kalanGun = !bitti && g.tarih && g.tekrar !== 'Her gün' ? Math.round((Date.parse(g.tarih) - Date.parse(bugun)) / 86400000) : null;
+    const yaklasiyor = kalanGun === 1 || kalanGun === 2;
+    const yanip = (sonGun || yaklasiyor) && !durdurulanlar.includes(g.id);
+    const yanipMetni = sonGun ? 'Son gün!' : `Termine ${kalanGun} gün kaldı.`;
+    return `<div class="pl-gorev${bitti ? ' bitti' : ''}${sonGun ? ' pl-songun' : ''}${yanip ? ' pl-yanip' : ''}${yanip && yaklasiyor ? ' pl-sari' : ''}" data-oncelik="${g.oncelik}" data-gorev="${g.id}"${yanip ? ` title="${yanipMetni} Yanıp sönmeyi durdurmak için tıklayın."` : ''}>
       <input type="checkbox" data-tamamla="${g.id}" ${bitti ? 'checked' : ''} title="${bitti ? 'Geri al' : 'Tamamlandı işaretle'}">
       <div class="pl-gorev-govde" data-duzenle="${g.id}">
         <div class="pl-gorev-baslik">${g.oncelik === 'Yüksek' ? '<span class="pl-oncelik" title="Yüksek öncelik">!</span>' : ''}${_plKacir(g.baslik)}</div>
@@ -162,6 +168,7 @@ function gorevleriCiz() {
           ${baslamaEtiketi}
           ${!bitti && tekrarliMi(g) && g.tarih && g.tarih < bugun ? '<span class="pl-etiket" style="background:#fee2e2; color:#b91c1c;">Gecikti</span>' : ''}
           ${sonGun ? '<span class="pl-etiket" style="background:#dc2626; color:#fff;">⏰ Son gün</span>' : ''}
+          ${yaklasiyor ? `<span class="pl-etiket" style="background:#fef3c7; color:#92400e;">⏳ ${kalanGun} gün kaldı</span>` : ''}
           ${!bitti && !sonGun && tekrarliMi(g) && t(g) === bugun ? '<span class="pl-etiket" style="background:#dbeafe; color:#1e40af;">Bugün</span>' : ''}
           ${bitti && g.tamamlanmaTarihi ? `<span>✔ ${gunAyYil(g.tamamlanmaTarihi)}</span>` : ''}
           ${g.tekrar && g.tekrar !== 'Bir defalık' ? `<span class="pl-etiket" style="background:#ecfdf5; color:#047857;" title="Tamamlandığında bir sonraki tarih için yeniden eklenir">🔁 ${g.tekrar}</span>` : ''}
