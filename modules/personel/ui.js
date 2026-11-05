@@ -282,7 +282,8 @@ function personelSayfasiniBaslat() {
   });
 
   document.getElementById('tumunuSecCheckbox').addEventListener('change', e => {
-    const gorunenler = personelleriGetir(document.getElementById('aramaKutusu').value, _arsivGorunumu);
+    // Bölüm filtresi de verilir: yoksa tabloda görünmeyen kişiler seçilip toplu silinebiliyordu.
+    const gorunenler = personelleriGetir(document.getElementById('aramaKutusu').value, _arsivGorunumu, document.getElementById('bolumFiltre').value);
     if (e.target.checked) gorunenler.forEach(p => _seciliPersonelIdleri.add(p.id));
     else gorunenler.forEach(p => _seciliPersonelIdleri.delete(p.id));
     tabloyuCiz(document.getElementById('aramaKutusu').value);
