@@ -301,7 +301,10 @@ function personelSayfasiniBaslat() {
     excelSablonIndir(PERSONEL_EXCEL_KOLONLARI, 'personel_sablonu.xlsx');
   });
   document.getElementById('disaAktarBtn').addEventListener('click', () => {
-    excelDisaAktar(personelleriGetir('', _arsivGorunumu), PERSONEL_EXCEL_KOLONLARI, 'personel_listesi.xlsx');
+    // Kullanıcı isteği: arama ve filtre sonucu neyse o aktarılsın — tablodaki liste ve sırayla aynı.
+    const liste = _prsSutunSiraliListe(personelleriGetir(document.getElementById('aramaKutusu').value, _arsivGorunumu, document.getElementById('bolumFiltre').value));
+    if (!liste.length) { alert('Arama ve filtreye uyan personel yok, aktarılacak kayıt bulunamadı.'); return; }
+    excelDisaAktar(liste, PERSONEL_EXCEL_KOLONLARI, 'personel_listesi.xlsx');
   });
   document.getElementById('iceAktarBtn').addEventListener('click', () => {
     document.getElementById('iceAktarDosya').click();
