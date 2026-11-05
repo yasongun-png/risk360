@@ -215,6 +215,7 @@ function toplantiDetaySayfasiniBaslat() {
 
   olaylariCiz();
   document.getElementById('yeniOlayBtn').addEventListener('click', () => olayModalAc());
+  document.getElementById('baskaAydanOlayBtn').addEventListener('click', _baskaAydanOlayModaliAc);
   document.getElementById('olayModalKapatBtn').addEventListener('click', olayModalKapat);
   document.getElementById('olayModalIptalBtn').addEventListener('click', olayModalKapat);
   document.getElementById('olayForm').addEventListener('submit', olayFormGonderildi);
@@ -906,6 +907,57 @@ function olaylariCiz() {
     olaylariCiz();
   }));
   fotoReferanslariCoz(govde);
+}
+
+// Kullanıcı isteği: olaylar toplantının ayından gelmeye devam etsin, istenirse
+// başka ayların olayları da seçilerek eklenebilsin. Seçilenler Olay/Kaza
+// modülünden gelen satırlarla aynı davranır (Düzenle/Sil/Karara Aktar, raporlar).
+function _baskaAydanOlayModaliAc() {
+  const kayitlar = kurulEklenebilirOlaylariGetir(_toplantiId);
+  const aylar = Array.from(new Set(kayitlar.map(k => String(k.kazaTarihi || '').slice(0, 7)).filter(Boolean)));
+  const katman = document.createElement('div');
+  katman.className = 'modal-katman acik';
+  katman.innerHTML = `
+    <div class="modal-kutu" style="max-width:720px;">
+      <h3 style="margin-top:0;">Başka Aydan Olay Ekle</h3>
+      ${kayitlar.length ? `
+      <label for="baskaAyFiltre">Ay</label>
+      <select id="baskaAyFiltre">
+        <option value="">Tüm aylar (${kayitlar.length})</option>
+        ${aylar.map(ay => `<option value="${ay}">${ay.slice(5)}.${ay.slice(0, 4)}</option>`).join('')}
+      </select>
+      <div class="tablo-scroll" style="max-height:360px; overflow:auto;">
+        <table class="veri-tablosu" style="margin:0;">
+          <thead><tr><th style="width:30px;"></th><th>Tarih</th><th>Tür</th><th>Yer</th><th>Kazalı</th><th>Özet</th></tr></thead>
+          <tbody>${kayitlar.map(k => `<tr data-baska-ay="${String(k.kazaTarihi || '').slice(0, 7)}">
+            <td><input type="checkbox" data-baska-olay="${_ktKacir(k.id)}" style="width:auto; margin:0;"></td>
+            <td>${gunAyYil(k.kazaTarihi) || '-'}</td>
+            <td>${_ktKacir(kazaTipiGorunen(k.olayTipi)) || '-'}</td>
+            <td>${_ktKacir(k.kazaYeri) || '-'}</td>
+            <td>${_ktKacir(k.adSoyad) || '-'}</td>
+            <td>${_ktKacir((typeof olayAciklamaOnEkiTemizle === 'function' ? olayAciklamaOnEkiTemizle(k.aciklama) : k.aciklama) || k.olayOzeti) || '-'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>` : '<p style="font-size:14px;">Olay/Kaza modülünde eklenebilecek başka olay yok.</p>'}
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" data-baska-kapat>Kapat</button>
+        ${kayitlar.length ? '<button type="button" class="birincil" data-baska-ekle>Seçilenleri Ekle</button>' : ''}
+      </div>
+    </div>`;
+  document.body.appendChild(katman);
+  katman.querySelector('[data-baska-kapat]').addEventListener('click', () => katman.remove());
+  if (!kayitlar.length) return;
+  // Satırlar silinmeyip gizlenir: ay değiştirilse de önceki seçimler korunur.
+  katman.querySelector('#baskaAyFiltre').addEventListener('change', e => {
+    katman.querySelectorAll('[data-baska-ay]').forEach(tr => { tr.style.display = !e.target.value || tr.getAttribute('data-baska-ay') === e.target.value ? '' : 'none'; });
+  });
+  katman.querySelector('[data-baska-ekle]').addEventListener('click', () => {
+    const idler = Array.from(katman.querySelectorAll('[data-baska-olay]:checked')).map(cb => cb.getAttribute('data-baska-olay'));
+    if (!idler.length) { alert('Eklemek için en az bir olay işaretleyin.'); return; }
+    kurulEkOlaylariEkle(_toplantiId, idler);
+    katman.remove();
+    olaylariCiz();
+  });
 }
 
 // Karar tablosundaki _kararFotoHucresiUret ile aynı desen — olayın (elle

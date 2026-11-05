@@ -562,9 +562,12 @@ function kararDevret(kararId, yeniToplantiId) {
 // (ikisi de global scope'ta, namespace yok). Bunun yerine tenantAnahtar('olay_kaza_kayitlari')
 // anahtarı doğrudan burada, tek satırda okunur.
 function _kurulOtomatikOlaylariGetir(toplanti) {
-  const ay = toplanti && (toplanti.donem || (toplanti.tarih || '').slice(0, 7));
-  if (!ay) return [];
+  if (!toplanti) return [];
+  const ay = toplanti.donem || (toplanti.tarih || '').slice(0, 7);
   const kayitlar = oku(tenantAnahtar('olay_kaza_kayitlari'), []);
+  // Kullanıcı isteği: ay kuralı aynen kalsın, istenirse başka ayların olayları
+  // da eklenebilsin (bkz. kurulEkOlaylariEkle) — bunlara ay/tarih kuralı uygulanmaz.
+  const ekSet = new Set(toplanti.ekOlayKazaIdleri || []);
   // Aynı ay içinde ama toplantı tarihinden SONRA meydana gelen bir kaza henüz
   // görüşülmemiş sayılır — kullanıcı isteği: "bu ayda toplantı tarihine kadar
   // kaza olduysa onu da ekleyelim". toplanti.tarih yoksa (nadir/eski kayıt) ay
@@ -577,8 +580,8 @@ function _kurulOtomatikOlaylariGetir(toplanti) {
   const gizliSet = new Set(toplanti.otomatikOlayGizliKazaIdleri || []);
   const yukseltilmisSet = new Set(olayTumunuGetir().filter(o => o.toplantiId === toplanti.id && o.kaynakKazaId).map(o => o.kaynakKazaId));
   return kayitlar
-    .filter(k => String(k.kazaTarihi || '').slice(0, 7) === ay)
-    .filter(k => !toplanti.tarih || !k.kazaTarihi || k.kazaTarihi <= toplanti.tarih)
+    .filter(k => ekSet.has(k.id) || (ay && String(k.kazaTarihi || '').slice(0, 7) === ay
+      && (!toplanti.tarih || !k.kazaTarihi || k.kazaTarihi <= toplanti.tarih)))
     .filter(k => !gizliSet.has(k.id) && !yukseltilmisSet.has(k.id))
     .map(k => ({
       id: 'oto-' + k.id,
@@ -730,6 +733,29 @@ function kurulOtomatikOlayiGizle(toplantiId, kazaId) {
   if (!mevcut.includes(kazaId)) {
     toplantiGuncelleRepo(toplantiId, { otomatikOlayGizliKazaIdleri: mevcut.concat([kazaId]) });
   }
+  return { basarili: true };
+}
+
+// "Başka Aydan Ekle" listesi: Olay/Kaza kayıtlarından bu toplantıda henüz
+// görünmeyenler, yeniden eskiye. "Sil" ile gizlenmiş olanlar da burada çıkar,
+// böylece yanlışlıkla silinen bir olay geri alınabilir.
+function kurulEklenebilirOlaylariGetir(toplantiId) {
+  const toplanti = toplantiIdIleGetirRepo(toplantiId);
+  if (!toplanti) return [];
+  const gorunen = new Set(toplantiOlaylariniGetir(toplantiId).map(o => o.otomatik ? o.id.replace(/^oto-/, '') : o.kaynakKazaId).filter(Boolean));
+  return oku(tenantAnahtar('olay_kaza_kayitlari'), [])
+    .filter(k => k.id && !gorunen.has(k.id))
+    .sort((a, b) => String(b.kazaTarihi || '').localeCompare(String(a.kazaTarihi || '')));
+}
+
+function kurulEkOlaylariEkle(toplantiId, kazaIdleri) {
+  const toplanti = toplantiIdIleGetirRepo(toplantiId);
+  if (!toplanti || !kazaIdleri.length) return { basarili: false };
+  const eklenen = new Set(kazaIdleri);
+  toplantiGuncelleRepo(toplantiId, {
+    ekOlayKazaIdleri: Array.from(new Set([...(toplanti.ekOlayKazaIdleri || []), ...kazaIdleri])),
+    otomatikOlayGizliKazaIdleri: (toplanti.otomatikOlayGizliKazaIdleri || []).filter(id => !eklenen.has(id))
+  });
   return { basarili: true };
 }
 

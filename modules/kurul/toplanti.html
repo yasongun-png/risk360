@@ -67,7 +67,10 @@
 
     <div class="dashboard-ust" style="margin-top:24px;">
       <h3 style="margin:0;">Olaylar (Görüşülen İş Kazası / Ramak Kala)</h3>
-      <button type="button" class="birincil" id="yeniOlayBtn" style="width:auto;">+ Yeni Olay</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="ikincil" id="baskaAydanOlayBtn" style="width:auto;" title="Olay/Kaza modülünden, toplantının ayı dışındaki olayları seçip ekler">Başka Aydan Ekle</button>
+        <button type="button" class="birincil" id="yeniOlayBtn" style="width:auto;">+ Yeni Olay</button>
+      </div>
     </div>
     <div class="tablo-scroll">
       <table class="veri-tablosu">
@@ -574,12 +577,12 @@
   <script src="../egitim/model.js"></script>
   <script src="../../core/xlsx-bicimli.js?v=1"></script>
   <script src="../../core/kaza-istatistik.js?v=3"></script>
-  <script src="model.js?v=20261024a"></script>
+  <script src="model.js?v=20261105a"></script>
   <script src="cikti.js?v=53"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
-  <script src="service.js?v=20261031a"></script>
-  <script src="toplanti-ui.js?v=20261102a"></script>
+  <script src="service.js?v=20261105a"></script>
+  <script src="toplanti-ui.js?v=20261105a"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 
