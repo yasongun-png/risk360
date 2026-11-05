@@ -257,7 +257,9 @@ function personelSayfasiniBaslat() {
   document.getElementById('modalKapatBtn').addEventListener('click', modalKapat);
   document.getElementById('modalIptalBtn').addEventListener('click', modalKapat);
   document.getElementById('personelForm').addEventListener('submit', formGonderildi);
-  document.getElementById('aramaKutusu').addEventListener('input', e => tabloyuCiz(e.target.value));
+  // Kullanıcı isteği: arama/filtre değişince seçim temizlensin — yoksa "Seçilenleri
+  // Sil" ekranda görünmeyen kişileri de silebiliyordu.
+  document.getElementById('aramaKutusu').addEventListener('input', e => { _seciliPersonelIdleri.clear(); tabloyuCiz(e.target.value); });
   document.getElementById('sekmeAktif').addEventListener('click', () => sekmeDegistir(false));
   document.getElementById('sekmeArsiv').addEventListener('click', () => sekmeDegistir(true));
 
@@ -326,7 +328,7 @@ function personelSayfasiniBaslat() {
     });
   });
 
-  document.getElementById('bolumFiltre').addEventListener('change', () => tabloyuCiz(document.getElementById('aramaKutusu').value));
+  document.getElementById('bolumFiltre').addEventListener('change', () => { _seciliPersonelIdleri.clear(); tabloyuCiz(document.getElementById('aramaKutusu').value); });
   _bolumFiltreDoldur();
   _prsBaslikSiralamayiKur();
   tabloyuCiz('');
