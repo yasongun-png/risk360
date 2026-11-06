@@ -1024,32 +1024,61 @@ async function kurulRaporuWordOlustur() {
     ...YONETMELIK_MADDELERI.flatMap(maddeParagraflari),
 
     // Taranmış imzalı toplantı daveti + imza listesi (yüklenmişse): Yasal Düzenleme'den sonra.
-    ...taramaElemanlari,
-
-    // Kullanıcı isteği: imzalı (taranmış) davet/imza listesi yüklendiyse sistemin kendi imza listesi sayfası eklenmez.
-    ...(taramaElemanlari.length ? [] : [
-      new docx.Paragraph({ text: '13) İmza Listesi', heading: docx.HeadingLevel.HEADING_2, pageBreakBefore: true }),
-      katilanlar.length ? table(['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'], katilanlar.map(k => [k.siraNo, k.adSoyad, k.unvan, ''])) : P('Toplantıya katılan bulunmamaktadır.')
-    ])
+    ...taramaElemanlari
   ];
+
+  // Kullanıcı isteği: imza listesi satırları sayfayı dolduracak şekilde genişlesin,
+  // bu sayfada sayfa numarası olmasın — bu yüzden ayrı bir bölüm (section).
+  // A4 yüksekliği 16838 twip; kenar boşlukları, başlık, üst satır ve tablodan
+  // sonraki zorunlu paragraf payı düşülür. Çok kalabalık listede satır en az
+  // 450 twip kalır, liste ikinci sayfaya taşar.
+  const imzaSatirYuksekligi = Math.max(450, Math.floor((16838 - 1440 - 1400) / Math.max(katilanlar.length, 1)));
+  const imzaHucresi = (metin, genislik, opts = {}) => new docx.TableCell({
+    width: { size: genislik, type: docx.WidthType.PERCENTAGE },
+    verticalAlign: docx.VerticalAlign.CENTER,
+    children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(metin ?? ''), size: KURUL_WORD_METIN_BOYUT, ...opts })] })]
+  });
+  const imzaSutunlari = [8, 30, 30, 32];
+  const imzaCocuklari = [
+    new docx.Paragraph({ text: '13) İmza Listesi', heading: docx.HeadingLevel.HEADING_2 }),
+    katilanlar.length ? new docx.Table({
+      width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      rows: [
+        new docx.TableRow({ cantSplit: true, tableHeader: true, height: { value: 500, rule: docx.HeightRule.ATLEAST },
+          children: ['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'].map((b, i) => imzaHucresi(b, imzaSutunlari[i], { bold: true })) }),
+        ...katilanlar.map(k => new docx.TableRow({ cantSplit: true, height: { value: imzaSatirYuksekligi, rule: docx.HeightRule.ATLEAST },
+          children: [k.siraNo, k.adSoyad, k.unvan, ''].map((d, i) => imzaHucresi(d, imzaSutunlari[i])) }))
+      ]
+    }) : P('Toplantıya katılan bulunmamaktadır.'),
+    new docx.Paragraph({ spacing: { before: 0, after: 0 }, children: [new docx.TextRun({ text: '', size: 2 })] })
+  ];
+  // Kullanıcı isteği: imzalı (taranmış) davet/imza listesi yüklendiyse sistemin kendi imza listesi sayfası eklenmez.
+  const imzaBolumuVar = !taramaElemanlari.length;
+  const sayfaKenarlari = { top: 720, right: 720, bottom: 720, left: 720 };
 
   const doc = new docx.Document({
     sections: [{
-      properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+      properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: sayfaKenarlari } },
       // Kullanıcı isteği: her sayfa "Sayfa X / Y" olarak numaralandırılsın —
       // PDF çıktısında bu zaten jsPDF son-işleme döngüsüyle var (bkz.
       // kurulRaporuPdfOlustur), Word'de docx.PageNumber alanlarıyla eklendi;
       // Word içinde otomatik güncellenir (sabit metin değil, gerçek alan).
+      // Numarasız imza sayfası toplama girmesin diye Y bu bölümün sayfa sayısıdır.
       footers: {
         default: new docx.Footer({
           children: [new docx.Paragraph({
             alignment: docx.AlignmentType.CENTER,
-            children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '64748B' })]
+            children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', imzaBolumuVar ? docx.PageNumber.TOTAL_PAGES_IN_SECTION : docx.PageNumber.TOTAL_PAGES], size: 16, color: '64748B' })]
           })]
         })
       },
       children: kapakCocuklari
-    }]
+    }, ...(imzaBolumuVar ? [{
+      properties: { type: docx.SectionType.NEXT_PAGE, page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: { ...sayfaKenarlari, footer: 200 } } },
+      // Boş alt bilgi şart: verilmezse önceki bölümün numaralı alt bilgisi devralınır.
+      footers: { default: new docx.Footer({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: '', size: 2 })] })] }) },
+      children: imzaCocuklari
+    }] : [])]
   });
 
   const blob = await docx.Packer.toBlob(doc);
