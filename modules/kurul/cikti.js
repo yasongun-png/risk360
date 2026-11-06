@@ -1027,38 +1027,12 @@ async function kurulRaporuWordOlustur() {
     ...taramaElemanlari
   ];
 
-  // Kullanıcı isteği: imza listesi satırları sayfayı dolduracak şekilde genişlesin,
-  // bu sayfada sayfa numarası olmasın — bu yüzden ayrı bir bölüm (section).
-  // A4 yüksekliği 16838 twip; kenar boşlukları, başlık, üst satır ve tablodan
-  // sonraki zorunlu paragraf payı düşülür. Çok kalabalık listede satır en az
-  // 450 twip kalır, liste ikinci sayfaya taşar.
-  const imzaSatirYuksekligi = Math.max(450, Math.floor((16838 - 1440 - 1400) / Math.max(katilanlar.length, 1)));
-  const imzaHucresi = (metin, genislik, opts = {}) => new docx.TableCell({
-    width: { size: genislik, type: docx.WidthType.PERCENTAGE },
-    verticalAlign: docx.VerticalAlign.CENTER,
-    children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(metin ?? ''), size: KURUL_WORD_METIN_BOYUT, ...opts })] })]
-  });
-  const imzaSutunlari = [8, 30, 30, 32];
-  const imzaCocuklari = [
-    new docx.Paragraph({ text: `13) İmza Listesi${toplanti.tarih ? ' – Toplantı Tarihi: ' + gunAyYil(toplanti.tarih) : ''}`, heading: docx.HeadingLevel.HEADING_2 }),
-    katilanlar.length ? new docx.Table({
-      width: { size: 100, type: docx.WidthType.PERCENTAGE },
-      rows: [
-        new docx.TableRow({ cantSplit: true, tableHeader: true, height: { value: 500, rule: docx.HeightRule.ATLEAST },
-          children: ['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'].map((b, i) => imzaHucresi(b, imzaSutunlari[i], { bold: true })) }),
-        ...katilanlar.map(k => new docx.TableRow({ cantSplit: true, height: { value: imzaSatirYuksekligi, rule: docx.HeightRule.ATLEAST },
-          children: [k.siraNo, k.adSoyad, k.unvan, ''].map((d, i) => imzaHucresi(d, imzaSutunlari[i])) }))
-      ]
-    }) : P('Toplantıya katılan bulunmamaktadır.'),
-    new docx.Paragraph({ spacing: { before: 0, after: 0 }, children: [new docx.TextRun({ text: '', size: 2 })] })
-  ];
   // Kullanıcı isteği: imzalı (taranmış) davet/imza listesi yüklendiyse sistemin kendi imza listesi sayfası eklenmez.
   const imzaBolumuVar = !taramaElemanlari.length;
-  const sayfaKenarlari = { top: 720, right: 720, bottom: 720, left: 720 };
 
   const doc = new docx.Document({
     sections: [{
-      properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: sayfaKenarlari } },
+      properties: { page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: KURUL_WORD_SAYFA_KENARLARI } },
       // Kullanıcı isteği: her sayfa "Sayfa X / Y" olarak numaralandırılsın —
       // PDF çıktısında bu zaten jsPDF son-işleme döngüsüyle var (bkz.
       // kurulRaporuPdfOlustur), Word'de docx.PageNumber alanlarıyla eklendi;
@@ -1073,16 +1047,47 @@ async function kurulRaporuWordOlustur() {
         })
       },
       children: kapakCocuklari
-    }, ...(imzaBolumuVar ? [{
-      properties: { type: docx.SectionType.NEXT_PAGE, page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: { ...sayfaKenarlari, footer: 200 } } },
-      // Boş alt bilgi şart: verilmezse önceki bölümün numaralı alt bilgisi devralınır.
-      footers: { default: new docx.Footer({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: '', size: 2 })] })] }) },
-      children: imzaCocuklari
-    }] : [])]
+    }, ...(imzaBolumuVar ? [_kurulImzaSayfasiBolumu(toplanti, katilanlar)] : [])]
   });
 
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `Kurul_Raporu_${toplanti.toplantiNo}.docx`);
+}
+
+const KURUL_WORD_SAYFA_KENARLARI = { top: 720, right: 720, bottom: 720, left: 720 };
+
+// Kullanıcı isteği: imza listesi satırları sayfayı dolduracak şekilde genişlesin,
+// bu sayfada sayfa numarası olmasın — bu yüzden ayrı bir bölüm (section). Kurul
+// Raporu ve tek başına "İmza Listesi" Word çıktısı aynı sayfayı buradan alır.
+// A4 yüksekliği 16838 twip; kenar boşlukları, başlık, üst satır ve tablodan
+// sonraki zorunlu paragraf payı düşülür. Çok kalabalık listede satır en az
+// 450 twip kalır, liste ikinci sayfaya taşar.
+function _kurulImzaSayfasiBolumu(toplanti, katilanlar) {
+  const satirYuksekligi = Math.max(450, Math.floor((16838 - 1440 - 1400) / Math.max(katilanlar.length, 1)));
+  const sutunlar = [8, 30, 30, 32];
+  const hucre = (metin, genislik, opts = {}) => new docx.TableCell({
+    width: { size: genislik, type: docx.WidthType.PERCENTAGE },
+    verticalAlign: docx.VerticalAlign.CENTER,
+    children: [new docx.Paragraph({ children: [new docx.TextRun({ text: String(metin ?? ''), size: KURUL_WORD_METIN_BOYUT, ...opts })] })]
+  });
+  return {
+    properties: { type: docx.SectionType.NEXT_PAGE, page: { size: { orientation: docx.PageOrientation.PORTRAIT }, margin: { ...KURUL_WORD_SAYFA_KENARLARI, footer: 200 } } },
+    // Boş alt bilgi şart: verilmezse önceki bölümün numaralı alt bilgisi devralınır.
+    footers: { default: new docx.Footer({ children: [new docx.Paragraph({ children: [new docx.TextRun({ text: '', size: 2 })] })] }) },
+    children: [
+      new docx.Paragraph({ text: `13) İmza Listesi${toplanti.tarih ? ' – Toplantı Tarihi: ' + gunAyYil(toplanti.tarih) : ''}`, heading: docx.HeadingLevel.HEADING_2 }),
+      katilanlar.length ? new docx.Table({
+        width: { size: 100, type: docx.WidthType.PERCENTAGE },
+        rows: [
+          new docx.TableRow({ cantSplit: true, tableHeader: true, height: { value: 500, rule: docx.HeightRule.ATLEAST },
+            children: ['Sıra', 'Ad Soyad', 'Ünvan', 'İmza'].map((b, i) => hucre(b, sutunlar[i], { bold: true })) }),
+          ...katilanlar.map(k => new docx.TableRow({ cantSplit: true, height: { value: satirYuksekligi, rule: docx.HeightRule.ATLEAST },
+            children: [k.siraNo, k.adSoyad, k.unvan, ''].map((d, i) => hucre(d, sutunlar[i])) }))
+        ]
+      }) : new docx.Paragraph({ children: [new docx.TextRun({ text: 'Toplantıya katılan bulunmamaktadır.', size: KURUL_WORD_METIN_BOYUT })] }),
+      new docx.Paragraph({ spacing: { before: 0, after: 0 }, children: [new docx.TextRun({ text: '', size: 2 })] })
+    ]
+  };
 }
 
 function _denetimAktifFirmaAdi() {
@@ -2404,40 +2409,9 @@ async function imzaListesiWordOlustur() {
   const toplanti = toplantiIdIleGetirRepo(_toplantiId);
   if (!toplanti) return;
 
-  const imzalar = toplantiImzalariniGetir(_toplantiId);
-
-  const doc = new docx.Document({
-    sections: [{
-      children: [
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: _denetimAktifFirmaAdi(), bold: true })] }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'İSG KURULU İMZA LİSTESİ', bold: true, size: 28 })], spacing: { after: 200 } }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `${toplanti.toplantiNo} — ${_ciktiDonemMetni(toplanti)} — ${_ciktiTarihSaat(toplanti)}` })], spacing: { after: 400 } }),
-        new docx.Table({
-          width: { size: 100, type: docx.WidthType.PERCENTAGE },
-          rows: [
-            // Kullanıcı isteği: sütun genişlikleri artırıldı (eşit dörtte-bir
-            // varsayılanı yerine SIRA dar, diğer üç sütun daha geniş).
-            new docx.TableRow({ cantSplit: true,
-              children: [
-                ['SIRA', 8], ['ADI VE SOYADI', 30], ['ÜNVAN / KURULDAKİ GÖREVİ', 30], ['İMZA', 32]
-              ].map(([baslik, genislik]) =>
-                new docx.TableCell({ width: { size: genislik, type: docx.WidthType.PERCENTAGE }, children: [new docx.Paragraph({ keepNext: true, spacing: { before: 120, after: 120 }, children: [new docx.TextRun({ text: baslik, bold: true })] })] })
-              )
-            }),
-            ...imzalar.map(i => new docx.TableRow({ cantSplit: true,
-              height: { value: 350, rule: docx.HeightRule.ATLEAST },
-              children: [
-                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: i.siraNo, spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: i.adSoyad, spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: [i.unvan, i.kuruldakiGorev].filter(Boolean).join(' / '), spacing: { before: 60, after: 60 } })] }),
-                new docx.TableCell({ children: [new docx.Paragraph({ keepNext: true, text: '', spacing: { before: 60, after: 60 } })] })
-              ]
-            }))
-          ]
-        })
-      ]
-    }]
-  });
+  // Kullanıcı isteği: bu düğme Kurul Raporu'ndaki imza sayfasının aynısını versin.
+  const katilanlar = toplantiImzalariniGetir(_toplantiId).filter(i => i.katildiMi);
+  const doc = new docx.Document({ sections: [_kurulImzaSayfasiBolumu(toplanti, katilanlar)] });
 
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `Imza_Listesi_${toplanti.toplantiNo}.docx`);
