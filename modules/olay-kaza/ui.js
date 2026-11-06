@@ -6,6 +6,7 @@ let _aksiyonTaslak = [];
 let _kronolojiTaslak = [];
 let _tanikTaslak = [];
 let _ekipUyeTaslak = [];
+let _ekipPersonelleri = [];
 let _olayFotograflari = [];
 let _olayImzaliBelge = '';
 
@@ -735,6 +736,25 @@ function tanikListesiniCiz() {
   });
 }
 
+// Kullanıcı isteği: "soruşturma ekip üyelerini personel modülünden çekebilmek
+// istiyorum" — Ad Soyad kutusu personel listesini önerir; listede olmayan biri
+// (örn. OSGB uzmanı) yine elle yazılabilir.
+function _ekipPersonelListesiniCiz(liste) {
+  _ekipPersonelleri = liste;
+  document.getElementById('ekipPersonelListesi').innerHTML = liste.map(p =>
+    `<option value="${_okKacir(p.adSoyad)}">${_okKacir([p.sicilNo, p.gorev, p.bolum, p._firmaAdi].filter(Boolean).join(' · '))}</option>`
+  ).join('');
+}
+
+// Seçilen personelin görevi unvana yazılır; elle yazılmış unvan ezilmez.
+function _ekipUyesiPersoneldenDoldur(u, kutu) {
+  const p = _ekipPersonelleri.find(x => x.adSoyad === u.adSoyad.trim());
+  if (!p || !p.gorev || (u.unvan && u.unvan !== u._otoUnvan)) return;
+  u.unvan = p.gorev;
+  u._otoUnvan = p.gorev;
+  kutu.querySelector(`[data-ekip-alan="unvan"][data-ekip-id="${u.id}"]`).value = p.gorev;
+}
+
 // Soruşturma Ekibi — aynı desen.
 function ekipUyeSatiriEkle() {
   _ekipUyeTaslak.push(olayEkipUyesiOlustur({}));
@@ -745,7 +765,7 @@ function ekipUyeListesiniCiz() {
   const kutu = document.getElementById('ekipUyeListesi');
   kutu.innerHTML = _ekipUyeTaslak.map(u => `
     <div style="display:grid; grid-template-columns: 1fr 1fr 32px; gap:8px; align-items:start; margin-bottom:8px;">
-      <input placeholder="Ad Soyad" data-ekip-alan="adSoyad" data-ekip-id="${u.id}" value="${u.adSoyad.replace(/"/g, '&quot;')}">
+      <input placeholder="Personelden seçin veya yazın" list="ekipPersonelListesi" autocomplete="off" data-ekip-alan="adSoyad" data-ekip-id="${u.id}" value="${u.adSoyad.replace(/"/g, '&quot;')}">
       <input placeholder="Unvan (örn. Vardiya Amiri)" data-ekip-alan="unvan" data-ekip-id="${u.id}" value="${u.unvan.replace(/"/g, '&quot;')}">
       <button type="button" class="tablo-buton sil" data-ekip-sil="${u.id}" title="Sil">✕</button>
     </div>
@@ -754,7 +774,9 @@ function ekipUyeListesiniCiz() {
   kutu.querySelectorAll('[data-ekip-alan]').forEach(el => {
     el.addEventListener('input', () => {
       const u = _ekipUyeTaslak.find(x => x.id === el.getAttribute('data-ekip-id'));
-      if (u) u[el.getAttribute('data-ekip-alan')] = el.value;
+      if (!u) return;
+      u[el.getAttribute('data-ekip-alan')] = el.value;
+      if (el.getAttribute('data-ekip-alan') === 'adSoyad') _ekipUyesiPersoneldenDoldur(u, kutu);
     });
   });
   kutu.querySelectorAll('[data-ekip-sil]').forEach(btn => {
@@ -815,8 +837,10 @@ function kayitModalAc(kayitHam) {
   // digerFirmalardanPersonelleriGetir, core/data.js -> buyukVeriFirmadanOku).
   const kendiPersonel = personelleriGetir('', false).map(p => Object.assign({}, p, { _firmaId: '', _firmaAdi: '' }));
   _personelSecenekleriniCiz(kendiPersonel, kayit);
+  _ekipPersonelListesiniCiz(kendiPersonel);
   digerFirmalardanPersonelleriGetir().then(digerPersonel => {
     _personelSecenekleriniCiz(kendiPersonel.concat(digerPersonel), kayit);
+    _ekipPersonelListesiniCiz(kendiPersonel.concat(digerPersonel));
   });
   document.getElementById('kisiSicilNo').value = kayit ? kayit.sicilNo : '';
   document.getElementById('kisiGorev').value = kayit ? kayit.gorev : '';
