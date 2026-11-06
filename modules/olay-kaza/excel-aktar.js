@@ -57,8 +57,9 @@ const OLAY_IMPORT_KOLONLARI = [
   { anahtar: 'sorusturmaBitis', baslik: 'Soruşturma Bitişi', tur: 'tarih', aciklama: 'GG.AA.YYYY', ornek: '20.10.2026' },
   { anahtar: 'hazirlayanAdi', baslik: 'Hazırlayan (Ad Soyad)', ornek: '' },
   { anahtar: 'hazirlayanUnvan', baslik: 'Hazırlayan Unvanı', ornek: 'İş Güvenliği Uzmanı' },
-  { anahtar: 'ekipUyesiAdi', baslik: 'Soruşturma Ekibi Üyesi', ornek: '' },
-  { anahtar: 'ekipUyesiUnvan', baslik: 'Ekip Üyesi Unvanı', ornek: '' },
+  { anahtar: 'ekipUyeleri', baslik: 'Soruşturma Ekibi Üyesi', esanlamlar: ['Soruşturma Ekibi'], tur: 'liste', aciklama: 'Her satır (Alt+Enter) bir üye: Ad Soyad | Unvan', ornek: 'Mehmet Kaya | Vardiya Amiri\nAyşe Demir | Bakım Şefi' },
+  // Eski şablonlarda unvan ayrı sütundu: yalnız içe aktarmada okunur.
+  { anahtar: 'ekipUyesiUnvan', baslik: 'Ekip Üyesi Unvanı', eski: true },
   { anahtar: 'onaylayanAdi', baslik: 'Bölüm Yöneticisi (Ad Soyad)', ornek: '' },
   { anahtar: 'onaylayanUnvan', baslik: 'Bölüm Yöneticisi Unvanı', ornek: '' },
 
@@ -66,16 +67,18 @@ const OLAY_IMPORT_KOLONLARI = [
   { anahtar: 'kapanisTarihi', baslik: 'Kapanış Tarihi', tur: 'tarih', aciklama: 'GG.AA.YYYY', ornek: '' }
 ];
 
+const OLAY_SABLON_KOLONLARI = OLAY_IMPORT_KOLONLARI.filter(k => !k.eski);
+
 function olaySablonIndir() {
   xlsxHazirOlduğunda(() => {
     const wb = XLSX.utils.book_new();
-    const veri = XLSX.utils.aoa_to_sheet([OLAY_IMPORT_KOLONLARI.map(k => k.baslik)]);
-    veri['!cols'] = OLAY_IMPORT_KOLONLARI.map(k => ({ wch: k.tur === 'liste' || k.anahtar === 'aciklama' ? 45 : Math.max(14, k.baslik.length + 2) }));
+    const veri = XLSX.utils.aoa_to_sheet([OLAY_SABLON_KOLONLARI.map(k => k.baslik)]);
+    veri['!cols'] = OLAY_SABLON_KOLONLARI.map(k => ({ wch: k.tur === 'liste' || k.anahtar === 'aciklama' ? 45 : Math.max(14, k.baslik.length + 2) }));
     XLSX.utils.book_append_sheet(wb, veri, 'Olaylar');
 
     const yardim = XLSX.utils.aoa_to_sheet([
       ['Sütun', 'Zorunlu', 'Nasıl doldurulur', 'Örnek'],
-      ...OLAY_IMPORT_KOLONLARI.map(k => [k.baslik, k.zorunlu ? 'Evet' : '', k.aciklama || '', k.ornek || '']),
+      ...OLAY_SABLON_KOLONLARI.map(k => [k.baslik, k.zorunlu ? 'Evet' : '', k.aciklama || '', k.ornek || '']),
       [],
       ['Not: Veriyi yalnız "Olaylar" sayfasına girin; her satır bir olay. Bir hücrede birden fazla satır için Alt+Enter kullanın.']
     ]);
@@ -112,16 +115,17 @@ function olayExcelDisaAktar(kayitlar) {
     if (k.tur === 'sayi') return d == null ? '' : d;
     if (k.anahtar === 'kronoloji') return (d || []).map(x => [x.saat, x.gelisme].join(' | ')).join('\n');
     if (k.anahtar === 'tanikIfadeleri') return (d || []).map(x => [x.adSoyad, x.unvan, x.ifade].join(' | ')).join('\n');
+    if (k.anahtar === 'ekipUyeleri') return olayEkipUyeleriniGetir(kayit).map(x => [x.adSoyad, x.unvan].join(' | ')).join('\n');
     if (k.anahtar === 'aksiyonlar') return (d || []).map(x => [x.baslik, x.duzelticiFaaliyet, x.sorumlu, tarih(x.termin), x.durum].join(' | ')).join('\n');
     return d == null ? '' : String(d);
   };
   xlsxHazirOlduğunda(() => {
     const satirlar = kayitlar.map(kayit => {
       const rp = typeof fineKinneyPuaniHesapla === 'function' ? fineKinneyPuaniHesapla(kayit) : null;
-      return OLAY_IMPORT_KOLONLARI.map(k => hucre(k, kayit)).concat([rp == null ? '' : rp]);
+      return OLAY_SABLON_KOLONLARI.map(k => hucre(k, kayit)).concat([rp == null ? '' : rp]);
     });
-    const ws = XLSX.utils.aoa_to_sheet([OLAY_IMPORT_KOLONLARI.map(k => k.baslik).concat(['Fine-Kinney RP']), ...satirlar]);
-    ws['!cols'] = OLAY_IMPORT_KOLONLARI.map(k => ({ wch: k.tur === 'liste' || k.anahtar === 'aciklama' ? 45 : Math.max(14, k.baslik.length + 2) })).concat([{ wch: 16 }]);
+    const ws = XLSX.utils.aoa_to_sheet([OLAY_SABLON_KOLONLARI.map(k => k.baslik).concat(['Fine-Kinney RP']), ...satirlar]);
+    ws['!cols'] = OLAY_SABLON_KOLONLARI.map(k => ({ wch: k.tur === 'liste' || k.anahtar === 'aciklama' ? 45 : Math.max(14, k.baslik.length + 2) })).concat([{ wch: 16 }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Olaylar');
     XLSX.writeFile(wb, 'olay_kaza_kayitlari.xlsx');
@@ -202,6 +206,11 @@ function _okImportSatiriniDonustur(ham) {
     const p = _okParcalar(s);
     return { adSoyad: p[0] || '', unvan: p.length > 2 ? p[1] : '', ifade: p.length > 2 ? p.slice(2).join(' | ') : (p[1] || '') };
   });
+  v.ekipUyeleri = v.ekipUyeleri.map(s => {
+    const p = _okParcalar(s);
+    return { adSoyad: p[0] || '', unvan: p[1] || '' };
+  });
+  if (v.ekipUyeleri.length === 1 && !v.ekipUyeleri[0].unvan) v.ekipUyeleri[0].unvan = v.ekipUyesiUnvan;
   v.aksiyonlar = v.aksiyonlar.map(s => {
     const p = _okParcalar(s);
     return { baslik: p[0] || '', duzelticiFaaliyet: p[1] || '', sorumlu: p[2] || '', termin: _okExcelTarih(p[3] || ''), durum: _okEsle(p[4] || '', ['Açık', 'Kapalı']) || 'Açık' };

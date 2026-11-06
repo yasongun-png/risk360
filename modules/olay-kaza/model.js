@@ -166,6 +166,21 @@ function tanikOlustur(veriler) {
   };
 }
 
+// Kullanıcı isteği: "iş kazaları için birden fazla ekip üyesi ekleyebilmeliyim".
+function olayEkipUyesiOlustur(veriler) {
+  return {
+    id: veriler.id || rastgeleId(),
+    adSoyad: (veriler.adSoyad || '').trim(),
+    unvan: (veriler.unvan || '').trim()
+  };
+}
+
+// Eski kayıtlarda tek üye ekipUyesiAdi/ekipUyesiUnvan alanlarında duruyor.
+function olayEkipUyeleriniGetir(k) {
+  if (Array.isArray(k.ekipUyeleri)) return k.ekipUyeleri.map(u => olayEkipUyesiOlustur(u));
+  return k.ekipUyesiAdi || k.ekipUyesiUnvan ? [olayEkipUyesiOlustur({ adSoyad: k.ekipUyesiAdi, unvan: k.ekipUyesiUnvan })] : [];
+}
+
 function olayKaydiOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
@@ -244,8 +259,7 @@ function olayKaydiOlustur(veriler) {
     // Onaylayan) — gerçek rapor örneğindeki 3 imzalı kapanış formatı.
     hazirlayanAdi: (veriler.hazirlayanAdi || '').trim(),
     hazirlayanUnvan: (veriler.hazirlayanUnvan || '').trim(),
-    ekipUyesiAdi: (veriler.ekipUyesiAdi || '').trim(),
-    ekipUyesiUnvan: (veriler.ekipUyesiUnvan || '').trim(),
+    ekipUyeleri: olayEkipUyeleriniGetir(veriler),
     onaylayanAdi: (veriler.onaylayanAdi || '').trim(),
     onaylayanUnvan: (veriler.onaylayanUnvan || '').trim(),
     kazaSinifi: (veriler.kazaSinifi || '').trim(),

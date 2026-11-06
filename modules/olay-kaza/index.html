@@ -291,7 +291,7 @@
         <textarea id="sonucDegerlendirme"></textarea>
         </div>
 
-        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Rapor Bilgileri (Hazırlayan / Bölüm Yöneticisi)</div>
+        <div class="form-bolum-baslik katlanir kapali" data-bolum-toggle>Rapor Bilgileri (Hazırlayan / Soruşturma Ekibi / Bölüm Yöneticisi)</div>
         <div class="form-bolum-icerik kapali">
         <div class="form-satir-ikili">
           <div>
@@ -303,16 +303,9 @@
             <input type="text" id="raporHazirlayanUnvan" placeholder="örn. İG Uzmanı (B Sınıfı)">
           </div>
         </div>
-        <div class="form-satir-ikili">
-          <div>
-            <label for="raporEkipUyesiAdi">Soruşturma Ekibi Üyesi</label>
-            <input type="text" id="raporEkipUyesiAdi">
-          </div>
-          <div>
-            <label for="raporEkipUyesiUnvan">Ekip Üyesi Unvanı</label>
-            <input type="text" id="raporEkipUyesiUnvan" placeholder="örn. Vardiya Amiri">
-          </div>
-        </div>
+        <label>Soruşturma Ekibi</label>
+        <div id="ekipUyeListesi"></div>
+        <button type="button" class="ikincil" id="ekipUyeEkleBtn" style="width:auto; margin-bottom:14px;">+ Ekip Üyesi Ekle</button>
         <div class="form-satir-ikili">
           <div>
             <label for="raporOnaylayanAdi">Bölüm Yöneticisi (Ad Soyad)</label>
@@ -417,14 +410,14 @@
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js"></script>
   <script src="../../core/kaza-istatistik.js?v=3"></script>
-  <script src="model.js?v=5"></script>
+  <script src="model.js?v=6"></script>
   <script src="validation.js?v=2"></script>
   <script src="repository.js"></script>
   <script src="service.js?v=5"></script>
-  <script src="cikti.js?v=5"></script>
+  <script src="cikti.js?v=6"></script>
   <script src="kiyas-paneli.js?v=1"></script>
-  <script src="ui.js?v=11"></script>
-  <script src="excel-aktar.js?v=3"></script>
+  <script src="ui.js?v=12"></script>
+  <script src="excel-aktar.js?v=4"></script>
   <script>
     const kullanici = girisGerekliModul('olay-kaza');
 

@@ -5,6 +5,7 @@ let _duzenlenenKayitId = null;
 let _aksiyonTaslak = [];
 let _kronolojiTaslak = [];
 let _tanikTaslak = [];
+let _ekipUyeTaslak = [];
 let _olayFotograflari = [];
 let _olayImzaliBelge = '';
 
@@ -40,12 +41,17 @@ function _mevzuatSecilenleriTopla() {
 function _olayFotoOnizlemeCiz() {
   const kutu = document.getElementById('olayFotoOnizleme');
   kutu.innerHTML = _olayFotograflari.map((f, i) => `
-    <div style="display:inline-flex; flex-direction:column; align-items:center; gap:4px; margin:0 10px 10px 0;">
+    <div style="display:inline-flex; flex-direction:column; align-items:center; gap:4px; width:170px; margin:0 10px 10px 0; vertical-align:top;">
       <img data-foto-ref="${f.url}" style="width:64px; height:64px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">
+      <input type="text" data-foto-aciklama="${i}" placeholder="Açıklama" value="${_okKacir(f.aciklama || '')}" style="width:100%; margin:0; font-size:12px;">
       <button type="button" data-foto-kaldir="${i}" class="tablo-buton sil">Kaldır</button>
     </div>
   `).join('') + (_olayFotograflari.length ? '' : '<div style="font-size:12px; color:var(--metin-soluk);">Henüz fotoğraf eklenmedi.</div>')
     + (_olayFotograflari.length >= 3 ? '<div style="font-size:12px; color:var(--metin-soluk);">En fazla 3 fotoğraf eklenebilir.</div>' : '');
+  // Kullanıcı isteği: "olay yeri fotolarının altına açıklama ekleyebilmeliyim".
+  kutu.querySelectorAll('[data-foto-aciklama]').forEach(el => {
+    el.addEventListener('input', () => { _olayFotograflari[Number(el.getAttribute('data-foto-aciklama'))].aciklama = el.value; });
+  });
   kutu.querySelectorAll('[data-foto-kaldir]').forEach(btn => {
     btn.addEventListener('click', () => {
       _olayFotograflari.splice(Number(btn.getAttribute('data-foto-kaldir')), 1);
@@ -182,6 +188,7 @@ function olayKazaSayfasiniBaslat() {
   document.getElementById('aksiyonEkleBtn').addEventListener('click', aksiyonSatiriEkle);
   document.getElementById('kronolojiEkleBtn').addEventListener('click', kronolojiSatiriEkle);
   document.getElementById('tanikEkleBtn').addEventListener('click', tanikSatiriEkle);
+  document.getElementById('ekipUyeEkleBtn').addEventListener('click', ekipUyeSatiriEkle);
 
   // Kayıt formu çok kalabalık geldiği için bölümler katlanabilir yapıldı —
   // veri modeli/doğrulama/PDF raporu hiç değişmedi, sadece Temel Bilgiler/
@@ -728,6 +735,36 @@ function tanikListesiniCiz() {
   });
 }
 
+// Soruşturma Ekibi — aynı desen.
+function ekipUyeSatiriEkle() {
+  _ekipUyeTaslak.push(olayEkipUyesiOlustur({}));
+  ekipUyeListesiniCiz();
+}
+
+function ekipUyeListesiniCiz() {
+  const kutu = document.getElementById('ekipUyeListesi');
+  kutu.innerHTML = _ekipUyeTaslak.map(u => `
+    <div style="display:grid; grid-template-columns: 1fr 1fr 32px; gap:8px; align-items:start; margin-bottom:8px;">
+      <input placeholder="Ad Soyad" data-ekip-alan="adSoyad" data-ekip-id="${u.id}" value="${u.adSoyad.replace(/"/g, '&quot;')}">
+      <input placeholder="Unvan (örn. Vardiya Amiri)" data-ekip-alan="unvan" data-ekip-id="${u.id}" value="${u.unvan.replace(/"/g, '&quot;')}">
+      <button type="button" class="tablo-buton sil" data-ekip-sil="${u.id}" title="Sil">✕</button>
+    </div>
+  `).join('') || '<p style="font-size:12px; color:var(--metin-soluk);">Henüz ekip üyesi eklenmedi.</p>';
+
+  kutu.querySelectorAll('[data-ekip-alan]').forEach(el => {
+    el.addEventListener('input', () => {
+      const u = _ekipUyeTaslak.find(x => x.id === el.getAttribute('data-ekip-id'));
+      if (u) u[el.getAttribute('data-ekip-alan')] = el.value;
+    });
+  });
+  kutu.querySelectorAll('[data-ekip-sil]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _ekipUyeTaslak = _ekipUyeTaslak.filter(u => u.id !== btn.getAttribute('data-ekip-sil'));
+      ekipUyeListesiniCiz();
+    });
+  });
+}
+
 // Formda sorulan sorular olay tipine göre farklılaşsın diye (kullanıcı
 // isteği) — Ramak Kala/Tehlike Bildirimi/Maddi Hasar/Çevresel Olay ve acil
 // durum türü olaylarda (Yangın, Patlama vb.) yaralı olması beklenmez, bu
@@ -767,7 +804,7 @@ function kayitModalAc(kayitHam) {
   _okBolumAlaniniHazirla(kayit ? kayit.bolum : '');
   _okBolumAlaniniHazirla(kayit ? kayit.kazaBolumu : '', 'temelKazaBolumu');
   document.getElementById('temelKazaYeri').value = kayit ? kayit.kazaYeri : '';
-  _olayFotograflari = kayit && Array.isArray(kayit.olayYeriFotograflari) ? kayit.olayYeriFotograflari.slice(0, 3) : [];
+  _olayFotograflari = kayit && Array.isArray(kayit.olayYeriFotograflari) ? kayit.olayYeriFotograflari.slice(0, 3).map(f => Object.assign({}, f)) : [];
   _olayFotoOnizlemeCiz();
   _olayImzaliBelge = kayit ? (kayit.imzaliBelgeUrl || '') : '';
   _olayBelgeOnizlemeCiz();
@@ -833,8 +870,8 @@ function kayitModalAc(kayitHam) {
   // Rapor Bilgileri (Hazırlayan / Soruşturma Ekibi / Onaylayan)
   document.getElementById('raporHazirlayanAdi').value = kayit ? kayit.hazirlayanAdi : '';
   document.getElementById('raporHazirlayanUnvan').value = kayit ? kayit.hazirlayanUnvan : '';
-  document.getElementById('raporEkipUyesiAdi').value = kayit ? kayit.ekipUyesiAdi : '';
-  document.getElementById('raporEkipUyesiUnvan').value = kayit ? kayit.ekipUyesiUnvan : '';
+  _ekipUyeTaslak = kayit ? kayit.ekipUyeleri.map(u => Object.assign({}, u)) : [];
+  ekipUyeListesiniCiz();
   document.getElementById('raporOnaylayanAdi').value = kayit ? kayit.onaylayanAdi : '';
   document.getElementById('raporOnaylayanUnvan').value = kayit ? kayit.onaylayanUnvan : '';
   document.getElementById('raporKazaSinifi').value = kayit ? kayit.kazaSinifi : '';
@@ -918,8 +955,7 @@ async function formGonderildi(e) {
 
     hazirlayanAdi: document.getElementById('raporHazirlayanAdi').value,
     hazirlayanUnvan: document.getElementById('raporHazirlayanUnvan').value,
-    ekipUyesiAdi: document.getElementById('raporEkipUyesiAdi').value,
-    ekipUyesiUnvan: document.getElementById('raporEkipUyesiUnvan').value,
+    ekipUyeleri: _ekipUyeTaslak.filter(u => u.adSoyad.trim() || u.unvan.trim()),
     onaylayanAdi: document.getElementById('raporOnaylayanAdi').value,
     onaylayanUnvan: document.getElementById('raporOnaylayanUnvan').value,
     kazaSinifi: document.getElementById('raporKazaSinifi').value,

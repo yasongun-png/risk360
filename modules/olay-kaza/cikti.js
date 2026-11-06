@@ -67,6 +67,7 @@ function _okKidemMetni(iseGirisTarihi, referansTarih) {
 // paylaşımı olmadığı için burada yerel olarak yeniden tanımlandı.
 
 const _okWordKenar = { style: docx.BorderStyle.SINGLE, size: 4, color: '111827' };
+const _okWordKenarsiz = { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 const _okWordKenarSet = { top: _okWordKenar, bottom: _okWordKenar, left: _okWordKenar, right: _okWordKenar };
 const _okWordGolge = { fill: 'E5E7EB', color: 'auto', type: docx.ShadingType.CLEAR };
 const _okWordHucre = (children, opts = {}) => new docx.TableCell({
@@ -208,15 +209,23 @@ async function kazaRaporuWordOlustur(id) {
 
   // Fotoğraf sayısına göre genişlik: 1'de büyük, 2/3'te yan yana sığacak
   // şekilde küçülür (dikey A4, 0,5" kenar boşluğu).
-  const fotoUrlleri = (Array.isArray(k.olayYeriFotograflari) ? k.olayYeriFotograflari : []).map(f => f && f.url).filter(Boolean).slice(0, 3);
-  const fotoGenislik = { 1: 420, 2: 320, 3: 215 }[fotoUrlleri.length] || 215;
-  const fotolar = (await Promise.all(fotoUrlleri.map(u => _okFotoVerisiGetir(u, fotoGenislik)))).filter(Boolean);
-  const fotoDocx = fotolar.length ? [new docx.Paragraph({
-    alignment: docx.AlignmentType.CENTER,
-    children: fotolar.flatMap((f, i) => [
-      new docx.ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } }),
-      ...(i < fotolar.length - 1 ? [new docx.TextRun({ text: '   ' })] : [])
-    ])
+  const fotoKayitlari = (Array.isArray(k.olayYeriFotograflari) ? k.olayYeriFotograflari : []).filter(f => f && f.url).slice(0, 3);
+  const fotoGenislik = { 1: 420, 2: 320, 3: 215 }[fotoKayitlari.length] || 215;
+  const fotolar = (await Promise.all(fotoKayitlari.map(async f => {
+    const veri = await _okFotoVerisiGetir(f.url, fotoGenislik);
+    return veri && Object.assign({}, veri, { aciklama: (f.aciklama || '').trim() });
+  }))).filter(Boolean);
+  // Açıklama fotoğrafın tam altında kalsın diye her fotoğraf kendi hücresinde.
+  const fotoDocx = fotolar.length ? [new docx.Table({
+    width: { size: 100, type: docx.WidthType.PERCENTAGE },
+    borders: { top: _okWordKenarsiz, bottom: _okWordKenarsiz, left: _okWordKenarsiz, right: _okWordKenarsiz, insideHorizontal: _okWordKenarsiz, insideVertical: _okWordKenarsiz },
+    rows: [new docx.TableRow({ children: fotolar.map(f => new docx.TableCell({
+      width: { size: Math.floor(100 / fotolar.length), type: docx.WidthType.PERCENTAGE },
+      children: [
+        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: f.veri, transformation: { width: f.genislik, height: f.yukseklik } })] }),
+        ...(f.aciklama ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 60 }, children: [new docx.TextRun({ text: f.aciklama, size: 18 })] })] : [])
+      ]
+    })) })]
   })] : [];
 
   const bolumler = [
@@ -255,23 +264,30 @@ async function kazaRaporuWordOlustur(id) {
     ]
   });
 
+  // Her ekip üyesine ayrı imza alanı; satır başına 3 imza, sığmayan alt satıra iner.
+  const ekipUyeleri = olayEkipUyeleriniGetir(k);
+  const imzalar = [
+    [k.hazirlayanAdi, k.hazirlayanUnvan || 'Hazırlayan'],
+    ...(ekipUyeleri.length ? ekipUyeleri.map(u => [u.adSoyad, u.unvan || 'Soruşturma Ekibi Üyesi']) : [['', 'Soruşturma Ekibi Üyesi']]),
+    [k.onaylayanAdi, k.onaylayanUnvan || 'Bölüm Yöneticisi']
+  ];
+  const imzaHucreGenisligi = { size: 33, type: docx.WidthType.PERCENTAGE };
+  const imzaHucresi = ([ad, unvan]) => new docx.TableCell({ width: imzaHucreGenisligi, borders: { top: _okWordKenar }, margins: { top: 100 }, children: [
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: ad || '-', bold: true })] }),
+    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: unvan, size: 18 })] })
+  ] });
+  const bosImzaHucresi = () => new docx.TableCell({ width: imzaHucreGenisligi, children: [new docx.Paragraph({ text: '' })] });
+  const imzaSatirlari = [];
+  for (let i = 0; i < imzalar.length; i += 3) {
+    const dilim = imzalar.slice(i, i + 3);
+    // Satırlar arasında elle imzaya yer kalsın.
+    if (i > 0) imzaSatirlari.push(new docx.TableRow({ height: { value: 700, rule: docx.HeightRule.ATLEAST }, children: [bosImzaHucresi(), bosImzaHucresi(), bosImzaHucresi()] }));
+    imzaSatirlari.push(new docx.TableRow({ children: [...dilim.map(imzaHucresi), ...Array.from({ length: 3 - dilim.length }, bosImzaHucresi)] }));
+  }
   const imzaTablosu = new docx.Table({
     width: { size: 100, type: docx.WidthType.PERCENTAGE },
-    borders: { top: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideHorizontal: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: docx.BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
-    rows: [new docx.TableRow({ children: [
-      new docx.TableCell({ borders: { top: _okWordKenar }, margins: { top: 100 }, children: [
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.hazirlayanAdi || '-', bold: true })] }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.hazirlayanUnvan || 'Hazırlayan', size: 18 })] })
-      ] }),
-      new docx.TableCell({ borders: { top: _okWordKenar }, margins: { top: 100 }, children: [
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.ekipUyesiAdi || '-', bold: true })] }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.ekipUyesiUnvan || 'Soruşturma Ekibi Üyesi', size: 18 })] })
-      ] }),
-      new docx.TableCell({ borders: { top: _okWordKenar }, margins: { top: 100 }, children: [
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.onaylayanAdi || '-', bold: true })] }),
-        new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: k.onaylayanUnvan || 'Bölüm Yöneticisi', size: 18 })] })
-      ] })
-    ] })]
+    borders: { top: _okWordKenarsiz, bottom: _okWordKenarsiz, left: _okWordKenarsiz, right: _okWordKenarsiz, insideHorizontal: _okWordKenarsiz, insideVertical: _okWordKenarsiz },
+    rows: imzaSatirlari
   });
 
   const cocuklar = [
