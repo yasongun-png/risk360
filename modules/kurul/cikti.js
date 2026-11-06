@@ -2400,8 +2400,8 @@ async function atamaYazisiWordOlustur(imzaId) {
   saveAs(blob, `Atama_Yazisi_${(imza.adSoyad || 'kisi').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
 
-// ==================== 6) STANDALONE İMZA LİSTESİ (WORD/PDF) ====================
-// Eski üretim uygulamasındaki ayrı btnSigWord/btnSigPDF butonlarının karşılığı
+// ==================== 6) STANDALONE İMZA LİSTESİ (WORD) ====================
+// Eski üretim uygulamasındaki ayrı btnSigWord butonunun karşılığı
 // — tam Kurul Raporu'nun içine gömülü değil, yalnızca imza listesinin tek
 // başına yazdırılabilir/dolaştırılabilir bir belge olarak çıkarılması.
 
@@ -2415,47 +2415,6 @@ async function imzaListesiWordOlustur() {
 
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `Imza_Listesi_${toplanti.toplantiNo}.docx`);
-}
-
-async function imzaListesiPdfOlustur() {
-  const toplanti = toplantiIdIleGetirRepo(_toplantiId);
-  if (!toplanti) return;
-
-  const imzalar = toplantiImzalariniGetir(_toplantiId);
-
-  const html = `
-  <div id="kurulImzaPdf">
-    <style>
-      #kurulImzaPdf{ font-family: Arial, Helvetica, sans-serif; color:#111827; font-size:10pt; width:100%; }
-      #kurulImzaPdf h1{ text-align:center; font-size:16pt; margin:0 0 4mm; }
-      #kurulImzaPdf .alt{ text-align:center; font-size:10pt; color:#475569; margin:0 0 8mm; }
-      #kurulImzaPdf table{ width:100%; border-collapse:collapse; }
-      #kurulImzaPdf th{ background:#e5e7eb; border:1px solid #94a3b8; padding:5px 6px; font-size:9pt; }
-      #kurulImzaPdf td{ border:1px solid #cbd5e1; padding:6px; height:11mm; font-size:9.5pt; }
-    </style>
-    <h1>${_ciktiKacir(_denetimAktifFirmaAdi())} — İSG KURULU İMZA LİSTESİ</h1>
-    <div class="alt">${_ciktiKacir(toplanti.toplantiNo)} — ${_ciktiKacir(_ciktiDonemMetni(toplanti))} — ${_ciktiKacir(_ciktiTarihSaat(toplanti))}</div>
-    ${_pdfTablo(['Sıra', 'Ad Soyad', 'Ünvan / Kuruldaki Görevi', 'İmza'], imzalar.map(i => [i.siraNo, i.adSoyad, [i.unvan, i.kuruldakiGorev].filter(Boolean).join(' / '), '']), '', [8, 27, 40, 25])}
-  </div>`;
-
-  const mount = document.getElementById('yazdirmaAlani');
-  mount.innerHTML = html;
-  mount.style.display = 'block';
-
-  await html2pdf()
-    .set({
-      margin: [10, 10, 10, 10],
-      filename: `Imza_Listesi_${toplanti.toplantiNo}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4', compress: true },
-      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] }
-    })
-    .from(mount)
-    .save();
-
-  mount.innerHTML = '';
-  mount.style.display = 'none';
 }
 
 // ==================== Buton bağlantıları ====================
@@ -2499,14 +2458,6 @@ function ciktiButonlariniBagla() {
   });
   document.getElementById('btnImzaListesiWord').addEventListener('click', async () => {
     await imzaListesiWordOlustur();
-  });
-  document.getElementById('btnImzaListesiPDF').addEventListener('click', async () => {
-    try {
-      await imzaListesiPdfOlustur();
-    } catch (e) {
-      console.error(e);
-      alert('PDF üretilemedi: ' + (e.message || e));
-    }
   });
   document.getElementById('btnFormAyarlari').addEventListener('click', () => formAyarlariModalAc('kurul', 'Toplantı Yönetimi'));
 }
