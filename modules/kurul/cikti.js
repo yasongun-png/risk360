@@ -1800,6 +1800,33 @@ async function pptxOlustur() {
     return w;
   };
 
+  // Kullanıcı isteği: "normal açık bu en altta köşede olsun, yazıların üzerine
+  // binmesin" — rozetler sağ alt köşede, alt şeridin hemen üstünde yan yana.
+  const rozetleriKoseyeEkle = (sl, rozetler) => {
+    const dolu = rozetler.filter(r => r.metin);
+    const genislik = r => Math.max(0.9, 0.1 * r.metin.length + 0.35);
+    let x = SW - M - dolu.reduce((t, r) => t + genislik(r) + 0.15, -0.15);
+    dolu.forEach(r => { x += rozetEkle(sl, r.metin, x, SH - 0.84, r.renk) + 0.15; });
+  };
+
+  // Kart slaytlarının metin kutusu: yükseklik yazının uzunluğuna göre hesaplanır
+  // ki metin kutudan taşıp altındaki tabloya binmesin. Tablo sığmayacaksa yazı
+  // küçülür. Dönüş: tablonun başlayacağı y.
+  const metinKutusuEkle = (sl, metin, w, satirSayisi) => {
+    const YAZI_BOYUTLARI = [13.5, 12, 11, 10];
+    const enFazlaKutu = SH - 0.95 - 1.35 - 0.2 - satirSayisi * 0.36;
+    const kutuYuksekligi = boyut => {
+      const satirKarakter = Math.floor((w - 0.5) / (0.09 * boyut / 13.5));
+      const satir = String(metin).split('\n').reduce((t, s) => t + Math.max(1, Math.ceil(s.length / satirKarakter)), 0);
+      return satir * (boyut * 1.25 / 72) + 0.35;
+    };
+    const boyut = YAZI_BOYUTLARI.find(b => kutuYuksekligi(b) <= enFazlaKutu) || YAZI_BOYUTLARI[YAZI_BOYUTLARI.length - 1];
+    const h = Math.max(1.2, Math.min(kutuYuksekligi(boyut), Math.max(enFazlaKutu, 1.2)));
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w, h, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addText(metin, { x: M + 0.25, y: 1.42, w: w - 0.5, h: h - 0.14, margin: 0, fontSize: boyut, color: R.baslik, valign: 'top', fit: 'shrink' });
+    return 1.35 + h + 0.2;
+  };
+
   // Küçük, en-boy oranı bozulmayan "çerçeveli" fotoğraf — kart slaytlarının
   // sağında kullanılır (kullanıcı isteği: "fotoğraflar gereksiz
   // çekiştirilmesin" -- sizing:contain ile kutuya sığdırılır, kırpılıp
@@ -2012,8 +2039,6 @@ async function pptxOlustur() {
     const foto = o.fotograflar && o.fotograflar[0] && o.fotograflar[0].url;
     const metinGenislik = foto ? 7.3 : SW - 2 * M;
     kartBasligi(sl, `OLAY  ·  ${sira} / ${toplam}${o.otomatik ? '  ·  Olay/Kaza modülünden' : ''}`, o.tur || '-');
-    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.55, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-    sl.addText(o.olusSekli || '-', { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.25, fontSize: 13.5, color: R.baslik, valign: 'top' });
     const metaSatirlari = [
       ['Tarih', gunAyYil(o.tarih) || '-'],
       ['Yer', o.yer || '-'],
@@ -2029,9 +2054,8 @@ async function pptxOlustur() {
         ['Oy Sonucu', [o.oySonucu, kararOyDokumMetni(o) && `(${kararOyDokumMetni(o)})`].filter(Boolean).join('  ') || '-']
       );
     }
-    metaTablosuEkle(sl, metaSatirlari, M, 3.1, metinGenislik);
-    if (o.oncelik) rozetEkle(sl, o.oncelik, M, 2.98 - 0.42, _renkGetir(ONCELIK_RENK, o.oncelik));
-    if (o.durum) rozetEkle(sl, o.durum, M + 1.3, 2.98 - 0.42, _renkGetir(DURUM_RENK, o.durum));
+    metaTablosuEkle(sl, metaSatirlari, M, metinKutusuEkle(sl, o.olusSekli || '-', metinGenislik, metaSatirlari.length), metinGenislik);
+    rozetleriKoseyeEkle(sl, [{ metin: o.oncelik, renk: _renkGetir(ONCELIK_RENK, o.oncelik) }, { metin: o.durum, renk: _renkGetir(DURUM_RENK, o.durum) }]);
     if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
   };
 
@@ -2062,13 +2086,8 @@ async function pptxOlustur() {
 
     const sl = yeniSlayt();
     kartBasligi(sl, `${baslikOnEki}  ·  ${sira} / ${toplam}`, k.kararNo);
-    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
-    sl.addText(k.kararMetni || '-', { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top' });
-
     const kararDurum = k.durumGoruntu || k.durum || '';
-    let rozetX = M;
-    if (k.oncelik) rozetX += (rozetEkle(sl, k.oncelik, rozetX, 2.9, _renkGetir(ONCELIK_RENK, k.oncelik)) || 0) + 0.15;
-    if (kararDurum) rozetEkle(sl, kararDurum, rozetX, 2.9, _renkGetir(DURUM_RENK, kararDurum));
+    rozetleriKoseyeEkle(sl, [{ metin: k.oncelik, renk: _renkGetir(ONCELIK_RENK, k.oncelik) }, { metin: kararDurum, renk: _renkGetir(DURUM_RENK, kararDurum) }]);
 
     const metaSatirlari = [
       ['Sorumlu', k.sorumlu || '-'],
@@ -2077,7 +2096,7 @@ async function pptxOlustur() {
       ['Oy Sonucu', [k.oySonucu, kararOyDokumMetni(k) && `(${kararOyDokumMetni(k)})`].filter(Boolean).join('  ') || '-'],
       ['Kapanış / Kanıt', [k.kapanisTarihi, k.kanit].filter(Boolean).join(' / ') || '-']
     ];
-    metaTablosuEkle(sl, metaSatirlari, M, 3.4, metinGenislik);
+    metaTablosuEkle(sl, metaSatirlari, M, metinKutusuEkle(sl, k.kararMetni || '-', metinGenislik, metaSatirlari.length), metinGenislik);
     if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
 
     const sl2 = yeniSlayt();
@@ -2132,11 +2151,9 @@ async function pptxOlustur() {
 
     const sl = yeniSlayt();
     kartBasligi(sl, `${baslikOnEki}  ·  ${sira} / ${toplam}`, k.konuBasligi || '-');
-    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: metinGenislik, h: 1.35, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
     // Açıklama boşsa (sadece '-') kutuda konu başlığının tamamı gösterilir (başlık üstte kısaltılıyor).
     const aciklama = (k.uygunsuzluk && k.uygunsuzluk.trim() !== '-') ? k.uygunsuzluk : (k.konuBasligi || '-');
-    sl.addText(aciklama, { x: M + 0.25, y: 1.5, w: metinGenislik - 0.5, h: 1.05, fontSize: 13.5, color: R.baslik, valign: 'top', fit: 'shrink' });
-    if (k.durum) rozetEkle(sl, k.durum, M, 2.9, _renkGetir(DURUM_RENK, k.durum));
+    rozetleriKoseyeEkle(sl, [{ metin: k.durum, renk: _renkGetir(DURUM_RENK, k.durum) }]);
 
     const metaSatirlari = [
       ['Bölüm', k.bolum || '-'],
@@ -2145,7 +2162,7 @@ async function pptxOlustur() {
       ['Sorumlu', k.sorumlu || '-']
     ];
     if (k.alinanOnlem) metaSatirlari.push(['Alınan Önlem', k.alinanOnlem]);
-    metaTablosuEkle(sl, metaSatirlari, M, 3.4, metinGenislik);
+    metaTablosuEkle(sl, metaSatirlari, M, metinKutusuEkle(sl, aciklama, metinGenislik, metaSatirlari.length), metinGenislik);
     if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
   };
 
