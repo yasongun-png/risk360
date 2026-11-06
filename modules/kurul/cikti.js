@@ -1040,7 +1040,7 @@ async function kurulRaporuWordOlustur() {
   });
   const imzaSutunlari = [8, 30, 30, 32];
   const imzaCocuklari = [
-    new docx.Paragraph({ text: '13) İmza Listesi', heading: docx.HeadingLevel.HEADING_2 }),
+    new docx.Paragraph({ text: `13) İmza Listesi${toplanti.tarih ? ' – Toplantı Tarihi: ' + gunAyYil(toplanti.tarih) : ''}`, heading: docx.HeadingLevel.HEADING_2 }),
     katilanlar.length ? new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
       rows: [
