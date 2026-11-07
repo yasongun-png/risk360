@@ -318,7 +318,6 @@ function _csgbDetayCiz(kutu) {
         <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; max-width:560px; justify-content:flex-end;">
           <button type="button" class="ikincil" id="csgbDenetimDuzenleBtn">${E.duzenle}</button>
           <button type="button" class="ikincil" id="csgbRaporWordBtn">📄 Takip Raporu (Word)</button>
-          <button type="button" class="ikincil" id="csgbRaporPdfBtn" title="Tablodaki maddeye tıklayınca PDF içinde tam metnine gider">📕 Takip Raporu (PDF)</button>
           <button type="button" class="ikincil" id="csgbRaporExcelBtn" title="Biçimli rapor: denetim bilgileri, özet, madde tablosu ve toplantılar sayfası">📗 Takip Raporu (Excel)</button>
           <button type="button" class="ikincil" id="csgbPptxBtn" title="Son takip toplantısının (toplantı yoksa sıradaki toplantının) sunumu: genel durum, açık maddeler, tamamlananlar">📊 Toplantı Sunumu (PPTX)</button>
         </div>
@@ -430,7 +429,6 @@ function _csgbDetayCiz(kutu) {
     const tamMetin = await onayModali('Raporun sonuna maddelerin tam metni (tavsiye edilen önlemler, mevzuat) ve kanıt fotoğrafları "Ek" olarak eklensin mi? Hayır derseniz sadece kısa takip tablosu üretilir.', 'Evet, ekle');
     await csgbTakipRaporuWordOlustur(d.id, tamMetin);
   });
-  _csgbButonIsle('csgbRaporPdfBtn', 'PDF hazırlanıyor...', () => csgbTakipRaporuPdfOlustur(d.id));
   _csgbButonIsle('csgbRaporExcelBtn', 'Excel hazırlanıyor...', () => csgbTakipRaporuExcelOlustur(d.id));
   _csgbButonIsle('csgbPptxBtn', 'Sunum hazırlanıyor...', () => {
     const son = toplantilar[toplantilar.length - 1];
