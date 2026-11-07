@@ -393,7 +393,7 @@ async function uygunsuzlukFormunuYazdir(id) {
   ]);
 }
 
-// Toplu PDF raporunun kapak sayfasındaki serbest Konu/metin — modül içinde
+// Toplu Word raporunun kapak sayfasındaki serbest Konu/metin — modül içinde
 // (formAyarlariGetir'den ayrı) tenant-scoped bir ayar olarak saklanır.
 function _raporMetniAnahtari() { return uygunsuzlukAnahtari('uygunsuzluk_rapor_metni'); }
 
@@ -607,7 +607,7 @@ function _islemButonlariUret(k) {
   const imzaStili = _ucImzaliMi(k) ? ' style="color:#16a34a; font-weight:700; border-color:#86efac;"' : '';
   const butonlar = [
     `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button>`,
-    `<button class="tablo-buton" data-pdf="${k.id}">PDF</button>`,
+    `<button class="tablo-buton" data-word="${k.id}">Word</button>`,
     `<button class="tablo-buton" data-imza="${k.id}"${imzaStili}>✍️ Kaşe/İmza</button>`,
     // Çevre sekmesinde harita ve Risk'e aktarım yok (o modüller İSG kayıtlarını okur).
     UYG_CEVRE_MODU ? '' : `<a class="tablo-buton${k.haritaTesisId ? ' sil' : ''}" href="${_islemHaritaUrlUret(k)}" style="text-decoration:none;" title="${k.haritaTesisId ? 'Haritada Gör' : 'Haritada Konum Ekle'}">🗺️ Harita</a>`,
@@ -660,22 +660,22 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
   const eskiMetin = btn.textContent;
   btn.disabled = true;
   try {
-    btn.textContent = 'PDF hazırlanıyor...';
-    // Bu kayıtların PDF'i (fotoğraflı olduğunda) genelde birkaç MB --
+    btn.textContent = 'Form hazırlanıyor...';
+    // Bu kayıtların formu (fotoğraflı olduğunda) genelde birkaç MB --
     // EmailJS'in ek olarak kabul ettiği boyutun (ücretsiz planda ~50KB)
     // çok üzerinde; doğrudan ek olarak göndermek EmailJS'in eki sessizce
     // düşürüp maili eksiz göndermesine yol açıyordu (kullanıcı bildirdi).
-    // Bunun yerine PDF, fotoğraf yüklemede zaten kullanılan Firebase
+    // Bunun yerine Word formu, fotoğraf yüklemede zaten kullanılan Firebase
     // Storage'a yüklenir ve mail gövdesine bir indirme linki eklenir --
     // boyut sınırı yok. Storage yapılandırılmamışsa/başarısız olursa link
     // olmadan devam edilir (mail yine de gider, kullanıcı bilgilendirilir).
-    let pdfUrl = '';
+    let formUrl = '';
     try {
-      pdfUrl = await uygunsuzlukKayitPdfUrlOlustur(k.id) || '';
-    } catch (pdfHata) {
-      console.error('PDF linki oluşturulamadı:', pdfHata);
+      formUrl = await uygunsuzlukKayitWordUrlOlustur(k.id) || '';
+    } catch (formHata) {
+      console.error('Form linki oluşturulamadı:', formHata);
     }
-    if (!pdfUrl && !confirm('PDF linki oluşturulamadı (Storage yapılandırılmamış olabilir). Mail PDF olmadan gönderilsin mi?')) {
+    if (!formUrl && !confirm('Form linki oluşturulamadı (Storage yapılandırılmamış olabilir). Mail form linki olmadan gönderilsin mi?')) {
       btn.disabled = false;
       btn.textContent = eskiMetin;
       return;
@@ -710,10 +710,10 @@ async function _uygunsuzlukMailGonderTiklandi(btn) {
       bilgi_email: k.ilgiliBilgi || '',
       konu: `Uygunsuzluk Bildirimi — ${k.aksiyonNo}`,
       mesaj: _uygunsuzlukMailMetniDoldur(k),
-      pdf_url: pdfUrl,
+      pdf_url: formUrl,
       liste_pdf_url: listePdfUrl
     });
-    alert(`Mail gönderildi${pdfUrl ? ' (form linki eklendi)' : ' (form linksiz)'}${listePdfUrl ? ' (liste linki eklendi)' : ''}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
+    alert(`Mail gönderildi${formUrl ? ' (form linki eklendi)' : ' (form linksiz)'}${listePdfUrl ? ' (liste linki eklendi)' : ''}: ${k.ilgiliKime}${k.ilgiliBilgi ? ' (bilgi: ' + k.ilgiliBilgi + ')' : ''}`);
   } catch (hata) {
     console.error(hata);
     alert('Mail gönderilemedi: ' + (hata.message || hata.text || hata));
@@ -933,8 +933,8 @@ function kayitlariCiz(aramaMetni) {
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => kayitModalAc(uygunsuzlukIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-form]').forEach(btn => btn.addEventListener('click', () => uygunsuzlukFormunuYazdir(btn.getAttribute('data-form'))));
   govde.querySelectorAll('[data-imza]').forEach(btn => btn.addEventListener('click', () => imzaModalAc(btn.getAttribute('data-imza'))));
-  govde.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', async () => {
-    try { await uygunsuzlukKayitPdfOlustur(btn.getAttribute('data-pdf')); } catch (hata) { console.error(hata); alert('PDF üretilemedi: ' + (hata.message || hata)); }
+  govde.querySelectorAll('[data-word]').forEach(btn => btn.addEventListener('click', async () => {
+    try { await uygunsuzlukKayitWordOlustur(btn.getAttribute('data-word')); } catch (hata) { console.error(hata); alert('Word üretilemedi: ' + (hata.message || hata)); }
   }));
   govde.querySelectorAll('[data-mail]').forEach(btn => btn.addEventListener('click', () => _uygunsuzlukMailGonderTiklandi(btn)));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {

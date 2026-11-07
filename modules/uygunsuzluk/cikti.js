@@ -1,4 +1,4 @@
-// Uygunsuzluk / DÖF — kapak sayfalı, fotoğraflı PDF raporları.
+// Uygunsuzluk / DÖF — kapak sayfalı, fotoğraflı Word raporları.
 // Eski üretim uygulamasındaki (uygunsuzluk-platform-standalone.html) kapak +
 // liste + öncesi/sonrası fotoğraf sütunlu PDF çıktısıyla mümkün olduğunca
 // aynı mantık: kayıtlar Açık/Kapalı olarak İKİ AYRI bölüme ayrılır (tek
@@ -6,20 +6,10 @@
 // kalıpta tutulur (Açık = yeşil, Kapalı = kırmızı). Kapak sayfasındaki başlık
 // ve giriş metni serbestçe düzenlenebilir (bkz. ui.js raporMetniGetir/Kaydet —
 // eski uygulamadaki "Konu" / editTopicPdfIntroPrompt mantığı). Ayrıca her
-// kayıt için ayrı, tek sayfalık "İSG Uygunsuzluk Bildirim Formu" PDF'i üretilir
+// kayıt için ayrı "Uygunsuzluk Formu" Word dosyası üretilir
 // (gerçek üretim örneğiyle birebir: kapak bilgisi + 4 bölüm + öncesi/sonrası
-// fotoğraf). Tüm PDF'lerin sağ üst köşesinde ortak Form Ayarları (Doküman No/
+// fotoğraf). Formun sağ üst köşesinde ortak Form Ayarları (Doküman No/
 // Sürüm Tarihi/Sürüm No/Sayfa Sayısı) kutusu bulunur (bkz. core/form-ayarlari.js).
-
-function _ucKacir(v) {
-  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}
-
-function _ucDurumRozet(kayitAcikMi) {
-  return kayitAcikMi
-    ? '<span class="uc-rozet uc-rozet-acik">AÇIK</span>'
-    : '<span class="uc-rozet uc-rozet-kapali">KAPALI</span>';
-}
 
 // Toplu Word raporunda her tablo sayfasına düşen kayıt sayısı (yatay A4,
 // satır başına ~34mm fotoğraf kutusu) — bkz. uygunsuzlukRaporuWordOlustur.
@@ -277,7 +267,7 @@ async function uygunsuzlukRaporuWordOlustur(indir = true) {
 }
 
 // Mail Gönder'in EmailJS'e ikinci bir link olarak eklediği "Uygunsuzluk
-// Listesi" raporu -- uygunsuzlukKayitPdfUrlOlustur ile AYNI Storage yükleme
+// Listesi" raporu -- uygunsuzlukKayitWordUrlOlustur ile AYNI Storage yükleme
 // deseni (bkz. orada ki uzun yorum: ek boyutu sınırı, CORS vb.). Mail
 // gönderilirken tablodaki O ANKİ arama/filtre neyse onunla üretilir --
 // "Word Raporu" düğmesiyle birebir aynı dosya. Kullanıcı isteği: "maili
@@ -294,7 +284,7 @@ async function uygunsuzlukListesiWordUrlOlustur() {
   const yol = 'uygunsuzluk_liste_word/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
   const blob = uretim.blob;
 
-  // Kullanıcı bildirdi: "liste raporu uzun sürüyor" -- tek kayıt PDF'inden
+  // Kullanıcı bildirdi: "liste raporu uzun sürüyor" -- tek kayıt formundan
   // farklı olarak bu, filtreye uyan TÜM kayıtları (çok sayfalı, fotoğraflı
   // olabilir) içerdiğinden dosya çok daha büyük olabilir; tek kayıt
   // linkindeki 20 saniyelik süre bu yükleme için gerçekçi çıkabiliyordu,
@@ -307,58 +297,16 @@ async function uygunsuzlukListesiWordUrlOlustur() {
   return Promise.race([yukleme, zamanAsimi]);
 }
 
-// ==================== TEKİL KAYIT PDF'İ (İSG UYGUNSUZLUK BİLDİRİM FORMU) ====================
-// Gerçek üretim çıktısıyla (ISG_Rapor_*.pdf) birebir: logo + başlık + form
-// ayarları üst bilgisi, 4 numaralı bölüm, öncesi/sonrası fotoğraf kutuları.
+// ==================== TEKİL KAYIT WORD'Ü (UYGUNSUZLUK FORMU) ====================
+// Kullanıcı isteği: "uygunsuzluk pdf i word olarak versin, pdf istemiyorum,
+// aynısını word olarak versin" — eski PDF formuyla aynı içerik ve sıra: logo +
+// başlık + form ayarları üst bilgisi, 3 metin bölümü, 2. sayfadan itibaren
+// görsel kanıtlar, ek fotoğraflar, konum krokisi, onay. Üst bilgi Word'ün kendi
+// sayfa başlığında olduğundan her sayfada tekrar eder; "Sayfa Sayısı" Word alanı
+// olduğundan her sayfada gerçek değeri gösterir.
 
-function _ucAlanSatiri(etiket1, deger1, etiket2, deger2) {
-  if (etiket2 === undefined) {
-    return `<tr><td class="uc-form-etiket">${_ucKacir(etiket1)}</td><td class="uc-form-deger" colspan="3">${deger1}</td></tr>`;
-  }
-  return `<tr>
-    <td class="uc-form-etiket">${_ucKacir(etiket1)}</td><td class="uc-form-deger">${deger1}</td>
-    <td class="uc-form-etiket">${_ucKacir(etiket2)}</td><td class="uc-form-deger">${deger2}</td>
-  </tr>`;
-}
-
-// imzaKaydi: {ad, tarih} (modules/uygunsuzluk/model.js uygunsuzlukImzaVeriUret),
-// imzaGorselUrl: fotoBuyukCoz ile çözülmüş data URL (varsa). Dijital imza
-// atılmışsa çizilmiş imza görseli + tarih basılır; atılmamışsa kağıda elle
-// imzalamak için boş bir alan bırakılır (bkz. is-izni/cikti.js _izImzaHucre
-// ile aynı ilke — dijital varsa göster, yoksa boş kutu).
-function _ucOnayKutusu(baslik, adSoyad, imzaKaydi, imzaGorselUrl) {
-  const gosterilecekAd = (imzaKaydi && imzaKaydi.ad) || adSoyad;
-  const imzaIcerik = imzaGorselUrl
-    ? `<img src="${imzaGorselUrl}" style="max-width:100%; max-height:12mm;">`
-    : '';
-  const tarihSatiri = (imzaKaydi && imzaKaydi.tarih)
-    ? `<div style="font-size:7pt; color:#64748b; margin-top:0.5mm;">${_ucKacir(gunAyYil((imzaKaydi.tarih || '').slice(0, 10)))}</div>`
-    : '';
-  return `
-    <div class="uc-onay-kutu">
-      <div class="uc-onay-etiket">${_ucKacir(baslik)}</div>
-      <div class="uc-onay-ad">${_ucKacir(gosterilecekAd) || '&nbsp;'}</div>
-      <div class="uc-onay-imza-alani">${imzaIcerik}</div>
-      <div class="uc-onay-imza-baslik">İmza${tarihSatiri}</div>
-    </div>
-  `;
-}
-
-function _ucFormFotoKutusu(url, etiket) {
-  return `
-    <div class="uc-form-foto-kutu">
-      <div class="uc-form-foto-govde">${url ? `<img src="${url}">` : ''}</div>
-      <div class="uc-form-foto-etiket">${_ucKacir(etiket)}</div>
-    </div>
-  `;
-}
-
-// Firebase Storage URL'leri (kroki görseli file:// değil gerçek http(s)
-// sunucudan geliyorsa buraya düşer) CORS başlığı olmadan html2canvas'ın
-// canvas'a "okuma" adımında sessizce boş/şeffaf çıkabiliyor — ekranda normal
-// <img> olarak görünse bile. Bunu kesin önlemek için görsel önce tamamen
-// indirilip data: URL'e çevrilir; zaten data: ise (base64/fotoref çözümü)
-// dokunmadan geri döner.
+// Firebase Storage URL'leri canvas'a sorunsuz çizilsin diye görsel önce
+// indirilip data: URL'e çevrilir; zaten data: ise dokunmadan geri döner.
 async function _ucGorseliDataUrlaCevir(url) {
   if (!url || url.startsWith('data:')) return url || '';
   try {
@@ -377,8 +325,8 @@ async function _ucGorseliDataUrlaCevir(url) {
 }
 
 // Saha Dijital Haritası köprüsü — bkz. modules/harita. Kayıtta işaretli bir
-// konum varsa, o tesisin kroki görselinin üstünde noktayı gösteren küçük bir
-// görüntü döner; yoksa null (çağıran taraf yer tutucu metin gösterir).
+// konum varsa o tesisin kroki görselini ve noktayı döner; yoksa null (çağıran
+// taraf yer tutucu metin gösterir).
 async function _ucKrokiGorseliniHazirla(k) {
   if (!k.haritaTesisId || k.haritaX === '' || k.haritaY === '') {
     console.warn('[Kroki] Kayıtta haritaTesisId/haritaX/haritaY yok:', k.aksiyonNo);
@@ -394,77 +342,63 @@ async function _ucKrokiGorseliniHazirla(k) {
   return { url: dataUrl, x: Number(k.haritaX) || 0, y: Number(k.haritaY) || 0, tesisAdi: tesis.ad };
 }
 
-const _UC_KAYIT_STIL = `
-      #ucKayitPdf{ font-family: Arial, Helvetica, sans-serif; color:#111827; background:#fff; width:210mm; min-height:297mm; padding:8mm; font-size:9pt; }
-      #ucKayitPdf *{ box-sizing:border-box; }
+async function _ucWordGorselAc(url) {
+  const blob = await (await fetch(url)).blob();
+  return new Promise((coz, red) => {
+    const i = new Image();
+    i.onload = () => coz(i);
+    i.onerror = red;
+    i.src = URL.createObjectURL(blob);
+  });
+}
 
-      #ucKayitPdf .fa-kutu{ border-collapse:collapse; font-size:6.8pt; width:100%; table-layout:fixed; }
-      #ucKayitPdf .fa-kutu td{ padding:1.5px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      #ucKayitPdf .fa-kutu td:first-child{ font-weight:700; background:#fff; width:48%; }
+// Görseli kırpmadan kutuya sığdırır (eski PDF'teki object-fit:contain).
+// Şeffaf logo/imza JPEG'de siyah çıkmasın diye zemin beyaz boyanır. kroki
+// verilirse işaret noktası görselin üstüne çizilir. Çözülemezse null döner.
+async function _ucWordGorselSigdir(url, maksGen, maksYuk, kroki) {
+  if (!url) return null;
+  try {
+    const img = await _ucWordGorselAc(url);
+    const oran = Math.min(maksGen / img.naturalWidth, maksYuk / img.naturalHeight, kroki ? Infinity : 1);
+    const gen = Math.max(1, Math.round(img.naturalWidth * oran));
+    const yuk = Math.max(1, Math.round(img.naturalHeight * oran));
+    const canvas = document.createElement('canvas');
+    canvas.width = gen * 2;
+    canvas.height = yuk * 2;
+    const c = canvas.getContext('2d');
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, 0, canvas.width, canvas.height);
+    c.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (kroki) {
+      const x = canvas.width * kroki.x / 100, y = canvas.height * kroki.y / 100;
+      c.font = 'bold 22px Arial';
+      const kutuGen = c.measureText(kroki.kod).width + 16, kutuYuk = 30;
+      c.fillStyle = 'rgba(17,24,39,0.87)';
+      c.fillRect(x - kutuGen / 2, y - kutuYuk, kutuGen, kutuYuk);
+      c.fillStyle = '#ffffff';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(kroki.kod, x, y - kutuYuk / 2);
+      const ucgenAlt = y - kutuYuk - 4;
+      c.fillStyle = '#dc2626';
+      c.beginPath();
+      c.moveTo(x, ucgenAlt - 36);
+      c.lineTo(x - 20, ucgenAlt);
+      c.lineTo(x + 20, ucgenAlt);
+      c.closePath();
+      c.fill();
+    }
+    const jpeg = await new Promise(coz => canvas.toBlob(coz, 'image/jpeg', 0.85));
+    return { veri: new Uint8Array(await jpeg.arrayBuffer()), gen, yuk };
+  } catch (e) {
+    console.error('Görsel Word formuna eklenemedi:', e);
+    return null;
+  }
+}
 
-      #ucKayitPdf .uc-form-ustbilgi{ display:flex; align-items:stretch; border:2px solid #111827; margin-bottom:4mm; background:#fff; }
-      #ucKayitPdf .uc-form-ustbilgi > div{ padding:3mm; display:flex; align-items:center; justify-content:center; border-right:2px solid #111827; background:#fff; }
-      #ucKayitPdf .uc-form-ustbilgi > div:last-child{ border-right:none; }
-      #ucKayitPdf .uc-form-logo{ flex:0 0 28mm; width:28mm; text-align:center; color:#94a3b8; font-size:8pt; font-weight:700; }
-      #ucKayitPdf .uc-form-logo img{ max-width:24mm; max-height:16mm; }
-      #ucKayitPdf .uc-form-baslik{ flex:1 1 auto; min-width:0; text-align:center; font-size:13pt; font-weight:700; color:#111827; line-height:1.3; }
-      #ucKayitPdf .uc-form-fa{ flex:0 0 42mm; width:42mm; padding:2mm !important; align-items:stretch !important; }
-
-      #ucKayitPdf .uc-form-bolum{ margin-bottom:3mm; background:#fff; }
-      #ucKayitPdf .uc-form-bolum h2{ margin:0; background:#fff; color:#111827; font-size:9.5pt; padding:2mm 3mm; text-transform:uppercase; border:1px solid #111827; border-bottom:none; }
-      #ucKayitPdf .uc-form-bolum table{ width:100%; border-collapse:collapse; border:1px solid #111827; }
-      #ucKayitPdf .uc-form-bolum td{ border:1px solid #111827; padding:2.5mm 3mm; vertical-align:top; font-size:9pt; }
-      #ucKayitPdf .uc-form-etiket{ font-weight:700; width:16%; background:#fff; white-space:pre-line; }
-      #ucKayitPdf .uc-form-deger{ width:34%; white-space:pre-line; }
-
-      #ucKayitPdf .uc-rozet{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
-      #ucKayitPdf .uc-rozet-acik{ background:#16a34a; color:#fff; }
-      #ucKayitPdf .uc-rozet-kapali{ background:#dc2626; color:#fff; }
-      #ucKayitPdf .uc-rozet-risk{ display:inline-block; padding:2px 10px; border-radius:8px; font-size:8.5pt; font-weight:700; }
-      #ucKayitPdf .uc-rozet-risk.dusuk{ background:#dcfce7; color:#15803d; }
-      #ucKayitPdf .uc-rozet-risk.orta{ background:#fef3c7; color:#b45309; }
-      #ucKayitPdf .uc-rozet-risk.yuksek, #ucKayitPdf .uc-rozet-risk.cok-yuksek{ background:#fee2e2; color:#b91c1c; }
-
-      #ucKayitPdf .uc-form-fotograflar{ display:flex; gap:4mm; }
-      #ucKayitPdf .uc-form-foto-kutu{ flex:1; border:1px solid #111827; background:#fff; }
-      #ucKayitPdf .uc-form-foto-govde{ height:56mm; display:flex; align-items:center; justify-content:center; background:#fff; overflow:hidden; }
-      #ucKayitPdf .uc-form-foto-govde img{ max-width:100%; max-height:100%; object-fit:contain; }
-      #ucKayitPdf .uc-form-foto-etiket{ text-align:center; font-weight:700; font-size:8pt; padding:2mm; border-top:1px solid #111827; text-transform:uppercase; }
-
-      #ucKayitPdf .uc-kroki-kutu{ position:relative; width:100%; background:#f3f4f6; border:1px solid #111827; overflow:hidden; }
-      #ucKayitPdf .uc-kroki-kutu img{ display:block; width:100%; height:auto; max-height:85mm; object-fit:contain; margin:0 auto; }
-      #ucKayitPdf .uc-kroki-nokta{ position:absolute; transform:translate(-50%, -100%); display:flex; flex-direction:column; align-items:center; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
-      #ucKayitPdf .uc-kroki-ikon{ font-size:26px; line-height:1; }
-      #ucKayitPdf .uc-kroki-kod{ font-size:7.5pt; font-weight:700; background:#111827dd; color:#fff; padding:1px 5px; border-radius:3px; margin-top:1px; white-space:nowrap; }
-      #ucKayitPdf .uc-kroki-tesis{ font-size:7.5pt; color:#64748b; margin-top:1.5mm; }
-      #ucKayitPdf .uc-kroki-yok{ color:#64748b; font-size:9pt; text-align:center; padding:6mm; border:1px dashed #cbd5e1; }
-
-      #ucKayitPdf .uc-form-altbilgi{ text-align:center; font-size:7.5pt; color:#64748b; margin-top:5mm; }
-      #ucKayitPdf .uc-kroki-kutu-buyuk img{ max-height:70mm; }
-
-      #ucKayitPdf .uc-onay-satir{ display:flex; gap:6mm; }
-      #ucKayitPdf .uc-onay-kutu{ flex:1; border:1px solid #111827; padding:3mm; text-align:center; background:#fff; }
-      #ucKayitPdf .uc-onay-etiket{ font-size:8pt; font-weight:700; color:#111827; text-transform:uppercase; }
-      #ucKayitPdf .uc-onay-ad{ font-size:9pt; margin-top:1.5mm; min-height:4mm; }
-      #ucKayitPdf .uc-onay-imza-alani{ height:12mm; border-bottom:1px solid #111827; margin-top:4mm; display:flex; align-items:flex-end; justify-content:center; }
-      #ucKayitPdf .uc-onay-imza-alani img{ display:block; margin:0 auto; }
-      #ucKayitPdf .uc-onay-imza-baslik{ font-size:7.5pt; color:#64748b; margin-top:1mm; }
-
-      #ucKayitPdf table.uc-ek-foto-tablo{ width:100%; border-collapse:collapse; table-layout:fixed; }
-      #ucKayitPdf table.uc-ek-foto-tablo th{ background:#e5e7eb; color:#111827; font-size:8pt; padding:3px 4px; border:1px solid #94a3b8; text-transform:uppercase; }
-      #ucKayitPdf table.uc-ek-foto-tablo th:first-child, #ucKayitPdf table.uc-ek-foto-tablo td.uc-ek-foto-no{ width:8%; }
-      #ucKayitPdf table.uc-ek-foto-tablo th:not(:first-child){ width:46%; }
-      #ucKayitPdf table.uc-ek-foto-tablo td{ border:1px solid #cbd5e1; padding:3px; vertical-align:middle; text-align:center; overflow:hidden; }
-      #ucKayitPdf table.uc-ek-foto-tablo td.uc-ek-foto-no{ font-weight:700; }
-      #ucKayitPdf .uc-ek-foto-govde{ height:40mm; display:flex; align-items:center; justify-content:center; background:#f3f4f6; overflow:hidden; }
-      #ucKayitPdf .uc-ek-foto-govde img{ max-width:100%; max-height:100%; object-fit:contain; }
-`;
-
-// indir=false: dosyayı indirmez, jsPDF nesnesini döner -- "Mail Gönder"in
-// PDF'i EmailJS eki olarak göndermek için ayrı bir indirme diyaloğu
-// açtırmadan aynı PDF'i üretmesini sağlar (bkz. ui.js
-// _uygunsuzlukMailGonderTiklandi).
-async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
+// indir=false: dosyayı indirmez, { blob, dosyaAdi } döner — Mail Gönder'in form
+// linki için (bkz. uygunsuzlukKayitWordUrlOlustur).
+async function uygunsuzlukKayitWordOlustur(id, indir = true) {
   const k = uygunsuzlukIdIleGetirRepo(id);
   if (!k) return null;
 
@@ -473,278 +407,227 @@ async function uygunsuzlukKayitPdfOlustur(id, indir = true) {
   const acikMi = k.durum !== 'Kapalı';
   const tanim = [k.baslik, k.aciklama].filter(Boolean).join(' — ');
   const imzalar = k.imzalar || {};
-  const [fotoOncesiUrl, fotoSonrasiUrl, kroki, ekFotoUrlleri, bildirenImzaUrl, sorumluImzaUrl] = await Promise.all([
-    fotoBuyukCoz(k.fotoOncesi),
-    fotoBuyukCoz(k.fotoSonrasi),
-    _ucKrokiGorseliniHazirla(k),
-    Promise.all([2, 3, 4].map(async n => ({
-      no: n,
-      oncesi: await fotoBuyukCoz(k['fotoOncesi' + n]),
-      sonrasi: await fotoBuyukCoz(k['fotoSonrasi' + n])
-    }))),
-    fotoBuyukCoz(imzalar.bildiren && imzalar.bildiren.imzaUrl),
-    fotoBuyukCoz(imzalar.sorumlu && imzalar.sorumlu.imzaUrl)
+  const fa = formAyarlariGetir('uygunsuzluk');
+
+  const mm = v => Math.round(v * 56.7);          // mm → twip
+  const px = v => Math.round(v * 96 / 25.4);     // mm → docx görsel pikseli
+  const GENISLIK = mm(194);                      // A4 dikey, 8mm kenar
+  const koyu = { style: docx.BorderStyle.SINGLE, size: 8, color: '111827' };
+  const kalin = { style: docx.BorderStyle.SINGLE, size: 12, color: '111827' };
+  const acik = { style: docx.BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
+  const cerceve = kenar => ({ top: kenar, bottom: kenar, left: kenar, right: kenar });
+
+  const gorsel = async (ref, gen, yuk) => _ucWordGorselSigdir(await fotoBuyukCoz(ref), px(gen), px(yuk));
+  const krokiBilgi = await _ucKrokiGorseliniHazirla(k);
+  const [logoGorsel, fotoOncesi, fotoSonrasi, krokiGorsel, bildirenImza, sorumluImza, ekFotolar] = await Promise.all([
+    _ucWordGorselSigdir(logo, px(24), px(16)),
+    gorsel(k.fotoOncesi, 91, 54),
+    gorsel(k.fotoSonrasi, 91, 54),
+    krokiBilgi ? _ucWordGorselSigdir(krokiBilgi.url, px(186), px(70), { x: krokiBilgi.x, y: krokiBilgi.y, kod: k.aksiyonNo || '' }) : null,
+    gorsel(imzalar.bildiren && imzalar.bildiren.imzaUrl, 80, 12),
+    gorsel(imzalar.sorumlu && imzalar.sorumlu.imzaUrl, 80, 12),
+    Promise.all([2, 3, 4].map(async no => ({
+      no,
+      oncesiVarMi: !!k['fotoOncesi' + no],
+      sonrasiVarMi: !!k['fotoSonrasi' + no],
+      oncesi: await gorsel(k['fotoOncesi' + no], 85, 38),
+      sonrasi: await gorsel(k['fotoSonrasi' + no], 85, 38)
+    })))
   ]);
   // Boş kalan çiftler tabloya hiç girmez.
-  const ekFotoSatirlari = ekFotoUrlleri.filter(f => f.oncesi || f.sonrasi);
+  const ekFotoSatirlari = ekFotolar.filter(f => f.oncesiVarMi || f.sonrasiVarMi);
 
-  // Form Ayarları kutusundaki "Sayfa Sayısı" satırı varsayılan olarak sabit
-  // bir metin (ör. "1/1") -- bu form her zaman en az 2 sayfa ürettiğinden
-  // (aşağıdaki sayfalar dizisi), her sayfaya kendi gerçek "mevcut/toplam"
-  // değeri (bkz. formAyarlariKutusuHtml'in 4. parametresi) geçilir; aksi
-  // halde her iki sayfa da aynı sabit değeri (ör. "1/1") gösteriyordu
-  // (kullanıcı bildirdi).
-  //
-  // 2. sayfa SABİT 4 parça değildir: Ek Fotoğraflar (0-3 çift) ve Konum
-  // Krokisi (görsel oranına göre değişken yükseklik) yüzünden içerik toplam
-  // yüksekliği kayıttan kayda ciddi oranda değişiyor -- eskiden bu parçalar
-  // hep TEK bir 2. sayfaya sabitlenmişti ve taşan kısım 3. sayfaya
-  // GEÇMİYORDU, sayfa sınırının altında görünmeden kırpılıyordu (kullanıcı
-  // bildirdi: "3. sayfaya geçmiyor"). Şimdi bu parçalar birer "blok" olarak
-  // önce gerçek DOM yüksekliği ölçülüp (bkz. _ucSayfaIcerigiYuksekligiOlcMm),
-  // sığdığı kadarı aynı sayfada, sığmayanı otomatik yeni bir sayfada
-  // basılıyor -- gerekirse 3, 4... sayfaya kadar uzayabilir.
-  let _ucBolumNo = 5;
-  const blokGorselKanitlar = `
-    <div class="uc-form-bolum">
-      <h2>4. Görsel Kanıtlar (Öncesi / Sonrası)</h2>
-      <div style="padding:3mm;">
-        <div class="uc-form-fotograflar">
-          ${_ucFormFotoKutusu(fotoOncesiUrl, 'Uygunsuzluk Anı (Öncesi)')}
-          ${_ucFormFotoKutusu(fotoSonrasiUrl, 'Düzeltici Faaliyet (Sonrası)')}
-        </div>
-      </div>
-    </div>
-  `;
+  const metin = (text, o = {}) => new docx.TextRun(Object.assign({ text: String(text ?? ''), font: 'Arial', color: '111827', size: 18 }, o));
+  // Çok satırlı metin (Ek Açıklama vb.) satır satır korunur.
+  const satirli = (deger, o = {}) => String(deger ?? '').split('\n').map((s, i) => metin(s, Object.assign(i ? { break: 1 } : {}, o)));
+  const resim = g => new docx.ImageRun({ data: g.veri, transformation: { width: g.gen, height: g.yuk } });
+  const paragraf = (children, o = {}) => new docx.Paragraph(Object.assign({ children }, o));
+  const ortali = (children, o = {}) => paragraf(children, Object.assign({ alignment: docx.AlignmentType.CENTER }, o));
+  const hucre = (children, genislik, o = {}) => new docx.TableCell(Object.assign({
+    width: { size: genislik, type: docx.WidthType.DXA },
+    borders: cerceve(koyu),
+    margins: { top: mm(2), bottom: mm(2), left: mm(3), right: mm(3) },
+    children
+  }, o));
+  const tablo = (sutunlar, rows) => new docx.Table({
+    width: { size: GENISLIK, type: docx.WidthType.DXA },
+    columnWidths: sutunlar,
+    layout: docx.TableLayoutType.FIXED,
+    rows
+  });
+  const bosluk = () => paragraf([metin('', { size: 8 })], { spacing: { before: 0, after: mm(1) } });
+  const bolumBasligi = (baslik, sutunSayisi) => new docx.TableRow({ cantSplit: true, children: [hucre(
+    [paragraf([metin(baslik.toLocaleUpperCase('tr'), { bold: true, size: 19 })], { keepNext: true })],
+    GENISLIK,
+    { columnSpan: sutunSayisi }
+  )] });
 
-  const blokEkFotograflar = ekFotoSatirlari.length ? `
-    <div class="uc-form-bolum">
-      <h2>${_ucBolumNo++}. Ek Fotoğraflar</h2>
-      <table class="uc-ek-foto-tablo">
-        <thead><tr><th>#</th><th>Öncesi</th><th>Sonrası</th></tr></thead>
-        <tbody>
-          ${ekFotoSatirlari.map(f => `
-            <tr>
-              <td class="uc-ek-foto-no">${f.no}</td>
-              <td><div class="uc-ek-foto-govde">${f.oncesi ? `<img src="${f.oncesi}">` : ''}</div></td>
-              <td><div class="uc-ek-foto-govde">${f.sonrasi ? `<img src="${f.sonrasi}">` : ''}</div></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  ` : '';
+  // 1-3. bölümlerin ortak 4 sütunlu etiket/değer tablosu.
+  const ETIKET = mm(31), DEGER = mm(66);
+  const SUTUNLAR = [ETIKET, DEGER, ETIKET, DEGER];
+  const etiketHucre = etiket => hucre([paragraf([metin(etiket, { bold: true })])], ETIKET);
+  const degerRun = d => (Array.isArray(d) ? d : satirli(d || '-'));
+  const tekAlan = (etiket, d) => new docx.TableRow({ children: [etiketHucre(etiket), hucre([paragraf(degerRun(d))], GENISLIK - ETIKET, { columnSpan: 3 })] });
+  const ikiAlan = (e1, d1, e2, d2) => new docx.TableRow({ children: [etiketHucre(e1), hucre([paragraf(degerRun(d1))], DEGER), etiketHucre(e2), hucre([paragraf(degerRun(d2))], DEGER)] });
+  const rozet = (yazi, zemin, renk) => [metin(` ${yazi} `, { bold: true, size: 17, color: renk, shading: { fill: zemin, color: 'auto', type: docx.ShadingType.CLEAR } })];
+  const riskRenk = { 'Düşük': ['DCFCE7', '15803D'], 'Orta': ['FEF3C7', 'B45309'], 'Yüksek': ['FEE2E2', 'B91C1C'], 'Çok Yüksek': ['FEE2E2', 'B91C1C'] }[k.riskSeviyesi];
 
-  const blokKroki = `
-    <div class="uc-form-bolum">
-      <h2>${_ucBolumNo++}. Konum Krokisi</h2>
-      <div style="padding:3mm;">
-        ${kroki ? `
-          <div class="uc-kroki-kutu uc-kroki-kutu-buyuk">
-            <img src="${kroki.url}">
-            <div class="uc-kroki-nokta" style="left:${kroki.x}%; top:${kroki.y}%;">
-              <span class="uc-kroki-ikon">🔺</span>
-              <span class="uc-kroki-kod">${_ucKacir(k.aksiyonNo)}</span>
-            </div>
-          </div>
-          <div class="uc-kroki-tesis">${_ucKacir(kroki.tesisAdi)}</div>
-        ` : `<div class="uc-kroki-yok">Bu kayıt için Saha Dijital Haritası'nda bir konum işaretlenmemiş.</div>`}
-      </div>
-    </div>
-  `;
+  // ---- Her sayfada tekrar eden üst bilgi ----
+  const FA_GEN = mm(42), LOGO_GEN = mm(28);
+  const faSatir = (etiket, degerRunlari) => paragraf([metin(etiket, { bold: true, size: 14 }), new docx.TextRun({ children: [new docx.Tab(), ...degerRunlari], font: 'Arial', color: '111827', size: 14 })], { tabStops: [{ type: docx.TabStopType.LEFT, position: mm(17) }] });
+  const ustBilgi = new docx.Header({ children: [
+    new docx.Table({
+      width: { size: GENISLIK, type: docx.WidthType.DXA },
+      columnWidths: [LOGO_GEN, GENISLIK - LOGO_GEN - FA_GEN, FA_GEN],
+      layout: docx.TableLayoutType.FIXED,
+      rows: [new docx.TableRow({ children: [
+        hucre([ortali(logoGorsel ? [resim(logoGorsel)] : [metin('LOGO YOK', { bold: true, size: 16, color: '94A3B8' })])], LOGO_GEN, { borders: cerceve(kalin), verticalAlign: docx.VerticalAlign.CENTER, margins: { top: mm(2), bottom: mm(2), left: mm(1), right: mm(1) } }),
+        hucre([ortali([metin(UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUK FORMU' : 'UYGUNSUZLUK FORMU', { bold: true, size: 26 })])], GENISLIK - LOGO_GEN - FA_GEN, { borders: cerceve(kalin), verticalAlign: docx.VerticalAlign.CENTER }),
+        hucre([
+          faSatir('Doküman No', [`: ${fa.dokumanNo || '-'}`]),
+          faSatir('Sürüm Tarihi', [`: ${fa.surumTarihi || '-'}`]),
+          faSatir('Sürüm No', [`: ${fa.surumNo || '-'}`]),
+          faSatir('Sayfa Sayısı', [': ', docx.PageNumber.CURRENT, '/', docx.PageNumber.TOTAL_PAGES])
+        ], FA_GEN, { borders: cerceve(kalin), verticalAlign: docx.VerticalAlign.CENTER, margins: { top: mm(1), bottom: mm(1), left: mm(1.5), right: mm(1) } })
+      ] })]
+    }),
+    bosluk()
+  ] });
 
-  const blokOnay = `
-    <div class="uc-form-bolum">
-      <h2>${_ucBolumNo}. Onay</h2>
-      <div style="padding:3mm;">
-        <div class="uc-onay-satir">
-          ${_ucOnayKutusu('Tespit Eden', k.atayan, imzalar.bildiren, bildirenImzaUrl)}
-          ${_ucOnayKutusu('Bölüm Sorumlusu', k.sorumlu, imzalar.sorumlu, sorumluImzaUrl)}
-        </div>
-      </div>
-    </div>
-  `;
+  const altBilgi = new docx.Footer({ children: [
+    ortali([metin('🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.', { size: 15, color: '64748B' })]),
+    ortali([new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '646464', font: 'Arial' })])
+  ] });
 
-  const ikinciSayfaBloklari = [blokGorselKanitlar, blokEkFotograflar, blokKroki, blokOnay].filter(Boolean);
+  // ---- 1. sayfa: metin bölümleri ----
+  const genelBilgiler = tablo(SUTUNLAR, [
+    bolumBasligi('1. Genel Bilgiler', 4),
+    ikiAlan('Bildirim No', k.aksiyonNo, 'Bildirim Tarihi', gunAyYil(k.bildirimTarihi)),
+    tekAlan('Birim / Tesis', k.bolum),
+    ikiAlan('Bildiren Kişi', k.atayan, 'Risk Seviyesi', riskRenk ? rozet(k.riskSeviyesi, riskRenk[0], riskRenk[1]) : k.riskSeviyesi)
+  ]);
+  const detaylar = tablo(SUTUNLAR, [
+    bolumBasligi('2. Uygunsuzluk Detayları', 4),
+    tekAlan('Tanım', tanim),
+    tekAlan('Kök Neden', k.kokNeden),
+    tekAlan('Faaliyet Önerisi', k.duzelticiFaaliyet),
+    tekAlan('İlgili Yasal Şartlar', (k.yasalSartlar && k.yasalSartlar.length) ? k.yasalSartlar.join(', ') : '-'),
+    tekAlan('Yasal Dayanak / Not', k.yasalDayanak)
+  ]);
+  const aksiyon = tablo(SUTUNLAR, [
+    bolumBasligi('3. Aksiyon ve Kapanış', 4),
+    ikiAlan('Sorumlu', k.sorumlu, 'Hedef Termin', gunAyYil(k.termin)),
+    ikiAlan('Durum', acikMi ? rozet('AÇIK', '16A34A', 'FFFFFF') : rozet('KAPALI', 'DC2626', 'FFFFFF'), 'Kapanış Tarihi', gunAyYil(k.kapanisTarihi)),
+    tekAlan('Kapanış Notu', k.kanitAciklamasi)
+  ]);
 
-  const mount = document.getElementById('yazdirmaAlani');
-  mount.style.display = 'block';
+  // ---- 2. sayfadan itibaren: görsel kanıtlar, ek fotoğraflar, kroki, onay ----
+  let bolumNo = 5;
+  const YARIM = Math.round(GENISLIK / 2);
+  const IKI_SUTUN = [YARIM, GENISLIK - YARIM];
+  const fotoHucre = (g, genislik) => hucre([ortali(g ? [resim(g)] : [metin('')])], genislik, { verticalAlign: docx.VerticalAlign.CENTER, margins: { top: mm(1), bottom: mm(1), left: mm(1), right: mm(1) } });
+  const gorselKanitlar = tablo(IKI_SUTUN, [
+    bolumBasligi('4. Görsel Kanıtlar (Öncesi / Sonrası)', 2),
+    new docx.TableRow({ cantSplit: true, height: { value: mm(58), rule: docx.HeightRule.EXACT }, children: [fotoHucre(fotoOncesi, IKI_SUTUN[0]), fotoHucre(fotoSonrasi, IKI_SUTUN[1])] }),
+    new docx.TableRow({ cantSplit: true, children: ['Uygunsuzluk Anı (Öncesi)', 'Düzeltici Faaliyet (Sonrası)'].map((e, i) => hucre([ortali([metin(e.toLocaleUpperCase('tr'), { bold: true, size: 16 })])], IKI_SUTUN[i])) })
+  ]);
 
-  function _ucKayitSayfaGovdesiOlustur(sayfaEtiketi, icerikHtml, ekStil) {
-    return `
-      <div id="ucKayitPdf" style="${ekStil || ''}">
-        <style>${_UC_KAYIT_STIL}</style>
-        <div class="uc-form-ustbilgi">
-          <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
-          <div class="uc-form-baslik">${UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUK FORMU' : 'UYGUNSUZLUK FORMU'}</div>
-          <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, sayfaEtiketi)}</div>
-        </div>
-        ${icerikHtml}
-        <div class="uc-form-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
-      </div>
-    `;
-  }
+  const EK_NO = mm(16), EK_FOTO = Math.round((GENISLIK - EK_NO) / 2);
+  const EK_SUTUN = [EK_NO, EK_FOTO, GENISLIK - EK_NO - EK_FOTO];
+  const ekFotograflar = ekFotoSatirlari.length ? tablo(EK_SUTUN, [
+    bolumBasligi(`${bolumNo++}. Ek Fotoğraflar`, 3),
+    new docx.TableRow({ cantSplit: true, children: ['#', 'ÖNCESİ', 'SONRASI'].map((e, i) => hucre([ortali([metin(e, { bold: true, size: 16 })])], EK_SUTUN[i], { shading: { fill: 'E5E7EB', color: 'auto', type: docx.ShadingType.CLEAR }, borders: cerceve(acik) })) }),
+    ...ekFotoSatirlari.map(f => new docx.TableRow({ cantSplit: true, height: { value: mm(42), rule: docx.HeightRule.EXACT }, children: [
+      hucre([ortali([metin(f.no, { bold: true })])], EK_SUTUN[0], { verticalAlign: docx.VerticalAlign.CENTER, borders: cerceve(acik) }),
+      fotoHucre(f.oncesi, EK_SUTUN[1]),
+      fotoHucre(f.sonrasi, EK_SUTUN[2])
+    ] }))
+  ]) : null;
 
-  async function _ucGorsellerYuklensinBekle() {
-    await Promise.all(Array.from(document.getElementById('ucKayitPdf').querySelectorAll('img')).map(img => {
-      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-      return new Promise(resolve => {
-        img.addEventListener('load', resolve, { once: true });
-        img.addEventListener('error', resolve, { once: true });
-      });
-    }));
-  }
+  const konumKrokisi = tablo([GENISLIK], [
+    bolumBasligi(`${bolumNo++}. Konum Krokisi`, 1),
+    new docx.TableRow({ cantSplit: true, children: [hucre(krokiGorsel
+      ? [ortali([resim(krokiGorsel)]), paragraf([metin(krokiBilgi.tesisAdi, { size: 15, color: '64748B' })], { spacing: { before: mm(1.5) } })]
+      : [ortali([metin('Bu kayıt için Saha Dijital Haritası\'nda bir konum işaretlenmemiş.', { color: '64748B' })], { spacing: { before: mm(4), after: mm(4) } })],
+    GENISLIK)] })
+  ]);
 
-  // CSS'te #ucKayitPdf min-height:297mm sabitlenmiş (tam sayfa render için) --
-  // ölçüm sırasında bunu ezmezsek her ölçüm en az 297mm dönerdi, gerçek
-  // içerik yüksekliğini hiç ayırt edemezdik. Inline style, ID seçiciden
-  // yüksek önceliğe sahip olduğundan min-height:0 ile geçici olarak iptal
-  // edilir (yalnızca ölçüm anında; gerçek yakalama sırasında kullanılmaz).
-  const UC_PX_PER_MM = 96 / 25.4;
-  async function _ucSayfaIcerigiYuksekligiOlcMm(icerikHtml) {
-    mount.innerHTML = _ucKayitSayfaGovdesiOlustur('9/9', icerikHtml, 'min-height:0;');
-    await _ucGorsellerYuklensinBekle();
-    return document.getElementById('ucKayitPdf').offsetHeight / UC_PX_PER_MM;
-  }
+  // Dijital imza varsa görseli + tarih basılır; yoksa kağıda elle imzalamak için boş alan kalır.
+  const onayHucre = (baslik, adSoyad, imzaKaydi, imza, genislik) => {
+    const tarih = imzaKaydi && imzaKaydi.tarih ? gunAyYil(imzaKaydi.tarih.slice(0, 10)) : '';
+    return hucre([
+      ortali([metin(baslik.toLocaleUpperCase('tr'), { bold: true, size: 16 })]),
+      ortali([metin((imzaKaydi && imzaKaydi.ad) || adSoyad || '')], { spacing: { before: mm(1) } }),
+      ortali(imza ? [resim(imza)] : [metin('')], {
+        spacing: { before: imza ? mm(2) : mm(10) },
+        border: { bottom: { style: docx.BorderStyle.SINGLE, size: 6, color: '111827', space: 1 } }
+      }),
+      ortali([metin('İmza', { size: 15, color: '64748B' })], { spacing: { before: mm(1) } }),
+      ...(tarih ? [ortali([metin(tarih, { size: 14, color: '64748B' })])] : [])
+    ], genislik);
+  };
+  const onay = tablo(IKI_SUTUN, [
+    bolumBasligi(`${bolumNo}. Onay`, 2),
+    new docx.TableRow({ cantSplit: true, children: [
+      onayHucre('Tespit Eden', k.atayan, imzalar.bildiren, bildirenImza, IKI_SUTUN[0]),
+      onayHucre('Bölüm Sorumlusu', k.sorumlu, imzalar.sorumlu, sorumluImza, IKI_SUTUN[1])
+    ] })
+  ]);
 
-  // A4 yüksekliği 297mm; üstbilgi+altbilgi+güvenlik payı düşülünce bir
-  // sayfaya güvenle sığan içerik bütçesi ~290mm olarak alınır.
-  const UC_SAYFA_ICERIK_BUDGET_MM = 290;
-  const ikinciSayfaSonrasiSayfalar = [];
-  let biriktirilenBloklar = [];
-  for (const blok of ikinciSayfaBloklari) {
-    const adayBloklari = [...biriktirilenBloklar, blok];
-    const adayYukseklikMm = await _ucSayfaIcerigiYuksekligiOlcMm(adayBloklari.join(''));
-    if (adayYukseklikMm <= UC_SAYFA_ICERIK_BUDGET_MM || biriktirilenBloklar.length === 0) {
-      biriktirilenBloklar = adayBloklari;
-    } else {
-      ikinciSayfaSonrasiSayfalar.push(biriktirilenBloklar);
-      biriktirilenBloklar = [blok];
-    }
-  }
-  if (biriktirilenBloklar.length) ikinciSayfaSonrasiSayfalar.push(biriktirilenBloklar);
+  // Görsel Kanıtlar eski PDF'teki gibi hep 2. sayfanın başında başlar; sonrakiler
+  // Word tarafından akar, satırlar (cantSplit) sayfa arasında bölünmez.
+  const govde = [
+    genelBilgiler, bosluk(), detaylar, bosluk(), aksiyon,
+    paragraf([new docx.PageBreak()]),
+    gorselKanitlar, bosluk(),
+    ...(ekFotograflar ? [ekFotograflar, bosluk()] : []),
+    konumKrokisi, bosluk(),
+    onay,
+    bosluk()
+  ];
 
-  const UC_TOPLAM_SAYFA = 1 + ikinciSayfaSonrasiSayfalar.length;
-
-  const html = `
-  <div id="ucKayitPdf">
-    <style>${_UC_KAYIT_STIL}</style>
-
-    <div class="uc-form-ustbilgi">
-      <div class="uc-form-logo">${logo ? `<img src="${logo}">` : 'LOGO YOK'}</div>
-      <div class="uc-form-baslik">${UYG_CEVRE_MODU ? 'ÇEVRE UYGUNSUZLUK FORMU' : 'UYGUNSUZLUK FORMU'}</div>
-      <div class="uc-form-fa">${formAyarlariKutusuHtml('uygunsuzluk', null, false, `1/${UC_TOPLAM_SAYFA}`)}</div>
-    </div>
-
-    <div class="uc-form-bolum">
-      <h2>1. Genel Bilgiler</h2>
-      <table>
-        ${_ucAlanSatiri('Bildirim No', _ucKacir(k.aksiyonNo), 'Bildirim Tarihi', _ucKacir(gunAyYil(k.bildirimTarihi)) || '-')}
-        ${_ucAlanSatiri('Birim / Tesis', _ucKacir(k.bolum) || '-')}
-        ${_ucAlanSatiri('Bildiren Kişi', _ucKacir(k.atayan) || '-', 'Risk Seviyesi', `<span class="uc-rozet-risk ${slugOlustur(k.riskSeviyesi || '')}">${_ucKacir(k.riskSeviyesi)}</span>`)}
-      </table>
-    </div>
-
-    <div class="uc-form-bolum">
-      <h2>2. Uygunsuzluk Detayları</h2>
-      <table>
-        ${_ucAlanSatiri('Tanım', _ucKacir(tanim) || '-')}
-        ${_ucAlanSatiri('Kök Neden', _ucKacir(k.kokNeden) || '-')}
-        ${_ucAlanSatiri('Faaliyet Önerisi', _ucKacir(k.duzelticiFaaliyet) || '-')}
-        ${_ucAlanSatiri('İlgili Yasal Şartlar', _ucKacir((k.yasalSartlar && k.yasalSartlar.length) ? k.yasalSartlar.join(', ') : '-'))}
-        ${_ucAlanSatiri('Yasal Dayanak / Not', _ucKacir(k.yasalDayanak) || '-')}
-      </table>
-    </div>
-
-    <div class="uc-form-bolum">
-      <h2>3. Aksiyon ve Kapanış</h2>
-      <table>
-        ${_ucAlanSatiri('Sorumlu', _ucKacir(k.sorumlu) || '-', 'Hedef Termin', _ucKacir(gunAyYil(k.termin)) || '-')}
-        ${_ucAlanSatiri('Durum', _ucDurumRozet(acikMi), 'Kapanış Tarihi', _ucKacir(gunAyYil(k.kapanisTarihi)) || '-')}
-        ${_ucAlanSatiri('Kapanış Notu', _ucKacir(k.kanitAciklamasi) || '-')}
-      </table>
-    </div>
-
-    <div class="uc-form-altbilgi">🌱 Çevre sorumluluğunuzu düşünerek lütfen gerekmedikçe çıktı almayınız.</div>
-  </div>
-  `;
-
-  // Kullanıcı bildirdi: "yukarıya biraz fazla yazı yazınca görsel kanıtlar
-  // sayfa arasında bölündü, bir fotoğrafın böyle ikiye bölünmemesi lazım"
-  // -- 1-3. bölümlerin metin uzunluğu kayıttan kayda değiştiğinden, Görsel
-  // Kanıtlar (sabit ~56mm yükseklikte foto kutuları) sayfa 1'in altında
-  // kalırsa canvas'ın A4 sayfasına sığdırılması sırasında görünmeden
-  // kırpılıyordu. Bu yüzden Görsel Kanıtlar hep sayfa 1'de DEĞİL, kendi
-  // başlık şeridini tekrar eden 2. sayfanın EN BAŞINDA basılıyor; ondan
-  // sonraki bloklar (Ek Fotoğraflar/Kroki/Onay) yukarıda ölçülüp
-  // paketlenerek gerekirse 3., 4. sayfaya taşıyor (bkz. yukarıdaki
-  // ikinciSayfaSonrasiSayfalar).
-  const digerSayfalar = ikinciSayfaSonrasiSayfalar.map((bloklar, i) =>
-    _ucKayitSayfaGovdesiOlustur(`${i + 2}/${UC_TOPLAM_SAYFA}`, bloklar.join(''))
-  );
-
-  // html2pdf'in kenar boşluklu/oto-ölçeklemeli hattı, sağdaki 1-2px'lik
-  // box-shadow çerçeve çizgisini büyütme/kesme sırasında kayıp edebiliyordu
-  // (bkz. egitim/stajyer sertifikalarında aynı sorun için kullanılan çözüm) —
-  // bunun yerine her sayfa tam kenardan kenara (full-bleed) ayrı ayrı
-  // yakalanıp kendi PDF sayfasına eklenir; formun kendi 8mm padding'i görsel
-  // kenar boşluğu görevi görür.
-  const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-  const sayfalar = [html, ...digerSayfalar];
-  for (let i = 0; i < sayfalar.length; i++) {
-    mount.innerHTML = sayfalar[i];
-    // Kroki data: URL'i olsa bile tarayıcı boyutlarını (naturalWidth/Height)
-    // henüz hesaplamamış olabilir — "height:auto" o ana kadar 0'a çözülüp
-    // kutuyu görünmez yapıyordu (kullanıcı bildirdi, canlı testte doğrulandı).
-    // html2canvas çağrılmadan önce sayfadaki TÜM <img>'lerin gerçekten
-    // yüklenmesi/decode olması beklenir.
-    await _ucGorsellerYuklensinBekle();
-    // Kullanıcı isteği: "uygunsuzluk pdf raporunun mb'ı büyük düşürmek
-    // mümkün mü" -- bkz. yukarıdaki genel rapor fonksiyonundaki aynı not.
-    const canvas = await html2canvas(document.getElementById('ucKayitPdf'), { scale: 1.5, backgroundColor: '#ffffff', useCORS: true });
-    if (i > 0) pdf.addPage('a4', 'p');
-    const genislikMm = 210;
-    const yukseklikMm = canvas.height * (genislikMm / canvas.width);
-    pdf.addImage(canvas.toDataURL('image/jpeg', 0.75), 'JPEG', 0, 0, genislikMm, yukseklikMm);
-    pdf.setFontSize(8);
-    pdf.setTextColor(100);
-    pdf.text(`Sayfa ${i + 1} / ${sayfalar.length}`, 210 / 2, 297 - 5, { align: 'center' });
-  }
-  const dosyaAdi = `${UYG_CEVRE_MODU ? 'Cevre_' : ''}Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.pdf`;
-  if (indir) pdf.save(dosyaAdi);
-
-  mount.innerHTML = '';
-  mount.style.display = 'none';
-  return { pdf, dosyaAdi };
+  const doc = new docx.Document({
+    styles: { default: { document: { run: { font: 'Arial', size: 18 } } } },
+    sections: [{
+      properties: { page: {
+        size: { orientation: docx.PageOrientation.PORTRAIT },
+        margin: { top: mm(8), right: mm(8), bottom: mm(14), left: mm(8), header: mm(8), footer: mm(4) }
+      } },
+      headers: { default: ustBilgi },
+      footers: { default: altBilgi },
+      children: govde
+    }]
+  });
+  const blob = await docx.Packer.toBlob(doc);
+  const dosyaAdi = `${UYG_CEVRE_MODU ? 'Cevre_' : ''}Uygunsuzluk_Bildirim_${(k.aksiyonNo || id).replace(/[\\/]/g, '-')}.docx`;
+  if (indir) saveAs(blob, dosyaAdi);
+  return { blob, dosyaAdi };
 }
 
 // Mail Gönder'in EmailJS'e doğrudan ek olarak eklemek yerine kullandığı yol:
-// bu PDF'ler (fotoğraflı kayıtlarda ~birkaç MB) EmailJS'in ek boyutu
-// sınırlarını (ücretsiz planda ~50KB) fazlasıyla aşıyor -- ek olarak
-// gönderilince EmailJS bunu sessizce düşürüp maili eksiz gönderiyordu
-// (kullanıcı bildirdi). Bunun yerine PDF, foto yüklemede zaten kullanılan
-// aynı Firebase Storage'a (bkz. core/data.js fotoYukle) yüklenir ve mail
-// gövdesine bir indirme linki eklenir -- boyut sınırı yok, güvenilir.
-// Storage yapılandırılmamışsa/başarısız olursa null döner (çağıran taraf
-// linksiz devam eder, e-posta yine de gider).
-async function uygunsuzlukKayitPdfUrlOlustur(id) {
+// fotoğraflı form birkaç MB olabildiğinden EmailJS'in ek boyutu sınırlarını
+// (ücretsiz planda ~50KB) aşıyor -- ek olarak gönderilince EmailJS bunu sessizce
+// düşürüp maili eksiz gönderiyordu (kullanıcı bildirdi). Bunun yerine dosya, foto
+// yüklemede zaten kullanılan aynı Firebase Storage'a (bkz. core/data.js
+// fotoYukle) yüklenir ve mail gövdesine bir indirme linki eklenir. Storage
+// yapılandırılmamışsa/başarısız olursa null döner (çağıran taraf linksiz devam
+// eder). EmailJS şablonu değişkeni geriye dönük uyumluluk için hâlâ pdf_url.
+async function uygunsuzlukKayitWordUrlOlustur(id) {
   const storage = typeof bulutStorageAl === 'function' ? bulutStorageAl() : null;
   if (!storage) return null;
 
-  const uretim = await uygunsuzlukKayitPdfOlustur(id, false);
+  const uretim = await uygunsuzlukKayitWordOlustur(id, false);
   if (!uretim) return null;
 
   const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-  const yol = 'uygunsuzluk_pdf/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
-  const blob = uretim.pdf.output('blob');
+  const yol = 'uygunsuzluk_form_word/' + (firma ? firma.slug : 'genel') + '/' + Date.now() + '_' + uretim.dosyaAdi;
 
   // fotoYukle'deki (core/data.js) aynı önlem: Storage isteği ağ/izin
-  // sorunuyla süresiz asılı kalabiliyor (kullanıcı bildirdi: "PDF
-  // hazırlanıyor"da kalıyordu) -- belirli sürede sonuçlanmazsa hata
+  // sorunuyla süresiz asılı kalabiliyor -- belirli sürede sonuçlanmazsa hata
   // fırlatılıp linksiz devam edilmesi sağlanır.
-  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('PDF yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 20000));
+  const zamanAsimi = new Promise((_, reddet) => setTimeout(() => reddet(new Error('Form Word yükleme zaman aşımına uğradı (Storage yanıt vermedi).')), 20000));
   const yukleme = (async () => {
-    const anlik = await storage.ref().child(yol).put(blob, { contentType: 'application/pdf' });
+    const anlik = await storage.ref().child(yol).put(uretim.blob, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     return anlik.ref.getDownloadURL();
   })();
   return Promise.race([yukleme, zamanAsimi]);

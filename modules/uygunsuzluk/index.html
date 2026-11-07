@@ -129,7 +129,7 @@
   <div class="modal-katman" id="raporMetniKatmani">
     <div class="modal-kutu" style="max-width:560px;">
       <h3>Rapor Kapak Metni</h3>
-      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Toplu PDF raporunun ilk sayfasında (kapak) görünecek başlık ve serbest metin. Bir kez girin, istediğinizde değiştirin.</p>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Toplu Word raporunun ilk sayfasında (kapak) görünecek başlık ve serbest metin. Bir kez girin, istediğinizde değiştirin.</p>
       <label for="raporKonuGirdi">Konu (Başlık)</label>
       <input type="text" id="raporKonuGirdi" placeholder="ör. Saha Kontrolü Uygunsuzlukları Raporu">
       <label for="raporGirisMetniGirdi">Giriş Metni</label>
@@ -371,7 +371,7 @@
           </div>
         </div>
 
-        <!-- Ek 3 öncesi/sonrası çifti (kullanıcı isteği) — doluysa PDF'in
+        <!-- Ek 3 öncesi/sonrası çifti (kullanıcı isteği) — doluysa Word formunun
              2. sayfasında ayrı bir tablo olarak gösterilir (bkz. cikti.js). -->
         <div class="form-satir-ikili">
           <div>
@@ -474,14 +474,14 @@
   <script src="../../core/metin-istem.js"></script>
   <script src="../../core/risk-aktar.js?v=20261023a"></script>
   <script src="../../core/eposta.js"></script>
-  <!-- Bildirim Formu PDF'inin sonundaki konum krokisi için (bkz. cikti.js) -->
+  <!-- Uygunsuzluk Formu'nun sonundaki konum krokisi için (bkz. cikti.js) -->
   <script src="../harita/repository.js"></script>
   <script src="model.js?v=20261024a"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=20261024a"></script>
   <script src="service.js?v=2"></script>
-  <script src="ui.js?v=20261102a"></script>
-  <script src="cikti.js?v=20261024a"></script>
+  <script src="ui.js?v=20261107a"></script>
+  <script src="cikti.js?v=20261107a"></script>
   <script>
     // İSG / Çevre ana sekmesi ve Çevre'ye özgü başlıklar.
     document.querySelectorAll('#uygAlanSekmeleri [data-alan]').forEach(b => {
