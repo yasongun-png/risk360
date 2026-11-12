@@ -97,8 +97,8 @@ function _plFiltreliGorevler() {
     && (!arama || (g.baslik + ' ' + g.aciklama + ' ' + (g.sorumlu || '')).toLocaleLowerCase('tr-TR').includes(arama)));
 }
 
-// Ekrandaki gruplar (sırasıyla): termini bugün olanlar, bir defalık işlerin tarih
-// grupları, tekrarlayan iş grupları, termini geçmişler; tamamlananlar ayrı.
+// Ekrandaki gruplar (sırasıyla): termini geçmişler, termini bugün olanlar, bir
+// defalık işlerin tarih grupları, tekrarlayan iş grupları; tamamlananlar ayrı.
 function _plEkranGruplari(liste) {
   // Kullanıcı isteği: her gün / aylık / yıllık işler ayrı ayrı görünsün — tarih
   // grupları yalnızca bir defalık işler için; tekrarlayanlar kendi bölümlerinde.
@@ -108,10 +108,10 @@ function _plEkranGruplari(liste) {
   // tekrarlayan olsun olmasın; diğer gruplarda tekrar görünmez.
   const sonGunMu = g => g.durum !== 'Tamamlandı' && g.tarih === bugun;
   const sonGunGrubu = { baslik: '⏰ Termini Bugün Olan İşler', renk: '#dc2626', liste: planBitiseGoreSirala(liste.filter(sonGunMu)) };
-  // Kullanıcı isteği: termini geçmiş işler en altta ayrı grup — tekrarlayan olsun
-  // olmasın; diğer gruplarda tekrar görünmez.
+  // Kullanıcı isteği: termini geçmiş işler ayrı grup, en üstte (önce en alttaydı),
+  // mor yanıp söner — tekrarlayan olsun olmasın; diğer gruplarda tekrar görünmez.
   const gecikmisMi = g => g.durum !== 'Tamamlandı' && g.tarih && g.tarih < bugun;
-  const gecikmisGrubu = { baslik: '⌛ Termini Geçmiş İşler', renk: '#2563eb', liste: planBitiseGoreSirala(liste.filter(gecikmisMi)) };
+  const gecikmisGrubu = { baslik: '⚠️ Termini Geçmiş İşler', renk: '#7c3aed', liste: planBitiseGoreSirala(liste.filter(gecikmisMi)) };
   const { gruplar } = planGorevleriGrupla(liste.filter(g => !tekrarliMi(g) && !sonGunMu(g) && !gecikmisMi(g)));
   const { tamamlanan } = planGorevleriGrupla(liste);
   const tekrarGruplari = [
@@ -122,7 +122,7 @@ function _plEkranGruplari(liste) {
   ].map(gr => Object.assign(gr, {
     liste: planBitiseGoreSirala(liste.filter(g => g.durum !== 'Tamamlandı' && !sonGunMu(g) && !gecikmisMi(g) && g.tekrar === gr.tekrar))
   }));
-  return { dolu: [sonGunGrubu].concat(gruplar, tekrarGruplari, gecikmisGrubu).filter(gr => gr.liste.length), tamamlanan };
+  return { dolu: [gecikmisGrubu, sonGunGrubu].concat(gruplar, tekrarGruplari).filter(gr => gr.liste.length), tamamlanan };
 }
 
 function gorevleriCiz() {
@@ -161,18 +161,19 @@ function gorevleriCiz() {
     // "Her gün" işlerde hariç: bir sonraki tarihleri hep yarın olduğundan sürekli yanardı.
     const kalanGun = !bitti && g.tarih && g.tekrar !== 'Her gün' ? Math.round((Date.parse(g.tarih) - Date.parse(bugun)) / 86400000) : null;
     const yaklasiyor = kalanGun === 1 || kalanGun === 2;
-    // Kullanıcı isteği: termini geçmiş işler mavi yanıp sönsün.
-    const gecikmis = !bitti && g.tarih && g.tarih < bugun;
+    // Kullanıcı isteği: termini geçmiş işler mor yanıp sönsün (önce maviydi).
+    const gecikmis = !bitti && !!g.tarih && g.tarih < bugun;
+    const gecikenGun = gecikmis ? Math.round((Date.parse(bugun) - Date.parse(g.tarih)) / 86400000) : 0;
     const yanip = (sonGun || yaklasiyor || gecikmis) && !durdurulanlar.includes(g.id);
-    const yanipMetni = sonGun ? 'Son gün!' : gecikmis ? 'Termini geçti.' : `Termine ${kalanGun} gün kaldı.`;
-    return `<div class="pl-gorev${bitti ? ' bitti' : ''}${sonGun ? ' pl-songun' : ''}${yanip ? ' pl-yanip' : ''}${yanip && yaklasiyor ? ' pl-sari' : ''}${yanip && gecikmis ? ' pl-mavi' : ''}" data-oncelik="${g.oncelik}" data-gorev="${g.id}"${yanip ? ` title="${yanipMetni} Yanıp sönmeyi durdurmak için tıklayın."` : ''}>
+    const yanipMetni = sonGun ? 'Son gün!' : gecikmis ? `Termini ${gecikenGun} gün geçti.` : `Termine ${kalanGun} gün kaldı.`;
+    return `<div class="pl-gorev${bitti ? ' bitti' : ''}${sonGun ? ' pl-songun' : ''}${gecikmis ? ' pl-gecikti' : ''}${yanip ? ' pl-yanip' : ''}${yanip && yaklasiyor ? ' pl-sari' : ''}${yanip && gecikmis ? ' pl-mor' : ''}" data-oncelik="${g.oncelik}" data-gorev="${g.id}"${yanip ? ` title="${yanipMetni} Yanıp sönmeyi durdurmak için tıklayın."` : ''}>
       <input type="checkbox" data-tamamla="${g.id}" ${bitti ? 'checked' : ''} title="${bitti ? 'Geri al' : 'Tamamlandı işaretle'}">
       <div class="pl-gorev-govde" data-duzenle="${g.id}">
         <div class="pl-gorev-baslik">${g.oncelik === 'Yüksek' ? '<span class="pl-oncelik" title="Yüksek öncelik">!</span>' : ''}${_plKacir(g.baslik)}</div>
         <div class="pl-gorev-alt">
           ${tarih ? `<span title="Başlangıç → Planlanan bitiş">${tarih}</span>` : ''}
           ${baslamaEtiketi}
-          ${!bitti && tekrarliMi(g) && g.tarih && g.tarih < bugun ? '<span class="pl-etiket" style="background:#fee2e2; color:#b91c1c;">Gecikti</span>' : ''}
+          ${gecikmis ? `<span class="pl-etiket" style="background:#7c3aed; color:#fff;">⚠️ ${gecikenGun} gün gecikti</span>` : ''}
           ${sonGun ? '<span class="pl-etiket" style="background:#dc2626; color:#fff;">⏰ Son gün</span>' : ''}
           ${yaklasiyor ? `<span class="pl-etiket" style="background:#fef3c7; color:#92400e;">⏳ ${kalanGun} gün kaldı</span>` : ''}
           ${!bitti && !sonGun && tekrarliMi(g) && t(g) === bugun ? '<span class="pl-etiket" style="background:#dbeafe; color:#1e40af;">Bugün</span>' : ''}
