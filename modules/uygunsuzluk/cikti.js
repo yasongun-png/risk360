@@ -301,8 +301,8 @@ async function uygunsuzlukListesiWordUrlOlustur() {
 // Kullanıcı isteği: "uygunsuzluk pdf i word olarak versin, pdf istemiyorum,
 // aynısını word olarak versin" — eski PDF formuyla aynı içerik ve sıra: logo +
 // başlık + form ayarları üst bilgisi, 3 metin bölümü, 2. sayfadan itibaren
-// görsel kanıtlar, ek fotoğraflar, onay (konum krokisi kullanıcı isteğiyle
-// kaldırıldı). Üst bilgi Word'ün kendi
+// görsel kanıtlar, ek fotoğraflar, konum krokisi (yalnızca konum seçildiyse),
+// onay. Üst bilgi Word'ün kendi
 // sayfa başlığında olduğundan her sayfada tekrar eder; "Sayfa Sayısı" Word alanı
 // olduğundan her sayfada gerçek değeri gösterir.
 
@@ -327,12 +327,9 @@ async function _ucGorseliDataUrlaCevir(url) {
 
 // Saha Dijital Haritası köprüsü — bkz. modules/harita. Kayıtta işaretli bir
 // konum varsa o tesisin kroki görselini ve noktayı döner; yoksa null (çağıran
-// taraf yer tutucu metin gösterir).
+// taraf Konum Krokisi bölümünü hiç koymaz).
 async function _ucKrokiGorseliniHazirla(k) {
-  if (!k.haritaTesisId || k.haritaX === '' || k.haritaY === '') {
-    console.warn('[Kroki] Kayıtta haritaTesisId/haritaX/haritaY yok:', k.aksiyonNo);
-    return null;
-  }
+  if (!k.haritaTesisId || k.haritaX === '' || k.haritaY === '' || k.haritaX == null || k.haritaY == null) return null;
   const tesis = haritaTesisIdIleGetirRepo(k.haritaTesisId);
   if (!tesis) { console.warn('[Kroki] Tesis bulunamadı, id:', k.haritaTesisId); return null; }
   if (!tesis.gorselUrl) { console.warn('[Kroki] Tesiste gorselUrl yok:', tesis.ad); return null; }
@@ -419,12 +416,14 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
   const cerceve = kenar => ({ top: kenar, bottom: kenar, left: kenar, right: kenar });
 
   const gorsel = async (ref, gen, yuk) => _ucWordGorselSigdir(await fotoBuyukCoz(ref), px(gen), px(yuk));
-  // Kullanıcı isteği: konum krokisi Uygunsuzluk Formu'nda gösterilmesin — kroki
-  // hazırlanmaz. _ucKrokiGorseliniHazirla şu an kullanılmıyor; geri istenirse diye duruyor.
-  const [logoGorsel, fotoOncesi, fotoSonrasi, bildirenImza, sorumluImza, ekFotolar] = await Promise.all([
+  // Kullanıcı isteği: konum krokisi yalnızca kayıtta haritadan konum seçildiyse
+  // gösterilsin; konum yoksa bölüm hiç çıkmaz (önce "işaretlenmemiş" yazısı çıkıyordu).
+  const krokiBilgi = await _ucKrokiGorseliniHazirla(k);
+  const [logoGorsel, fotoOncesi, fotoSonrasi, krokiGorsel, bildirenImza, sorumluImza, ekFotolar] = await Promise.all([
     _ucWordGorselSigdir(logo, px(24), px(16)),
     gorsel(k.fotoOncesi, 91, 54),
     gorsel(k.fotoSonrasi, 91, 54),
+    krokiBilgi ? _ucWordGorselSigdir(krokiBilgi.url, px(186), px(70), { x: krokiBilgi.x, y: krokiBilgi.y, kod: k.aksiyonNo || '' }) : null,
     gorsel(imzalar.bildiren && imzalar.bildiren.imzaUrl, 80, 12),
     gorsel(imzalar.sorumlu && imzalar.sorumlu.imzaUrl, 80, 12),
     Promise.all([2, 3, 4].map(async no => ({
@@ -551,6 +550,14 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
     ] }))
   ]) : null;
 
+  const konumKrokisi = krokiGorsel ? tablo([GENISLIK], [
+    bolumBasligi(`${bolumNo++}. Konum Krokisi`, 1),
+    new docx.TableRow({ cantSplit: true, children: [hucre([
+      ortali([resim(krokiGorsel)]),
+      paragraf([metin(krokiBilgi.tesisAdi, { size: 15, color: '64748B' })], { spacing: { before: mm(1.5) } })
+    ], GENISLIK)] })
+  ]) : null;
+
   // Dijital imza varsa görseli + tarih basılır; yoksa kağıda elle imzalamak için boş alan kalır.
   const onayHucre = (baslik, adSoyad, imzaKaydi, imza, genislik) => {
     const tarih = imzaKaydi && imzaKaydi.tarih ? gunAyYil(imzaKaydi.tarih.slice(0, 10)) : '';
@@ -580,6 +587,7 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
     paragraf([new docx.PageBreak()]),
     gorselKanitlar, bosluk(),
     ...(ekFotograflar ? [ekFotograflar, bosluk()] : []),
+    ...(konumKrokisi ? [konumKrokisi, bosluk()] : []),
     onay,
     bosluk()
   ];
