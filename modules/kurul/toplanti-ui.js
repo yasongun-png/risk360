@@ -145,6 +145,16 @@ function toplantiDetaySayfasiniBaslat() {
   });
   _ciktiButonu('aksiyonPlaniWordBtn', 'Hazırlanıyor...', kurulAksiyonPlaniWordOlustur);
   _ciktiButonu('aksiyonPlaniExcelBtn', 'Hazırlanıyor...', kurulAksiyonPlaniExcelOlustur);
+  // Kullanıcı isteği: kararları uygunsuzluk formu gibi karar bazında, istenirse
+  // hepsini birlikte tek Word olarak indirmek (bkz. karar-formu.js). Sıra: önce
+  // bu toplantının kararları, sonra devredenler; olaydan gelen sanal satırlar hariç.
+  _ciktiButonu('kararFormlariWordBtn', 'Hazırlanıyor...', async toplantiId => {
+    const { devreden, yeni } = toplantiKararGruplariniGetir(toplantiId);
+    const idler = yeni.concat(devreden).filter(k => !k.olayKaynakli && k.id).map(k => k.id);
+    if (!idler.length) { alert('Bu toplantıda indirilecek karar yok.'); return; }
+    const t = toplantiIdIleGetirRepo(toplantiId) || {};
+    await kurulKararFormuWordOlustur(idler, t.toplantiNo || gunAyYil(t.tarih));
+  });
   document.getElementById('kararModalKapatBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararModalIptalBtn').addEventListener('click', kararModalKapat);
   document.getElementById('kararForm').addEventListener('submit', kararFormGonderildi);
@@ -491,7 +501,7 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar, devredenMi)
       <td style="white-space:nowrap;">
         ${planaEkle}${olayId
           ? `<button class="tablo-buton" data-duzenle-olay="${olayId}">Düzenle</button><button class="tablo-buton sil" data-sil-olay="${olayId}">Sil</button>`
-          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${devredenMi && !kararKapaliMi(k.durum) && !kararPasifMi(k) ? `<button class="tablo-buton" data-pasif="${k.id}" title="Karar yapılmasa da gündemden düşer; sonraki toplantılara devretmez. Kurul ana sayfasındaki Kararlar sekmesinden yeniden aktif edilebilir.">⏸ Pasife Al</button>` : ''}${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
+          : `<button class="tablo-buton" data-duzenle="${k.id}">Düzenle</button><button class="tablo-buton" data-karar-formu="${k.id}" title="Bu kararın formunu Word olarak indir">📄 Form</button><button class="tablo-buton" data-tasi="${k.id}">Taşı</button>${devredenMi && !kararKapaliMi(k.durum) && !kararPasifMi(k) ? `<button class="tablo-buton" data-pasif="${k.id}" title="Karar yapılmasa da gündemden düşer; sonraki toplantılara devretmez. Kurul ana sayfasındaki Kararlar sekmesinden yeniden aktif edilebilir.">⏸ Pasife Al</button>` : ''}${riskeAktarButonHtml('kurul', k.id)}<button class="tablo-buton sil" data-sil="${k.id}">Sil</button>`}
       </td>
       <td>${k.kararNo}</td>
       <td>${_ktKacir(k.kaynakGundem) || '-'}</td>
@@ -509,6 +519,16 @@ function _kararTablosunuCiz(govdeId, bosDurumId, bosMesaj, kararlar, devredenMi)
 
   govde.querySelectorAll('[data-duzenle]').forEach(btn => {
     btn.addEventListener('click', () => kararModalAc(kararIdIleGetirRepo(btn.getAttribute('data-duzenle'))));
+  });
+
+  govde.querySelectorAll('[data-karar-formu]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const eski = btn.textContent;
+      btn.disabled = true; btn.textContent = '...';
+      try { await kurulKararFormuWordOlustur(btn.getAttribute('data-karar-formu')); }
+      catch (hata) { console.error(hata); alert('Karar formu üretilemedi: ' + (hata.message || hata)); }
+      finally { btn.disabled = false; btn.textContent = eski; }
+    });
   });
 
   govde.querySelectorAll('[data-duzenle-olay]').forEach(btn => {

@@ -72,6 +72,19 @@ function kurulSayfasiniBaslat() {
     const kararlar = tumKararlariGetir(document.getElementById('kararAramaKutusu').value, durumFiltre ? { durum: durumFiltre } : {});
     excelDisaAktar(kararlar, KURUL_KARAR_EXPORT_KOLONLARI, 'kurul_kararlari.xlsx');
   });
+  // Listede (arama/durum filtresiyle) görünen kararların formları tek Word'de (bkz. karar-formu.js).
+  document.getElementById('kararFormlariWordBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('kararFormlariWordBtn');
+    const durumFiltre = document.getElementById('kararDurumFiltre').value;
+    const kararlar = tumKararlariGetir(document.getElementById('kararAramaKutusu').value, durumFiltre ? { durum: durumFiltre } : {});
+    if (!kararlar.length) { alert('Listede indirilecek karar yok.'); return; }
+    if (kararlar.length > 30 && !(await onayModali(`${kararlar.length} karar için form hazırlanacak (fotoğraflarla birlikte biraz sürebilir). Devam edilsin mi?`, 'Devam'))) return;
+    const eski = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Hazırlanıyor...';
+    try { await kurulKararFormuWordOlustur(kararlar.map(k => k.id), durumFiltre || 'Tum_Kararlar'); }
+    catch (hata) { console.error(hata); alert('Karar formları üretilemedi: ' + (hata.message || hata)); }
+    finally { btn.disabled = false; btn.textContent = eski; }
+  });
 
   gorunumDegistir('toplantilar');
 }
@@ -221,9 +234,19 @@ function kararlariCiz(aramaMetni) {
       <td>${gunAyYil(k.termin) || '-'}</td>
       <td>${k.oncelik}</td>
       <td>${k.durumGoruntu}${k.suAndaDevredenMi ? ' <span style="font-size:10px; color:var(--metin-soluk);">(devreden)</span>' : ''}${k.pasif ? `<div style="font-size:11px; color:#92400e; background:#fef3c7; border-radius:6px; padding:1px 6px; display:inline-block; margin-top:2px;" title="${_kurulKacir(k.pasifNedeni || '')}">⏸ Pasif${k.pasifTarihi ? ' — ' + gunAyYil(k.pasifTarihi) : ''}</div>${k.pasifNedeni ? `<div style="font-size:11px; color:var(--metin-soluk);">${_kurulKacir(k.pasifNedeni)}</div>` : ''}` : ''}</td>
-      <td>${k.pasif ? `<button class="tablo-buton" data-aktif-et="${k.id}" title="Karar yeniden devreden kararlar arasına (gündeme) alınır">▶ Aktif Et</button>` : ''}</td>
+      <td style="white-space:nowrap;"><button class="tablo-buton" data-karar-formu="${k.id}" title="Bu kararın formunu Word olarak indir">📄 Form</button>${k.pasif ? `<button class="tablo-buton" data-aktif-et="${k.id}" title="Karar yeniden devreden kararlar arasına (gündeme) alınır">▶ Aktif Et</button>` : ''}</td>
     `;
     govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-karar-formu]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const eski = btn.textContent;
+      btn.disabled = true; btn.textContent = '...';
+      try { await kurulKararFormuWordOlustur(btn.getAttribute('data-karar-formu')); }
+      catch (hata) { console.error(hata); alert('Karar formu üretilemedi: ' + (hata.message || hata)); }
+      finally { btn.disabled = false; btn.textContent = eski; }
+    });
   });
 
   govde.querySelectorAll('[data-aktif-et]').forEach(btn => {
