@@ -1210,7 +1210,10 @@ async function konuBasliklariWordOlustur(notFormu = false) {
     });
   };
 
-  kararBolumuEkle('BU TOPLANTIDA GÖRÜŞÜLECEK KONULAR', yeni);
+  // Kullanıcı isteği: bu toplantının kararları toplantıdan önce yazıldığı için
+  // aslında yeni gündem maddesidir — Konu Başlıkları ve PPTX'te "karar" denmez;
+  // toplantı raporunda (Bu Toplantıda Alınan Kararlar) karar olarak kalır.
+  kararBolumuEkle('YENİ GÜNDEM MADDELERİ', yeni);
   kararBolumuEkle('ÖNCEKİ TOPLANTIDAN DEVREDEN KARARLAR', devreden);
 
   // Kullanıcı isteği (Ekim 2026): Kapatılan / Yeni Açılan Uygunsuzluklar
@@ -2131,8 +2134,11 @@ async function pptxOlustur() {
   bolumAraSlaydi('GÖRÜŞ VE ÖNERİLER', 'Çalışanların değerlendirmesi');
   tabloSlaydi('ÇALIŞANLARIN GÖRÜŞ VE ÖNERİLERİ', GORUS_TABLO_BASLIKLARI, _gorusSatirlari(toplanti.calisanTemsilcisiGorusleri), [1, 1]);
 
-  bolumAraSlaydi('KARARLAR', 'Yeni kararlar ve devreden kararların takibi');
-  kararSlaytlariniEkle('YENİ KARAR', yeni);
+  // Bu toplantının maddeleri toplantıdan önce yazılır, henüz karar değildir
+  // (kullanıcı isteği) — sunumda "Gündem Maddesi"; devredenler karar olarak kalır.
+  bolumAraSlaydi('YENİ GÜNDEM MADDELERİ', 'Bu toplantıda görüşülecek konular');
+  kararSlaytlariniEkle('GÜNDEM MADDESİ', yeni);
+  bolumAraSlaydi('DEVREDEN KARARLAR', 'Önceki toplantılardan devreden kararların takibi');
   kararSlaytlariniEkle('DEVREDEN KARAR', devreden);
 
   bolumAraSlaydi('EĞİTİM VE FAALİYETLER', 'Ay içinde yapılan eğitimler ve İSG çalışmaları');
