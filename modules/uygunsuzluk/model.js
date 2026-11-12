@@ -210,7 +210,8 @@ function uygunsuzlukKonuOlustur(veriler) {
 // frekans hesaplaması koyalım, olay modülündeki gibi; riske aktarırken daha iyi
 // olur". Ölçekler ve düzey eşikleri core/risk-aktar.js'teki (_RA_OLASILIK,
 // _RA_FREKANS, _RA_SIDDET, _RA_DUZEYLER) — risk modülüyle aynı. O/F/Ş isteğe
-// bağlıdır; üçü de seçilirse Risk Seviyesi puandan önerilir (kullanıcı değiştirebilir).
+// bağlıdır; üçü de seçilirse Risk Seviyesi puandan alınır (elle değiştirilemez —
+// kullanıcı isteği: "önceden kalan risk seviyesi de bu hesaplamadan alsın").
 // Fine-Kinney düzeyi → bu modülün 4'lü Risk Seviyesi.
 const UYG_FK_SEVIYE_ESLESMESI = {
   'Tolerans Gösterilemez': 'Çok Yüksek', 'Esaslı Risk': 'Yüksek', 'Önemli Risk': 'Orta',

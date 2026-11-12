@@ -142,7 +142,7 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('modalKapatBtn').addEventListener('click', kayitModalKapat);
   document.getElementById('modalIptalBtn').addEventListener('click', kayitModalKapat);
   document.getElementById('kayitForm').addEventListener('submit', formGonderildi);
-  ['fkO', 'fkF', 'fkS'].forEach(id => document.getElementById(id).addEventListener('change', () => _usFkHesabiCiz(true)));
+  ['fkO', 'fkF', 'fkS'].forEach(id => document.getElementById(id).addEventListener('change', _usFkHesabiCiz));
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
   document.getElementById('durumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('riskFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
@@ -1241,7 +1241,7 @@ function kayitModalAc(kayit) {
   _usFkSecimDoldur('fkO', _RA_OLASILIK, kayit && kayit.fkO);
   _usFkSecimDoldur('fkF', _RA_FREKANS, kayit && kayit.fkF);
   _usFkSecimDoldur('fkS', _RA_SIDDET, kayit && kayit.fkS);
-  _usFkHesabiCiz(false);
+  _usFkHesabiCiz();
 
   document.getElementById('kokNeden').value = kayit ? kayit.kokNeden : '';
   document.getElementById('duzelticiFaaliyet').value = kayit ? kayit.duzelticiFaaliyet : '';
@@ -1320,15 +1320,19 @@ function _usFkSecimDoldur(id, liste, secili) {
     + liste.map(([d, e]) => `<option value="${d}" ${String(secili) === String(d) ? 'selected' : ''}>${d} - ${_usKacir(e)}</option>`).join('');
 }
 
-// seviyeyiAyarla: kullanıcı O/F/Ş değiştirdiğinde Risk Seviyesi puandan önerilir;
-// form açılırken kayıttaki seviye korunur.
-function _usFkHesabiCiz(seviyeyiAyarla) {
+// Kullanıcı isteği: "önceden kalan risk seviyesi de bu hesaplamadan alsın" —
+// O/F/Ş seçiliyse Risk Seviyesi puandan gelir ve elle değiştirilemez; puanlama
+// yapılmamış kayıtta (eski kayıtlar) Risk Seviyesi yine elle seçilir.
+function _usFkHesabiCiz() {
   const fk = uygunsuzlukFineKinney({ fkO: document.getElementById('fkO').value, fkF: document.getElementById('fkF').value, fkS: document.getElementById('fkS').value });
   const kutu = document.getElementById('fkHesapKutusu');
-  if (!fk) { kutu.innerHTML = 'Risk puanını görmek için Olasılık, Frekans ve Şiddet seçiniz.'; return; }
-  if (seviyeyiAyarla) document.getElementById('riskSeviyesi').value = fk.seviye;
+  const seviye = document.getElementById('riskSeviyesi');
+  seviye.disabled = !!fk;
+  seviye.title = fk ? 'Fine-Kinney puanından hesaplanır. Elle seçmek için O/F/Ş seçimlerini boşaltın.' : '';
+  if (!fk) { kutu.innerHTML = 'Risk puanını görmek için Olasılık, Frekans ve Şiddet seçiniz. Seçilince Risk Seviyesi bu puandan alınır.'; return; }
+  seviye.value = fk.seviye;
   kutu.innerHTML = `Fine-Kinney Risk Puanı: <strong>${fk.puan.toLocaleString('tr-TR')}</strong> &nbsp; <span class="duzey-rozet duzey-${slugOlustur(fk.duzey)}">${fk.duzey}</span>
-    <span style="font-size:12px; color:var(--metin-soluk);">→ Risk Seviyesi: ${fk.seviye}</span>`;
+    <span style="font-size:12px; color:var(--metin-soluk);">→ Risk Seviyesi: <b>${fk.seviye}</b> (puandan)</span>`;
 }
 
 function kayitModalKapat() {
@@ -1352,7 +1356,9 @@ function formGonderildi(e) {
     bolum: document.getElementById('bolum').value,
     lokasyon: document.getElementById('lokasyon').value,
     kaynakTuru: document.getElementById('kaynakTuru').value,
-    riskSeviyesi: document.getElementById('riskSeviyesi').value,
+    // Fine-Kinney puanlanmışsa seviye puandan (bkz. _usFkHesabiCiz).
+    riskSeviyesi: (uygunsuzlukFineKinney({ fkO: document.getElementById('fkO').value, fkF: document.getElementById('fkF').value, fkS: document.getElementById('fkS').value }) || {}).seviye
+      || document.getElementById('riskSeviyesi').value,
     fkO: document.getElementById('fkO').value,
     fkF: document.getElementById('fkF').value,
     fkS: document.getElementById('fkS').value,
