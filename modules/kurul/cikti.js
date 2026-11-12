@@ -1975,7 +1975,7 @@ async function pptxOlustur() {
           ...(kisi ? [{ text: kisi, options: { fontSize: 10.5, bold: true, color: R.birincil, breakLine: true } }] : []),
           { text: [k.bolum || k.kazaBolumu, k.yer].filter(Boolean).join(' · ') || '-', options: { fontSize: 9.5, color: R.soluk, breakLine: true } },
           ...(yaralanma ? [{ text: 'Yaralanma: ' + yaralanma, options: { fontSize: 9.5, color: R.baslik, breakLine: true } }] : []),
-          { text: k.aciklama ? (k.aciklama.length > 120 ? k.aciklama.slice(0, 120) + '…' : k.aciklama) : 'Oluş şekli açıklaması girilmemiş.', options: { fontSize: 9, italic: !k.aciklama, color: R.baslik } }
+          { text: k.aciklama ? (k.aciklama.length > 150 ? k.aciklama.slice(0, 150) + '… (tamamı kaza ayrıntısı slaydında)' : k.aciklama) : 'Oluş şekli açıklaması girilmemiş.', options: { fontSize: 9, italic: !k.aciklama, color: R.baslik } }
         ], { x: sagX + 1.25, y: y + 0.06, w: sagW - 1.35, h: kartH - 0.12, valign: 'top', fit: 'shrink' });
       });
     } else {
@@ -2023,6 +2023,39 @@ async function pptxOlustur() {
         ], { x: M, y: 1.35, w: tw, colW: [tw * 0.1, tw * 0.17, tw * 0.17, tw * 0.15, tw * 0.07, tw * 0.34], fontSize: 9, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
         ds.addNotes(parca.map(k => `${tarihSaat(k)} — ${k.adSoyad || '-'}: ${k.aciklama || '-'}`).join('\n\n'));
       }
+
+      // Kullanıcı isteği: "kaza anlatımı yarım" — kartlarda anlatım kısaltılıyor;
+      // her kayıp günlü kaza için ayrı slaytta kazalı bilgileri (sol) ve TAM
+      // anlatım + kök neden + önlemler (sağ).
+      kazaSatirlari.forEach((k, i) => {
+        const ks = yeniSlayt();
+        kartBasligi(ks, `KAZA AYRINTISI  ·  ${i + 1} / ${kazaSatirlari.length}`, `${tarihSaat(k) || '-'}  •  ${k.tur}  •  ${k.kayipGun} gün kayıp`);
+        const solW2 = 4.3, sagX2 = M + solW2 + 0.3, sagW2 = SW - 2 * M - solW2 - 0.3;
+        const bilgi = [
+          ['Kazalı', k.adSoyad], ['Sicil No', k.sicilNo], ['Görev', k.gorev],
+          ['Yaş', k.yas != null && k.yas !== '' ? String(k.yas) : ''], ['İşe Giriş', gunAyYil(k.iseGiris)],
+          ['Bölümü', k.bolum], ['Kaza Bölümü', k.kazaBolumu && k.kazaBolumu !== k.bolum ? k.kazaBolumu : ''], ['Olay Yeri', k.yer],
+          ['Yaptığı İş', k.isTanimi], ['Yaralanma', [k.yaralanma, k.uzuv].filter(Boolean).join(' · ')],
+          ['Kayıp Gün', String(k.kayipGun)], ['Kayıt No', k.kayitNo]
+        ].filter(([, d]) => d);
+        ks.addTable(bilgi.map(([e, d], j) => [
+          { text: e, options: { bold: true, color: R.soluk, fill: { color: j % 2 ? R.bg : 'FFFFFF' } } },
+          { text: d, options: { color: R.baslik, fill: { color: j % 2 ? R.bg : 'FFFFFF' }, bold: e === 'Kazalı' } }
+        ]), { x: M, y: 1.35, w: solW2, colW: [1.35, solW2 - 1.35], fontSize: 10.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+
+        const anlatim = k.aciklama || 'Oluş şekli açıklaması girilmemiş.';
+        const parcalar = [
+          { text: 'KAZA ANLATIMI', options: { bold: true, fontSize: 11, color: R.birincil, breakLine: true } },
+          { text: anlatim, options: { italic: !k.aciklama, color: R.baslik, breakLine: true } },
+          ...(k.kokNeden ? [{ text: ' ', options: { breakLine: true } }, { text: 'KÖK NEDEN', options: { bold: true, fontSize: 11, color: R.birincil, breakLine: true } }, { text: k.kokNeden, options: { color: R.baslik, breakLine: true } }] : []),
+          ...(k.onlemler.length ? [{ text: ' ', options: { breakLine: true } }, { text: 'ALINAN / PLANLANAN ÖNLEMLER', options: { bold: true, fontSize: 11, color: R.birincil, breakLine: true } }, ...k.onlemler.map(o => ({ text: '• ' + o, options: { color: R.baslik, breakLine: true } }))] : [])
+        ];
+        const uzunluk = anlatim.length + (k.kokNeden || '').length + k.onlemler.join(' ').length;
+        ks.addShape(pptx.ShapeType.roundRect, { x: sagX2, y: 1.35, w: sagW2, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+        ks.addText(parcalar, { x: sagX2 + 0.25, y: 1.5, w: sagW2 - 0.5, h: 5.1, valign: 'top', fit: 'shrink', paraSpaceAfter: 2,
+          fontSize: uzunluk > 1400 ? 9.5 : uzunluk > 900 ? 11 : uzunluk > 500 ? 12.5 : 14 });
+        ks.addNotes([k.adSoyad, k.gorev, k.bolum].filter(Boolean).join(' — ') + '\n\n' + anlatim);
+      });
     }
   }
 
