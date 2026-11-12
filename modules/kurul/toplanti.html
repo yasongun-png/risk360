@@ -103,7 +103,7 @@
         <button type="button" class="ikincil" id="kurulNotlarBtn" title="Bu toplantıda kararlar hakkında konuşulanları tek pencereden girin">📝 Konuşulanlar</button>
         <button type="button" class="ikincil" id="aksiyonPlaniWordBtn" title="Açık kararlar ve toplantı notlarıyla aksiyon planı (Word)">📋 Aksiyon Planı (Word)</button>
         <button type="button" class="ikincil" id="aksiyonPlaniExcelBtn" title="Açık kararlar ve toplantı notlarıyla aksiyon planı (Excel)">📗 Aksiyon Planı (Excel)</button>
-        <button type="button" class="birincil" id="yeniKararBtn" style="width:auto;">+ Yeni Karar</button>
+        <button type="button" class="birincil" id="yeniKararBtn" style="width:auto;">+ Yeni Gündem Maddesi</button>
       </div>
     </div>
 
@@ -249,7 +249,7 @@
 
   <div class="modal-katman" id="kararModalKatman">
     <div class="modal-kutu" style="max-width:560px;">
-      <h3 id="kararModalBaslik">Yeni Karar</h3>
+      <h3 id="kararModalBaslik">Yeni Gündem Maddesi</h3>
       <form id="kararForm">
         <label for="kararNo">Karar No <span style="color:var(--metin-soluk); font-weight:400;">(boş bırakırsanız otomatik verilir)</span></label>
         <input type="text" id="kararNo" placeholder="Otomatik">
@@ -581,7 +581,7 @@
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
   <script src="service.js?v=20261105a"></script>
-  <script src="toplanti-ui.js?v=20261105a"></script>
+  <script src="toplanti-ui.js?v=20261112a"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

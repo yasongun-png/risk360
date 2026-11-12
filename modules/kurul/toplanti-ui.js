@@ -816,7 +816,7 @@ function olayiKararaAktar(olay) {
     fotografEk: (olay.fotograflar || []).filter(f => f && f.url).slice(0, 3).map(f => ({ url: f.url }))
   });
   _kararKaynakOlayId = anahtar;
-  document.getElementById('kararModalBaslik').textContent = 'Olaydan Yeni Karar — ' + (olay.tur || '');
+  document.getElementById('kararModalBaslik').textContent = 'Olaydan Yeni Gündem Maddesi — ' + (olay.tur || '');
 }
 
 function olaylariCiz() {
@@ -1214,7 +1214,8 @@ function kararModalAc(karar) {
   // id'si olmayan bir taslak (olaydan aktarma) yeni karar gibi kaydedilir.
   _duzenlenenKararId = karar && karar.id ? karar.id : null;
   _kararKaynakOlayId = '';
-  document.getElementById('kararModalBaslik').textContent = karar && karar.id ? 'Kararı Düzenle' : 'Yeni Karar';
+  // Kullanıcı isteği: toplantıdan önce yazılan madde henüz karar değil, yeni gündem maddesidir.
+  document.getElementById('kararModalBaslik').textContent = karar && karar.id ? 'Kararı Düzenle' : 'Yeni Gündem Maddesi';
   document.getElementById('kararNo').value = karar ? karar.kararNo : '';
   document.getElementById('kararMetni').value = karar ? karar.kararMetni : '';
   document.getElementById('kararKaynakGundem').value = karar ? karar.kaynakGundem : '';
