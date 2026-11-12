@@ -543,6 +543,14 @@
             };
             kayitModalAc(null);
           }
+          // Kullanıcı bildirdi: "sayfayı yenilediğimde bu uygunsuzluk kendiliğinden
+          // açılıyor" — tek seferlik parametreler işlendikten sonra adresten silinir
+          // (diğerleri, ör. alan=cevre, kalır).
+          if (['ac', 'yeniKonum', 'tesisId', 'x', 'y'].some(p => parametreler.has(p))) {
+            ['ac', 'yeniKonum', 'tesisId', 'x', 'y'].forEach(p => parametreler.delete(p));
+            const kalan = parametreler.toString();
+            history.replaceState(null, '', location.pathname + (kalan ? '?' + kalan : '') + location.hash);
+          }
         });
       }
     }
