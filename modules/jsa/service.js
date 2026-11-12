@@ -73,7 +73,8 @@ function jsaImzaVer(id, rol, ad, imzaUrl) {
 function _jsaAksiyonlariUygunsuzluguYaz(aksiyonlar, jsaKaydi) {
   if (typeof uygunsuzlukEkle !== 'function' || !Array.isArray(aksiyonlar) || !aksiyonlar.length) return [];
   const enYuksek = jsaEnYuksekRiskiHesapla(jsaKaydi);
-  const riskSeviyesi = !enYuksek ? 'Orta' : enYuksek.puan < 20 ? 'Düşük' : enYuksek.puan < 70 ? 'Orta' : enYuksek.puan < 200 ? 'Yüksek' : 'Çok Yüksek';
+  // Uygunsuzlukta Risk Seviyesi Fine-Kinney düzey adıyla yazılır (bkz. uygunsuzluk/model.js).
+  const riskSeviyesi = uygunsuzlukPuandanSeviye(enYuksek ? enYuksek.puan : null);
 
   const uyarilar = [];
   aksiyonlar.forEach(a => {

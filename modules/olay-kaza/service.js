@@ -105,7 +105,8 @@ async function _kaydiDigerFirmayaKopyala(personelFirmaId, yeniKayit) {
 function _aksiyonlariUygunsuzluguYaz(aksiyonlar, olayKaydi) {
   if (typeof uygunsuzlukEkle !== 'function' || !Array.isArray(aksiyonlar) || !aksiyonlar.length) return [];
   const fkRP = fineKinneyPuaniHesapla(olayKaydi);
-  const riskSeviyesi = fkRP == null ? 'Orta' : fkRP < 20 ? 'Düşük' : fkRP < 70 ? 'Orta' : fkRP < 200 ? 'Yüksek' : 'Çok Yüksek';
+  // Uygunsuzlukta Risk Seviyesi Fine-Kinney düzey adıyla yazılır (bkz. uygunsuzluk/model.js).
+  const riskSeviyesi = uygunsuzlukPuandanSeviye(fkRP);
 
   const uyarilar = [];
   aksiyonlar.forEach(a => {
@@ -117,6 +118,7 @@ function _aksiyonlariUygunsuzluguYaz(aksiyonlar, olayKaydi) {
       lokasyon: olayKaydi.kazaYeri,
       kaynakTuru: 'İş Kazası',
       riskSeviyesi,
+      fkO: olayKaydi.fkO || '', fkF: olayKaydi.fkF || '', fkS: olayKaydi.fkS || '',
       kokNeden: olayKaydi.analizNeden || '',
       duzelticiFaaliyet: a.duzelticiFaaliyet,
       sorumlu: a.sorumlu,

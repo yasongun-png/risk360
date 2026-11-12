@@ -117,6 +117,14 @@ function usRozetSinifAdi(durum) {
   return slugOlustur(durum || '');
 }
 
+// Fine-Kinney düzeyleri risk modülündeki renklerle (style.css .duzey-rozet),
+// eski 4'lü ölçek eski rozetle gösterilir.
+function _usRiskRozeti(seviye) {
+  return RISK_SEVIYELERI.includes(seviye)
+    ? `<span class="duzey-rozet duzey-${slugOlustur(seviye)}">${_usKacir(seviye)}</span>`
+    : `<span class="genel-rozet rozet-${usRozetSinifAdi(seviye)}">${_usKacir(seviye)}</span>`;
+}
+
 // Daha önce Excel'den içe aktarılmış ve tarihi "Thu Jul 03 2025 23:59:04 GMT+0300 (...)" gibi bozuk metin olarak
 // kaydedilmiş kayıtları 'YYYY-MM-DD'ye çevirir (bir kerelik onarım; değişiklik yoksa yazma yapılmaz).
 function _usTarihleriOnar() {
@@ -892,7 +900,7 @@ function kayitlariCiz(aramaMetni) {
       <td>${_usKacir(k.bolum)}</td>
       <td>${gunAyYil(k.bildirimTarihi) || '-'}</td>
       <td>${_usTanimHucresiUret(k)}</td>
-      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.riskSeviyesi)}">${_usKacir(k.riskSeviyesi)}</span>${(fk => fk ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;" title="Fine-Kinney: O ${k.fkO} × F ${k.fkF} × Ş ${k.fkS} — ${fk.duzey}">FK ${fk.puan.toLocaleString('tr-TR')}</div>` : '')(uygunsuzlukFineKinney(k))}</td>
+      <td>${_usRiskRozeti(k.riskSeviyesi)}${(fk => fk ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;" title="Fine-Kinney: O ${k.fkO} × F ${k.fkF} × Ş ${k.fkS} — ${fk.duzey}">FK ${fk.puan.toLocaleString('tr-TR')}</div>` : '')(uygunsuzlukFineKinney(k))}</td>
       <td>${gunAyYil(k.termin) || '-'}</td>
       <td>${_usKacir(k.sorumlu)}</td>
       <td>${_usFotoHucresiUret(k.fotoOncesi, 'Öncesi')}</td>
@@ -1183,7 +1191,7 @@ function ozetiCiz() {
       ${kart('Kapalı', ozet.kapali)}
       ${kart('Gecikmiş', ozet.gecikmis)}
       ${kart('Onay Bekleyen', ozet.onayBekleyen)}
-      ${kart('Yüksek/Çok Yüksek Risk', ozet.yuksekVeUstuRisk)}
+      ${kart('Esaslı Risk ve Üstü', ozet.yuksekVeUstuRisk)}
     </div>
 
     <div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px,1fr));">
@@ -1237,7 +1245,10 @@ function kayitModalAc(kayit) {
   document.getElementById('bolum').value = kayit ? kayit.bolum : '';
   document.getElementById('lokasyon').value = kayit ? kayit.lokasyon : '';
   document.getElementById('kaynakTuru').innerHTML = KAYNAK_TURLERI.map(t => `<option ${kayit && kayit.kaynakTuru === t ? 'selected' : ''}>${t}</option>`).join('');
-  document.getElementById('riskSeviyesi').innerHTML = RISK_SEVIYELERI.map(r => `<option ${kayit && kayit.riskSeviyesi === r ? 'selected' : ''}>${r}</option>`).join('');
+  // Eski ölçekteki (Düşük/Orta/...) kayıt düzenlenirken kendi değeri listede kalır.
+  const seciliRisk = kayit ? kayit.riskSeviyesi : UYG_VARSAYILAN_RISK;
+  const riskSecenekleri = RISK_SEVIYELERI.includes(seciliRisk) || !seciliRisk ? RISK_SEVIYELERI : [seciliRisk].concat(RISK_SEVIYELERI);
+  document.getElementById('riskSeviyesi').innerHTML = riskSecenekleri.map(r => `<option value="${_usKacir(r)}" ${seciliRisk === r ? 'selected' : ''}>${_usKacir(r)}${RISK_SEVIYELERI.includes(r) ? '' : ' (eski ölçek)'}</option>`).join('');
   _usFkSecimDoldur('fkO', _RA_OLASILIK, kayit && kayit.fkO);
   _usFkSecimDoldur('fkF', _RA_FREKANS, kayit && kayit.fkF);
   _usFkSecimDoldur('fkS', _RA_SIDDET, kayit && kayit.fkS);
@@ -1328,11 +1339,13 @@ function _usFkHesabiCiz() {
   const kutu = document.getElementById('fkHesapKutusu');
   const seviye = document.getElementById('riskSeviyesi');
   seviye.disabled = !!fk;
+  // Eski ölçekteki bir değer listedeyse puan girilince yeni düzey seçilebilsin.
+  if (fk && ![...seviye.options].some(o => o.value === fk.seviye)) seviye.insertAdjacentHTML('beforeend', `<option value="${fk.seviye}">${fk.seviye}</option>`);
   seviye.title = fk ? 'Fine-Kinney puanından hesaplanır. Elle seçmek için O/F/Ş seçimlerini boşaltın.' : '';
   if (!fk) { kutu.innerHTML = 'Risk puanını görmek için Olasılık, Frekans ve Şiddet seçiniz. Seçilince Risk Seviyesi bu puandan alınır.'; return; }
   seviye.value = fk.seviye;
   kutu.innerHTML = `Fine-Kinney Risk Puanı: <strong>${fk.puan.toLocaleString('tr-TR')}</strong> &nbsp; <span class="duzey-rozet duzey-${slugOlustur(fk.duzey)}">${fk.duzey}</span>
-    <span style="font-size:12px; color:var(--metin-soluk);">→ Risk Seviyesi: <b>${fk.seviye}</b> (puandan)</span>`;
+    <span style="font-size:12px; color:var(--metin-soluk);">→ Risk Seviyesi'ne yazıldı</span>`;
 }
 
 function kayitModalKapat() {

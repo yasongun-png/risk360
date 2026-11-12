@@ -112,7 +112,8 @@ function tespitOneriImzaVer(id, rol, ad, imzaUrl) {
 // modülün sayfası uygunsuzluk/model.js, /validation.js, /repository.js ve
 // /service.js dosyalarını da yükler (bkz. modules/acil-durum
 // plan-detay.html'in kimyasal modülünü dahil etmesiyle aynı ilke).
-const _TO_ONCELIK_RISK_ESLESME = { 'Düşük': 'Düşük', 'Orta': 'Orta', 'Yüksek': 'Yüksek', 'Acil': 'Çok Yüksek' };
+// Uygunsuzlukta Risk Seviyesi Fine-Kinney düzey adlarıyla tutulur (bkz. uygunsuzluk/model.js).
+const _TO_ONCELIK_RISK_ESLESME = { 'Düşük': 'Önemsiz Risk', 'Orta': 'Olası Risk', 'Yüksek': 'Önemli Risk', 'Acil': 'Esaslı Risk' };
 const _TO_DURUM_UYGUNSUZLUK_ESLESME = { 'Açık': 'Açık', 'Tebliğ Edildi': 'Devam Ediyor', 'Uygulamada': 'Devam Ediyor', 'Kapandı': 'Kapalı', 'Reddedildi': 'İptal' };
 
 function tespitOneriUygunsuzlugaAktar(id) {
@@ -129,7 +130,7 @@ function tespitOneriUygunsuzlugaAktar(id) {
     bolum: k.bolum,
     atayan: k.tespitEden,
     sorumlu: k.tebligEdilen,
-    riskSeviyesi: _TO_ONCELIK_RISK_ESLESME[k.oncelik] || 'Orta',
+    riskSeviyesi: _TO_ONCELIK_RISK_ESLESME[k.oncelik] || UYG_VARSAYILAN_RISK,
     bildirimTarihi: k.tespitTarihi,
     kapanisTarihi: k.kapanisTarihi,
     kanitAciklamasi: k.yapilanIslem,

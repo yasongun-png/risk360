@@ -301,7 +301,8 @@ async function uygunsuzlukListesiWordUrlOlustur() {
 // Kullanıcı isteği: "uygunsuzluk pdf i word olarak versin, pdf istemiyorum,
 // aynısını word olarak versin" — eski PDF formuyla aynı içerik ve sıra: logo +
 // başlık + form ayarları üst bilgisi, 3 metin bölümü, 2. sayfadan itibaren
-// görsel kanıtlar, ek fotoğraflar, konum krokisi, onay. Üst bilgi Word'ün kendi
+// görsel kanıtlar, ek fotoğraflar, onay (konum krokisi kullanıcı isteğiyle
+// kaldırıldı). Üst bilgi Word'ün kendi
 // sayfa başlığında olduğundan her sayfada tekrar eder; "Sayfa Sayısı" Word alanı
 // olduğundan her sayfada gerçek değeri gösterir.
 
@@ -418,12 +419,12 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
   const cerceve = kenar => ({ top: kenar, bottom: kenar, left: kenar, right: kenar });
 
   const gorsel = async (ref, gen, yuk) => _ucWordGorselSigdir(await fotoBuyukCoz(ref), px(gen), px(yuk));
-  const krokiBilgi = await _ucKrokiGorseliniHazirla(k);
-  const [logoGorsel, fotoOncesi, fotoSonrasi, krokiGorsel, bildirenImza, sorumluImza, ekFotolar] = await Promise.all([
+  // Kullanıcı isteği: konum krokisi Uygunsuzluk Formu'nda gösterilmesin — kroki
+  // hazırlanmaz. _ucKrokiGorseliniHazirla şu an kullanılmıyor; geri istenirse diye duruyor.
+  const [logoGorsel, fotoOncesi, fotoSonrasi, bildirenImza, sorumluImza, ekFotolar] = await Promise.all([
     _ucWordGorselSigdir(logo, px(24), px(16)),
     gorsel(k.fotoOncesi, 91, 54),
     gorsel(k.fotoSonrasi, 91, 54),
-    krokiBilgi ? _ucWordGorselSigdir(krokiBilgi.url, px(186), px(70), { x: krokiBilgi.x, y: krokiBilgi.y, kod: k.aksiyonNo || '' }) : null,
     gorsel(imzalar.bildiren && imzalar.bildiren.imzaUrl, 80, 12),
     gorsel(imzalar.sorumlu && imzalar.sorumlu.imzaUrl, 80, 12),
     Promise.all([2, 3, 4].map(async no => ({
@@ -470,7 +471,12 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
   const tekAlan = (etiket, d) => new docx.TableRow({ children: [etiketHucre(etiket), hucre([paragraf(degerRun(d))], GENISLIK - ETIKET, { columnSpan: 3 })] });
   const ikiAlan = (e1, d1, e2, d2) => new docx.TableRow({ children: [etiketHucre(e1), hucre([paragraf(degerRun(d1))], DEGER), etiketHucre(e2), hucre([paragraf(degerRun(d2))], DEGER)] });
   const rozet = (yazi, zemin, renk) => [metin(` ${yazi} `, { bold: true, size: 17, color: renk, shading: { fill: zemin, color: 'auto', type: docx.ShadingType.CLEAR } })];
-  const riskRenk = { 'Düşük': ['DCFCE7', '15803D'], 'Orta': ['FEF3C7', 'B45309'], 'Yüksek': ['FEE2E2', 'B91C1C'], 'Çok Yüksek': ['FEE2E2', 'B91C1C'] }[k.riskSeviyesi];
+  // Fine-Kinney düzeyleri (risk modülü renkleri) + eski 4'lü ölçek.
+  const riskRenk = {
+    'Önemsiz Risk': ['DCFCE7', '15803D'], 'Olası Risk': ['FEF3C7', 'B45309'], 'Önemli Risk': ['FFEDD5', 'C2410C'],
+    'Esaslı Risk': ['FEE2E2', 'B91C1C'], 'Tolerans Gösterilemez': ['450A0A', 'FECACA'],
+    'Düşük': ['DCFCE7', '15803D'], 'Orta': ['FEF3C7', 'B45309'], 'Yüksek': ['FEE2E2', 'B91C1C'], 'Çok Yüksek': ['FEE2E2', 'B91C1C']
+  }[k.riskSeviyesi];
 
   // ---- Her sayfada tekrar eden üst bilgi ----
   const FA_GEN = mm(42), LOGO_GEN = mm(28);
@@ -545,14 +551,6 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
     ] }))
   ]) : null;
 
-  const konumKrokisi = tablo([GENISLIK], [
-    bolumBasligi(`${bolumNo++}. Konum Krokisi`, 1),
-    new docx.TableRow({ cantSplit: true, children: [hucre(krokiGorsel
-      ? [ortali([resim(krokiGorsel)]), paragraf([metin(krokiBilgi.tesisAdi, { size: 15, color: '64748B' })], { spacing: { before: mm(1.5) } })]
-      : [ortali([metin('Bu kayıt için Saha Dijital Haritası\'nda bir konum işaretlenmemiş.', { color: '64748B' })], { spacing: { before: mm(4), after: mm(4) } })],
-    GENISLIK)] })
-  ]);
-
   // Dijital imza varsa görseli + tarih basılır; yoksa kağıda elle imzalamak için boş alan kalır.
   const onayHucre = (baslik, adSoyad, imzaKaydi, imza, genislik) => {
     const tarih = imzaKaydi && imzaKaydi.tarih ? gunAyYil(imzaKaydi.tarih.slice(0, 10)) : '';
@@ -582,7 +580,6 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
     paragraf([new docx.PageBreak()]),
     gorselKanitlar, bosluk(),
     ...(ekFotograflar ? [ekFotograflar, bosluk()] : []),
-    konumKrokisi, bosluk(),
     onay,
     bosluk()
   ];

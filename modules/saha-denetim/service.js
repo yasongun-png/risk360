@@ -116,7 +116,7 @@ function denetimBulgusunuUygunsuzlugaAktar(denetimId, maddeIndex, ekVeriler) {
     bolum: denetim.bolum,
     lokasyon: denetim.lokasyon,
     kaynakTuru: 'Saha Denetimi',
-    riskSeviyesi: ekVeriler.riskSeviyesi || 'Orta',
+    riskSeviyesi: ekVeriler.riskSeviyesi || UYG_VARSAYILAN_RISK,
     sorumlu: ekVeriler.sorumlu,
     atayan: denetim.denetci,
     bildirimTarihi: denetim.tarih,

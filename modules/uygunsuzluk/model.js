@@ -2,7 +2,25 @@
 
 const UYGUNSUZLUK_DURUMLARI = ['Açık', 'Devam Ediyor', 'Onay Bekliyor', 'Kapalı', 'İptal'];
 const ONAY_DURUMLARI = ['Onay Gerekmiyor', 'Onay Bekliyor', 'Onaylandı', 'Reddedildi'];
-const RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Çok Yüksek'];
+// Kullanıcı isteği: Risk Seviyesi doğrudan Fine-Kinney düzey adlarıyla yazılsın
+// ("önemli risk, önemsiz risk, olası risk ..."). Eski kayıtlardaki 4'lü ölçek
+// (UYG_ESKI_RISK_SEVIYELERI) değiştirilmez; sıralama/istatistik ikisini de tanır.
+const RISK_SEVIYELERI = ['Önemsiz Risk', 'Olası Risk', 'Önemli Risk', 'Esaslı Risk', 'Tolerans Gösterilemez'];
+const UYG_ESKI_RISK_SEVIYELERI = ['Düşük', 'Orta', 'Yüksek', 'Çok Yüksek'];
+const UYG_VARSAYILAN_RISK = 'Olası Risk';
+
+// Sıra (1 en düşük – 5 en yüksek); eski ölçek yaklaşık karşılığına oturtulur.
+function uygunsuzlukRiskSirasi(seviye) {
+  const yeni = RISK_SEVIYELERI.indexOf(seviye);
+  if (yeni >= 0) return yeni + 1;
+  return { 'Düşük': 1, 'Orta': 2.5, 'Yüksek': 4, 'Çok Yüksek': 5 }[seviye] || 0;
+}
+
+// Fine-Kinney puanından düzey adı (risk modülüyle aynı eşikler: >400, >200, >70, >20).
+function uygunsuzlukPuandanSeviye(puan) {
+  if (puan == null || !isFinite(puan)) return UYG_VARSAYILAN_RISK;
+  return puan > 400 ? 'Tolerans Gösterilemez' : puan > 200 ? 'Esaslı Risk' : puan > 70 ? 'Önemli Risk' : puan > 20 ? 'Olası Risk' : 'Önemsiz Risk';
+}
 // Kullanıcı isteği (2026-10-24): Uygunsuzluk modülünde İSG ve Çevre sekmeleri.
 // index.html?alan=cevre -> Çevre: kayıtlar ve ayarlar ayrı anahtarlarda
 // (cevre_uygunsuzluk_*) tutulur; diğer modüllerin (Olay/Kaza, Saha Denetim,
@@ -212,19 +230,13 @@ function uygunsuzlukKonuOlustur(veriler) {
 // _RA_FREKANS, _RA_SIDDET, _RA_DUZEYLER) — risk modülüyle aynı. O/F/Ş isteğe
 // bağlıdır; üçü de seçilirse Risk Seviyesi puandan alınır (elle değiştirilemez —
 // kullanıcı isteği: "önceden kalan risk seviyesi de bu hesaplamadan alsın").
-// Fine-Kinney düzeyi → bu modülün 4'lü Risk Seviyesi.
-const UYG_FK_SEVIYE_ESLESMESI = {
-  'Tolerans Gösterilemez': 'Çok Yüksek', 'Esaslı Risk': 'Yüksek', 'Önemli Risk': 'Orta',
-  'Olası Risk': 'Düşük', 'Önemsiz Risk': 'Düşük'
-};
-
-// { puan, duzey, seviye } ya da O/F/Ş eksikse null.
+// { puan, duzey, seviye } ya da O/F/Ş eksikse null. seviye = düzey adı.
 function uygunsuzlukFineKinney(k) {
   const o = Number(k && k.fkO), f = Number(k && k.fkF), s = Number(k && k.fkS);
   if (!(o && f && s)) return null;
   const puan = Math.round(o * f * s * 10) / 10;
-  const duzey = _RA_DUZEYLER.find(([min]) => puan > min)[1];
-  return { puan, duzey, seviye: UYG_FK_SEVIYE_ESLESMESI[duzey] };
+  const duzey = uygunsuzlukPuandanSeviye(puan);
+  return { puan, duzey, seviye: duzey };
 }
 
 function uygunsuzlukKaydiOlustur(veriler) {
@@ -240,7 +252,7 @@ function uygunsuzlukKaydiOlustur(veriler) {
     bolum: (veriler.bolum || '').trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
     kaynakTuru: veriler.kaynakTuru || 'Manuel Bildirim',
-    riskSeviyesi: veriler.riskSeviyesi || 'Orta',
+    riskSeviyesi: veriler.riskSeviyesi || UYG_VARSAYILAN_RISK,
     fkO: veriler.fkO || '', fkF: veriler.fkF || '', fkS: veriler.fkS || '',
 
     kokNeden: (veriler.kokNeden || '').trim(),

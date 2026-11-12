@@ -484,12 +484,12 @@
   <script src="../../core/eposta.js"></script>
   <!-- Uygunsuzluk Formu'nun sonundaki konum krokisi için (bkz. cikti.js) -->
   <script src="../harita/repository.js"></script>
-  <script src="model.js?v=20261112b"></script>
+  <script src="model.js?v=20261112c"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=20261024a"></script>
-  <script src="service.js?v=20261112a"></script>
-  <script src="ui.js?v=20261112b"></script>
-  <script src="cikti.js?v=20261112a"></script>
+  <script src="service.js?v=20261112c"></script>
+  <script src="ui.js?v=20261112c"></script>
+  <script src="cikti.js?v=20261112d"></script>
   <script>
     // İSG / Çevre ana sekmesi ve Çevre'ye özgü başlıklar.
     document.querySelectorAll('#uygAlanSekmeleri [data-alan]').forEach(b => {
@@ -519,7 +519,10 @@
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + (UYG_CEVRE_MODU ? ' çevre uygunsuzlukları ve düzeltici/önleyici faaliyet kayıtları' : ' uygunsuzluk ve düzeltici/önleyici faaliyet kayıtları');
-          document.getElementById('riskFiltre').innerHTML += RISK_SEVIYELERI.map(r => `<option>${r}</option>`).join('');
+          // Fine-Kinney düzeyleri; kayıtlarda hâlâ eski ölçek (Düşük/Orta/...) varsa onlar da.
+          const eskiRiskler = UYG_ESKI_RISK_SEVIYELERI.filter(r => uygunsuzlukTumunuGetir().some(k => k.riskSeviyesi === r));
+          document.getElementById('riskFiltre').innerHTML += RISK_SEVIYELERI.map(r => `<option>${r}</option>`).join('')
+            + (eskiRiskler.length ? `<optgroup label="Eski ölçek">${eskiRiskler.map(r => `<option>${r}</option>`).join('')}</optgroup>` : '');
           uygunsuzlukSayfasiniBaslat();
 
           // Saha Dijital Haritası köprüsü — bkz. modules/harita/ui.js.

@@ -111,7 +111,7 @@ function uygunsuzlukGuncelle(id, veriler) {
     bolum: veriler.bolum.trim(),
     lokasyon: (veriler.lokasyon || '').trim(),
     kaynakTuru: veriler.kaynakTuru || 'Manuel Bildirim',
-    riskSeviyesi: veriler.riskSeviyesi || 'Orta',
+    riskSeviyesi: veriler.riskSeviyesi || UYG_VARSAYILAN_RISK,
     fkO: veriler.fkO || '', fkF: veriler.fkF || '', fkS: veriler.fkS || '',
     kokNeden: (veriler.kokNeden || '').trim(),
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
@@ -289,7 +289,8 @@ function uygunsuzlukOzetiHesapla(filtreler) {
     kapali: liste.filter(k => k.durum === 'Kapalı').length,
     gecikmis: liste.filter(k => k.durumGoruntu === 'Gecikmiş').length,
     onayBekleyen: liste.filter(k => k.onayDurumu === 'Onay Bekliyor' && k.durum === 'Onay Bekliyor').length,
-    yuksekVeUstuRisk: liste.filter(k => k.riskSeviyesi === 'Yüksek' || k.riskSeviyesi === 'Çok Yüksek').length,
+    // Esaslı Risk ve üstü (eski ölçekte Yüksek / Çok Yüksek).
+    yuksekVeUstuRisk: liste.filter(k => uygunsuzlukRiskSirasi(k.riskSeviyesi) >= 4).length,
     bolumeGore: grupla(k => k.bolum),
     durumaGore: grupla(k => k.durumGoruntu),
     riskSeviyesineGore: grupla(k => k.riskSeviyesi),
@@ -298,8 +299,7 @@ function uygunsuzlukOzetiHesapla(filtreler) {
     enOncelikliAcikKayitlar: liste
       .filter(k => k.durum !== 'Kapalı' && k.durum !== 'İptal')
       .sort((a, b) => {
-        const siralama = { 'Çok Yüksek': 4, 'Yüksek': 3, 'Orta': 2, 'Düşük': 1 };
-        return (siralama[b.riskSeviyesi] || 0) - (siralama[a.riskSeviyesi] || 0) || (a.termin || '').localeCompare(b.termin || '');
+        return uygunsuzlukRiskSirasi(b.riskSeviyesi) - uygunsuzlukRiskSirasi(a.riskSeviyesi) || (a.termin || '').localeCompare(b.termin || '');
       })
       .slice(0, 10)
   };
