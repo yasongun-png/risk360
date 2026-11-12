@@ -142,6 +142,7 @@ function uygunsuzlukSayfasiniBaslat() {
   document.getElementById('modalKapatBtn').addEventListener('click', kayitModalKapat);
   document.getElementById('modalIptalBtn').addEventListener('click', kayitModalKapat);
   document.getElementById('kayitForm').addEventListener('submit', formGonderildi);
+  ['fkO', 'fkF', 'fkS'].forEach(id => document.getElementById(id).addEventListener('change', () => _usFkHesabiCiz(true)));
   document.getElementById('aramaKutusu').addEventListener('input', e => kayitlariCiz(e.target.value));
   document.getElementById('durumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('riskFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
@@ -891,7 +892,7 @@ function kayitlariCiz(aramaMetni) {
       <td>${_usKacir(k.bolum)}</td>
       <td>${gunAyYil(k.bildirimTarihi) || '-'}</td>
       <td>${_usTanimHucresiUret(k)}</td>
-      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.riskSeviyesi)}">${_usKacir(k.riskSeviyesi)}</span></td>
+      <td><span class="genel-rozet rozet-${usRozetSinifAdi(k.riskSeviyesi)}">${_usKacir(k.riskSeviyesi)}</span>${(fk => fk ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;" title="Fine-Kinney: O ${k.fkO} × F ${k.fkF} × Ş ${k.fkS} — ${fk.duzey}">FK ${fk.puan.toLocaleString('tr-TR')}</div>` : '')(uygunsuzlukFineKinney(k))}</td>
       <td>${gunAyYil(k.termin) || '-'}</td>
       <td>${_usKacir(k.sorumlu)}</td>
       <td>${_usFotoHucresiUret(k.fotoOncesi, 'Öncesi')}</td>
@@ -964,6 +965,8 @@ function kayitlariCiz(aramaMetni) {
         yer: k.lokasyon || k.bolum, faaliyet: k.konuAdi || k.bolum,
         tehlike: [k.baslik, k.aciklama].filter(Boolean).join(' - '),
         risk: k.kokNeden ? 'Kök neden: ' + k.kokNeden : '',
+        // Uygunsuzlukta puanlanmışsa O/F/Ş forma hazır gelir.
+        O: k.fkO, F: k.fkF, S: k.fkS,
         planlanan: k.duzelticiFaaliyet, sorumlu: k.sorumlu, termin: k.termin, fotoOncesi: k.fotoOncesi
       },
       sonra: () => kayitlariCiz(document.getElementById('aramaKutusu').value)
@@ -1235,6 +1238,10 @@ function kayitModalAc(kayit) {
   document.getElementById('lokasyon').value = kayit ? kayit.lokasyon : '';
   document.getElementById('kaynakTuru').innerHTML = KAYNAK_TURLERI.map(t => `<option ${kayit && kayit.kaynakTuru === t ? 'selected' : ''}>${t}</option>`).join('');
   document.getElementById('riskSeviyesi').innerHTML = RISK_SEVIYELERI.map(r => `<option ${kayit && kayit.riskSeviyesi === r ? 'selected' : ''}>${r}</option>`).join('');
+  _usFkSecimDoldur('fkO', _RA_OLASILIK, kayit && kayit.fkO);
+  _usFkSecimDoldur('fkF', _RA_FREKANS, kayit && kayit.fkF);
+  _usFkSecimDoldur('fkS', _RA_SIDDET, kayit && kayit.fkS);
+  _usFkHesabiCiz(false);
 
   document.getElementById('kokNeden').value = kayit ? kayit.kokNeden : '';
   document.getElementById('duzelticiFaaliyet').value = kayit ? kayit.duzelticiFaaliyet : '';
@@ -1307,6 +1314,23 @@ function _konumAlaniCiz(kayit) {
   }
 }
 
+// Fine-Kinney (bkz. model.js uygunsuzlukFineKinney). Ölçek listeleri core/risk-aktar.js'ten.
+function _usFkSecimDoldur(id, liste, secili) {
+  document.getElementById(id).innerHTML = '<option value="">— Seçiniz —</option>'
+    + liste.map(([d, e]) => `<option value="${d}" ${String(secili) === String(d) ? 'selected' : ''}>${d} - ${_usKacir(e)}</option>`).join('');
+}
+
+// seviyeyiAyarla: kullanıcı O/F/Ş değiştirdiğinde Risk Seviyesi puandan önerilir;
+// form açılırken kayıttaki seviye korunur.
+function _usFkHesabiCiz(seviyeyiAyarla) {
+  const fk = uygunsuzlukFineKinney({ fkO: document.getElementById('fkO').value, fkF: document.getElementById('fkF').value, fkS: document.getElementById('fkS').value });
+  const kutu = document.getElementById('fkHesapKutusu');
+  if (!fk) { kutu.innerHTML = 'Risk puanını görmek için Olasılık, Frekans ve Şiddet seçiniz.'; return; }
+  if (seviyeyiAyarla) document.getElementById('riskSeviyesi').value = fk.seviye;
+  kutu.innerHTML = `Fine-Kinney Risk Puanı: <strong>${fk.puan.toLocaleString('tr-TR')}</strong> &nbsp; <span class="duzey-rozet duzey-${slugOlustur(fk.duzey)}">${fk.duzey}</span>
+    <span style="font-size:12px; color:var(--metin-soluk);">→ Risk Seviyesi: ${fk.seviye}</span>`;
+}
+
 function kayitModalKapat() {
   document.getElementById('modalKatman').classList.remove('acik');
   _duzenlenenKayitId = null;
@@ -1329,6 +1353,9 @@ function formGonderildi(e) {
     lokasyon: document.getElementById('lokasyon').value,
     kaynakTuru: document.getElementById('kaynakTuru').value,
     riskSeviyesi: document.getElementById('riskSeviyesi').value,
+    fkO: document.getElementById('fkO').value,
+    fkF: document.getElementById('fkF').value,
+    fkS: document.getElementById('fkS').value,
     kokNeden: document.getElementById('kokNeden').value,
     duzelticiFaaliyet: document.getElementById('duzelticiFaaliyet').value,
     sorumlu: document.getElementById('sorumlu').value,

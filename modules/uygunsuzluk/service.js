@@ -112,6 +112,7 @@ function uygunsuzlukGuncelle(id, veriler) {
     lokasyon: (veriler.lokasyon || '').trim(),
     kaynakTuru: veriler.kaynakTuru || 'Manuel Bildirim',
     riskSeviyesi: veriler.riskSeviyesi || 'Orta',
+    fkO: veriler.fkO || '', fkF: veriler.fkF || '', fkS: veriler.fkS || '',
     kokNeden: (veriler.kokNeden || '').trim(),
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),
     sorumlu: veriler.sorumlu.trim(),

@@ -504,7 +504,8 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
     bolumBasligi('1. Genel Bilgiler', 4),
     ikiAlan('Bildirim No', k.aksiyonNo, 'Bildirim Tarihi', gunAyYil(k.bildirimTarihi)),
     tekAlan('Birim / Tesis', k.bolum),
-    ikiAlan('Bildiren Kişi', k.atayan, 'Risk Seviyesi', riskRenk ? rozet(k.riskSeviyesi, riskRenk[0], riskRenk[1]) : k.riskSeviyesi)
+    ikiAlan('Bildiren Kişi', k.atayan, 'Risk Seviyesi', riskRenk ? rozet(k.riskSeviyesi, riskRenk[0], riskRenk[1]) : k.riskSeviyesi),
+    ...(fk => fk ? [tekAlan('Fine-Kinney', `O: ${k.fkO}  ×  F: ${k.fkF}  ×  Ş: ${k.fkS}  =  RP ${fk.puan.toLocaleString('tr-TR')} (${fk.duzey})`)] : [])(uygunsuzlukFineKinney(k))
   ]);
   const detaylar = tablo(SUTUNLAR, [
     bolumBasligi('2. Uygunsuzluk Detayları', 4),

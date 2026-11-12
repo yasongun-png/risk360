@@ -206,6 +206,26 @@ function uygunsuzlukKonuOlustur(veriler) {
   };
 }
 
+// Kullanıcı isteği: "uygunsuzluk modülüne de Fine-Kinney olasılık, şiddet,
+// frekans hesaplaması koyalım, olay modülündeki gibi; riske aktarırken daha iyi
+// olur". Ölçekler ve düzey eşikleri core/risk-aktar.js'teki (_RA_OLASILIK,
+// _RA_FREKANS, _RA_SIDDET, _RA_DUZEYLER) — risk modülüyle aynı. O/F/Ş isteğe
+// bağlıdır; üçü de seçilirse Risk Seviyesi puandan önerilir (kullanıcı değiştirebilir).
+// Fine-Kinney düzeyi → bu modülün 4'lü Risk Seviyesi.
+const UYG_FK_SEVIYE_ESLESMESI = {
+  'Tolerans Gösterilemez': 'Çok Yüksek', 'Esaslı Risk': 'Yüksek', 'Önemli Risk': 'Orta',
+  'Olası Risk': 'Düşük', 'Önemsiz Risk': 'Düşük'
+};
+
+// { puan, duzey, seviye } ya da O/F/Ş eksikse null.
+function uygunsuzlukFineKinney(k) {
+  const o = Number(k && k.fkO), f = Number(k && k.fkF), s = Number(k && k.fkS);
+  if (!(o && f && s)) return null;
+  const puan = Math.round(o * f * s * 10) / 10;
+  const duzey = _RA_DUZEYLER.find(([min]) => puan > min)[1];
+  return { puan, duzey, seviye: UYG_FK_SEVIYE_ESLESMESI[duzey] };
+}
+
 function uygunsuzlukKaydiOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
@@ -220,6 +240,7 @@ function uygunsuzlukKaydiOlustur(veriler) {
     lokasyon: (veriler.lokasyon || '').trim(),
     kaynakTuru: veriler.kaynakTuru || 'Manuel Bildirim',
     riskSeviyesi: veriler.riskSeviyesi || 'Orta',
+    fkO: veriler.fkO || '', fkF: veriler.fkF || '', fkS: veriler.fkS || '',
 
     kokNeden: (veriler.kokNeden || '').trim(),
     duzelticiFaaliyet: (veriler.duzelticiFaaliyet || '').trim(),

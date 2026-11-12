@@ -304,6 +304,14 @@
           </div>
         </div>
 
+        <div class="form-bolum-baslik">Fine-Kinney Risk Puanlaması <span style="color:var(--metin-soluk); font-weight:400; text-transform:none;">(opsiyonel — Riske Aktar'da da kullanılır)</span></div>
+        <div class="form-satir-ikili" style="grid-template-columns:repeat(3, 1fr);">
+          <div><label for="fkO">Olasılık (O)</label><select id="fkO"></select></div>
+          <div><label for="fkF">Frekans (F)</label><select id="fkF"></select></div>
+          <div><label for="fkS">Şiddet (Ş)</label><select id="fkS"></select></div>
+        </div>
+        <div class="hesap-kutusu" id="fkHesapKutusu" style="margin-bottom:12px;"></div>
+
         <div class="form-bolum-baslik">Kök Neden ve Faaliyetler</div>
         <label for="kokNeden">Kök Neden</label>
         <input type="text" id="kokNeden">
@@ -476,12 +484,12 @@
   <script src="../../core/eposta.js"></script>
   <!-- Uygunsuzluk Formu'nun sonundaki konum krokisi için (bkz. cikti.js) -->
   <script src="../harita/repository.js"></script>
-  <script src="model.js?v=20261024a"></script>
+  <script src="model.js?v=20261112a"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=20261024a"></script>
-  <script src="service.js?v=2"></script>
-  <script src="ui.js?v=20261107a"></script>
-  <script src="cikti.js?v=20261107a"></script>
+  <script src="service.js?v=20261112a"></script>
+  <script src="ui.js?v=20261112a"></script>
+  <script src="cikti.js?v=20261112a"></script>
   <script>
     // İSG / Çevre ana sekmesi ve Çevre'ye özgü başlıklar.
     document.querySelectorAll('#uygAlanSekmeleri [data-alan]').forEach(b => {
