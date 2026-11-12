@@ -688,7 +688,24 @@ function toplantiKazaIstatistikleriHesapla(toplanti) {
       // Kullanıcı isteği: "kazaların nasıl olduğu ile ilgili bilgi yok,
       // sorarlarsa nasıl cevaplarım" — toplantıda soru gelirse cevap
       // verebilsin diye oluş şekli açıklaması da eklendi.
-      aciklama: k.aciklama || ''
+      aciklama: k.aciklama || '',
+      // Kullanıcı isteği: "iş kazası detayları sorulduğunda cevaplayamıyorum,
+      // mesela kim kaza geçirdi" — PPTX'te kazalı, bölüm, yaralanma, kök neden
+      // ve alınan önlemler (bkz. cikti.js kayıp gün slaydı ve konuşmacı notları).
+      kayitNo: k.kayitNo || '',
+      saat: k.kazaSaati || '',
+      adSoyad: k.adSoyad || '',
+      sicilNo: k.sicilNo || '',
+      gorev: k.gorev || '',
+      yas: k.magdurYasi,
+      iseGiris: k.iseGirisTarihi || '',
+      bolum: k.bolum || '',
+      kazaBolumu: k.kazaBolumu || '',
+      isTanimi: k.isTanimi || '',
+      yaralanma: k.yaralanmaTuru || '',
+      uzuv: k.yaralananUzuv || '',
+      kokNeden: k.analizNeden || '',
+      onlemler: (k.aksiyonlar || []).map(a => a.duzelticiFaaliyet || a.baslik).filter(Boolean)
     }));
   const enYuksekKayipGunlu = kazalarKayipGuneSirali.slice(0, 3);
 

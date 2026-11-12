@@ -1940,17 +1940,22 @@ async function pptxOlustur() {
     // Kullanıcı isteği (2026-09-11): aylık toplam kayıp gün yerine, HER
     // kazanın kendi kayıp günüyle en yüksekten en düşüğe sıralı listesi.
     const kazaSatirlari = kazaIst.kazalarKayipGuneSirali;
+    // Kullanıcı isteği: "kim kaza geçirdi" — tabloya kazalı ve bölüm eklendi.
+    const baslikHucre = t => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } });
     if (kazaSatirlari.length) {
       sl.addTable([
-        [{ text: 'Tarih', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } },
-         { text: 'Tür', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } },
-         { text: 'Kayıp Gün', options: { bold: true, color: 'FFFFFF', fill: { color: R.birincil } } }],
-        ...kazaSatirlari.map((k, i) => [
-          { text: gunAyYil(k.tarih) || '-', options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik } },
-          { text: k.tur, options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik } },
-          { text: String(k.kayipGun), options: { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik, align: 'center' } }
-        ])
-      ], { x: M, y: 1.35, w: solW, colW: [solW * 0.32, solW * 0.44, solW * 0.24], fontSize: 10.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+        ['Tarih', 'Kazalı', 'Bölüm', 'Tür', 'Kayıp Gün'].map(baslikHucre),
+        ...kazaSatirlari.map((k, i) => {
+          const o = { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik };
+          return [
+            { text: gunAyYil(k.tarih) || '-', options: o },
+            { text: [k.adSoyad, k.gorev].filter(Boolean).join(' — ') || '-', options: o },
+            { text: k.bolum || k.kazaBolumu || '-', options: o },
+            { text: k.tur, options: o },
+            { text: String(k.kayipGun), options: Object.assign({ align: 'center' }, o) }
+          ];
+        })
+      ], { x: M, y: 1.35, w: solW, colW: [solW * 0.17, solW * 0.31, solW * 0.2, solW * 0.19, solW * 0.13], fontSize: 9.5, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
     } else {
       sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: solW, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
       sl.addText('Bu yıl için kayıp günlü kaza bulunmamaktadır.', { x: M, y: 1.35, w: solW, h: 0.9, fontSize: 12, color: R.soluk, align: 'center', valign: 'middle' });
@@ -1963,15 +1968,61 @@ async function pptxOlustur() {
         const y = 1.8 + i * (kartH + 0.15);
         sl.addShape(pptx.ShapeType.roundRect, { x: sagX, y, w: sagW, h: kartH, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
         sl.addText(String(k.kayipGun), { x: sagX, y, w: 1.1, h: kartH, fontSize: 26, bold: true, color: R.birincil, align: 'center', valign: 'middle' });
+        const kisi = [k.adSoyad, k.gorev].filter(Boolean).join(' — ');
+        const yaralanma = [k.yaralanma, k.uzuv].filter(Boolean).join(' · ');
         sl.addText([
           { text: `${i + 1}. ${gunAyYil(k.tarih) || '-'}  •  ${k.tur}`, options: { fontSize: 12, bold: true, color: R.baslik, breakLine: true } },
-          { text: k.yer || '-', options: { fontSize: 10, color: R.soluk, breakLine: true } },
-          { text: k.aciklama ? (k.aciklama.length > 160 ? k.aciklama.slice(0, 160) + '…' : k.aciklama) : 'Oluş şekli açıklaması girilmemiş.', options: { fontSize: 9.5, italic: !k.aciklama, color: R.baslik } }
-        ], { x: sagX + 1.25, y: y + 0.08, w: sagW - 1.35, h: kartH - 0.16, valign: 'top' });
+          ...(kisi ? [{ text: kisi, options: { fontSize: 10.5, bold: true, color: R.birincil, breakLine: true } }] : []),
+          { text: [k.bolum || k.kazaBolumu, k.yer].filter(Boolean).join(' · ') || '-', options: { fontSize: 9.5, color: R.soluk, breakLine: true } },
+          ...(yaralanma ? [{ text: 'Yaralanma: ' + yaralanma, options: { fontSize: 9.5, color: R.baslik, breakLine: true } }] : []),
+          { text: k.aciklama ? (k.aciklama.length > 120 ? k.aciklama.slice(0, 120) + '…' : k.aciklama) : 'Oluş şekli açıklaması girilmemiş.', options: { fontSize: 9, italic: !k.aciklama, color: R.baslik } }
+        ], { x: sagX + 1.25, y: y + 0.06, w: sagW - 1.35, h: kartH - 0.12, valign: 'top', fit: 'shrink' });
       });
     } else {
       sl.addShape(pptx.ShapeType.roundRect, { x: sagX, y: 1.8, w: sagW, h: 0.9, rectRadius: 0.06, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
       sl.addText('Kayıp günlü kaza bulunmamaktadır.', { x: sagX, y: 1.8, w: sagW, h: 0.9, fontSize: 11, color: R.soluk, align: 'center', valign: 'middle' });
+    }
+
+    // Kullanıcı isteği: "iş kazası detayları sorulduğunda cevaplayamıyorum,
+    // mesela kim kaza geçirdi" — (1) slaydın konuşmacı notlarına her kazanın tam
+    // dökümü (sunucu görünümünde yalnızca sunan kişi görür), (2) ardından tüm
+    // kayıp günlü kazaların ayrıntı tablosu (8'erli slaytlar).
+    if (kazaSatirlari.length) {
+      const tarihSaat = k => [gunAyYil(k.tarih), k.saat].filter(Boolean).join(' ');
+      sl.addNotes(kazaSatirlari.map((k, i) => [
+        `${i + 1}) ${tarihSaat(k) || '-'} — ${k.tur} — ${k.kayipGun} gün kayıp${k.kayitNo ? ' (' + k.kayitNo + ')' : ''}`,
+        `Kazalı: ${[k.adSoyad, k.sicilNo && 'Sicil ' + k.sicilNo, k.gorev, k.yas != null && k.yas !== '' ? k.yas + ' yaş' : '', k.iseGiris && 'işe giriş ' + gunAyYil(k.iseGiris)].filter(Boolean).join(', ') || '-'}`,
+        `Bölüm / Yer: ${[k.bolum, k.kazaBolumu && k.kazaBolumu !== k.bolum ? 'kaza bölümü ' + k.kazaBolumu : '', k.yer].filter(Boolean).join(' · ') || '-'}`,
+        k.isTanimi ? `Yaptığı iş: ${k.isTanimi}` : '',
+        `Yaralanma: ${[k.yaralanma, k.uzuv].filter(Boolean).join(' · ') || '-'}`,
+        `Oluş şekli: ${k.aciklama || '-'}`,
+        k.kokNeden ? `Kök neden: ${k.kokNeden}` : '',
+        k.onlemler.length ? `Alınan / planlanan önlemler: ${k.onlemler.join('; ')}` : ''
+      ].filter(Boolean).join('\n')).join('\n\n'));
+
+      const PARCA = 8;
+      for (let bas = 0; bas < kazaSatirlari.length; bas += PARCA) {
+        const parca = kazaSatirlari.slice(bas, bas + PARCA);
+        const ds = yeniSlayt();
+        const sayfa = kazaSatirlari.length > PARCA ? `  (${bas / PARCA + 1}/${Math.ceil(kazaSatirlari.length / PARCA)})` : '';
+        kartBasligi(ds, 'İSG PERFORMANSI', `${kazaIst.yil} Yılı Kayıp Günlü Kazaların Ayrıntıları${sayfa}`);
+        const tw = SW - 2 * M;
+        ds.addTable([
+          ['Tarih', 'Kazalı / Görev', 'Bölüm / Yer', 'Yaralanma', 'Kayıp Gün', 'Kök Neden / Önlem'].map(baslikHucre),
+          ...parca.map((k, i) => {
+            const o = { fill: { color: i % 2 ? R.bg : 'FFFFFF' }, color: R.baslik, valign: 'top' };
+            return [
+              { text: tarihSaat(k) || '-', options: o },
+              { text: [k.adSoyad, k.gorev].filter(Boolean).join('\n') || '-', options: o },
+              { text: [k.bolum || k.kazaBolumu, k.yer].filter(Boolean).join('\n') || '-', options: o },
+              { text: [k.yaralanma, k.uzuv].filter(Boolean).join('\n') || '-', options: o },
+              { text: String(k.kayipGun), options: Object.assign({}, o, { align: 'center', bold: true }) },
+              { text: [k.kokNeden, k.onlemler.length ? 'Önlem: ' + k.onlemler.join('; ') : ''].filter(Boolean).join('\n') || '-', options: o }
+            ];
+          })
+        ], { x: M, y: 1.35, w: tw, colW: [tw * 0.1, tw * 0.17, tw * 0.17, tw * 0.15, tw * 0.07, tw * 0.34], fontSize: 9, border: { type: 'solid', color: R.cizgi, pt: 0.75 }, autoPage: false });
+        ds.addNotes(parca.map(k => `${tarihSaat(k)} — ${k.adSoyad || '-'}: ${k.aciklama || '-'}`).join('\n\n'));
+      }
     }
   }
 
@@ -1984,11 +2035,12 @@ async function pptxOlustur() {
     const kutularKi = [
       { etiket: `${kiPptx.yil} Yılında Alınan Karar`, deger: String(kiPptx.alinan), renk: R.birincil },
       { etiket: 'Tamamlanan', deger: String(kiPptx.tamamlanan), renk: '15803D' },
+      // Kullanıcı isteği: sunumda "Geciken" ayrı kutu olmasın, açık kısmına
+      // eklensin — gecikenler zaten açık sayısının içinde (açık = alınan − tamamlanan).
       { etiket: 'Açık (Devam Eden)', deger: String(kiPptx.acik), renk: 'B45309' },
-      { etiket: 'Geciken', deger: String(kiPptx.geciken), renk: 'B91C1C' },
       { etiket: 'Tamamlanma Oranı', deger: oranKi, renk: R.birincil }
     ];
-    const aralikKi = 0.25, kutuWKi = (SW - 2 * M - 4 * aralikKi) / 5;
+    const aralikKi = 0.25, kutuWKi = (SW - 2 * M - (kutularKi.length - 1) * aralikKi) / kutularKi.length;
     kutularKi.forEach((k, i) => {
       const x = M + i * (kutuWKi + aralikKi), y = 1.4;
       sl.addShape(pptx.ShapeType.roundRect, { x, y, w: kutuWKi, h: 1.9, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
