@@ -181,6 +181,8 @@ function _olayKaynakliDevredenKararlariGetir(toplanti) {
       toplantiId: o.toplantiId,
       kararMetni: o.kararMetni || '',
       kaynakGundem: [o.tur, o.olusSekli].filter(Boolean).join(' — '),
+      // Sunum özeti, olay kapanana kadar devrettiği toplantılarda da görünür.
+      ozet: o.ozet || '',
       sorumlu: o.sorumlu || '',
       termin: o.termin || '',
       oncelik: o.oncelik || 'Normal',
