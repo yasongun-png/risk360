@@ -2636,7 +2636,8 @@ async function kurulAksiyonPlaniWordOlustur(toplantiId) {
       ...v.kararlar.map(k => new docx.TableRow({ cantSplit: true, children: [
         hucre(new docx.Paragraph({ children: [metin(k.kararNo || '-', { bold: true })] }), SUTUN[0]),
         hucre(paragraflar(k.kaynakGundem || '-', { bold: true }), SUTUN[1]),
-        hucre(paragraflar(k.kararMetni || '-'), SUTUN[2]),
+        hucre([...paragraflar(k.kararMetni || '-'),
+          ...(k.ozet ? String(k.ozet).split('\n').map((s, i) => new docx.Paragraph({ spacing: { before: i ? 0 : 60, after: 30 }, children: [...(i ? [] : [metin('Özet: ', { bold: true, size: 15, color: '0F766E' })]), metin(s, { size: 15, italics: true })] })) : [])], SUTUN[2]),
         hucre(k.konusulanlar.length ? k.konusulanlar.map(s => { const i = s.indexOf(': '); return new docx.Paragraph({ spacing: { after: 40 }, children: i > 0 ? [metin(s.slice(0, i + 2), { bold: true, size: 15 }), metin(s.slice(i + 2), { size: 15 })] : [metin(s, { size: 15 })] }); }) : [new docx.Paragraph({ children: [metin('-', { size: 15 })] })], SUTUN[3]),
         hucre(paragraflar(k.sorumlu || '-', { size: 15 }), SUTUN[4]),
         hucre(new docx.Paragraph({ children: [metin(gunAyYil(k.termin) || '-', { size: 15 })] }), SUTUN[5]),
@@ -2701,7 +2702,7 @@ async function kurulAksiyonPlaniExcelOlustur(toplantiId) {
   satirlar.push({ hucreler: ['Karar No', 'Konu', 'Karar', 'Konuşulanlar', 'Sorumlu', 'Termin', 'Öncelik', 'Durum'].map(b => h(b, X.tabloBaslik)), yukseklik: 22 });
   const durumStili = d => d === 'Tamamlandı' ? X.tamam : (d === 'Gecikmiş' ? X.gecikmis : (d === 'Devam Ediyor' ? X.devam : X.acik));
   v.kararlar.forEach(k => satirlar.push({ hucreler: [
-    h(k.kararNo || '-', X.hucreKalin), h(k.kaynakGundem || '-', X.hucreKalin), h(k.kararMetni || '-', X.hucre),
+    h(k.kararNo || '-', X.hucreKalin), h(k.kaynakGundem || '-', X.hucreKalin), h((k.kararMetni || '-') + (k.ozet ? '\n\nÖzet: ' + k.ozet : ''), X.hucre),
     h(k.konusulanlar.join('\n') || '-', X.hucre), h(k.sorumlu || '-', X.hucre), h(gunAyYil(k.termin) || '-', X.hucre),
     h(k.oncelik || '-', X.hucre), h(k.durumMetni + (kararKapaliMi(k.durum) && k.kapanisTarihi ? '\n' + gunAyYil(k.kapanisTarihi) : ''), durumStili(k.durumMetni))
   ] }));

@@ -140,6 +140,7 @@ async function _kararFormuBolumu(karar, logoGorsel, fa) {
     bolumBasligi(`${no++}. Karar Detayları`, 4),
     tekAlan('Gündem / Konu', k.kaynakGundem),
     tekAlan('Karar Metni', k.kararMetni),
+    ...(k.ozet ? [tekAlan('Sunum Özeti', k.ozet)] : []),
     ...(oyParcalari.length || k.oy ? [tekAlan('Oylama', [k.oy, ...oyParcalari].filter(Boolean).join('\n'))] : []),
     ...((k.yasalSartlar && k.yasalSartlar.length) ? [tekAlan('İlgili Yasal Şartlar', k.yasalSartlar.join(', '))] : []),
     ...(k.yasalDayanak ? [tekAlan('Yasal Dayanak / Not', k.yasalDayanak)] : [])

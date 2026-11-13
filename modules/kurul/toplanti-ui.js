@@ -668,6 +668,7 @@ function _kurulNotSatirlariniCiz() {
       <td><b>${_ktKacir(k.kararNo)}</b><div style="font-size:11px; color:var(--metin-soluk);">${_ktKacir(kararDurumGoster(k.durum))}</div></td>
       <td style="font-size:12px;">
         ${k.kaynakGundem ? '<b>' + _ktKacir(k.kaynakGundem) + '</b><br>' : ''}${_ktKacir(k.kararMetni)}
+        ${k.ozet ? `<div style="margin-top:3px; white-space:pre-wrap; background:var(--zemin-ikincil, #f1f5f9); border-left:3px solid var(--birincil, #0f766e); padding:3px 8px; border-radius:4px;"><b>Özet:</b> ${_ktKacir(k.ozet)}</div>` : ''}
         <div style="color:var(--metin-soluk); margin-top:3px;">Sorumlu: ${_ktKacir(k.sorumlu) || '-'} · Termin: ${gunAyYil(k.termin) || '-'}</div>
         ${onceki.length ? `<details style="margin-top:3px;"><summary style="cursor:pointer; color:var(--metin-soluk);">Önceki konuşulanlar (${onceki.length})</summary>${onceki.map(n => `<div><b>${n.eski ? 'Önceki not' : (_kurulNotTarihi(n.tarih) || _ktKacir(n.toplantiNo))}:</b> ${_ktKacir(n.not)}</div>`).join('')}</details>` : ''}
       </td>
