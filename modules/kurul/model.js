@@ -299,8 +299,10 @@ function kurulOlayiOlustur(veriler) {
     tarih: veriler.tarih || '',
     yer: (veriler.yer || '').trim(),
     birim: (veriler.birim || '').trim(),
+    // İş kazasında kazazedenin adı — PPTX olay başlığı "İş Kazası - Ad Soyad - Bölüm".
+    adSoyad: (veriler.adSoyad || '').trim(),
     olusSekli: (veriler.olusSekli || '').trim(),
-    // Sunum özeti (serbest metin) — PPTX'te olay slaydının ardından ÖZET slaydı.
+    // Sunum özeti (serbest metin) — PPTX'te olay slaydının üst metin kutusunda.
     ozet: (veriler.ozet || '').trim(),
     kokNeden: (veriler.kokNeden || '').trim(),
     isGunuKaybi: (veriler.isGunuKaybi || '').trim(),

@@ -259,7 +259,7 @@
         <textarea id="kararMetni"></textarea>
         <div class="alan-hatasi" id="kararMetniHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
-        <label for="kararOzet">Sunum Özeti <span style="color:var(--metin-soluk); font-weight:400;">(serbest — PPTX'te ayrı slaytta gösterilir)</span></label>
+        <label for="kararOzet">Sunum Özeti <span style="color:var(--metin-soluk); font-weight:400;">(serbest — PPTX'te slaydın üst metin kutusunda gösterilir)</span></label>
         <textarea id="kararOzet" rows="4" placeholder="Toplantıda okuyacağınız kısa özet: ne oldu, ne yapıldı, ne isteniyor..."></textarea>
 
         <label for="kararKaynakGundem">Konu / Başlık</label>
@@ -401,9 +401,11 @@
             <input type="text" id="olayBirim">
           </div>
         </div>
+        <label for="olayAdSoyad">Kazazede Adı Soyadı <span style="color:var(--metin-soluk); font-weight:400;">(iş kazasında — PPTX başlığı "İş Kazası - Ad Soyad - Birim" olur)</span></label>
+        <input type="text" id="olayAdSoyad">
         <label for="olayOlusSekli">Oluş Şekli</label>
         <textarea id="olayOlusSekli"></textarea>
-        <label for="olayOzet">Sunum Özeti <span style="color:var(--metin-soluk); font-weight:400;">(serbest — PPTX'te ayrı slaytta gösterilir)</span></label>
+        <label for="olayOzet">Sunum Özeti <span style="color:var(--metin-soluk); font-weight:400;">(serbest — PPTX'te slaydın üst metin kutusunda gösterilir)</span></label>
         <textarea id="olayOzet" rows="4" placeholder="Toplantıda okuyacağınız kısa özet: ne oldu, kim etkilendi, ne yapıldı..."></textarea>
         <label for="olayKokNeden">Kök Neden</label>
         <input type="text" id="olayKokNeden">
@@ -582,13 +584,13 @@
   <script src="../egitim/model.js"></script>
   <script src="../../core/xlsx-bicimli.js?v=1"></script>
   <script src="../../core/kaza-istatistik.js?v=3"></script>
-  <script src="model.js?v=20261113a"></script>
-  <script src="cikti.js?v=67"></script>
+  <script src="model.js?v=20261113c"></script>
+  <script src="cikti.js?v=68"></script>
   <script src="karar-formu.js?v=2"></script>
   <script src="validation.js"></script>
   <script src="repository.js?v=2"></script>
-  <script src="service.js?v=20261113b"></script>
-  <script src="toplanti-ui.js?v=20261113b"></script>
+  <script src="service.js?v=20261113c"></script>
+  <script src="toplanti-ui.js?v=20261113c"></script>
   <script>
     const kullanici = girisGerekliModul('kurul');
 

@@ -1018,6 +1018,7 @@ function olayModalAc(olay) {
   document.getElementById('olayTarih').value = olay ? olay.tarih : '';
   document.getElementById('olayYer').value = olay ? olay.yer : '';
   document.getElementById('olayBirim').value = olay ? olay.birim : '';
+  document.getElementById('olayAdSoyad').value = olay ? (olay.adSoyad || _ktKaynakKazaAdSoyad(olay)) : '';
   document.getElementById('olayOlusSekli').value = olay ? olay.olusSekli : '';
   document.getElementById('olayOzet').value = olay ? (olay.ozet || '') : '';
   document.getElementById('olayKokNeden').value = olay ? olay.kokNeden : '';
@@ -1053,6 +1054,14 @@ function olayModalKapat() {
   document.getElementById('olayModalKatman').classList.remove('acik');
   _duzenlenenOlayId = null;
 }
+// Eski (adSoyad alanından önce yükseltilmiş) olaylarda kazazede adı, bağlı
+// Olay/Kaza kaydından okunur — form açıldığında alan boş kalmasın.
+function _ktKaynakKazaAdSoyad(olay) {
+  const kazaId = olay.kaynakKazaId || (olay.otomatik ? String(olay.id || '').replace(/^oto-/, '') : '');
+  if (!kazaId) return '';
+  const k = oku(tenantAnahtar('olay_kaza_kayitlari'), []).find(x => x.id === kazaId);
+  return (k && k.adSoyad) || '';
+}
 function olayFormGonderildi(e) {
   e.preventDefault();
   document.querySelectorAll('#olayForm .alan-hatasi').forEach(el => el.textContent = '');
@@ -1062,6 +1071,7 @@ function olayFormGonderildi(e) {
     tarih: document.getElementById('olayTarih').value,
     yer: document.getElementById('olayYer').value,
     birim: document.getElementById('olayBirim').value,
+    adSoyad: document.getElementById('olayAdSoyad').value,
     olusSekli: document.getElementById('olayOlusSekli').value,
     ozet: document.getElementById('olayOzet').value,
     kokNeden: document.getElementById('olayKokNeden').value,

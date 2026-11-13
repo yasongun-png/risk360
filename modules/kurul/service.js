@@ -791,6 +791,7 @@ function kurulOtomatikOlayiYukselt(toplantiId, otomatikOlay) {
     tarih: otomatikOlay.tarih,
     yer: otomatikOlay.yer,
     birim: otomatikOlay.birim,
+    adSoyad: otomatikOlay.adSoyad,
     olusSekli: otomatikOlay.olusSekli,
     kokNeden: otomatikOlay.kokNeden,
     isGunuKaybi: otomatikOlay.isGunuKaybi,
@@ -819,7 +820,11 @@ function kurulOlayiGuncelle(id, veriler) {
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
   const mevcut = olayTumunuGetir().find(o => o.id === id) || null;
-  const guncellenen = olayGuncelleRepo(id, kurulOlayiOlustur(Object.assign({}, veriler, { id, toplantiId: mevcut ? mevcut.toplantiId : veriler.toplantiId })));
+  // Formda olmayan alanlar (kaynak kaza bağı, sıra) korunur — aksi halde
+  // kurulOlayiOlustur bunları boşaltıyor, yükseltilmiş olay düzenlenince
+  // aynı kaza otomatik satır olarak tekrar beliriyor ve sıra 0'a dönüyordu.
+  const korunan = mevcut ? { kaynakKazaId: mevcut.kaynakKazaId, sira: mevcut.sira } : {};
+  const guncellenen = olayGuncelleRepo(id, kurulOlayiOlustur(Object.assign({}, korunan, veriler, { id, toplantiId: mevcut ? mevcut.toplantiId : veriler.toplantiId })));
   _denetimEkle('olay', id, 'guncelle', mevcut, guncellenen);
   return { basarili: true, olay: guncellenen };
 }

@@ -1960,11 +1960,26 @@ async function pptxOlustur() {
 
   // Her olay kendi slaydında (karar deseniyle aynı) — varsa ilk fotoğrafı
   // sağda küçük, tüm fotoğrafları da hemen ardından birer tam ekran slaytta.
+  // Kullanıcı isteği: iş kazalarında slayt başlığı "İş Kazası - Kazazede - Bölüm".
+  // Kaza mı değil mi ve kazazede/bölüm, bağlı Olay/Kaza kaydından (varsa) okunur;
+  // elle girilen olaylarda tür metni ve formdaki Kazazede alanı kullanılır.
+  const _kazaKayitlari = oku(tenantAnahtar('olay_kaza_kayitlari'), []);
+  const _KAZA_OLAY_TIPLERI = ['Kayıp Gün (LTI)', 'Kısıtlı İş / Transfer (DART)', 'Tıbbi Tedavi', 'Ölüm'];
+  const olayBasligi = o => {
+    const kazaId = o.kaynakKazaId || (o.otomatik ? String(o.id || '').replace(/^oto-/, '') : '');
+    const kaynak = kazaId ? _kazaKayitlari.find(k => k.id === kazaId) : null;
+    const isKazasi = kaynak ? _KAZA_OLAY_TIPLERI.includes(kaynak.olayTipi)
+      : /iş kazası|kayıp gün|tıbbi tedavi|kısıtlı iş|ölüm/.test(String(o.tur || '').toLocaleLowerCase('tr'));
+    const adSoyad = String(o.adSoyad || (kaynak && kaynak.adSoyad) || '').trim();
+    if (!isKazasi || !adSoyad) return o.tur || '-';
+    const bolum = String(o.birim || (kaynak && (kaynak.bolum || kaynak.kazaBolumu)) || '').trim();
+    return ['İş Kazası', adSoyad, bolum].filter(Boolean).join(' - ');
+  };
   const olaySlaydi = (o, sira, toplam) => {
     const sl = yeniSlayt();
     const foto = o.fotograflar && o.fotograflar[0] && o.fotograflar[0].url;
     const metinGenislik = foto ? 7.3 : SW - 2 * M;
-    kartBasligi(sl, `OLAY  ·  ${sira} / ${toplam}${o.otomatik ? '  ·  Olay/Kaza modülünden' : ''}`, o.tur || '-');
+    kartBasligi(sl, `OLAY  ·  ${sira} / ${toplam}${o.otomatik ? '  ·  Olay/Kaza modülünden' : ''}`, olayBasligi(o));
     const metaSatirlari = [
       ['Tarih', gunAyYil(o.tarih) || '-'],
       ['Yer', o.yer || '-'],
@@ -1988,7 +2003,7 @@ async function pptxOlustur() {
   if (olaylar.length) {
     olaylar.forEach((o, i) => {
       olaySlaydi(o, i + 1, olaylar.length);
-      (o.fotograflar || []).forEach((f, fi) => fotoTamEkranSlaydiEkle(`${o.tur || 'Olay'} — Olay Yeri ${fi + 1}`, f.url));
+      (o.fotograflar || []).forEach((f, fi) => fotoTamEkranSlaydiEkle(`${olayBasligi(o)} — Olay Yeri ${fi + 1}`, f.url));
     });
   } else {
     tabloSlaydi('OLAYLAR', ['Bilgi'], [], []);
