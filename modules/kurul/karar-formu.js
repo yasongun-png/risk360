@@ -139,8 +139,8 @@ async function _kararFormuBolumu(karar, logoGorsel, fa) {
   const kararDetay = tablo(SUTUNLAR, [
     bolumBasligi(`${no++}. Karar Detayları`, 4),
     tekAlan('Gündem / Konu', k.kaynakGundem),
-    tekAlan('Karar Metni', k.kararMetni),
-    ...(k.ozet ? [tekAlan('Sunum Özeti', k.ozet)] : []),
+    // Kullanıcı isteği: özet girildiyse formda uzun karar metni yerine yalnızca özet.
+    String(k.ozet || '').trim() ? tekAlan('Karar Özeti', k.ozet) : tekAlan('Karar Metni', k.kararMetni),
     ...(oyParcalari.length || k.oy ? [tekAlan('Oylama', [k.oy, ...oyParcalari].filter(Boolean).join('\n'))] : []),
     ...((k.yasalSartlar && k.yasalSartlar.length) ? [tekAlan('İlgili Yasal Şartlar', k.yasalSartlar.join(', '))] : []),
     ...(k.yasalDayanak ? [tekAlan('Yasal Dayanak / Not', k.yasalDayanak)] : [])
