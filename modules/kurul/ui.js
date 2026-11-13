@@ -299,7 +299,7 @@ function gundemListesiniCiz() {
         <input placeholder="Not (opsiyonel)" data-gundem-alan="not" data-gundem-id="${g.id}" value="${g.not.replace(/"/g, '&quot;')}">
         <button type="button" class="tablo-buton sil" data-gundem-sil="${g.id}" title="Sil">✕</button>
       </div>
-      <textarea placeholder="Sunum özeti (opsiyonel, serbest) — PPTX'te bu madde için ayrı slaytta gösterilir" data-gundem-alan="ozet" data-gundem-id="${g.id}" rows="2" style="margin:4px 0 0; font-size:12.5px;">${String(g.ozet || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea>
+      <textarea placeholder="Özet (opsiyonel, serbest) — toplantı sayfasındaki gündem listesinde görünür" data-gundem-alan="ozet" data-gundem-id="${g.id}" rows="2" style="margin:4px 0 0; font-size:12.5px;">${String(g.ozet || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea>
     </div>
   `).join('') || '<p style="font-size:12px; color:var(--metin-soluk);">Henüz gündem maddesi eklenmedi.</p>';
 

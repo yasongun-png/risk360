@@ -2123,7 +2123,8 @@ async function pptxOlustur() {
     const olaylarMetni = /^olaylar/i.test(g.baslik.trim()) ? toplantiOlaylarGundemMetni(toplanti.id) : '';
     return [String(i + 1), g.baslik, [g.not, olaylarMetni].filter(Boolean).join(' — ')];
   }), [1, 5, 5.5]);
-  gundem.forEach((g, i) => ozetSlaydi(`GÜNDEM ${i + 1} / ${gundem.length}`, g.baslik, g.ozet));
+  // Kullanıcı isteği: gündem maddelerinin özetleri PPTX'e geçmesin (yalnızca
+  // toplantı sayfasında görünür); olay ve karar özetleri slayt olarak kalır.
 
   // Tam ekran fotoğraf slaydı — hem kararlar hem olaylar için ortak (kullanıcı
   // isteği: "fotoğraflar slaytta olsun sonraki slaytta büyük tam ekran
