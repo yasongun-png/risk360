@@ -406,6 +406,7 @@ function kararGuncelle(id, veriler) {
     kararNo,
     kararMetni: veriler.kararMetni.trim(),
     kaynakGundem: (veriler.kaynakGundem || '').trim(),
+    ...(veriler.ozet !== undefined ? { ozet: String(veriler.ozet || '').trim() } : {}),
     yasalSartlar: Array.isArray(veriler.yasalSartlar) ? veriler.yasalSartlar.filter(Boolean) : [],
     yasalDayanak: (veriler.yasalDayanak || '').trim(),
     sorumlu: veriler.sorumlu.trim(),

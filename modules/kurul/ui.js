@@ -290,11 +290,16 @@ function gundemSatiriEkle() {
 
 function gundemListesiniCiz() {
   const kutu = document.getElementById('gundemListesi');
+  // Kullanıcı isteği: her gündem maddesi için serbest "Sunum Özeti" — PPTX'te
+  // gündem tablosunun ardından o maddenin ÖZET slaydında okunur.
   kutu.innerHTML = _gundemTaslak.map((g, i) => `
-    <div class="form-satir-ikili" style="grid-template-columns: 1fr 1fr 32px; align-items:start; margin-bottom:8px;" data-gundem-satir="${g.id}">
-      <input placeholder="Gündem maddesi" data-gundem-alan="baslik" data-gundem-id="${g.id}" value="${g.baslik.replace(/"/g, '&quot;')}">
-      <input placeholder="Not (opsiyonel)" data-gundem-alan="not" data-gundem-id="${g.id}" value="${g.not.replace(/"/g, '&quot;')}">
-      <button type="button" class="tablo-buton sil" data-gundem-sil="${g.id}" title="Sil">✕</button>
+    <div style="margin-bottom:10px;" data-gundem-satir="${g.id}">
+      <div class="form-satir-ikili" style="grid-template-columns: 1fr 1fr 32px; align-items:start; margin-bottom:0;">
+        <input placeholder="Gündem maddesi" data-gundem-alan="baslik" data-gundem-id="${g.id}" value="${g.baslik.replace(/"/g, '&quot;')}">
+        <input placeholder="Not (opsiyonel)" data-gundem-alan="not" data-gundem-id="${g.id}" value="${g.not.replace(/"/g, '&quot;')}">
+        <button type="button" class="tablo-buton sil" data-gundem-sil="${g.id}" title="Sil">✕</button>
+      </div>
+      <textarea placeholder="Sunum özeti (opsiyonel, serbest) — PPTX'te bu madde için ayrı slaytta gösterilir" data-gundem-alan="ozet" data-gundem-id="${g.id}" rows="2" style="margin:4px 0 0; font-size:12.5px;">${String(g.ozet || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea>
     </div>
   `).join('') || '<p style="font-size:12px; color:var(--metin-soluk);">Henüz gündem maddesi eklenmedi.</p>';
 

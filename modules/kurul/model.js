@@ -151,7 +151,9 @@ function gundemMaddesiOlustur(veriler) {
     id: veriler.id || rastgeleId(),
     tur: veriler.tur || 'Genel',
     baslik: (veriler.baslik || '').trim(),
-    not: (veriler.not || '').trim()
+    not: (veriler.not || '').trim(),
+    // Kullanıcı isteği: her madde için serbest özet; PPTX'te ayrı slaytta okunur.
+    ozet: (veriler.ozet || '').trim()
   };
 }
 
@@ -225,6 +227,8 @@ function kararOlustur(veriler) {
     toplantiId: veriler.toplantiId || '',
     kararMetni: (veriler.kararMetni || '').trim(),
     kaynakGundem: (veriler.kaynakGundem || '').trim(),
+    // Sunum özeti (serbest metin) — PPTX'te maddenin ardından ayrı ÖZET slaydı.
+    ozet: (veriler.ozet || '').trim(),
     // Bu karar bir olaydan otomatik açılan taslaksa (bkz. service.js
     // toplantiOlaylariIcinKararTaslaklariniOlustur), kaynak olayın id'si —
     // manuel eklenen kararlarda hep boştur.
@@ -296,6 +300,8 @@ function kurulOlayiOlustur(veriler) {
     yer: (veriler.yer || '').trim(),
     birim: (veriler.birim || '').trim(),
     olusSekli: (veriler.olusSekli || '').trim(),
+    // Sunum özeti (serbest metin) — PPTX'te olay slaydının ardından ÖZET slaydı.
+    ozet: (veriler.ozet || '').trim(),
     kokNeden: (veriler.kokNeden || '').trim(),
     isGunuKaybi: (veriler.isGunuKaybi || '').trim(),
     // Olaya bağlı karar takibi — kararlar tablosundakiyle aynı 4 alan, ama

@@ -1878,6 +1878,24 @@ async function pptxOlustur() {
     }
   };
 
+  // Kullanıcı isteği: "herhangi bir olay, karar, gündem vb. için serbest özet
+  // kısmı olsun ve pptx'te o kısmı göreyim, maddenin özetini okuyayım" — özet
+  // girilmiş her maddenin hemen ardından büyük, okunaklı tek bir ÖZET slaydı.
+  // Yazı boyutu uzunluğa göre seçilir, yine de taşarsa fit:'shrink' küçültür;
+  // özet ayrıca konuşmacı notlarına da yazılır.
+  const ozetSlaydi = (ustEtiket, baslik, ozet) => {
+    const metin = String(ozet || '').trim();
+    if (!metin) return;
+    const sl = yeniSlayt();
+    kartBasligi(sl, `${ustEtiket}  ·  ÖZET`, baslik || '-');
+    sl.addShape(pptx.ShapeType.roundRect, { x: M, y: 1.35, w: SW - 2 * M, h: 5.4, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: R.cizgi, width: 1 } });
+    sl.addShape(pptx.ShapeType.rect, { x: M, y: 1.35, w: 0.09, h: 5.4, fill: { color: R.birincil }, line: { type: 'none' } });
+    const uzunluk = metin.length + (metin.split('\n').length - 1) * 60;
+    const boyut = uzunluk <= 250 ? 22 : uzunluk <= 500 ? 19 : uzunluk <= 900 ? 16 : uzunluk <= 1400 ? 14 : 12;
+    sl.addText(metin, { x: M + 0.4, y: 1.6, w: SW - 2 * M - 0.8, h: 4.9, fontSize: boyut, color: R.baslik, valign: 'top', fit: 'shrink', paraSpaceAfter: 6, lineSpacingMultiple: 1.1 });
+    sl.addNotes(metin);
+  };
+
   const metinSlaydi = (baslik, metin) => {
     const sl = yeniSlayt();
     kartBasligi(sl, 'DEĞERLENDİRME', baslik);
@@ -2105,6 +2123,7 @@ async function pptxOlustur() {
     const olaylarMetni = /^olaylar/i.test(g.baslik.trim()) ? toplantiOlaylarGundemMetni(toplanti.id) : '';
     return [String(i + 1), g.baslik, [g.not, olaylarMetni].filter(Boolean).join(' — ')];
   }), [1, 5, 5.5]);
+  gundem.forEach((g, i) => ozetSlaydi(`GÜNDEM ${i + 1} / ${gundem.length}`, g.baslik, g.ozet));
 
   // Tam ekran fotoğraf slaydı — hem kararlar hem olaylar için ortak (kullanıcı
   // isteği: "fotoğraflar slaytta olsun sonraki slaytta büyük tam ekran
@@ -2150,6 +2169,7 @@ async function pptxOlustur() {
   if (olaylar.length) {
     olaylar.forEach((o, i) => {
       olaySlaydi(o, i + 1, olaylar.length);
+      ozetSlaydi(`OLAY  ·  ${i + 1} / ${olaylar.length}`, [o.tur, gunAyYil(o.tarih), o.yer].filter(Boolean).join('  ·  '), o.ozet);
       (o.fotograflar || []).forEach((f, fi) => fotoTamEkranSlaydiEkle(`${o.tur || 'Olay'} — Olay Yeri ${fi + 1}`, f.url));
     });
   } else {
@@ -2186,6 +2206,8 @@ async function pptxOlustur() {
     ];
     metaTablosuEkle(sl, metaSatirlari, M, metinKutusuEkle(sl, k.kararMetni || '-', metinGenislik, metaSatirlari.length), metinGenislik);
     if (foto) kucukFotoEkle(sl, foto, 8.55, 1.35, 3.5);
+
+    ozetSlaydi(`${baslikOnEki}  ·  ${sira} / ${toplam}`, [k.kararNo, k.kaynakGundem].filter(Boolean).join('  ·  '), k.ozet);
 
     const sl2 = yeniSlayt();
     kartBasligi(sl2, `${baslikOnEki}  ·  ${sira} / ${toplam}  ·  ${k.kararNo}`, 'Konuşulanlar');

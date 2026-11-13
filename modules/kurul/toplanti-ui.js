@@ -444,7 +444,7 @@ function gundemListesiniCiz(toplanti) {
         const otoNot = /^olaylar/i.test(g.baslik.trim()) && olaylarMetni
           ? `<div style="margin-top:2px; color:var(--metin-soluk); font-size:12px;">${_ktKacir(olaylarMetni)}</div>`
           : '';
-        return `<li style="margin-bottom:6px;">${_ktKacir(g.baslik)}${g.not ? ' — ' + _ktKacir(g.not) : ''}${otoNot}</li>`;
+        return `<li style="margin-bottom:6px;">${_ktKacir(g.baslik)}${g.not ? ' — ' + _ktKacir(g.not) : ''}${otoNot}${g.ozet ? `<div style="margin-top:2px; font-size:12px; white-space:pre-wrap; background:var(--zemin-ikincil, #f1f5f9); border-left:3px solid var(--birincil, #0f766e); padding:3px 8px; border-radius:4px;"><b>Özet:</b> ${_ktKacir(g.ozet)}</div>` : ''}</li>`;
       }).join('')}</ol>`
     : '<div class="bos-durum gorunur">Gündem maddesi eklenmemiş.</div>';
 }
@@ -816,6 +816,7 @@ function olayiKararaAktar(olay) {
     kararNo: '',
     kararMetni: taslakMetin,
     kaynakGundem: olaylarGundemi ? olaylarGundemi.baslik : 'Olaylar',
+    ozet: olay.ozet || '',
     yasalSartlar: [],
     yasalDayanak: '',
     sorumlu: olay.sorumlu || '',
@@ -1017,6 +1018,7 @@ function olayModalAc(olay) {
   document.getElementById('olayYer').value = olay ? olay.yer : '';
   document.getElementById('olayBirim').value = olay ? olay.birim : '';
   document.getElementById('olayOlusSekli').value = olay ? olay.olusSekli : '';
+  document.getElementById('olayOzet').value = olay ? (olay.ozet || '') : '';
   document.getElementById('olayKokNeden').value = olay ? olay.kokNeden : '';
   document.getElementById('olayIsGunuKaybi').value = olay ? olay.isGunuKaybi : '';
 
@@ -1060,6 +1062,7 @@ function olayFormGonderildi(e) {
     yer: document.getElementById('olayYer').value,
     birim: document.getElementById('olayBirim').value,
     olusSekli: document.getElementById('olayOlusSekli').value,
+    ozet: document.getElementById('olayOzet').value,
     kokNeden: document.getElementById('olayKokNeden').value,
     isGunuKaybi: document.getElementById('olayIsGunuKaybi').value,
     yasalSartlar: _ktSeciliYasalSartlariGetir('olayYasalSartlar'),
@@ -1238,6 +1241,7 @@ function kararModalAc(karar) {
   document.getElementById('kararModalBaslik').textContent = karar && karar.id ? 'Kararı Düzenle' : 'Yeni Gündem Maddesi';
   document.getElementById('kararNo').value = karar ? karar.kararNo : '';
   document.getElementById('kararMetni').value = karar ? karar.kararMetni : '';
+  document.getElementById('kararOzet').value = karar ? (karar.ozet || '') : '';
   document.getElementById('kararKaynakGundem').value = karar ? karar.kaynakGundem : '';
   _ktYasalSartlariDoldur('kararYasalSartlar');
   _ktYasalSartlariSec('kararYasalSartlar', karar ? karar.yasalSartlar : []);
@@ -1302,6 +1306,7 @@ function kararFormGonderildi(e) {
   const veriler = {
     kararNo: document.getElementById('kararNo').value,
     kararMetni: document.getElementById('kararMetni').value,
+    ozet: document.getElementById('kararOzet').value,
     kaynakGundem: document.getElementById('kararKaynakGundem').value,
     yasalSartlar: _ktSeciliYasalSartlariGetir('kararYasalSartlar'),
     yasalDayanak: document.getElementById('kararYasalDayanak').value,
