@@ -301,6 +301,11 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('fpAramaKutusu').addEventListener('input', firmaPersoneliniCiz);
   document.getElementById('fpPasifFiltre').addEventListener('change', firmaPersoneliniCiz);
   document.getElementById('fpYeniKisiBtn').addEventListener('click', () => kisiModalAc(null, _ykFpFirmaId));
+  document.getElementById('fpMailEksikBtn').addEventListener('click', firmaPersoneliMailEksik);
+  document.getElementById('fpTumunuSec').addEventListener('change', e => {
+    document.querySelectorAll('#fpTabloGovde [data-fp-sec]').forEach(cb => { cb.checked = e.target.checked; });
+    _ykFpSecimDurumunuGuncelle();
+  });
 
   document.getElementById('yeniKisiBtn').addEventListener('click', () => kisiModalAc());
   document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
@@ -1022,8 +1027,11 @@ function firmaPersoneliniCiz() {
 
   const govde = document.getElementById('fpTabloGovde');
   const bosDurum = document.getElementById('fpBosDurum');
+  // Liste yeniden çizilince seçimler korunur (ör. pasif yap sonrası).
+  const seciliIdler = new Set(Array.from(govde.querySelectorAll('[data-fp-sec]:checked')).map(cb => cb.getAttribute('data-fp-sec')));
   govde.innerHTML = '';
   if (kisiler.length === 0) {
+    _ykFpSecimDurumunuGuncelle();
     bosDurum.classList.add('gorunur');
     bosDurum.textContent = tumu.length ? 'Aramanızla eşleşen personel bulunamadı.' : 'Bu firmaya kayıtlı personel yok.';
     return;
@@ -1038,6 +1046,7 @@ function firmaPersoneliniCiz() {
     const sonTarihMetni = k.girisSonTarih && k.girisSonTarih.sonTarih ? formatTarihGoster(k.girisSonTarih.sonTarih) : '-';
     const bolumGorev = [k.bolum, k.gorev].filter(Boolean).map(_ykKacir).join(' / ') || '-';
     satir.innerHTML = `
+      <td><input type="checkbox" data-fp-sec="${k.id}" ${seciliIdler.has(k.id) ? 'checked' : ''}></td>
       <td>${_ykKacir(k.personelNo)}</td>
       <td>${_ykKacir(k.adSoyad)}${k.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
       <td>${_ykKacir(k.kimlikNo) || '-'}</td>
@@ -1056,6 +1065,8 @@ function firmaPersoneliniCiz() {
     govde.appendChild(satir);
   });
 
+  govde.querySelectorAll('[data-fp-sec]').forEach(cb => cb.addEventListener('change', _ykFpSecimDurumunuGuncelle));
+  _ykFpSecimDurumunuGuncelle();
   govde.querySelectorAll('[data-fp-pasif]').forEach(btn => btn.addEventListener('click', () => {
     yukleniciKisiPasifDurumunuDegistir(btn.getAttribute('data-fp-pasif'), btn.getAttribute('data-yeni-pasif') === 'true');
     firmaPersoneliniCiz();
@@ -1070,6 +1081,30 @@ function firmaPersoneliniCiz() {
     yukleniciKisiSil(btn.getAttribute('data-fp-sil'));
     firmaPersoneliniCiz();
   }));
+}
+
+// Kullanıcı isteği (2026-11-14): "bu ekranda o firmanın tüm elemanlarının
+// veya seçilenlerin toplu olarak mail eksikler butonu". Seçim varsa
+// seçilenler, yoksa listede görünen tüm AKTİF personel (pasifler maile
+// girmesin; istenirse tek tek seçilebilir).
+function _ykFpSecimDurumunuGuncelle() {
+  const kutular = Array.from(document.querySelectorAll('#fpTabloGovde [data-fp-sec]'));
+  const secili = kutular.filter(cb => cb.checked).length;
+  const tumu = document.getElementById('fpTumunuSec');
+  tumu.checked = kutular.length > 0 && secili === kutular.length;
+  tumu.indeterminate = secili > 0 && secili < kutular.length;
+  document.getElementById('fpMailEksikBtn').textContent = secili ? `Mail için Eksiklikler (${secili} seçili)` : 'Mail için Eksiklikler (Tümü)';
+}
+
+function firmaPersoneliMailEksik() {
+  const kutular = Array.from(document.querySelectorAll('#fpTabloGovde [data-fp-sec]'));
+  const secili = kutular.filter(cb => cb.checked);
+  let kisiler = (secili.length ? secili : kutular)
+    .map(cb => yukleniciKisiIdIleGetirRepo(cb.getAttribute('data-fp-sec')))
+    .filter(Boolean);
+  if (!secili.length) kisiler = kisiler.filter(k => !k.pasif);
+  if (!kisiler.length) { alert('Listede maile eklenecek aktif personel yok.'); return; }
+  mailEksikAc(kisiler);
 }
 
 // ==================== MAİL İÇİN EKSİKLİKLER ====================

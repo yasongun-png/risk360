@@ -161,13 +161,14 @@
             <option value="aktif">Aktif</option>
             <option value="pasif">Pasif</option>
           </select>
+          <button type="button" class="ikincil" id="fpMailEksikBtn" style="width:auto;" title="Seçili personelin (seçim yoksa listedeki tüm aktif personelin) eksiklerini mail metni olarak verir">Mail için Eksiklikler (Tümü)</button>
           <button type="button" class="birincil" id="fpYeniKisiBtn" style="width:auto;">+ Personel Ekle</button>
         </div>
       </div>
       <div id="fpOzet" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Personel No</th><th>Ad Soyad</th><th>Kimlik No</th><th>Bölüm / Görev</th><th>Telefon</th><th>Durum</th><th>Girebileceği Son Tarih</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th style="width:28px;"><input type="checkbox" id="fpTumunuSec" title="Listedekilerin tümünü seç"></th><th>Personel No</th><th>Ad Soyad</th><th>Kimlik No</th><th>Bölüm / Görev</th><th>Telefon</th><th>Durum</th><th>Girebileceği Son Tarih</th><th>Kayıt Tarihi</th><th>İşlemler</th></tr></thead>
           <tbody id="fpTabloGovde"></tbody>
         </table>
       </div>
@@ -677,7 +678,7 @@
   <script src="validation.js?v=20261019c"></script>
   <script src="repository.js?v=20261030a"></script>
   <script src="service.js?v=20261104a"></script>
-  <script src="ui.js?v=20261114b"></script>
+  <script src="ui.js?v=20261114c"></script>
   <script src="roboto-font.js"></script>
   <script src="cikti.js?v=20261104a"></script>
   <script src="degerlendirme.js?v=20261019f"></script>
