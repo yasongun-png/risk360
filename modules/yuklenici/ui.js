@@ -252,6 +252,10 @@ function yukleniciSayfasiniBaslat() {
   document.getElementById('firmaForm').addEventListener('submit', firmaFormGonderildi);
   document.getElementById('firmaAdi').addEventListener('input', _firmaBenzerUyarisiniCiz);
   document.getElementById('firmaAramaKutusu').addEventListener('input', e => firmalariCiz(e.target.value));
+  document.getElementById('fpGeriBtn').addEventListener('click', () => gorunumDegistir('firmalar'));
+  document.getElementById('fpAramaKutusu').addEventListener('input', firmaPersoneliniCiz);
+  document.getElementById('fpPasifFiltre').addEventListener('change', firmaPersoneliniCiz);
+  document.getElementById('fpYeniKisiBtn').addEventListener('click', () => kisiModalAc(null, _ykFpFirmaId));
 
   document.getElementById('yeniKisiBtn').addEventListener('click', () => kisiModalAc());
   document.getElementById('kisiModalKapatBtn').addEventListener('click', kisiModalKapat);
@@ -494,11 +498,14 @@ function _yukleniciKisiIceAktarSatiriEkle(satir) {
 
 function gorunumDegistir(gorunum) {
   _ykGorunum = gorunum;
-  document.querySelectorAll('[data-sekme]').forEach(btn => btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== gorunum));
-  ['dashboard', 'firmalar', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama', 'formlar', 'degerlendirme'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
+  // Firma personeli sayfası Firmalar sekmesinin alt sayfasıdır; sekme seçili kalsın.
+  const seciliSekme = gorunum === 'firma-personel' ? 'firmalar' : gorunum;
+  document.querySelectorAll('[data-sekme]').forEach(btn => btn.classList.toggle('sekme-seciliDegil', btn.getAttribute('data-sekme') !== seciliSekme));
+  ['dashboard', 'firmalar', 'firma-personel', 'kisiler', 'araclar', 'ziyaretciler', 'kayitlar', 'ozet', 'detayli-arama', 'formlar', 'degerlendirme'].forEach(g => { document.getElementById('bolum-' + g).style.display = g === gorunum ? '' : 'none'; });
 
   if (gorunum === 'dashboard') dashboardCiz();
-  else if (gorunum === 'firmalar') firmalariCiz('');
+  else if (gorunum === 'firmalar') firmalariCiz(document.getElementById('firmaAramaKutusu').value);
+  else if (gorunum === 'firma-personel') firmaPersoneliniCiz();
   else if (gorunum === 'kisiler') kisileriCiz('');
   else if (gorunum === 'araclar') araclariCiz('');
   else if (gorunum === 'ziyaretciler') ziyaretcileriCiz();
@@ -902,7 +909,7 @@ function firmalariCiz(aramaMetni) {
     const satir = document.createElement('tr');
     satir.innerHTML = `
       <td>${f.firmaNo}</td>
-      <td>${_ykKacir(f.firmaAdi)}</td>
+      <td><a href="#" data-firma-personel="${f.id}" title="Bu firmanın tüm çalışanlarını göster" style="font-weight:600;">${_ykKacir(f.firmaAdi)}</a></td>
       <td>${_ykKacir(f.yetkiliAdi) || '-'}</td>
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.riskSeviyesi)}">${_ykKacir(f.riskSeviyesi)}</span></td>
       <td><span class="genel-rozet rozet-${ykRozetSinifAdi(f.durum)}">${_ykKacir(f.durum)}</span></td>
@@ -918,9 +925,105 @@ function firmalariCiz(aramaMetni) {
   });
 
   govde.querySelectorAll('[data-son-deg]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); _ykFirmaDegerlendirmeleriniAc(a.getAttribute('data-son-deg')); }));
+  govde.querySelectorAll('[data-firma-personel]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); firmaPersonelSayfasiniAc(a.getAttribute('data-firma-personel')); }));
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => firmaModalAc(yukleniciFirmaIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu firmayı ve bağlı personelini silmek istediğinize emin misiniz?', 'Sil')) { yukleniciFirmaSil(btn.getAttribute('data-sil')); firmalariCiz(document.getElementById('firmaAramaKutusu').value); }
+  }));
+}
+
+// ==================== FİRMA PERSONELİ ====================
+// Kullanıcı isteği (2026-11-14): "firmanın adının üzerine tıkladığımda sadece
+// o firmanın tüm çalışanlarını gösteren sayfa açılsın". Aktif + pasif tüm
+// personel listelenir (filtreyle daraltılabilir).
+
+let _ykFpFirmaId = null;
+
+function firmaPersonelSayfasiniAc(firmaId) {
+  _ykFpFirmaId = firmaId;
+  document.getElementById('fpAramaKutusu').value = '';
+  document.getElementById('fpPasifFiltre').value = '';
+  gorunumDegistir('firma-personel');
+  window.scrollTo(0, 0);
+}
+
+function firmaPersoneliniCiz() {
+  const firma = _ykFpFirmaId ? yukleniciFirmaIdIleGetirRepo(_ykFpFirmaId) : null;
+  if (!firma) { gorunumDegistir('firmalar'); return; }
+
+  document.getElementById('fpBaslik').innerHTML = `${_ykKacir(firma.firmaAdi)} <span style="font-weight:normal; font-size:13px; color:var(--metin-soluk);">(${_ykKacir(firma.firmaNo)})</span>`;
+
+  const tumu = yukleniciKisileriniGetir('', { firmaId: firma.id });
+  const say = fn => tumu.filter(fn).length;
+  const aktifler = tumu.filter(k => !k.pasif);
+  const cip = (etiket, deger, renk) => `<span class="genel-rozet" style="font-size:12px; ${renk || ''}">${etiket}: <b>${deger}</b></span>`;
+  document.getElementById('fpOzet').innerHTML = [
+    cip('Toplam', tumu.length),
+    cip('Aktif', aktifler.length),
+    cip('Pasif', say(k => k.pasif), 'opacity:.7;'),
+    cip('Girişe Uygun', aktifler.filter(k => k.durumGoruntu === 'Girişe Uygun').length, 'background:#dcfce7; color:#15803d;'),
+    cip('Eksik Evrak', aktifler.filter(k => k.durumGoruntu === 'Eksik Evrak').length, 'background:#fef3c7; color:#92400e;'),
+    cip('Girişe Kapalı', aktifler.filter(k => k.durumGoruntu === 'Girişe Kapalı').length, 'background:#fee2e2; color:#b91c1c;')
+  ].join('');
+
+  const pasifFiltre = document.getElementById('fpPasifFiltre').value;
+  const terim = _basligiNormallestir(document.getElementById('fpAramaKutusu').value || '');
+  let kisiler = tumu;
+  if (pasifFiltre === 'aktif') kisiler = kisiler.filter(k => !k.pasif);
+  else if (pasifFiltre === 'pasif') kisiler = kisiler.filter(k => k.pasif);
+  if (terim) kisiler = kisiler.filter(k => _basligiNormallestir([k.adSoyad, k.personelNo, k.kimlikNo, k.bolum, k.gorev, k.telefon].join(' ')).includes(terim));
+  // Aktifler önce, sonra ada göre.
+  kisiler.sort((a, b) => (a.pasif ? 1 : 0) - (b.pasif ? 1 : 0) || _yukleniciNormalizeText(a.adSoyad).localeCompare(_yukleniciNormalizeText(b.adSoyad)));
+
+  const govde = document.getElementById('fpTabloGovde');
+  const bosDurum = document.getElementById('fpBosDurum');
+  govde.innerHTML = '';
+  if (kisiler.length === 0) {
+    bosDurum.classList.add('gorunur');
+    bosDurum.textContent = tumu.length ? 'Aramanızla eşleşen personel bulunamadı.' : 'Bu firmaya kayıtlı personel yok.';
+    return;
+  }
+  bosDurum.classList.remove('gorunur');
+
+  const bugun = bugunIso();
+  kisiler.forEach(k => {
+    const satir = document.createElement('tr');
+    satir.classList.add(yukleniciKisiSatirSinifiHesapla(k, bugun));
+    if (k.pasif) satir.style.opacity = '0.55';
+    const sonTarihMetni = k.girisSonTarih && k.girisSonTarih.sonTarih ? formatTarihGoster(k.girisSonTarih.sonTarih) : '-';
+    const bolumGorev = [k.bolum, k.gorev].filter(Boolean).map(_ykKacir).join(' / ') || '-';
+    satir.innerHTML = `
+      <td>${_ykKacir(k.personelNo)}</td>
+      <td>${_ykKacir(k.adSoyad)}${k.pasif ? ' <span class="genel-rozet rozet-pasif" style="font-size:10px;">Pasif</span>' : ''}</td>
+      <td>${_ykKacir(k.kimlikNo) || '-'}</td>
+      <td>${bolumGorev}</td>
+      <td>${_ykKacir(k.telefon) || '-'}</td>
+      <td><span class="genel-rozet rozet-${ykRozetSinifAdi(k.durumGoruntu)}">${_ykKacir(k.durumGoruntu)}</span>${k.kritikSebep ? `<div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">${_ykKacir(k.kritikSebep.sebep)}${k.eksikBelgeSayisi > 1 ? ` (+${k.eksikBelgeSayisi - 1} diğer)` : ''}</div>` : ''}</td>
+      <td>${sonTarihMetni}</td>
+      <td>${_ykKayitTarihiGoster(k.olusturmaTarihi)}</td>
+      <td>
+        <button class="tablo-buton" data-fp-pasif="${k.id}" data-yeni-pasif="${k.pasif ? 'false' : 'true'}">${k.pasif ? 'Aktif Yap' : 'Pasif Yap'}</button>
+        <button class="tablo-buton" data-fp-duzenle="${k.id}">Düzenle</button>
+        <button class="tablo-buton" data-fp-mail="${k.id}" title="Bu kişinin eksiklerini mail metni olarak ver">Mail</button>
+        <button class="tablo-buton sil" data-fp-sil="${k.id}">Sil</button>
+      </td>
+    `;
+    govde.appendChild(satir);
+  });
+
+  govde.querySelectorAll('[data-fp-pasif]').forEach(btn => btn.addEventListener('click', () => {
+    yukleniciKisiPasifDurumunuDegistir(btn.getAttribute('data-fp-pasif'), btn.getAttribute('data-yeni-pasif') === 'true');
+    firmaPersoneliniCiz();
+  }));
+  govde.querySelectorAll('[data-fp-duzenle]').forEach(btn => btn.addEventListener('click', () => kisiModalAc(yukleniciKisiIdIleGetirRepo(btn.getAttribute('data-fp-duzenle')))));
+  govde.querySelectorAll('[data-fp-mail]').forEach(btn => btn.addEventListener('click', () => {
+    const kisi = yukleniciKisiIdIleGetirRepo(btn.getAttribute('data-fp-mail'));
+    if (kisi) mailEksikAc([kisi]);
+  }));
+  govde.querySelectorAll('[data-fp-sil]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!(await onayModali('Bu kişiyi silmek istediğinize emin misiniz?', 'Sil'))) return;
+    yukleniciKisiSil(btn.getAttribute('data-fp-sil'));
+    firmaPersoneliniCiz();
   }));
 }
 
@@ -1116,6 +1219,7 @@ function kisileriCiz(aramaMetni) {
   // "Yüklenici Personeli" sekmesi kaldırıldı; personel ekleme/düzenleme/içe
   // aktarma sonrası görünen liste Personel Kayıtları olduğu için o da yenilenir.
   if (_ykGorunum === 'kayitlar') kayitlariCiz(document.getElementById('kayitAramaKutusu').value);
+  if (_ykGorunum === 'firma-personel') firmaPersoneliniCiz();
   const govde = document.getElementById('kisiTabloGovde');
   const bosDurum = document.getElementById('kisiBosDurum');
   const filtreler = { durum: document.getElementById('kisiDurumFiltre').value };
@@ -1240,7 +1344,8 @@ function _kisiFirmaTehlikesiniUygula() {
     document.getElementById('kisiTehlikeSinifi'), document.getElementById('kisiTehlikeKaynak'));
 }
 
-function kisiModalAc(kisi) {
+// varsayilanFirmaId: yeni kişide firma önceden seçili gelsin (Firma Personeli sayfası).
+function kisiModalAc(kisi, varsayilanFirmaId) {
   _duzenlenenKisiId = kisi ? kisi.id : null;
   // Derin kopya: taslak üzerindeki değişiklikler kaydedilmeden modal kapatılırsa
   // orijinal kayıt (repository'deki referans) bozulmasın.
@@ -1249,7 +1354,7 @@ function kisiModalAc(kisi) {
   document.getElementById('kisiModalBaslik').textContent = kisi ? (kisi.personelNo + ' Kişisini Düzenle') : 'Yeni Yüklenici Personeli';
 
   const firmalar = yukleniciFirmalariTumunuGetir();
-  _yukleniciFirmaListesiCiz(document.getElementById('kisiFirmaId'), firmalar, kisi ? kisi.firmaId : '');
+  _yukleniciFirmaListesiCiz(document.getElementById('kisiFirmaId'), firmalar, kisi ? kisi.firmaId : (varsayilanFirmaId || ''));
   _yukleniciFirmaAramaBagla('kisiFirmaAra', 'kisiFirmaId', firmalar);
 
   document.getElementById('adSoyad').value = kisi ? kisi.adSoyad : '';
