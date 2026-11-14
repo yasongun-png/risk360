@@ -290,6 +290,14 @@ function riskSayfasiniBaslat() {
       if (!seciliKonu) { alert('Önce içe aktaracağınız risk değerlendirme konusunu seçin (yoksa "+ Yeni Konu" ile oluşturun). Tüm satırlar o konuya eklenir.'); return; }
       satirlar.forEach(satir => {
         satir.termin = excelTarihiNormallestir(satir.termin);
+        // Termin sütununda tarih yerine "İş başlamadan önce", "Hemen" gibi metin
+        // olabiliyor — satır reddedilmesin: metin Planlanan Faaliyet'in sonuna
+        // eklenir, Termin boş bırakılır.
+        if (satir.termin && !/^\d{4}-\d{2}-\d{2}$/.test(satir.termin)) {
+          const not = 'Termin: ' + String(satir.termin).trim();
+          satir.planlanan = [String(satir.planlanan || '').trim(), not].filter(Boolean).join('\n');
+          satir.termin = '';
+        }
         satir.bolum = seciliKonu;
       });
       const sonuc = await riskExcelTopluEkle(satirlar);
