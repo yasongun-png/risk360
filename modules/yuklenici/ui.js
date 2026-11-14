@@ -31,12 +31,38 @@ function formatTarihGoster(isoTarih) {
 const YK_SIRALAMA_SECENEKLERI = [
   ['yeni', 'Kayıt Tarihi (Yeniden Eskiye)'],
   ['eski', 'Kayıt Tarihi (Eskiden Yeniye)'],
-  ['ad', 'Ada Göre (A-Z)']
+  ['ad', 'Ada Göre (A-Z)'],
+  ['adZA', 'Ada Göre (Z-A)']
 ];
 
-function _ykSirala(liste, sira, tarihAl, adAl) {
+// Kullanıcı isteği (2026-11-14): "yüklenici firmalar firma adına göre
+// sıralama istenirse yapılabilsin" — listeye göre açık etiketler; firma
+// sütunu olan kişi listelerinde ayrıca Firma Adına Göre sıralama.
+const YK_SIRALAMA_ETIKETLERI = {
+  firmaSiralama: { ad: 'Firma Adı (A-Z)', adZA: 'Firma Adı (Z-A)' },
+  aracSiralama: { ad: 'Firma Adı (A-Z)', adZA: 'Firma Adı (Z-A)' },
+  kisiSiralama: { ad: 'Ad Soyad (A-Z)', adZA: 'Ad Soyad (Z-A)', firma: 'Firma Adı (A-Z)', firmaZA: 'Firma Adı (Z-A)' },
+  kayitSiralama: { ad: 'Ad / Kimlik (A-Z)', adZA: 'Ad / Kimlik (Z-A)', firma: 'Firma Adı (A-Z)', firmaZA: 'Firma Adı (Z-A)' }
+};
+
+function _ykSiralamaSecenekleri(selectId) {
+  const etiket = YK_SIRALAMA_ETIKETLERI[selectId] || {};
+  const liste = YK_SIRALAMA_SECENEKLERI.map(([deger, ad]) => [deger, etiket[deger] || ad]);
+  if (etiket.firma) liste.push(['firma', etiket.firma], ['firmaZA', etiket.firmaZA]);
+  return liste;
+}
+
+const _ykMetinKarsilastir = (x, y) => String(x || '').localeCompare(String(y || ''), 'tr', { sensitivity: 'base' });
+
+// firmaAl: yalnızca 'firma'/'firmaZA' seçenekleri için (aynı firmada ada göre).
+function _ykSirala(liste, sira, tarihAl, adAl, firmaAl) {
   const kopya = liste.slice();
-  if (sira === 'ad') return kopya.sort((a, b) => String(adAl(a) || '').localeCompare(String(adAl(b) || ''), 'tr'));
+  if (sira === 'ad') return kopya.sort((a, b) => _ykMetinKarsilastir(adAl(a), adAl(b)));
+  if (sira === 'adZA') return kopya.sort((a, b) => _ykMetinKarsilastir(adAl(b), adAl(a)));
+  if ((sira === 'firma' || sira === 'firmaZA') && firmaAl) {
+    const y = sira === 'firma' ? 1 : -1;
+    return kopya.sort((a, b) => y * _ykMetinKarsilastir(firmaAl(a), firmaAl(b)) || _ykMetinKarsilastir(adAl(a), adAl(b)));
+  }
   const yon = sira === 'eski' ? 1 : -1;
   return kopya.sort((a, b) => {
     const ta = tarihAl(a) || '';
@@ -222,9 +248,28 @@ function yukleniciSayfasiniBaslat() {
   document.querySelectorAll('[data-sekme]').forEach(btn => btn.addEventListener('click', () => gorunumDegistir(btn.getAttribute('data-sekme'))));
 
   document.querySelectorAll('select.yk-siralama').forEach(el => {
-    el.innerHTML = YK_SIRALAMA_SECENEKLERI.map(([deger, ad]) => `<option value="${deger}">${ad}</option>`).join('');
+    el.innerHTML = _ykSiralamaSecenekleri(el.id).map(([deger, ad]) => `<option value="${deger}">${ad}</option>`).join('');
     el.value = 'yeni';
   });
+  // Sütun başlığına tıklayınca A-Z / Z-A arasında geçer (sıralama kutusu da güncellenir).
+  const _ykBaslikOklariniGuncelle = () => document.querySelectorAll('th[data-yk-baslik-sirala]').forEach(th => {
+    const deger = _ykSiralamaDegeri(th.getAttribute('data-yk-baslik-sirala'));
+    const ok = deger === th.getAttribute('data-artan') ? ' ▲' : deger === th.getAttribute('data-azalan') ? ' ▼' : ' ⇅';
+    th.querySelector('.yk-baslik-ok').textContent = ok;
+  });
+  document.querySelectorAll('th[data-yk-baslik-sirala]').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.title = 'Tıklayın: A-Z / Z-A sırala';
+    th.insertAdjacentHTML('beforeend', '<span class="yk-baslik-ok" style="opacity:.6; font-size:11px;"></span>');
+    const sec = document.getElementById(th.getAttribute('data-yk-baslik-sirala'));
+    th.addEventListener('click', () => {
+      sec.value = sec.value === th.getAttribute('data-artan') ? th.getAttribute('data-azalan') : th.getAttribute('data-artan');
+      sec.dispatchEvent(new Event('change'));
+    });
+    sec.addEventListener('change', _ykBaslikOklariniGuncelle);
+  });
+  _ykBaslikOklariniGuncelle();
   document.getElementById('firmaSiralama').addEventListener('change', () => firmalariCiz(document.getElementById('firmaAramaKutusu').value));
   document.getElementById('kisiSiralama').addEventListener('change', () => kisileriCiz(document.getElementById('kisiAramaKutusu').value));
   document.getElementById('aracSiralama').addEventListener('change', () => araclariCiz(document.getElementById('aracAramaKutusu').value));
@@ -1223,7 +1268,7 @@ function kisileriCiz(aramaMetni) {
   const govde = document.getElementById('kisiTabloGovde');
   const bosDurum = document.getElementById('kisiBosDurum');
   const filtreler = { durum: document.getElementById('kisiDurumFiltre').value };
-  const kisiler = _ykSirala(yukleniciKisileriniGetir(aramaMetni, filtreler), _ykSiralamaDegeri('kisiSiralama'), k => k.olusturmaTarihi, k => k.adSoyad);
+  const kisiler = _ykSirala(yukleniciKisileriniGetir(aramaMetni, filtreler), _ykSiralamaDegeri('kisiSiralama'), k => k.olusturmaTarihi, k => k.adSoyad, k => k.firmaAdi);
 
   govde.innerHTML = '';
   if (kisiler.length === 0) {
@@ -1882,7 +1927,7 @@ function _ykKayitPasifFiltreUygula(liste) {
 function kayitlariCiz(aramaMetni) {
   const govde = document.getElementById('kayitTabloGovde');
   const bosDurum = document.getElementById('kayitBosDurum');
-  const kayitlar = _ykSirala(_ykKayitPasifFiltreUygula(yukleniciKayitlariniGetir(aramaMetni)), _ykSiralamaDegeri('kayitSiralama'), r => r.kaynak && r.kaynak.olusturmaTarihi, r => r.kimlik);
+  const kayitlar = _ykSirala(_ykKayitPasifFiltreUygula(yukleniciKayitlariniGetir(aramaMetni)), _ykSiralamaDegeri('kayitSiralama'), r => r.kaynak && r.kaynak.olusturmaTarihi, r => r.kimlik, r => r.firma);
   document.getElementById('kayitTumunuSecCheckbox').checked = false;
 
   govde.innerHTML = '';
