@@ -419,10 +419,13 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
   // Kullanıcı isteği: konum krokisi yalnızca kayıtta haritadan konum seçildiyse
   // gösterilsin; konum yoksa bölüm hiç çıkmaz (önce "işaretlenmemiş" yazısı çıkıyordu).
   const krokiBilgi = await _ucKrokiGorseliniHazirla(k);
+  // Kullanıcı isteği (2026-11-16): görsel kanıtlar ile ek fotoğraflar aynı
+  // boyutta olsun — ikisi de aynı kutuya sığdırılır, aynı satır yüksekliği.
+  const FOTO_KUTU_GEN = 91, FOTO_KUTU_YUK = 54, FOTO_SATIR_YUK = 58; // mm
   const [logoGorsel, fotoOncesi, fotoSonrasi, krokiGorsel, bildirenImza, sorumluImza, ekFotolar] = await Promise.all([
     _ucWordGorselSigdir(logo, px(24), px(16)),
-    gorsel(k.fotoOncesi, 91, 54),
-    gorsel(k.fotoSonrasi, 91, 54),
+    gorsel(k.fotoOncesi, FOTO_KUTU_GEN, FOTO_KUTU_YUK),
+    gorsel(k.fotoSonrasi, FOTO_KUTU_GEN, FOTO_KUTU_YUK),
     krokiBilgi ? _ucWordGorselSigdir(krokiBilgi.url, px(186), px(70), { x: krokiBilgi.x, y: krokiBilgi.y, kod: k.aksiyonNo || '' }) : null,
     gorsel(imzalar.bildiren && imzalar.bildiren.imzaUrl, 80, 12),
     gorsel(imzalar.sorumlu && imzalar.sorumlu.imzaUrl, 80, 12),
@@ -430,8 +433,8 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
       no,
       oncesiVarMi: !!k['fotoOncesi' + no],
       sonrasiVarMi: !!k['fotoSonrasi' + no],
-      oncesi: await gorsel(k['fotoOncesi' + no], 85, 38),
-      sonrasi: await gorsel(k['fotoSonrasi' + no], 85, 38)
+      oncesi: await gorsel(k['fotoOncesi' + no], FOTO_KUTU_GEN, FOTO_KUTU_YUK),
+      sonrasi: await gorsel(k['fotoSonrasi' + no], FOTO_KUTU_GEN, FOTO_KUTU_YUK)
     })))
   ]);
   // Boş kalan çiftler tabloya hiç girmez.
@@ -534,20 +537,20 @@ async function uygunsuzlukKayitWordOlustur(id, indir = true) {
   const fotoHucre = (g, genislik) => hucre([ortali(g ? [resim(g)] : [metin('')])], genislik, { verticalAlign: docx.VerticalAlign.CENTER, margins: { top: mm(1), bottom: mm(1), left: mm(1), right: mm(1) } });
   const gorselKanitlar = tablo(IKI_SUTUN, [
     bolumBasligi('4. Görsel Kanıtlar (Öncesi / Sonrası)', 2),
-    new docx.TableRow({ cantSplit: true, height: { value: mm(58), rule: docx.HeightRule.EXACT }, children: [fotoHucre(fotoOncesi, IKI_SUTUN[0]), fotoHucre(fotoSonrasi, IKI_SUTUN[1])] }),
+    new docx.TableRow({ cantSplit: true, height: { value: mm(FOTO_SATIR_YUK), rule: docx.HeightRule.EXACT }, children: [fotoHucre(fotoOncesi, IKI_SUTUN[0]), fotoHucre(fotoSonrasi, IKI_SUTUN[1])] }),
     new docx.TableRow({ cantSplit: true, children: ['Uygunsuzluk Anı (Öncesi)', 'Düzeltici Faaliyet (Sonrası)'].map((e, i) => hucre([ortali([metin(e.toLocaleUpperCase('tr'), { bold: true, size: 16 })])], IKI_SUTUN[i])) })
   ]);
 
-  const EK_NO = mm(16), EK_FOTO = Math.round((GENISLIK - EK_NO) / 2);
-  const EK_SUTUN = [EK_NO, EK_FOTO, GENISLIK - EK_NO - EK_FOTO];
-  const ekFotograflar = ekFotoSatirlari.length ? tablo(EK_SUTUN, [
-    bolumBasligi(`${bolumNo++}. Ek Fotoğraflar`, 3),
-    new docx.TableRow({ cantSplit: true, children: ['#', 'ÖNCESİ', 'SONRASI'].map((e, i) => hucre([ortali([metin(e, { bold: true, size: 16 })])], EK_SUTUN[i], { shading: { fill: 'E5E7EB', color: 'auto', type: docx.ShadingType.CLEAR }, borders: cerceve(acik) })) }),
-    ...ekFotoSatirlari.map(f => new docx.TableRow({ cantSplit: true, height: { value: mm(42), rule: docx.HeightRule.EXACT }, children: [
-      hucre([ortali([metin(f.no, { bold: true })])], EK_SUTUN[0], { verticalAlign: docx.VerticalAlign.CENTER, borders: cerceve(acik) }),
-      fotoHucre(f.oncesi, EK_SUTUN[1]),
-      fotoHucre(f.sonrasi, EK_SUTUN[2])
-    ] }))
+  // Ek fotoğraflar Görsel Kanıtlar ile aynı düzende: aynı iki sütun, aynı
+  // foto kutusu ve satır yüksekliği; altında "ÖNCESİ 2 / SONRASI 2" etiketi.
+  // Etiket satırı fotoğraftan ayrı sayfaya düşmesin diye foto hücreleri keepNext.
+  const ekFotoHucre = (g, genislik) => hucre([ortali(g ? [resim(g)] : [metin('')], { keepNext: true })], genislik, { verticalAlign: docx.VerticalAlign.CENTER, margins: { top: mm(1), bottom: mm(1), left: mm(1), right: mm(1) } });
+  const ekFotograflar = ekFotoSatirlari.length ? tablo(IKI_SUTUN, [
+    bolumBasligi(`${bolumNo++}. Ek Fotoğraflar`, 2),
+    ...ekFotoSatirlari.flatMap(f => [
+      new docx.TableRow({ cantSplit: true, height: { value: mm(FOTO_SATIR_YUK), rule: docx.HeightRule.EXACT }, children: [ekFotoHucre(f.oncesi, IKI_SUTUN[0]), ekFotoHucre(f.sonrasi, IKI_SUTUN[1])] }),
+      new docx.TableRow({ cantSplit: true, children: [`Öncesi ${f.no}`, `Sonrası ${f.no}`].map((e, i) => hucre([ortali([metin(e.toLocaleUpperCase('tr'), { bold: true, size: 16 })])], IKI_SUTUN[i])) })
+    ])
   ]) : null;
 
   const konumKrokisi = krokiGorsel ? tablo([GENISLIK], [
