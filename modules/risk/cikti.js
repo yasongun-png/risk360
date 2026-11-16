@@ -405,6 +405,37 @@ async function riskRaporuPdfOlustur(hazirlayanAdi) {
 // gibi küçük resim olarak DEĞİL, "Var/-" olarak gösterilir (çok satırlı geniş
 // tabloya onlarca görsel gömmek performans/karmaşıklık açısından orantısız);
 // tam görsel karşılaştırma için PDF/PPTX çıktıları kullanılmaya devam eder.
+// Kullanıcı isteği (2026-11-16): "raporlarda sol tarafta logo istiyorum".
+// Logo koda gömülmez; Firma Yönetimi'nde aktif firmaya yüklenen logo
+// (firmaLogoGetir) kullanılır. Kırpmadan maksGen×maksYuk piksel kutuya
+// sığdırılır, PNG olarak döner (Word için veri, Excel için base64).
+// Logo yoksa / çözülemezse null — rapor logosuz üretilir.
+async function _riskLogoHazirla(maksGen, maksYuk) {
+  const firma = aktifFirmaGetir();
+  let url = firma && typeof firmaLogoGetir === 'function' ? firmaLogoGetir(firma.id) : '';
+  if (!url) return null;
+  try {
+    if (typeof fotoBuyukCoz === 'function') url = (await fotoBuyukCoz(url)) || url;
+    const blob = await (await fetch(url)).blob();
+    const img = await new Promise((coz, red) => { const i = new Image(); i.onload = () => coz(i); i.onerror = red; i.src = URL.createObjectURL(blob); });
+    const oran = Math.min(maksGen / img.naturalWidth, maksYuk / img.naturalHeight, 1);
+    const gen = Math.max(1, Math.round(img.naturalWidth * oran));
+    const yuk = Math.max(1, Math.round(img.naturalHeight * oran));
+    const canvas = document.createElement('canvas');
+    canvas.width = gen * 2; canvas.height = yuk * 2;
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64 = dataUrl.split(',')[1];
+    const ikili = atob(base64);
+    const veri = new Uint8Array(ikili.length);
+    for (let i = 0; i < ikili.length; i++) veri[i] = ikili.charCodeAt(i);
+    return { veri, base64, gen, yuk };
+  } catch (e) {
+    console.error('Logo rapora eklenemedi:', e);
+    return null;
+  }
+}
+
 const _RSK_WORD_METIN_BOYUT = 16;
 const _RSK_WORD_BASLIK_BOYUT = 20;
 
@@ -590,11 +621,12 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
   const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
   // Excel'deki "Sayfa X / Y" alt bilgisinin karşılığı.
   const altBilgi = { default: new docx.Footer({ children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '646464' })] })] }) };
+  // Her sayfanın sol üstünde firma logosu (yaklaşık 40×14 mm kutu).
+  const logo = await _riskLogoHazirla(150, 52);
+  const ustBilgi = logo ? { default: new docx.Header({ children: [new docx.Paragraph({ alignment: docx.AlignmentType.LEFT, children: [new docx.ImageRun({ data: logo.veri, transformation: { width: logo.gen, height: logo.yuk } })] })] }) } : undefined;
+  const bolum = children => Object.assign({ properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, footers: altBilgi, children }, ustBilgi ? { headers: ustBilgi } : {});
   const doc = new docx.Document({
-    sections: [
-      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, footers: altBilgi, children: kapakCocuklari },
-      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, footers: altBilgi, children: cocuklar }
-    ]
+    sections: [bolum(kapakCocuklari), bolum(cocuklar)]
   });
   const blob = await docx.Packer.toBlob(doc);
   saveAs(blob, `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.docx`);
@@ -653,6 +685,13 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
   baslikSatiri(2, 'RİSK DEĞERLENDİRME RAPORU' + (filtreler.bolum ? ' — ' + filtreler.bolum : ''), 14, true);
   baslikSatiri(3, `Rapor Tarihi: ${bugun}   •   Toplam: ${ozet.toplam}   •   Açık: ${ozet.acik}   •   Gecikmiş: ${ozet.gecikmis}   •   Önemli+: ${ozet.onemliVeUstu}`, 10);
   ws.getRow(2).height = 22;
+  // Sol üstte firma logosu (Word'deki üst bilgi logosunun karşılığı); 1-3.
+  // satırların üstünde yüzer, başlık metinleri ortalı olduğundan çakışmaz.
+  const logo = await _riskLogoHazirla(150, 64);
+  if (logo) {
+    ws.getRow(1).height = 20; ws.getRow(3).height = 18;
+    ws.addImage(wb.addImage({ base64: logo.base64, extension: 'png' }), { tl: { col: 0.1, row: 0.1 }, ext: { width: logo.gen, height: logo.yuk }, editAs: 'oneCell' });
+  }
   // Word ile aynı: düzey hücrelerinde kısaltma, açıklaması başlığın üstünde.
   ws.mergeCells(`A4:${sonHarf}4`);
   ws.getCell('A4').value = 'Düzey kısaltmaları: ' + Object.keys(_RISK_DUZEY_KISALTMA).map(e => `${_RISK_DUZEY_KISALTMA[e]} = ${e}`).join('  •  ');
