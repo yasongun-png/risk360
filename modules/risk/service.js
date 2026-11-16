@@ -497,8 +497,10 @@ async function _riskFotoYenidenSaklaIhtiyacHalinde(deger, firmaSlug) {
   return fotoBuyukKaydet(deger, firmaSlug);
 }
 
-function riskOzetiHesapla() {
-  const liste = riskleriGetir('', {});
+// liste verilirse özet yalnızca o risklerden hesaplanır (Word/Excel raporu:
+// kullanıcı isteği 2026-11-16, "toplam/açık/gecikmiş sadece o konuya ait olmalı").
+function riskOzetiHesapla(verilenListe) {
+  const liste = Array.isArray(verilenListe) ? verilenListe : riskleriGetir('', {});
   const grupla = (secici) => {
     const sonuc = {};
     liste.forEach(r => {

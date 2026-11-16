@@ -548,7 +548,7 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
 
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(_bugun());
-  const ozet = riskOzetiHesapla();
+  const ozet = riskOzetiHesapla(riskler);
 
   const kapakCocuklari = [
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 24 })], spacing: { after: 300 } }),
@@ -628,7 +628,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
 
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(_bugun());
-  const ozet = riskOzetiHesapla();
+  const ozet = riskOzetiHesapla(riskler);
   const kolonlar = _riskRaporKolonlari(riskler, !!filtreler.bolum).filter(k => !k.foto);
   const ince = { style: 'thin', color: { argb: 'FF94A3B8' } };
   const kenar = { top: ince, bottom: ince, left: ince, right: ince };
@@ -638,7 +638,8 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
     pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.25, right: 0.25, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 }, printTitlesRow: '5:5' },
     headerFooter: { oddFooter: '&CSayfa &P / &N' }
   });
-  ws.columns = kolonlar.map(k => ({ width: Math.max(5, Math.round(k.yuzde * 2.1)) }));
+  // Başlık + filtre oku sığsın ("Düze", "Azalı" gibi kesilmesin): en az başlık uzunluğu + 5.
+  ws.columns = kolonlar.map(k => ({ width: Math.max(6, Math.round(k.yuzde * 2.1), k.baslik.length + 5) }));
   const sonHarf = ws.getColumn(kolonlar.length).letter;
 
   const baslikSatiri = (no, metin, boyut, kalin) => {
