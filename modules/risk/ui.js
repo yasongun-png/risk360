@@ -369,7 +369,6 @@ function riskSayfasiniBaslat() {
     }
   });
 
-  document.getElementById('pdfRaporBtn').addEventListener('click', () => hazirlayanModalAc('pdf'));
   document.getElementById('wordRaporBtn').addEventListener('click', () => hazirlayanModalAc('word'));
   document.getElementById('excelRaporBtn').addEventListener('click', () => hazirlayanModalAc('excel'));
   document.getElementById('hazirlayanModalKapatBtn').addEventListener('click', hazirlayanModalKapat);

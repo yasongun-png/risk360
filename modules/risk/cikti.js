@@ -174,8 +174,12 @@ function _riskRaporOnlemMetni(r) {
   return [r.onlem, r.planlanan ? 'Planlanan: ' + r.planlanan : ''].filter(Boolean).join('\n');
 }
 
+// Kullanıcı isteği (2026-11-16): PDF raporu kaldırıldı, "word ile exceli
+// uyumlu hale getir" — Word ve Excel birebir aynı sütunları kullanır;
+// fotoğraf sütunları (Word'de yalnızca "Var/-" yazıyordu, Excel'de yoktu)
+// ikisinden de çıkarıldı. Fotoğraflar PPTX sunumunda yer alır.
 function _riskRaporKolonlari(riskler, bolumFiltreli) {
-  const fotoVar = riskler.some(r => r.fotoOncesi || r.fotoSonrasi);
+  const fotoVar = false;
   const deger = v => (v === null || v === undefined || v === '') ? '-' : String(v);
   const f = (r, alan) => r.yontem === '5x5' ? '-' : deger(r[alan]);
   const kolonlar = [
@@ -498,8 +502,8 @@ function _riskWordYontemBolumu(riskler) {
   return cocuklar;
 }
 
-// Sütunlar PDF ile ortak (_riskRaporKolonlari): O/F/Ş, RP1, düzey, önlemler,
-// O₂/F₂/Ş₂, RP2, düzey₂, azalma... Word'de fotoğraf hücreleri "Var/-" yazar.
+// Sütunlar Excel ile ortak (_riskRaporKolonlari): O/F/Ş, RP1, düzey, önlemler,
+// O₂/F₂/Ş₂, RP2, düzey₂, azalma... (fotoğraf sütunu yok, bkz. orada).
 const _RSK_WORD_TABLO_BOYUT = 13;
 
 function _riskWordKucukParagraflar(metin, opts = {}) {
@@ -584,10 +588,12 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
   ];
 
   const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
+  // Excel'deki "Sayfa X / Y" alt bilgisinin karşılığı.
+  const altBilgi = { default: new docx.Footer({ children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '646464' })] })] }) };
   const doc = new docx.Document({
     sections: [
-      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, children: kapakCocuklari },
-      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, children: cocuklar }
+      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, footers: altBilgi, children: kapakCocuklari },
+      { properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, footers: altBilgi, children: cocuklar }
     ]
   });
   const blob = await docx.Packer.toBlob(doc);
@@ -646,6 +652,12 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
   baslikSatiri(2, 'RİSK DEĞERLENDİRME RAPORU' + (filtreler.bolum ? ' — ' + filtreler.bolum : ''), 14, true);
   baslikSatiri(3, `Rapor Tarihi: ${bugun}   •   Toplam: ${ozet.toplam}   •   Açık: ${ozet.acik}   •   Gecikmiş: ${ozet.gecikmis}   •   Önemli+: ${ozet.onemliVeUstu}`, 10);
   ws.getRow(2).height = 22;
+  // Word ile aynı: düzey hücrelerinde kısaltma, açıklaması başlığın üstünde.
+  ws.mergeCells(`A4:${sonHarf}4`);
+  ws.getCell('A4').value = 'Düzey kısaltmaları: ' + Object.keys(_RISK_DUZEY_KISALTMA).map(e => `${_RISK_DUZEY_KISALTMA[e]} = ${e}`).join('  •  ');
+  ws.getCell('A4').font = { italic: true, size: 8, color: { argb: 'FF4B5563' } };
+  ws.getCell('A4').alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+  ws.getRow(4).height = 24;
 
   const baslik = ws.getRow(5);
   baslik.values = kolonlar.map(k => k.baslik);
@@ -663,7 +675,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
       const c = satir.getCell(j + 1);
       if (k.duzey) {
         const etiket = k.duzey(r);
-        c.value = etiket || '-';
+        c.value = etiket ? (_RISK_DUZEY_KISALTMA[etiket] || etiket) : '-';
         if (etiket) {
           c.fill = _riskExcelDuzeyDolgu(etiket);
           c.font = { bold: true, size: 9, color: { argb: etiket === 'Tolerans Gösterilemez' || etiket === 'Kritik Risk' ? 'FFFFFFFF' : 'FF111827' } };
@@ -754,7 +766,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
   const fineKinneyVarMi = riskler.some(r => r.yontem !== '5x5');
   const matrisVarMi = riskler.some(r => r.yontem === '5x5');
   if (fineKinneyVarMi) {
-    ys.getCell(`A${y}`).value = 'Değerlendirme Yöntemi (Fine-Kinney): RP = Olasılık (O) × Frekans (F) × Şiddet (Ş). RP2 önlemler sonrası O₂ × F₂ × Ş₂.';
+    ys.getCell(`A${y}`).value = 'Değerlendirme Yöntemi (Fine-Kinney): Risk Puanı (RP) = Olasılık (O) × Frekans (F) × Şiddet (Ş) formülüyle hesaplanır. Önlem sonrası (RP2) aynı yöntemle, önlemler uygulandıktan sonraki O/F/Ş değerleriyle yeniden hesaplanır.';
     ys.getCell(`A${y}`).font = { bold: true };
     y += 2;
     const duzeyBaslangic = y;
@@ -767,7 +779,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
     y = Math.max(y, sonrasi);
   }
   if (matrisVarMi) {
-    ys.getCell(`A${y}`).value = 'Değerlendirme Yöntemi (5x5 Matris): RP = Olasılık (O) × Şiddet (Ş).';
+    ys.getCell(`A${y}`).value = 'Değerlendirme Yöntemi (5x5 Matris): Risk Puanı (RP) = Olasılık (O) × Şiddet (Ş) formülüyle hesaplanır (5x5 skala, frekans boyutu yoktur). Önlem sonrası (RP2) aynı yöntemle, önlemler uygulandıktan sonraki O/Ş değerleriyle yeniden hesaplanır.';
     ys.getCell(`A${y}`).font = { bold: true };
     y += 2;
     const duzeyBaslangic = y;

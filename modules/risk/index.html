@@ -66,7 +66,8 @@
           <button type="button" class="ikincil" id="jsonDisaAktarBtn">JSON Dışa Aktar</button>
           <button type="button" class="ikincil" id="jsonIceAktarBtn">JSON İçe Aktar</button>
           <input type="file" id="jsonIceAktarDosya" accept=".json" style="display:none;">
-          <button type="button" class="ikincil" id="pdfRaporBtn">PDF Raporu</button>
+          <!-- Kullanıcı isteği (2026-11-16): "risk değerlendirmesinden pdf'i kaldır" —
+               PDF Raporu butonu kaldırıldı; Word/Excel raporları kullanılıyor. -->
           <button type="button" class="ikincil" id="wordRaporBtn">Word Raporu</button>
           <button type="button" class="ikincil" id="excelRaporBtn" title="Tüm sütunlar (O/F/Ş, RP, önlemler, önlem sonrası) renkli düzeylerle hazır Excel tablosu">Excel Raporu</button>
           <button type="button" class="ikincil" id="pptxBtn">PPTX</button>
@@ -363,8 +364,8 @@
   <script src="repository.js?v=20261026a"></script>
   <script src="sablon-repository.js"></script>
   <script src="service.js?v=20261026b"></script>
-  <script src="cikti.js?v=20261023a"></script>
-  <script src="ui.js?v=20261114a"></script>
+  <script src="cikti.js?v=20261116a"></script>
+  <script src="ui.js?v=20261116a"></script>
   <script src="ekipler.js?v=20261022k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
