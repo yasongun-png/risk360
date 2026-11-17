@@ -95,7 +95,7 @@ const YANGIN_DOLABI_TIPLERI = [
 // Kullanıcı isteği: "acil durum ekipmanlarına yangın tüpünü ekle" -- aylık
 // gözle kontrol (bölüm, lokasyon, barkod, kontrol formu) için ekipman türü;
 // yıllık bakım/hidrostatik test takibi ayrı "Yangın Tüpü" sekmesinde kalır.
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Yangın Tüpü', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti', 'Konveyör Sistemi'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Yangın Tüpü', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -118,8 +118,7 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Yangın Pompa İstasyonu': 'YPI',
   'Yangın Tüpü': 'YSC',
   'İtfaiye Aracı': 'ITA',
-  'Temiz Hava Solunum Seti': 'THS',
-  'Konveyör Sistemi': 'KNV'
+  'Temiz Hava Solunum Seti': 'THS'
 };
 
 // Kullanıcı isteği: "itfaiye araçlarını ekleyelim, olması gereken
@@ -346,35 +345,6 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'maskeBaglantiHalkasi', soru: 'Maske–regülatör bağlantı halkası sızdırmaz' },
     { id: 'dusukBasincDuduk', soru: 'Düşük basınç uyarı düdüğü doğru basınç eşiğinde ötüyor' },
     { id: 'kapasiteEtiketi', soru: 'Kullanım süresi/kapasite etiketi okunaklı ve güncel' }
-  ],
-  // Kullanıcı isteği: "acil durum ekipman kontrolüne konveyör sistemlerini
-  // ekleyelim, halat buton muhafaza gibi sorular olacak". Kapsam konveyörün
-  // acil durdurma düzenekleri (çekme halatı/halat şalteri, acil stop
-  // butonları) ve hareketli aksam muhafazalarıdır — TS EN ISO 13850 (acil
-  // durdurma), TS EN 620 (sürekli taşıma sistemleri) ve İş Ekipmanlarının
-  // Kullanımında S.G. Şartları Yönetmeliği'ne göre gözle/fonksiyonel
-  // kontrol; mekanik bakım (rulman, redüktör vb.) kapsam dışıdır.
-  'Konveyör Sistemi': [
-    { id: 'halatBoyunca', soru: 'Acil durdurma çekme halatı konveyör boyunca kesintisiz ve erişilebilir' },
-    { id: 'halatGerginlik', soru: 'Çekme halatı gerginliği uygun, sarkma/kopma/aşınma yok' },
-    { id: 'halatMakaralar', soru: 'Halat taşıyıcı halka/makaraları sağlam, halat serbest hareket ediyor' },
-    { id: 'halatSalteri', soru: 'Halat çekildiğinde halat şalteri konveyörü durduruyor (fonksiyon testi)' },
-    { id: 'halatResetleme', soru: 'Halat şalteri kilitli kalıyor, elle resetlenmeden konveyör yeniden çalışmıyor' },
-    { id: 'halatIsaretleme', soru: 'Çekme halatı ve halat şalterleri görünür renkte/işaretli' },
-    { id: 'butonErisim', soru: 'Acil stop butonları erişilebilir konumda, önünde engel yok' },
-    { id: 'butonGorunur', soru: 'Acil stop butonları kırmızı mantar başlı, sarı zeminli ve görünür' },
-    { id: 'butonCalisir', soru: 'Acil stop butonuna basıldığında konveyör duruyor (fonksiyon testi)' },
-    { id: 'butonResetleme', soru: 'Acil stop butonu kilitli kalıyor, resetlenmeden yeniden çalıştırma mümkün değil' },
-    { id: 'butonHasarsiz', soru: 'Buton gövdesi ve kabloları hasarsız' },
-    { id: 'muhafazaTahrik', soru: 'Tahrik ve dönüş tamburu muhafazaları yerinde ve sağlam' },
-    { id: 'muhafazaZincirKayis', soru: 'Zincir, dişli, kayış-kasnak muhafazaları yerinde ve sağlam' },
-    { id: 'muhafazaSikisma', soru: 'Sıkışma/kapılma noktaları (bant–rulo arası) muhafaza altında' },
-    { id: 'muhafazaSabitleme', soru: 'Muhafazalar sabitlenmiş, alet olmadan sökülemiyor veya kilitlemeli (interlock)' },
-    { id: 'kilitlemeEtiketleme', soru: 'Bakım için enerji kesme/kilitleme-etiketleme (LOTO) noktası mevcut ve işaretli' },
-    { id: 'kalkisUyari', soru: 'Çalışmaya başlama sesli/ışıklı uyarısı çalışıyor' },
-    { id: 'gecitler', soru: 'Konveyör üzeri/altı geçiş köprüleri ve koruma ağları sağlam' },
-    { id: 'uyariLevhalari', soru: 'Uyarı ve ikaz levhaları mevcut ve okunaklı' },
-    { id: 'cevreDuzen', soru: 'Konveyör çevresi temiz, dökülen malzeme/kayma riski yok' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
