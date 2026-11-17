@@ -180,8 +180,12 @@ function _kfEkipmanNoKarsilastir(a, b) {
 // içinde kayıtlar YİNE bölüm (departman) adına göre alt başlıklara
 // ayrılır (kullanıcı isteği: "kontrol formunu bölüm bazında yapabileyim" /
 // "bölüm filtresi de olsun ve buna göre rapor hazırlanabilsin").
-async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, gorus) {
+// seciliIdler (Set) doluysa yalnızca tabloda işaretlenen ekipmanlar raporlanır
+// (kullanıcı isteği: "hiçbir şey seçmediysem hepsinin raporu, seçersem sadece
+// seçtiklerimin raporunu versin"); null ise eskisi gibi filtredeki tümü.
+async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, gorus, seciliIdler) {
   let tumEkipman = ekipmanlariTumunuGetir();
+  if (seciliIdler && seciliIdler.size) tumEkipman = tumEkipman.filter(e => seciliIdler.has(e.id));
   if (bolumFiltre) tumEkipman = tumEkipman.filter(e => (e.bolum || '').trim() === bolumFiltre);
   const turler = turFiltre ? [turFiltre] : EKIPMAN_TURLERI.filter(t => tumEkipman.some(e => e.tur === t));
 
@@ -247,8 +251,9 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, gor
 // bölüm filtreleriyle çalışan, her ekipmanı TEK SATIRDA gösteren kompakt
 // bir tablo (liste) raporu üretir -- ekranın "Dışa Aktar" Excel'iyle aynı
 // kolonlar (bkz. ui.js EKIPMAN_EXPORT_KOLONLARI), Word olarak.
-async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre) {
+async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre, seciliIdler) {
   let liste = ekipmanlariGetir('');
+  if (seciliIdler && seciliIdler.size) liste = liste.filter(e => seciliIdler.has(e.id));
   if (turFiltre) liste = liste.filter(e => e.tur === turFiltre);
   if (bolumFiltre) liste = liste.filter(e => (e.bolum || '').trim() === bolumFiltre);
   liste.sort((a, b) => (a.tur || '').localeCompare(b.tur || '', 'tr') || _kfEkipmanNoKarsilastir(a, b));
@@ -362,8 +367,9 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
 // envanter listesi. Her "Ekipman Dolabı" kendi sayfasında; malzeme +
 // adet + fiziksel kontrol için boş bir "✓" sütunu (asıldıktan sonra elle
 // işaretlenebilsin diye).
-async function ekipmanMalzemeEnvanteriWordOlustur(firma, bolumFiltre) {
+async function ekipmanMalzemeEnvanteriWordOlustur(firma, bolumFiltre, seciliIdler) {
   let dolaplar = ekipmanlariTumunuGetir().filter(e => e.tur === 'Ekipman Dolabı' && Array.isArray(e.malzemeListesi) && e.malzemeListesi.length);
+  if (seciliIdler && seciliIdler.size) dolaplar = dolaplar.filter(e => seciliIdler.has(e.id));
   if (bolumFiltre) dolaplar = dolaplar.filter(e => (e.bolum || '').trim() === bolumFiltre);
   dolaplar.sort((a, b) => (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true }));
 

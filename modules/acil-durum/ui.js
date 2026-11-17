@@ -357,11 +357,17 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // TÜM ekipmanları dışa aktarıyordu (ekrandaki tabloyla tutarsızdı) —
   // artık ekranda GÖRÜNENLE (bkz. _ekipmanFiltrelenmisListeGetir, ekipman
   // tablosunun kendisinin kullandığı fonksiyon) birebir aynı listeyi kullanır.
+  // Seçili satır varsa yalnız onlar, yoksa ekrandaki (filtreli) tüm liste.
+  const _ekipmanRaporListesi = () => {
+    const liste = _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value);
+    const secili = _ekipmanSeciliIdler();
+    return secili ? liste.filter(e => secili.has(e.id)) : liste;
+  };
   document.getElementById('ekipmanDisaAktarBtn').addEventListener('click', () => {
-    _ekipmanExcelDisaAktar(_ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value));
+    _ekipmanExcelDisaAktar(_ekipmanRaporListesi());
   });
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
-    raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanFiltrelenmisListeGetir(document.getElementById('ekipmanAramaKutusu').value));
+    raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanRaporListesi());
   });
   // Kullanıcı isteği: "yangın ekipmanı türlerine göre ayrı ayrı kontrol
   // formu hazırlayıp word çıktısı alabileyim" — tür filtresi seçiliyse
@@ -383,15 +389,18 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   // bir de liste şeklinde rapor olsun" — yukarıdaki (her ekipman ayrı
   // sayfada) detaylı Word raporunun yanında, aynı filtrelerle çalışan,
   // her ekipmanı tek satırda gösteren kompakt bir tablo raporu.
+  // Kullanıcı isteği (2026-11-17): "hiçbir şey seçmediysem hepsinin raporu,
+  // seçersem sadece seçtiklerimin raporunu versin" — Word raporlarının
+  // üçü de tablodaki işaretli satırlara göre süzülür (bkz. _ekipmanSeciliIdler).
   document.getElementById('ekipmanListeRaporuWordBtn').addEventListener('click', () => {
-    ekipmanKontrolFormuListeWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, _ekipmanAktifBolum);
+    ekipmanKontrolFormuListeWordOlustur(_adFirma, document.getElementById('ekipmanTurFiltre').value, _ekipmanAktifBolum, _ekipmanSeciliIdler());
   });
   // Kullanıcı isteği: "acil durım malzeme dolapları envanter lşstesini
   // çıktı alıp aşmak da istiyorum word olarak bu listeyi de indirebileyim
   // ekşpman bazında" — aktif bölüm sekmesindeki (veya "Tümü"yse hepsi)
   // Ekipman Dolabı kayıtları için malzeme envanteri.
   document.getElementById('ekipmanMalzemeEnvanteriWordBtn').addEventListener('click', () => {
-    ekipmanMalzemeEnvanteriWordOlustur(_adFirma, _ekipmanAktifBolum);
+    ekipmanMalzemeEnvanteriWordOlustur(_adFirma, _ekipmanAktifBolum, _ekipmanSeciliIdler());
   });
   // Kullanıcı isteği: "her bir ekipman için barkod üretsin ve çıktı
   // alayım" / "barkod pdf olarak olsun" — o an ekranda görünen (arama +
@@ -2284,13 +2293,20 @@ async function _ekipmanKontrolFormuWordBtnTiklandi() {
   const dugme = document.getElementById('ekipmanKontrolFormuWordBtn');
   dugme.disabled = true;
   try {
-    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, _ekipmanAktifBolum, gorus);
+    await ekipmanKontrolFormuWordOlustur(_adFirma, tur, _ekipmanAktifBolum, gorus, _ekipmanSeciliIdler());
   } catch (hata) {
     console.error(hata);
     alert('Kontrol formu oluşturulamadı: ' + (hata.message || hata));
   } finally {
     dugme.disabled = false;
   }
+}
+
+// Tablodaki işaretli ekipmanların id'leri; hiçbiri işaretli değilse null
+// (raporlar o zaman eskisi gibi tür/bölüm filtresindeki tüm ekipmanları alır).
+function _ekipmanSeciliIdler() {
+  const idler = Array.from(document.querySelectorAll('#ekipmanTabloGovde [data-ekipman-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+  return idler.length ? new Set(idler) : null;
 }
 
 // ==================== Ortak yardımcılar ====================
