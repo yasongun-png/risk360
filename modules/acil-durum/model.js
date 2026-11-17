@@ -95,7 +95,7 @@ const YANGIN_DOLABI_TIPLERI = [
 // Kullanıcı isteği: "acil durum ekipmanlarına yangın tüpünü ekle" -- aylık
 // gözle kontrol (bölüm, lokasyon, barkod, kontrol formu) için ekipman türü;
 // yıllık bakım/hidrostatik test takibi ayrı "Yangın Tüpü" sekmesinde kalır.
-const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Yangın Tüpü', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti'];
+const EKIPMAN_TURLERI = ['Hidrant', 'Yangın Dolabı', 'Yangın Tüpü', 'Göz Duşu', 'Göz ve Boy Duşu', 'Monitör', 'Sprinkler Hattı', 'Kaçış Yolu', 'Acil Çıkış Kapısı', 'Toplanma Alanı', 'Alarm / Siren', 'Acil Aydınlatma', 'Döküntü Kiti', 'Ekipman Dolabı', 'Yangın Pompa İstasyonu', 'İtfaiye Aracı', 'Temiz Hava Solunum Seti', 'Konveyör Hattı'];
 
 // Ekipman türüne göre kayıt önekleri (madde: "acil durum ekipmanlarının
 // türüne göre numaralandırma olsun" kullanıcı isteği) — her tür kendi
@@ -118,7 +118,8 @@ const EKIPMAN_TUR_ONEKLERI = {
   'Yangın Pompa İstasyonu': 'YPI',
   'Yangın Tüpü': 'YSC',
   'İtfaiye Aracı': 'ITA',
-  'Temiz Hava Solunum Seti': 'THS'
+  'Temiz Hava Solunum Seti': 'THS',
+  'Konveyör Hattı': 'KNV'
 };
 
 // Kullanıcı isteği: "itfaiye araçlarını ekleyelim, olması gereken
@@ -345,6 +346,33 @@ const EKIPMAN_KONTROL_SORULARI = {
     { id: 'maskeBaglantiHalkasi', soru: 'Maske–regülatör bağlantı halkası sızdırmaz' },
     { id: 'dusukBasincDuduk', soru: 'Düşük basınç uyarı düdüğü doğru basınç eşiğinde ötüyor' },
     { id: 'kapasiteEtiketi', soru: 'Kullanım süresi/kapasite etiketi okunaklı ve güncel' }
+  ],
+  // Kullanıcı isteği: "acil durum modülünde ekipman kontrolüne konveyör
+  // hatlarının kontrolünü ekle: emniyet teli, acil durdurma butonu,
+  // muhafazalar vb." — bant/rulolu konveyörlerin acil durdurma ve koruma
+  // donanımlarının periyodik gözle + fonksiyon kontrolü (TS EN 620 bant
+  // konveyör güvenlik gereklilikleri, TS EN ISO 13850 acil durdurma,
+  // Makine Emniyeti Yönetmeliği 2006/42/AT, İş Ekipmanları Yönetmeliği).
+  // Konveyörün yıllık periyodik muayenesi (yetkili kişi) bunun yerine geçmez.
+  'Konveyör Hattı': [
+    { id: 'emniyetTeli', soru: 'Emniyet teli (çekme halatı) hat boyunca kesintisiz, gergin ve erişilebilir' },
+    { id: 'emniyetTeliTest', soru: 'Emniyet teli çekildiğinde hat duruyor (fonksiyon testi yapıldı)' },
+    { id: 'emniyetTeliSalter', soru: 'Çekme halatı şalterleri sağlam, resetlenmeden hat yeniden çalışmıyor' },
+    { id: 'acilStopButon', soru: 'Acil durdurma butonları (mantar tip, kırmızı/sarı) yerinde ve hasarsız' },
+    { id: 'acilStopTest', soru: 'Acil durdurma butonuna basıldığında hat duruyor (fonksiyon testi yapıldı)' },
+    { id: 'acilStopErisim', soru: 'Acil durdurma butonlarına erişim engelsiz, yükleme/boşaltma noktalarında mevcut' },
+    { id: 'muhafazaTahrik', soru: 'Tahrik ve gergi tamburu, kasnak, zincir/dişli muhafazaları takılı ve sağlam' },
+    { id: 'muhafazaSikisma', soru: 'Bant–tambur/rulo sıkışma (ezilme) noktalarında koruyucu mevcut' },
+    { id: 'muhafazaSabit', soru: 'Muhafazalar alet olmadan sökülemiyor; açılır kapaklarda emniyet kilidi/sivici çalışıyor' },
+    { id: 'bantKayma', soru: 'Bant kayma (yan kaçırma) şalterleri yerinde ve çalışıyor' },
+    { id: 'bantDurumu', soru: 'Bantta yırtık, kopma, ek yeri açılması yok' },
+    { id: 'rulolar', soru: 'Taşıyıcı/dönüş ruloları dönüyor, kırık/sıkışmış rulo yok' },
+    { id: 'uyariSesIsik', soru: 'Hat çalışmaya başlamadan önce sesli/ışıklı uyarı veriliyor' },
+    { id: 'gecitler', soru: 'Hat üzerinden geçiş için korkuluklu geçit köprüsü mevcut, altından geçiş noktaları korumalı' },
+    { id: 'tabelalar', soru: 'Uyarı ve ikaz levhaları (sıkışma tehlikesi, acil stop yeri vb.) görünür' },
+    { id: 'kilitlemeEtiketleme', soru: 'Bakım için enerji kesme/kilitleme (LOTO) noktası belirli ve kullanılabilir' },
+    { id: 'zeminTemizlik', soru: 'Hat çevresi döküntü/malzeme birikintisinden arındırılmış, zemin kaymaz' },
+    { id: 'elektrikPanosu', soru: 'Kumanda/elektrik panosu kapalı, kabloları hasarsız' }
   ]
 };
 const TATBIKAT_TURLERI = ['Yangın Tatbikatı', 'Tahliye Tatbikatı', 'Kimyasal Sızıntı', 'Amonyak Senaryosu', 'Asit Sızıntısı', 'Deprem', 'Kapalı Alan Kurtarma', 'Liman / İskele Acil Durumu', 'Diğer'];
