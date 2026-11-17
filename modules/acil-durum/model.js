@@ -354,24 +354,12 @@ const EKIPMAN_KONTROL_SORULARI = {
   // konveyör güvenlik gereklilikleri, TS EN ISO 13850 acil durdurma,
   // Makine Emniyeti Yönetmeliği 2006/42/AT, İş Ekipmanları Yönetmeliği).
   // Konveyörün yıllık periyodik muayenesi (yetkili kişi) bunun yerine geçmez.
+  // Kullanıcı 18 maddelik ilk listeden yalnızca bu 5'ini seçti (1,4,7,15,18).
   'Konveyör Hattı': [
     { id: 'emniyetTeli', soru: 'Emniyet teli (çekme halatı) hat boyunca kesintisiz, gergin ve erişilebilir' },
-    { id: 'emniyetTeliTest', soru: 'Emniyet teli çekildiğinde hat duruyor (fonksiyon testi yapıldı)' },
-    { id: 'emniyetTeliSalter', soru: 'Çekme halatı şalterleri sağlam, resetlenmeden hat yeniden çalışmıyor' },
     { id: 'acilStopButon', soru: 'Acil durdurma butonları (mantar tip, kırmızı/sarı) yerinde ve hasarsız' },
-    { id: 'acilStopTest', soru: 'Acil durdurma butonuna basıldığında hat duruyor (fonksiyon testi yapıldı)' },
-    { id: 'acilStopErisim', soru: 'Acil durdurma butonlarına erişim engelsiz, yükleme/boşaltma noktalarında mevcut' },
     { id: 'muhafazaTahrik', soru: 'Tahrik ve gergi tamburu, kasnak, zincir/dişli muhafazaları takılı ve sağlam' },
-    { id: 'muhafazaSikisma', soru: 'Bant–tambur/rulo sıkışma (ezilme) noktalarında koruyucu mevcut' },
-    { id: 'muhafazaSabit', soru: 'Muhafazalar alet olmadan sökülemiyor; açılır kapaklarda emniyet kilidi/sivici çalışıyor' },
-    { id: 'bantKayma', soru: 'Bant kayma (yan kaçırma) şalterleri yerinde ve çalışıyor' },
-    { id: 'bantDurumu', soru: 'Bantta yırtık, kopma, ek yeri açılması yok' },
-    { id: 'rulolar', soru: 'Taşıyıcı/dönüş ruloları dönüyor, kırık/sıkışmış rulo yok' },
-    { id: 'uyariSesIsik', soru: 'Hat çalışmaya başlamadan önce sesli/ışıklı uyarı veriliyor' },
-    { id: 'gecitler', soru: 'Hat üzerinden geçiş için korkuluklu geçit köprüsü mevcut, altından geçiş noktaları korumalı' },
     { id: 'tabelalar', soru: 'Uyarı ve ikaz levhaları (sıkışma tehlikesi, acil stop yeri vb.) görünür' },
-    { id: 'kilitlemeEtiketleme', soru: 'Bakım için enerji kesme/kilitleme (LOTO) noktası belirli ve kullanılabilir' },
-    { id: 'zeminTemizlik', soru: 'Hat çevresi döküntü/malzeme birikintisinden arındırılmış, zemin kaymaz' },
     { id: 'elektrikPanosu', soru: 'Kumanda/elektrik panosu kapalı, kabloları hasarsız' }
   ]
 };
