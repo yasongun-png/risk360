@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../../manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="İSG Platform">
+<link rel="icon" href="../../assets/icons/favicon-32.png">
+<title>İSG Platform - Lokasyon Bazlı Saha Denetimi</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .ld-kart { background:var(--kart-bg); border:1px solid var(--kenarlik); border-radius:12px; box-shadow:var(--golge); margin-bottom:12px; }
+  .ld-kart-bas { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:12px 14px; cursor:pointer; }
+  .ld-kart-bas h4 { margin:0; font-size:15px; }
+  .ld-kart-govde { padding:0 14px 14px; border-top:1px solid var(--kenarlik); }
+  .ld-kod { font-family:Consolas, monospace; font-size:12px; color:var(--metin-soluk); }
+  .ld-istat { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin:12px 0; }
+  .ld-istat div { background:var(--kart-bg); border:1px solid var(--kenarlik); border-radius:10px; padding:10px 12px; }
+  .ld-istat b { display:block; font-size:22px; }
+  .ld-istat span { font-size:12px; color:var(--metin-soluk); }
+  .ld-kategori { margin-top:14px; }
+  .ld-kategori-bas { display:flex; justify-content:space-between; align-items:center; gap:8px; background:#f1f5f9; border-radius:8px; padding:7px 10px; font-weight:600; font-size:13.5px; }
+  .ld-madde { border-bottom:1px solid var(--kenarlik); padding:9px 2px; }
+  .ld-madde:last-child { border-bottom:none; }
+  .ld-madde-ust { display:flex; gap:10px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+  .ld-madde-metin { flex:1 1 320px; font-size:14px; }
+  .ld-mevzuat { font-size:11.5px; color:var(--metin-soluk); margin-top:2px; }
+  .ld-sonuc { display:flex; gap:4px; flex-wrap:wrap; }
+  .ld-sonuc button { border:1px solid var(--kenarlik); background:#fff; border-radius:8px; padding:7px 10px; font-size:12.5px; cursor:pointer; min-width:44px; }
+  .ld-sonuc button.secili-uygun { background:#dcfce7; border-color:#16a34a; color:#15803d; font-weight:600; }
+  .ld-sonuc button.secili-uygun-degil { background:#fee2e2; border-color:#dc2626; color:#b91c1c; font-weight:600; }
+  .ld-sonuc button.secili-uygulanamaz { background:#e5e7eb; border-color:#6b7280; color:#374151; font-weight:600; }
+  .ld-detay { margin-top:8px; background:#fff7f7; border:1px solid #fecaca; border-radius:8px; padding:10px; }
+  .ld-detay label { font-size:12px; margin-top:4px; }
+  .ld-detay textarea, .ld-detay select, .ld-detay input[type=text] { margin-bottom:8px; }
+  .ld-fotolar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .ld-fotolar img { width:84px; height:84px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik); }
+  .ld-foto-kutu { position:relative; }
+  .ld-foto-kutu button { position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; border:none; background:#dc2626; color:#fff; cursor:pointer; font-size:12px; line-height:1; }
+  .ld-eylemler { display:flex; gap:8px; flex-wrap:wrap; }
+  .ld-ust-eylemler { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+  .ld-ust-eylemler button { width:auto; }
+  .ld-gizli { display:none !important; }
+  .ld-kat-secim { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:4px 12px; margin-bottom:12px; }
+  .ld-kat-secim label { display:flex; gap:6px; align-items:center; font-weight:400; font-size:13.5px; margin:0; }
+  .ld-kat-secim input { width:auto; margin:0; }
+  .ld-ekipman-tablo td, .ld-ekipman-tablo th { font-size:12.5px; }
+  .ld-bilgi { font-size:12.5px; color:var(--metin-soluk); }
+  @media (max-width:600px) {
+    .icerik { padding-left:10px; padding-right:10px; }
+    .ld-sonuc button { padding:9px 10px; }
+  }
+</style>
+</head>
+<body>
+  <div class="ust-cubuk">
+    <div class="marka" role="link" title="Ana sayfaya dön" style="cursor:pointer;" onclick="location.href='../../dashboard.html'">🛡️ İSG Yönetim Platformu</div>
+    <div class="kullanici-bilgi">
+      <span id="kullaniciEtiketi"></span>
+      <a class="cikis-linki" id="cikisLinki">Çıkış Yap</a>
+    </div>
+  </div>
+
+  <div class="icerik">
+    <a href="index.html" class="geri-link">← Saha Denetim</a>
+    <h2 style="margin-top:14px;">Lokasyon Bazlı Saha Denetimi</h2>
+    <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
+
+    <div class="sekme-cubugu" id="ldSekmeler">
+      <button type="button" data-sekme="denetimler">Denetimler</button>
+      <button type="button" data-sekme="lokasyonlar" class="sekme-seciliDegil">Lokasyonlar ve Barkodlar</button>
+    </div>
+
+    <!-- DENETİM LİSTESİ -->
+    <div id="ldDenetimListesiBolumu">
+      <div class="arac-cubugu">
+        <input type="text" id="ldDenetimArama" class="arama-kutusu" placeholder="Denetim no, denetçi veya bölüm ara..." style="margin:0;">
+        <button type="button" class="birincil" id="ldYeniDenetimBtn" style="width:auto;">+ Yeni Denetim</button>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th>Denetim No</th><th>Tarih</th><th>Denetçi</th><th>Lokasyon</th><th>Bulgu</th><th>Uygunluk</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <tbody id="ldDenetimGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="ldDenetimBos"></div>
+    </div>
+
+    <!-- DENETİM DETAYI -->
+    <div id="ldDenetimDetayBolumu" class="ld-gizli">
+      <button type="button" class="tablo-buton" id="ldDetayGeriBtn">← Denetim listesine dön</button>
+      <h3 id="ldDetayBaslik" style="margin:8px 0 2px;"></h3>
+      <div id="ldDetayMeta" class="ld-bilgi"></div>
+      <div class="ld-istat" id="ldDetayIstat"></div>
+      <div class="ld-ust-eylemler">
+        <button type="button" class="birincil" id="ldBarkodOkutBtn">📷 Lokasyon Barkodu Okut</button>
+        <button type="button" class="ikincil" id="ldLokasyonSecBtn">+ Listeden Lokasyon Ekle</button>
+        <button type="button" class="ikincil" id="ldWordRaporBtn">📄 Word Raporu</button>
+        <button type="button" class="ikincil" id="ldTopluAktarBtn">↪ Bulguları Uygunsuzluğa Aktar</button>
+        <button type="button" class="ikincil" id="ldDenetimDuzenleBtn">✎ Denetim Bilgileri</button>
+        <button type="button" class="ikincil" id="ldTamamlaBtn">✓ Denetimi Tamamla</button>
+      </div>
+      <div id="ldZiyaretler"></div>
+      <div class="bos-durum" id="ldZiyaretBos">Henüz lokasyon eklenmedi. Lokasyon girişindeki barkodu okutun veya listeden lokasyon ekleyin.</div>
+
+      <div class="ld-kart" style="padding:14px;">
+        <label for="ldGenelDegerlendirme" style="margin-top:0;">Genel Değerlendirme ve Sonuç <span class="ld-bilgi">(Word raporunun sonuç bölümüne girer)</span></label>
+        <textarea id="ldGenelDegerlendirme" rows="5" placeholder="Denetimin genel sonucu, öne çıkan riskler, öncelikli alınması gereken önlemler..."></textarea>
+        <div id="ldBelgeAlani" style="margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <!-- LOKASYONLAR -->
+    <div id="ldLokasyonBolumu" class="ld-gizli">
+      <p class="ld-bilgi" style="margin-top:4px;">Denetlenecek her bölüm/kat bir lokasyondur (ör. Can-An Ambarı — Zemin Kat, 1. Kat). Her lokasyonun barkodunu basıp girişine asın; denetimde barkod okutulunca o lokasyonun kontrol listesi açılır. Bölüm ve lokasyon adlarını Acil Durum ekipmanlarındaki adlarla aynı yazarsanız o lokasyondaki ekipmanların son kontrol durumu denetime ve rapora otomatik gelir.</p>
+      <div class="arac-cubugu">
+        <input type="text" id="ldLokasyonArama" class="arama-kutusu" placeholder="Bölüm, lokasyon veya kod ara..." style="margin:0;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="ldBarkodPdfBtn">🏷 Barkod Etiketleri (PDF)</button>
+          <button type="button" class="birincil" id="ldYeniLokasyonBtn" style="width:auto;">+ Lokasyon Ekle</button>
+        </div>
+      </div>
+      <div class="tablo-scroll">
+        <table class="veri-tablosu">
+          <thead><tr><th><input type="checkbox" id="ldLokTumunuSec" style="width:auto; margin:0;"></th><th>Kod</th><th>Bölüm</th><th>Lokasyon / Kat</th><th>Kategoriler</th><th>Acil Durum Ekipmanı</th><th>İşlemler</th></tr></thead>
+          <tbody id="ldLokasyonGovde"></tbody>
+        </table>
+      </div>
+      <div class="bos-durum" id="ldLokasyonBos"></div>
+    </div>
+  </div>
+
+  <div id="yazdirmaAlani"></div>
+
+  <!-- DENETİM FORMU -->
+  <div class="modal-katman" id="ldDenetimModal">
+    <div class="modal-kutu" style="max-width:620px;">
+      <h3 id="ldDenetimModalBaslik">Yeni Lokasyon Bazlı Denetim</h3>
+      <label for="ldDBaslik">Denetim Adı <span class="ld-bilgi">(opsiyonel, ör. "Kasım Ayı Saha Denetimi")</span></label>
+      <input type="text" id="ldDBaslik">
+      <div class="form-satir-ikili">
+        <div><label for="ldDTarih">Başlangıç Tarihi</label><input type="date" id="ldDTarih"><div class="hata-mesaji" id="ldDTarihHata"></div></div>
+        <div><label for="ldDBitis">Bitiş Tarihi <span class="ld-bilgi">(birden çok gün sürerse)</span></label><input type="date" id="ldDBitis"></div>
+      </div>
+      <label for="ldDDenetciler">Denetçi(ler)</label>
+      <input type="text" id="ldDDenetciler" placeholder="Ad Soyad (İSG Uzmanı), ...">
+      <div class="hata-mesaji" id="ldDDenetcilerHata"></div>
+      <label for="ldDEslik">Eşlik Edenler</label>
+      <input type="text" id="ldDEslik" placeholder="Bölüm sorumlusu, çalışan temsilcisi vb.">
+      <label for="ldDKapsam">Kapsam / Amaç</label>
+      <textarea id="ldDKapsam" rows="2" placeholder="Ör. Can-An Ambarı ve TSP Tesisi tüm katlar; 6331 sayılı Kanun kapsamında periyodik saha denetimi"></textarea>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldDenetimModalIptal">İptal</button>
+        <button type="button" class="birincil" id="ldDenetimModalKaydet" style="width:auto;">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOKASYON FORMU -->
+  <div class="modal-katman" id="ldLokasyonModal">
+    <div class="modal-kutu" style="max-width:720px;">
+      <h3 id="ldLokasyonModalBaslik">Lokasyon Ekle</h3>
+      <datalist id="ldAcilBolumListesi"></datalist>
+      <datalist id="ldAcilLokasyonListesi"></datalist>
+      <label for="ldLBolum">Bölüm</label>
+      <input type="text" id="ldLBolum" list="ldAcilBolumListesi" placeholder="Ör. Can-An Ambarı">
+      <div class="hata-mesaji" id="ldLBolumHata"></div>
+      <label for="ldLLokasyon" id="ldLLokasyonEtiket">Lokasyon / Kat</label>
+      <input type="text" id="ldLLokasyon" list="ldAcilLokasyonListesi" placeholder="Ör. Zemin Kat">
+      <textarea id="ldLLokasyonCoklu" rows="4" class="ld-gizli" placeholder="Her satıra bir lokasyon:&#10;Zemin Kat&#10;1. Kat&#10;2. Kat"></textarea>
+      <label id="ldLCokluSecimEtiket" style="display:flex; gap:6px; align-items:center; font-weight:400; font-size:13px; margin-top:-6px;"><input type="checkbox" id="ldLCoklu" style="width:auto; margin:0;"> Aynı bölüme birden çok lokasyon ekle (her satıra bir tane)</label>
+      <div class="hata-mesaji" id="ldLLokasyonHata"></div>
+      <div id="ldLEkipmanBilgi" class="ld-bilgi" style="margin:4px 0 10px;"></div>
+      <label for="ldLAciklama">Açıklama <span class="ld-bilgi">(opsiyonel)</span></label>
+      <input type="text" id="ldLAciklama" placeholder="Ör. Paketleme hattı ve forklift şarj alanı dahil">
+      <label>Bu lokasyonda denetlenecek kategoriler</label>
+      <div class="ld-kat-secim" id="ldLKategoriler"></div>
+      <div class="hata-mesaji" id="ldLKategorilerHata"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldLokasyonModalIptal">İptal</button>
+        <button type="button" class="birincil" id="ldLokasyonModalKaydet" style="width:auto;">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LİSTEDEN LOKASYON SEÇ -->
+  <div class="modal-katman" id="ldLokasyonSecModal">
+    <div class="modal-kutu" style="max-width:560px;">
+      <h3>Lokasyon Ekle</h3>
+      <input type="text" id="ldLokasyonSecArama" class="arama-kutusu" placeholder="Ara..." style="max-width:none;">
+      <div id="ldLokasyonSecListe" style="max-height:55vh; overflow:auto; margin-top:8px;"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldLokasyonSecKapat">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KATEGORİ DÜZENLE (ziyaret) -->
+  <div class="modal-katman" id="ldKategoriModal">
+    <div class="modal-kutu" style="max-width:720px;">
+      <h3>Bu Lokasyonda Denetlenecek Kategoriler</h3>
+      <p class="ld-bilgi" style="margin-top:-6px;">Yalnızca bu denetimdeki ziyareti etkiler. Çıkarılan kategorinin (uygunsuzluğa aktarılmamış) cevapları silinir.</p>
+      <div class="ld-kat-secim" id="ldKategoriSecim"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldKategoriIptal">İptal</button>
+        <button type="button" class="birincil" id="ldKategoriKaydet" style="width:auto;">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERBEST BULGU -->
+  <div class="modal-katman" id="ldSerbestModal">
+    <div class="modal-kutu" style="max-width:560px;">
+      <h3>Listede Olmayan Tespit Ekle</h3>
+      <label for="ldSKategori">Kategori</label>
+      <select id="ldSKategori"></select>
+      <label for="ldSTespit">Tespit</label>
+      <textarea id="ldSTespit" rows="3" placeholder="Ör. Forklift şarj alanında elektrolit dökülmesi mevcut"></textarea>
+      <label for="ldSMevzuat">Mevzuat <span class="ld-bilgi">(opsiyonel)</span></label>
+      <input type="text" id="ldSMevzuat">
+      <div class="hata-mesaji" id="ldSHata"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldSerbestIptal">İptal</button>
+        <button type="button" class="birincil" id="ldSerbestKaydet" style="width:auto;">Ekle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- UYGUNSUZLUĞA AKTAR -->
+  <div class="modal-katman" id="ldAktarModal">
+    <div class="modal-kutu" style="max-width:520px;">
+      <h3 id="ldAktarBaslik">Uygunsuzluğa Aktar</h3>
+      <p id="ldAktarAciklama" class="ld-bilgi" style="margin-top:-6px;"></p>
+      <label for="ldASorumlu">Sorumlu</label>
+      <input type="text" id="ldASorumlu">
+      <label for="ldATermin">Termin</label>
+      <input type="date" id="ldATermin">
+      <label for="ldARisk">Risk Seviyesi</label>
+      <select id="ldARisk"></select>
+      <div class="hata-mesaji" id="ldAHata"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldAktarIptal">İptal</button>
+        <button type="button" class="birincil" id="ldAktarKaydet" style="width:auto;">Aktar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARKOD TARAMA -->
+  <div class="modal-katman" id="ldTaramaModal">
+    <div class="modal-kutu" style="max-width:420px;">
+      <h3>Lokasyon Barkodu Okut</h3>
+      <p class="ld-bilgi" style="margin-top:-6px;">Lokasyon girişindeki etiketi (QR veya çizgi barkod) kameraya gösterin.</p>
+      <div id="ldTaramaOkuyucu" style="width:100%; min-height:260px; border-radius:8px; overflow:hidden; background:#000;"></div>
+      <div id="ldTaramaDurum" class="hata-mesaji" style="margin-top:10px;"></div>
+      <label for="ldTaramaElle" style="margin-top:10px;">veya lokasyon kodunu yazın</label>
+      <div style="display:flex; gap:8px;"><input type="text" id="ldTaramaElle" placeholder="LOK-0001" style="margin:0;"><button type="button" class="ikincil" id="ldTaramaElleBtn" style="width:auto;">Aç</button></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ldTaramaKapat">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="../../core/data.js?v=6"></script>
+  <script src="../../core/auth.js"></script>
+  <script src="../../core/tenant.js?v=3"></script>
+  <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/belge-yukle.js"></script>
+  <script src="../../core/risk-aktar.js"></script>
+  <script src="../uygunsuzluk/model.js?v=20261112c"></script>
+  <script src="../uygunsuzluk/validation.js"></script>
+  <script src="../uygunsuzluk/repository.js"></script>
+  <script src="../uygunsuzluk/service.js?v=20261112c"></script>
+  <script src="../acil-durum/model.js?v=19"></script>
+  <script src="lokasyon-model.js?v=1"></script>
+  <script src="lokasyon-service.js?v=1"></script>
+  <script src="lokasyon-cikti.js?v=1"></script>
+  <script src="lokasyon-ui.js?v=1"></script>
+  <script>
+    const kullanici = girisGerekliModul('saha-denetim');
+
+    if (kullanici) {
+      document.getElementById('kullaniciEtiketi').textContent = '👤 ' + kullanici.adSoyad;
+      document.getElementById('cikisLinki').addEventListener('click', () => {
+        cikisYap();
+        window.location.href = '../../index.html';
+      });
+
+      const aktifFirma = aktifFirmaGetir();
+      if (!aktifFirma) {
+        window.location.href = '../../firma-sec.html';
+      } else {
+        bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — bölüm/kat bazında, ÇSGB müfettiş denetimi tarzında saha denetimi';
+          lokasyonDenetimSayfasiniBaslat(aktifFirma, kullanici);
+        });
+      }
+    }
+  </script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('../../sw.js'); }</script>
+</body>
+</html>
