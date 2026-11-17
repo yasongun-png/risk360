@@ -317,7 +317,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
       const cv = b.madde.cevap;
       const uyg = ldBagliUygunsuzluk(cv.uygId);
       const riskNo = riskeAktarilanRiskNo('saha-lokasyon', ldRiskKaynakId(d.id, b.ziyaret.id, b.madde.anahtar));
-      return [{ m: b.no, o: { kalin: true } }, `${b.ziyaret.bolum}\n${b.ziyaret.lokasyon}`, cv.s,
+      return [{ m: b.no, o: { kalin: true } }, `${b.ziyaret.bolum}\n${b.ziyaret.lokasyon}`, ldBulguTespiti(cv),
         { m: cv.risk || '-', o: { dolgu: _LDC_RISK_RENK[cv.risk] || undefined } },
         [uyg ? 'DÖF: ' + (uyg.aksiyonNo || '') : (cv.uygNo ? 'DÖF: ' + cv.uygNo : ''), riskNo ? 'Risk: ' + riskNo : ''].filter(Boolean).join('\n') || '-'];
     })));
@@ -335,8 +335,8 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
         : (cv.uygNo ? 'DÖF ' + cv.uygNo : 'Uygunsuzluk kaydı açılmadı');
       const satirlar = [
         [{ m: 'Kategori', o: { kalin: true, dolgu: _LDC_GRI } }, b.madde.kategori.ad],
-        [{ m: 'Tespit', o: { kalin: true, dolgu: _LDC_GRI } }, { m: cv.s, o: { kalin: true } }],
-        cv.not ? [{ m: 'Açıklama', o: { kalin: true, dolgu: _LDC_GRI } }, cv.not] : null,
+        [{ m: 'Tespit', o: { kalin: true, dolgu: _LDC_GRI } }, { m: ldBulguTespiti(cv), o: { kalin: true } }],
+        ldBulguKriteri(cv) ? [{ m: 'Kontrol Maddesi (Olması Gereken)', o: { kalin: true, dolgu: _LDC_GRI } }, { m: ldBulguKriteri(cv), o: { renk: '555555' } }] : null,
         [{ m: 'Mevzuat', o: { kalin: true, dolgu: _LDC_GRI } }, cv.m || '-'],
         [{ m: 'Önerilen Önlem', o: { kalin: true, dolgu: _LDC_GRI } }, cv.oneri || '-'],
         [{ m: 'Takip', o: { kalin: true, dolgu: _LDC_GRI } }, takip + (riskNo ? `\nRisk Değerlendirmesi: ${riskNo}` : '')]
@@ -409,7 +409,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
       const aciklama = [cv.not, cv.oneri ? 'Öneri: ' + cv.oneri : ''].filter(Boolean).join('\n');
       satirlar.push([String(no), { m: m.soru + (m.mevzuat ? '\n' + m.mevzuat : ''), o: { boy: 17 } }, _ldcSonucHucresi(cv.sonuc), { m: aciklama || '', o: { boy: 16 } }]);
     });
-    c.push(_ldcTablo([6, 54, 14, 26], ['#', 'Kontrol Maddesi / Mevzuat', 'Sonuç', 'Açıklama'], satirlar));
+    c.push(_ldcTablo([6, 54, 14, 26], ['#', 'Kontrol Maddesi / Mevzuat', 'Sonuç', 'Tespit / Öneri'], satirlar));
     if (z.lokasyonNotu) c.push(_ldcP('Lokasyon notu: ' + z.lokasyonNotu, { italics: true }, { spacing: { before: 120 } }));
   });
 

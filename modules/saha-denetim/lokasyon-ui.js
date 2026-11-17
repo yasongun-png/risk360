@@ -313,8 +313,8 @@ function _ldMaddeHtml(d, z, m, kilitli) {
     const riskSecenek = ['<option value="">— Seçiniz —</option>'].concat((typeof RISK_SEVIYELERI !== 'undefined' ? RISK_SEVIYELERI : []).map(r => `<option ${c.risk === r ? 'selected' : ''}>${_ldK(r)}</option>`)).join('');
     const fotolar = (c.fotolar || []).map((f, i) => `<div class="ld-foto-kutu"><img data-foto-ref="${_ldK(f)}" alt="">${kilitli ? '' : `<button type="button" data-foto-sil="${i}" ${ortak}>✕</button>`}</div>`).join('');
     detay = `<div class="ld-detay">
-      <label>Tespit açıklaması</label>
-      <textarea rows="2" data-alan="not" ${ortak} ${kilitli ? 'disabled' : ''} placeholder="Ne görüldü, nerede, kaç adet...">${_ldK(c.not)}</textarea>
+      <label>Tespit <span class="ld-bilgi">(raporda ve uygunsuzluk kaydında başlık olur)</span></label>
+      <textarea rows="2" data-alan="not" ${ortak} ${kilitli ? 'disabled' : ''} placeholder="Görülen durum, ör. H14 konveyörü emniyet halatı arızalı">${_ldK(c.not)}</textarea>
       <label>Önerilen önlem</label>
       <textarea rows="2" data-alan="oneri" ${ortak} ${kilitli ? 'disabled' : ''} placeholder="Ör. Kasnak muhafazası takılmalı, sökülmesi önlenmelidir.">${_ldK(c.oneri)}</textarea>
       <label>Risk seviyesi</label>
@@ -604,7 +604,7 @@ function _ldAktarAc(zid, anahtar) {
   if (!c) return;
   _ldAktarBaglam = { ziyaretId: zid, anahtar };
   _ldEl('ldAktarBaslik').textContent = 'Uygunsuzluğa Aktar';
-  _ldEl('ldAktarAciklama').textContent = `${z.bolum} — ${z.lokasyon}: ${c.s}`;
+  _ldEl('ldAktarAciklama').textContent = `${z.bolum} — ${z.lokasyon}: ${ldBulguTespiti(c)}`;
   _ldEl('ldASorumlu').value = '';
   _ldEl('ldATermin').value = '';
   _ldEl('ldARisk').value = c.risk || (typeof UYG_VARSAYILAN_RISK !== 'undefined' ? UYG_VARSAYILAN_RISK : '');
@@ -666,7 +666,7 @@ function _ldRiskeAktar(zid, anahtar) {
       bolum: z.bolum,
       yer: z.lokasyon,
       faaliyet: kat ? kat.ad : '',
-      tehlike: c.s + (c.not ? ' — ' + c.not : ''),
+      tehlike: ldBulguTespiti(c),
       risk: '',
       onlem: '',
       planlanan: c.oneri || '',

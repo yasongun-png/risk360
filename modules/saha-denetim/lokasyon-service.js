@@ -291,8 +291,8 @@ function _ldBulguAciklamasi(denetim, ziyaret, c, bulguNo) {
   return [
     `${denetim.denetimNo}${bulguNo ? ' / ' + bulguNo : ''} lokasyon bazlı saha denetimi tespiti.`,
     `Lokasyon: ${ziyaret.bolum} — ${ziyaret.lokasyon}`,
-    `Tespit: ${c.s}`,
-    c.not ? `Açıklama: ${c.not}` : '',
+    `Tespit: ${ldBulguTespiti(c)}`,
+    ldBulguKriteri(c) ? `Kontrol maddesi (olması gereken): ${ldBulguKriteri(c)}` : '',
     c.m ? `Mevzuat: ${c.m}` : ''
   ].filter(Boolean).join('\n');
 }
@@ -306,7 +306,7 @@ function ldBulguyuUygunsuzlugaAktar(denetimId, ziyaretId, anahtar, ek) {
   const bulgu = ldDenetimBulgulari(denetim).find(b => b.ziyaret.id === ziyaretId && b.madde.anahtar === anahtar);
   const fotolar = (c.fotolar || []).slice(0, 4);
   const sonuc = uygunsuzlukEkle({
-    baslik: c.s,
+    baslik: ldBulguTespiti(c),
     aciklama: _ldBulguAciklamasi(denetim, ziyaret, c, bulgu ? bulgu.no : ''),
     bolum: ziyaret.bolum,
     lokasyon: ziyaret.lokasyon,

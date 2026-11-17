@@ -317,6 +317,22 @@ function ldDenetimBulgulari(denetim) {
   return bulgular;
 }
 
+// Kullanıcı geri bildirimi (2026-11-17): "tespitler tespit değil aslında
+// olması gereken" — kontrol maddesi metni olması gereken durumu anlatır;
+// asıl tespit denetçinin yazdığı açıklamadır. Raporda/aktarımda "Tespit"
+// bu açıklamadan alınır, madde metni "Kontrol Maddesi (olması gereken)"
+// olarak ayrı gösterilir. Açıklama yazılmadıysa maddeden türetilir.
+// Listede olmayan (serbest) tespitlerde metnin kendisi zaten tespittir.
+function ldBulguTespiti(c) {
+  if (!c) return '';
+  if (c.serbest) return c.s || '';
+  return (c.not || '').trim() || `Kontrol maddesi karşılanmıyor: ${c.s}`;
+}
+
+function ldBulguKriteri(c) {
+  return c && !c.serbest ? (c.s || '') : '';
+}
+
 function ldPuanSinifi(puan) {
   if (puan == null) return 'rozet-pasif';
   return puan >= 90 ? 'rozet-uygun' : puan >= 70 ? 'rozet-orta' : 'rozet-yuksek';
