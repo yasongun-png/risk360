@@ -581,8 +581,12 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
   const bugun = gunAyYil(_bugun());
   const ozet = riskOzetiHesapla(riskler);
 
+  // Her sayfanın sol üstünde firma logosu (yaklaşık 40×14 mm kutu).
+  const logo = await _riskLogoHazirla(150, 52);
+  // Kullanıcı isteği (2026-11-17): logo varken üstteki küçük firma adı yazısı
+  // olmasın; logo yoksa firma adı kapakta kalır.
   const kapakCocuklari = [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 24 })], spacing: { after: 300 } }),
+    ...(logo ? [] : [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: firma ? firma.ad : '', bold: true, size: 24 })], spacing: { after: 300 } })]),
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: 'RİSK DEĞERLENDİRME RAPORU', bold: true, size: 32 })], spacing: { after: 200 } }),
     ...(filtreler.bolum ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: filtreler.bolum, size: 24 })], spacing: { after: 400 } })] : []),
     new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ text: `Rapor Tarihi: ${bugun}`, size: _RSK_WORD_METIN_BOYUT })] }),
@@ -621,8 +625,6 @@ async function riskRaporuWordOlustur(hazirlayanAdi) {
   const darKenar = { top: 720, right: 560, bottom: 720, left: 560 };
   // Excel'deki "Sayfa X / Y" alt bilgisinin karşılığı.
   const altBilgi = { default: new docx.Footer({ children: [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [new docx.TextRun({ children: ['Sayfa ', docx.PageNumber.CURRENT, ' / ', docx.PageNumber.TOTAL_PAGES], size: 16, color: '646464' })] })] }) };
-  // Her sayfanın sol üstünde firma logosu (yaklaşık 40×14 mm kutu).
-  const logo = await _riskLogoHazirla(150, 52);
   const ustBilgi = logo ? { default: new docx.Header({ children: [new docx.Paragraph({ alignment: docx.AlignmentType.LEFT, children: [new docx.ImageRun({ data: logo.veri, transformation: { width: logo.gen, height: logo.yuk } })] })] }) } : undefined;
   const bolum = children => Object.assign({ properties: { page: { size: { orientation: docx.PageOrientation.LANDSCAPE }, margin: darKenar } }, footers: altBilgi, children }, ustBilgi ? { headers: ustBilgi } : {});
   const doc = new docx.Document({
@@ -681,13 +683,13 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
     c.font = { size: boyut, bold: !!kalin };
     c.alignment = { horizontal: 'center', vertical: 'middle' };
   };
-  baslikSatiri(1, firma ? firma.ad : '', 12, true);
+  // Sol üstte firma logosu (Word'deki üst bilgi logosunun karşılığı); 1-3.
+  // satırların üstünde yüzer. Logo varken 1. satırdaki küçük firma adı yazılmaz.
+  const logo = await _riskLogoHazirla(150, 64);
+  baslikSatiri(1, logo ? '' : (firma ? firma.ad : ''), 12, true);
   baslikSatiri(2, 'RİSK DEĞERLENDİRME RAPORU' + (filtreler.bolum ? ' — ' + filtreler.bolum : ''), 14, true);
   baslikSatiri(3, `Rapor Tarihi: ${bugun}   •   Toplam: ${ozet.toplam}   •   Açık: ${ozet.acik}   •   Gecikmiş: ${ozet.gecikmis}   •   Önemli+: ${ozet.onemliVeUstu}`, 10);
   ws.getRow(2).height = 22;
-  // Sol üstte firma logosu (Word'deki üst bilgi logosunun karşılığı); 1-3.
-  // satırların üstünde yüzer, başlık metinleri ortalı olduğundan çakışmaz.
-  const logo = await _riskLogoHazirla(150, 64);
   if (logo) {
     ws.getRow(1).height = 20; ws.getRow(3).height = 18;
     ws.addImage(wb.addImage({ base64: logo.base64, extension: 'png' }), { tl: { col: 0.1, row: 0.1 }, ext: { width: logo.gen, height: logo.yuk }, editAs: 'oneCell' });
