@@ -27,7 +27,7 @@ function ldLokasyonKaydet(veri) {
   const hatalar = {};
   if (!(veri.bolum || '').trim()) hatalar.bolum = 'Bölüm zorunludur.';
   if (!(veri.lokasyon || '').trim()) hatalar.lokasyon = 'Lokasyon / kat zorunludur.';
-  if (!veri.kategoriler || !veri.kategoriler.length) hatalar.kategoriler = 'En az bir denetim kategorisi seçin.';
+  if (!veri.kategoriler || !veri.kategoriler.length) hatalar.kategoriler = 'En az bir kontrol kategorisi seçin.';
   if (Object.keys(hatalar).length) return { basarili: false, hatalar };
 
   const liste = oku(_ldLokAnahtar(), []) || [];
@@ -144,15 +144,15 @@ function _ldDenetimDegistir(id, degistir) {
 
 function ldDenetimKaydet(veri) {
   const hatalar = {};
-  if (!veri.tarih) hatalar.tarih = 'Denetim tarihi zorunludur.';
-  if (!(veri.denetciler || '').trim()) hatalar.denetciler = 'Denetçi zorunludur.';
+  if (!veri.tarih) hatalar.tarih = 'Kontrol tarihi zorunludur.';
+  if (!(veri.denetciler || '').trim()) hatalar.denetciler = 'Kontrol Eden zorunludur.';
   if (Object.keys(hatalar).length) return { basarili: false, hatalar };
 
   if (veri.id) {
     const d = _ldDenetimDegistir(veri.id, d => {
       ['baslik', 'tarih', 'bitisTarihi', 'denetciler', 'eslikEdenler', 'kapsam'].forEach(k => { if (k in veri) d[k] = (veri[k] || '').trim(); });
     });
-    return d ? { basarili: true, denetim: d } : { basarili: false, hatalar: { genel: 'Denetim bulunamadı.' } };
+    return d ? { basarili: true, denetim: d } : { basarili: false, hatalar: { genel: 'Kontrol bulunamadı.' } };
   }
   const liste = _ldDenetimListesi();
   const yeni = ldDenetimOlustur(Object.assign({}, veri, { denetimNo: ldSonrakiDenetimNo(liste, veri.tarih) }));
@@ -193,8 +193,8 @@ function ldZiyaretBaslat(denetimId, lokasyonId, yontem) {
   });
   if (!ziyaret) {
     const mevcut = ldDenetimGetir(denetimId);
-    if (mevcut && mevcut.tamamlandiMi) return { basarili: false, hata: 'Bu denetim tamamlanmış; yeni lokasyon eklenemez.' };
-    return { basarili: false, hata: 'Denetim bulunamadı.' };
+    if (mevcut && mevcut.tamamlandiMi) return { basarili: false, hata: 'Bu kontrol tamamlanmış; yeni lokasyon eklenemez.' };
+    return { basarili: false, hata: 'Kontrol bulunamadı.' };
   }
   return { basarili: true, ziyaret, yeniMi, denetim: d || ldDenetimGetir(denetimId) };
 }
@@ -289,7 +289,7 @@ function ldRiskKaynakId(denetimId, ziyaretId, anahtar) {
 
 function _ldBulguAciklamasi(denetim, ziyaret, c, bulguNo) {
   return [
-    `${denetim.denetimNo}${bulguNo ? ' / ' + bulguNo : ''} lokasyon bazlı saha denetimi tespiti.`,
+    `${denetim.denetimNo}${bulguNo ? ' / ' + bulguNo : ''} lokasyon bazlı saha kontrolü tespiti.`,
     `Lokasyon: ${ziyaret.bolum} — ${ziyaret.lokasyon}`,
     `Tespit: ${ldBulguTespiti(c)}`,
     ldBulguKriteri(c) ? `Kontrol maddesi (olması gereken): ${ldBulguKriteri(c)}` : '',

@@ -132,7 +132,7 @@ function _ldDenetimListesiCiz() {
   const bos = _ldEl('ldDenetimBos');
   if (!liste.length) {
     govde.innerHTML = '';
-    bos.textContent = ara ? 'Aramayla eşleşen denetim yok.' : 'Henüz lokasyon bazlı denetim yok. "+ Yeni Denetim" ile başlayın.';
+    bos.textContent = ara ? 'Aramayla eşleşen kontrol yok.' : 'Henüz lokasyon bazlı kontrol yok. "+ Yeni Kontrol" ile başlayın.';
     bos.classList.add('gorunur');
     return;
   }
@@ -166,7 +166,7 @@ async function _ldDenetimListesiTiklandi(e) {
   else if (sil) {
     const d = ldDenetimGetir(sil.getAttribute('data-den-sil'));
     if (!d) return;
-    if (!(await onayModali(`${d.denetimNo} denetimi ve tüm lokasyon kayıtları silinsin mi? (Uygunsuzluğa/riske aktarılmış kayıtlar o modüllerde kalır.)`, 'Sil'))) return;
+    if (!(await onayModali(`${d.denetimNo} kontrolü ve tüm lokasyon kayıtları silinsin mi? (Uygunsuzluğa/riske aktarılmış kayıtlar o modüllerde kalır.)`, 'Sil'))) return;
     const s = ldDenetimSil(d.id);
     if (!s.basarili) { alert(s.hata); return; }
     _ldDenetimListesiCiz();
@@ -175,7 +175,7 @@ async function _ldDenetimListesiTiklandi(e) {
 
 function _ldDenetimModalAc(d) {
   _ldEl('ldDenetimModal').dataset.id = d ? d.id : '';
-  _ldEl('ldDenetimModalBaslik').textContent = d ? `${d.denetimNo} — Denetim Bilgileri` : 'Yeni Lokasyon Bazlı Denetim';
+  _ldEl('ldDenetimModalBaslik').textContent = d ? `${d.denetimNo} — Kontrol Bilgileri` : 'Yeni Lokasyon Bazlı Kontrol';
   _ldEl('ldDBaslik').value = d ? d.baslik : '';
   _ldEl('ldDTarih').value = d ? d.tarih : _ldBugunIso();
   _ldEl('ldDBitis').value = d ? d.bitisTarihi : '';
@@ -227,7 +227,7 @@ function _ldDetayCiz() {
   _ldEl('ldDetayBaslik').textContent = `${d.denetimNo}${d.baslik ? ' — ' + d.baslik : ''}`;
   _ldEl('ldDetayMeta').innerHTML = [
     `Tarih: <b>${_ldTarihGoster(d.tarih)}${d.bitisTarihi && d.bitisTarihi !== d.tarih ? ' – ' + _ldTarihGoster(d.bitisTarihi) : ''}</b>`,
-    `Denetçi: <b>${_ldK(d.denetciler)}</b>`,
+    `Kontrol Eden: <b>${_ldK(d.denetciler)}</b>`,
     d.eslikEdenler ? `Eşlik eden: ${_ldK(d.eslikEdenler)}` : '',
     d.kapsam ? `Kapsam: ${_ldK(d.kapsam)}` : '',
     d.tamamlandiMi ? '<span class="genel-rozet rozet-tamamlandi">Tamamlandı</span>' : ''
@@ -242,7 +242,7 @@ function _ldDetayCiz() {
 
   const kilitli = d.tamamlandiMi;
   ['ldBarkodOkutBtn', 'ldLokasyonSecBtn', 'ldTamamlaBtn'].forEach(id => { _ldEl(id).disabled = kilitli; });
-  _ldEl('ldTamamlaBtn').textContent = kilitli ? '↺ Denetimi Yeniden Aç' : '✓ Denetimi Tamamla';
+  _ldEl('ldTamamlaBtn').textContent = kilitli ? '↺ Kontrolü Yeniden Aç' : '✓ Kontrolü Tamamla';
   _ldEl('ldTamamlaBtn').disabled = false;
   _ldEl('ldGenelDegerlendirme').value = d.genelDegerlendirme || '';
   _ldBelgeAlaniniKur(d);
@@ -292,7 +292,7 @@ function _ldZiyaretKartiHtml(d, z) {
       ${kilitli ? '' : `<div class="ld-eylemler" style="margin-top:10px;">
         <button type="button" class="ikincil" data-kat-duzenle="${z.id}" style="width:auto;">☰ Kategoriler</button>
         <button type="button" class="ikincil" data-serbest-ekle="${z.id}" style="width:auto;">+ Listede Olmayan Tespit</button>
-        <button type="button" class="ikincil sil" data-ziyaret-sil="${z.id}" style="width:auto;">Lokasyonu Denetimden Çıkar</button>
+        <button type="button" class="ikincil sil" data-ziyaret-sil="${z.id}" style="width:auto;">Lokasyonu Kontrolden Çıkar</button>
       </div>`}
       ${_ldEkipmanPaneliHtml(z, kilitli)}
       ${govde}
@@ -428,8 +428,8 @@ async function _ldZiyaretTiklandi(e) {
   } else if (b.hasAttribute('data-ziyaret-sil')) {
     const z = _ldAktifZiyaret(b.getAttribute('data-ziyaret-sil'));
     if (!z) return;
-    if (Object.values(z.cevaplar || {}).some(c => c.uygId)) { alert('Bu lokasyonun uygunsuzluğa aktarılmış bulguları var; denetimden çıkarılamaz.'); return; }
-    if (!(await onayModali(`${z.bolum} — ${z.lokasyon} bu denetimden çıkarılsın mı? Girilen cevaplar silinir.`, 'Çıkar'))) return;
+    if (Object.values(z.cevaplar || {}).some(c => c.uygId)) { alert('Bu lokasyonun uygunsuzluğa aktarılmış bulguları var; kontrolden çıkarılamaz.'); return; }
+    if (!(await onayModali(`${z.bolum} — ${z.lokasyon} bu kontrolden çıkarılsın mı? Girilen cevaplar silinir.`, 'Çıkar'))) return;
     ldZiyaretSil(did, z.id);
     _ldAcikZiyaretler.delete(z.id);
     _ldDetayCiz();
@@ -482,14 +482,14 @@ async function _ldTamamlaTiklandi() {
   const d = ldDenetimGetir(_ldAktifDenetimId);
   if (!d) return;
   if (d.tamamlandiMi) {
-    if (await onayModali('Denetim yeniden düzenlemeye açılsın mı?', 'Aç')) { ldDenetimAlanGuncelle(d.id, { tamamlandiMi: false }); _ldDetayCiz(); }
+    if (await onayModali('Kontrol yeniden düzenlemeye açılsın mı?', 'Aç')) { ldDenetimAlanGuncelle(d.id, { tamamlandiMi: false }); _ldDetayCiz(); }
     return;
   }
   const ist = ldDenetimIstatistik(d);
   const eksik = ist.toplam - ist.cevaplanan;
   const mesaj = eksik > 0
-    ? `${eksik} madde henüz değerlendirilmedi (raporda "Değerlendirilmedi" görünür). Yine de denetim tamamlansın mı?`
-    : 'Denetim tamamlandı olarak işaretlensin mi?';
+    ? `${eksik} madde henüz değerlendirilmedi (raporda "Değerlendirilmedi" görünür). Yine de kontrol tamamlansın mı?`
+    : 'Kontrol tamamlandı olarak işaretlensin mi?';
   if (!(await onayModali(mesaj, 'Tamamla'))) return;
   ldDenetimAlanGuncelle(d.id, { tamamlandiMi: true, bitisTarihi: d.bitisTarihi || (d.tarih !== _ldBugunIso() ? _ldBugunIso() : '') });
   _ldDetayCiz();
@@ -498,7 +498,7 @@ async function _ldTamamlaTiklandi() {
 function _ldBelgeAlaniniKur(d) {
   const alan = _ldEl('ldBelgeAlani');
   if (typeof belgeYukleyiciHtml !== 'function') { alan.innerHTML = ''; return; }
-  alan.innerHTML = belgeYukleyiciHtml('ldBelge', 'İmzalı Denetim Raporu');
+  alan.innerHTML = belgeYukleyiciHtml('ldBelge', 'İmzalı Kontrol Raporu');
   belgeYukleyiciBagla('ldBelge', async dosya => {
     try {
       const referans = await belgeDosyasiIsle(dosya, _ldFirma ? _ldFirma.slug : '');
@@ -522,7 +522,7 @@ function _ldLokasyonaGir(lokasyonId, yontem) {
   _ldDetayCiz();
   const kart = _ldEl('ldKart_' + s.ziyaret.id);
   if (kart) kart.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  if (!s.yeniMi && yontem === 'barkod') _ldBildirim(`${s.ziyaret.bolum} — ${s.ziyaret.lokasyon} bu denetimde zaten açık; kaldığınız yerden devam edebilirsiniz.`);
+  if (!s.yeniMi && yontem === 'barkod') _ldBildirim(`${s.ziyaret.bolum} — ${s.ziyaret.lokasyon} bu kontrolde zaten açık; kaldığınız yerden devam edebilirsiniz.`);
 }
 
 function _ldBildirim(metin) {
@@ -659,7 +659,7 @@ function _ldRiskeAktar(zid, anahtar) {
   const kat = ldKategoriGetir(c.k);
   riskeAktarModaliAc({
     modul: 'saha-lokasyon',
-    modulAdi: 'Lokasyon Bazlı Saha Denetimi',
+    modulAdi: 'Lokasyon Bazlı Saha Kontrolü',
     id: ldRiskKaynakId(d.id, zid, anahtar),
     etiket: `${d.denetimNo}${bulgu ? ' / ' + bulgu.no : ''}`,
     alanlar: {
@@ -761,9 +761,9 @@ async function _ldUrlLokasyonuIsle() {
   const acik = ldDenetimleriGetir().filter(d => !d.tamamlandiMi);
   let hedef = acik.find(d => d.tarih === _ldBugunIso() || (d.bitisTarihi && d.tarih <= _ldBugunIso() && _ldBugunIso() <= d.bitisTarihi)) || acik[0] || null;
   if (!hedef) {
-    if (!(await onayModali(`Devam eden denetim yok. ${lok.bolum} — ${lok.lokasyon} için bugün yeni bir denetim başlatılsın mı?`, 'Başlat'))) { temizle(); return; }
+    if (!(await onayModali(`Devam eden kontrol yok. ${lok.bolum} — ${lok.lokasyon} için bugün yeni bir kontrol başlatılsın mı?`, 'Başlat'))) { temizle(); return; }
     const s = ldDenetimKaydet({ tarih: _ldBugunIso(), denetciler: (_ldKullanici && _ldKullanici.adSoyad) || 'İSG Uzmanı' });
-    if (!s.basarili) { alert('Denetim başlatılamadı.'); temizle(); return; }
+    if (!s.basarili) { alert('Kontrol başlatılamadı.'); temizle(); return; }
     hedef = s.denetim;
   }
   temizle();
@@ -820,7 +820,7 @@ async function _ldLokasyonListesiTiklandi(e) {
   } else if (sil) {
     const l = ldLokasyonGetir(sil.getAttribute('data-lok-sil'));
     if (!l) return;
-    if (!(await onayModali(`${l.kod} ${l.bolum} — ${l.lokasyon} silinsin mi? (Geçmiş denetimlerdeki kayıtları etkilenmez; asılı barkodu artık okunmaz.)`, 'Sil'))) return;
+    if (!(await onayModali(`${l.kod} ${l.bolum} — ${l.lokasyon} silinsin mi? (Geçmiş kontrollerdeki kayıtları etkilenmez; asılı barkodu artık okunmaz.)`, 'Sil'))) return;
     const s = ldLokasyonSil(l.id);
     if (!s.basarili) { alert(s.hata); return; }
     _ldLokasyonListesiCiz();
@@ -863,8 +863,8 @@ function _ldLokasyonEkipmanBilgisiCiz() {
   const lok = _ldEl('ldLCoklu').checked ? '' : _ldEl('ldLLokasyon').value.trim();
   const n = ldLokasyonEkipmanlari(bolum, lok).length;
   kutu.textContent = n
-    ? `🧯 Acil Durum modülünde bu ${lok ? 'lokasyonla' : 'bölümle'} eşleşen ${n} ekipman var; son kontrol durumları denetime gelecek.`
-    : '🧯 Acil Durum modülünde bu adla eşleşen ekipman yok (adları oradakiyle aynı yazarsanız ekipman durumları denetime gelir).';
+    ? `🧯 Acil Durum modülünde bu ${lok ? 'lokasyonla' : 'bölümle'} eşleşen ${n} ekipman var; son kontrol durumları kontrole gelecek.`
+    : '🧯 Acil Durum modülünde bu adla eşleşen ekipman yok (adları oradakiyle aynı yazarsanız ekipman durumları kontrole gelir).';
 }
 
 function _ldLokasyonModalKaydet() {

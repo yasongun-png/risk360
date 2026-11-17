@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="İSG Platform">
 <link rel="icon" href="../../assets/icons/favicon-32.png">
-<title>İSG Platform - Lokasyon Bazlı Saha Denetimi</title>
+<title>İSG Platform - Lokasyon Bazlı Saha Kontrolü</title>
 <link rel="stylesheet" href="../../assets/style.css">
 <style>
   .ld-kart { background:var(--kart-bg); border:1px solid var(--kenarlik); border-radius:12px; box-shadow:var(--golge); margin-bottom:12px; }
@@ -67,23 +67,23 @@
 
   <div class="icerik">
     <a href="index.html" class="geri-link">← Saha Denetim</a>
-    <h2 style="margin-top:14px;">Lokasyon Bazlı Saha Denetimi</h2>
+    <h2 style="margin-top:14px;">Lokasyon Bazlı Saha Kontrolü</h2>
     <p style="color:#6b7280; font-size:13px; margin-top:-8px;" id="firmaEtiketi"></p>
 
     <div class="sekme-cubugu" id="ldSekmeler">
-      <button type="button" data-sekme="denetimler">Denetimler</button>
+      <button type="button" data-sekme="denetimler">Kontroller</button>
       <button type="button" data-sekme="lokasyonlar" class="sekme-seciliDegil">Lokasyonlar ve Barkodlar</button>
     </div>
 
     <!-- DENETİM LİSTESİ -->
     <div id="ldDenetimListesiBolumu">
       <div class="arac-cubugu">
-        <input type="text" id="ldDenetimArama" class="arama-kutusu" placeholder="Denetim no, denetçi veya bölüm ara..." style="margin:0;">
-        <button type="button" class="birincil" id="ldYeniDenetimBtn" style="width:auto;">+ Yeni Denetim</button>
+        <input type="text" id="ldDenetimArama" class="arama-kutusu" placeholder="Kontrol no, kontrol eden veya bölüm ara..." style="margin:0;">
+        <button type="button" class="birincil" id="ldYeniDenetimBtn" style="width:auto;">+ Yeni Kontrol</button>
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th>Denetim No</th><th>Tarih</th><th>Denetçi</th><th>Lokasyon</th><th>Bulgu</th><th>Uygunluk</th><th>Durum</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th>Kontrol No</th><th>Tarih</th><th>Kontrol Eden</th><th>Lokasyon</th><th>Bulgu</th><th>Uygunluk</th><th>Durum</th><th>İşlemler</th></tr></thead>
           <tbody id="ldDenetimGovde"></tbody>
         </table>
       </div>
@@ -92,7 +92,7 @@
 
     <!-- DENETİM DETAYI -->
     <div id="ldDenetimDetayBolumu" class="ld-gizli">
-      <button type="button" class="tablo-buton" id="ldDetayGeriBtn">← Denetim listesine dön</button>
+      <button type="button" class="tablo-buton" id="ldDetayGeriBtn">← Kontrollere dön</button>
       <h3 id="ldDetayBaslik" style="margin:8px 0 2px;"></h3>
       <div id="ldDetayMeta" class="ld-bilgi"></div>
       <div class="ld-istat" id="ldDetayIstat"></div>
@@ -101,22 +101,22 @@
         <button type="button" class="ikincil" id="ldLokasyonSecBtn">+ Listeden Lokasyon Ekle</button>
         <button type="button" class="ikincil" id="ldWordRaporBtn">📄 Word Raporu</button>
         <button type="button" class="ikincil" id="ldTopluAktarBtn">↪ Bulguları Uygunsuzluğa Aktar</button>
-        <button type="button" class="ikincil" id="ldDenetimDuzenleBtn">✎ Denetim Bilgileri</button>
-        <button type="button" class="ikincil" id="ldTamamlaBtn">✓ Denetimi Tamamla</button>
+        <button type="button" class="ikincil" id="ldDenetimDuzenleBtn">✎ Kontrol Bilgileri</button>
+        <button type="button" class="ikincil" id="ldTamamlaBtn">✓ Kontrolü Tamamla</button>
       </div>
       <div id="ldZiyaretler"></div>
       <div class="bos-durum" id="ldZiyaretBos">Henüz lokasyon eklenmedi. Lokasyon girişindeki barkodu okutun veya listeden lokasyon ekleyin.</div>
 
       <div class="ld-kart" style="padding:14px;">
         <label for="ldGenelDegerlendirme" style="margin-top:0;">Genel Değerlendirme ve Sonuç <span class="ld-bilgi">(Word raporunun sonuç bölümüne girer)</span></label>
-        <textarea id="ldGenelDegerlendirme" rows="5" placeholder="Denetimin genel sonucu, öne çıkan riskler, öncelikli alınması gereken önlemler..."></textarea>
+        <textarea id="ldGenelDegerlendirme" rows="5" placeholder="Kontrolün genel sonucu, öne çıkan riskler, öncelikli alınması gereken önlemler..."></textarea>
         <div id="ldBelgeAlani" style="margin-top:6px;"></div>
       </div>
     </div>
 
     <!-- LOKASYONLAR -->
     <div id="ldLokasyonBolumu" class="ld-gizli">
-      <p class="ld-bilgi" style="margin-top:4px;">Denetlenecek her bölüm/kat bir lokasyondur (ör. Can-An Ambarı — Zemin Kat, 1. Kat). Her lokasyonun barkodunu basıp girişine asın; denetimde barkod okutulunca o lokasyonun kontrol listesi açılır. Bölüm ve lokasyon adlarını Acil Durum ekipmanlarındaki adlarla aynı yazarsanız o lokasyondaki ekipmanların son kontrol durumu denetime ve rapora otomatik gelir.</p>
+      <p class="ld-bilgi" style="margin-top:4px;">Kontrol edilecek her bölüm/kat bir lokasyondur (ör. Can-An Ambarı — Zemin Kat, 1. Kat). Her lokasyonun barkodunu basıp girişine asın; kontrolde barkod okutulunca o lokasyonun kontrol listesi açılır. Bölüm ve lokasyon adlarını Acil Durum ekipmanlarındaki adlarla aynı yazarsanız o lokasyondaki ekipmanların son kontrol durumu kontrole ve rapora otomatik gelir.</p>
       <div class="arac-cubugu">
         <input type="text" id="ldLokasyonArama" class="arama-kutusu" placeholder="Bölüm, lokasyon veya kod ara..." style="margin:0;">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -139,20 +139,20 @@
   <!-- DENETİM FORMU -->
   <div class="modal-katman" id="ldDenetimModal">
     <div class="modal-kutu" style="max-width:620px;">
-      <h3 id="ldDenetimModalBaslik">Yeni Lokasyon Bazlı Denetim</h3>
-      <label for="ldDBaslik">Denetim Adı <span class="ld-bilgi">(opsiyonel, ör. "Kasım Ayı Saha Denetimi")</span></label>
+      <h3 id="ldDenetimModalBaslik">Yeni Lokasyon Bazlı Kontrol</h3>
+      <label for="ldDBaslik">Kontrol Adı <span class="ld-bilgi">(opsiyonel, ör. "Kasım Ayı Saha Kontrolü")</span></label>
       <input type="text" id="ldDBaslik">
       <div class="form-satir-ikili">
         <div><label for="ldDTarih">Başlangıç Tarihi</label><input type="date" id="ldDTarih"><div class="hata-mesaji" id="ldDTarihHata"></div></div>
         <div><label for="ldDBitis">Bitiş Tarihi <span class="ld-bilgi">(birden çok gün sürerse)</span></label><input type="date" id="ldDBitis"></div>
       </div>
-      <label for="ldDDenetciler">Denetçi(ler)</label>
+      <label for="ldDDenetciler">Kontrol Eden(ler)</label>
       <input type="text" id="ldDDenetciler" placeholder="Ad Soyad (İSG Uzmanı), ...">
       <div class="hata-mesaji" id="ldDDenetcilerHata"></div>
       <label for="ldDEslik">Eşlik Edenler</label>
       <input type="text" id="ldDEslik" placeholder="Bölüm sorumlusu, çalışan temsilcisi vb.">
       <label for="ldDKapsam">Kapsam / Amaç</label>
-      <textarea id="ldDKapsam" rows="2" placeholder="Ör. Can-An Ambarı ve TSP Tesisi tüm katlar; 6331 sayılı Kanun kapsamında periyodik saha denetimi"></textarea>
+      <textarea id="ldDKapsam" rows="2" placeholder="Ör. Can-An Ambarı ve TSP Tesisi tüm katlar; 6331 sayılı Kanun kapsamında periyodik saha kontrolü"></textarea>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="ldDenetimModalIptal">İptal</button>
         <button type="button" class="birincil" id="ldDenetimModalKaydet" style="width:auto;">Kaydet</button>
@@ -177,7 +177,7 @@
       <div id="ldLEkipmanBilgi" class="ld-bilgi" style="margin:4px 0 10px;"></div>
       <label for="ldLAciklama">Açıklama <span class="ld-bilgi">(opsiyonel)</span></label>
       <input type="text" id="ldLAciklama" placeholder="Ör. Paketleme hattı ve forklift şarj alanı dahil">
-      <label>Bu lokasyonda denetlenecek kategoriler</label>
+      <label>Bu lokasyonda kontrol edilecek kategoriler</label>
       <div class="ld-kat-secim" id="ldLKategoriler"></div>
       <div class="hata-mesaji" id="ldLKategorilerHata"></div>
       <div class="modal-eylemler">
@@ -202,8 +202,8 @@
   <!-- KATEGORİ DÜZENLE (ziyaret) -->
   <div class="modal-katman" id="ldKategoriModal">
     <div class="modal-kutu" style="max-width:720px;">
-      <h3>Bu Lokasyonda Denetlenecek Kategoriler</h3>
-      <p class="ld-bilgi" style="margin-top:-6px;">Yalnızca bu denetimdeki ziyareti etkiler. Çıkarılan kategorinin (uygunsuzluğa aktarılmamış) cevapları silinir.</p>
+      <h3>Bu Lokasyonda Kontrol Edilecek Kategoriler</h3>
+      <p class="ld-bilgi" style="margin-top:-6px;">Yalnızca bu kontroldeki ziyareti etkiler. Çıkarılan kategorinin (uygunsuzluğa aktarılmamış) cevapları silinir.</p>
       <div class="ld-kat-secim" id="ldKategoriSecim"></div>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="ldKategoriIptal">İptal</button>
@@ -284,10 +284,10 @@
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js?v=20261112c"></script>
   <script src="../acil-durum/model.js?v=19"></script>
-  <script src="lokasyon-model.js?v=2"></script>
-  <script src="lokasyon-service.js?v=2"></script>
-  <script src="lokasyon-cikti.js?v=2"></script>
-  <script src="lokasyon-ui.js?v=2"></script>
+  <script src="lokasyon-model.js?v=3"></script>
+  <script src="lokasyon-service.js?v=3"></script>
+  <script src="lokasyon-cikti.js?v=3"></script>
+  <script src="lokasyon-ui.js?v=3"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 
@@ -303,7 +303,7 @@
         window.location.href = '../../firma-sec.html';
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
-          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — bölüm/kat bazında, ÇSGB müfettiş denetimi tarzında saha denetimi';
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — bölüm/kat bazında, ÇSGB müfettiş kontrolü tarzında saha kontrolü';
           lokasyonDenetimSayfasiniBaslat(aktifFirma, kullanici);
         });
       }

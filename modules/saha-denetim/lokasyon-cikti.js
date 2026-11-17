@@ -60,7 +60,7 @@ function _ldcEtiketTuvali(lok, firma, url, genMm, yukMm) {
   ctx.fillRect(0, 0, G, 20 * O);
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${6.2 * O}px Arial, sans-serif`;
-  ctx.fillText('SAHA DENETİM NOKTASI', G / 2, 8.5 * O);
+  ctx.fillText('SAHA KONTROL NOKTASI', G / 2, 8.5 * O);
   ctx.font = `${3.6 * O}px Arial, sans-serif`;
   ctx.fillText(_ldcMetinSar(ctx, firma ? firma.ad : '', G - 10 * O, 1)[0] || '', G / 2, 15 * O);
 
@@ -79,7 +79,7 @@ function _ldcEtiketTuvali(lok, firma, url, genMm, yukMm) {
   _ldcQrCiz(ctx, url, (G - qrBoyut) / 2, qrY, qrBoyut);
   ctx.fillStyle = '#374151';
   ctx.font = `${3.6 * O}px Arial, sans-serif`;
-  ctx.fillText('Denetime girişte bu kodu okutunuz', G / 2, qrY + qrBoyut + 4 * O);
+  ctx.fillText('Kontrole girişte bu kodu okutunuz', G / 2, qrY + qrBoyut + 4 * O);
 
   // CODE128 (uygulama içi tarayıcı / el terminali için)
   if (typeof JsBarcode === 'function') {
@@ -234,18 +234,18 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   const c = [];
 
   // ---- Kapak / başlık ----
-  c.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 200, after: 60 }, children: [_ldcRun('SAHA DENETİM RAPORU', { bold: true, size: 36, color: _LDC_LACIVERT })] }));
-  c.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 280 }, children: [_ldcRun('Lokasyon Bazlı İş Sağlığı ve Güvenliği Denetimi', { size: 22, color: '555555' })] }));
+  c.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 200, after: 60 }, children: [_ldcRun('SAHA KONTROL RAPORU', { bold: true, size: 36, color: _LDC_LACIVERT })] }));
+  c.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 280 }, children: [_ldcRun('Lokasyon Bazlı İş Sağlığı ve Güvenliği Kontrolü', { size: 22, color: '555555' })] }));
   if (d.baslik) c.push(new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { after: 200 }, children: [_ldcRun(d.baslik, { bold: true, size: 24 })] }));
 
   const bilgi = [
     ['İşyeri', firma ? firma.ad : '-'],
-    ['Denetim No', d.denetimNo],
-    ['Denetim Tarihi', tarihMetni],
-    ['Denetçi(ler)', d.denetciler || '-'],
+    ['Kontrol No', d.denetimNo],
+    ['Kontrol Tarihi', tarihMetni],
+    ['Kontrol Eden(ler)', d.denetciler || '-'],
     ['Eşlik Edenler', d.eslikEdenler || '-'],
     ['Kapsam', d.kapsam || bolumler.join(', ')],
-    ['Denetlenen Bölüm / Lokasyon', `${bolumler.length} bölüm / ${d.ziyaretler.length} lokasyon`],
+    ['Kontrol Edilen Bölüm / Lokasyon', `${bolumler.length} bölüm / ${d.ziyaretler.length} lokasyon`],
     ['Rapor Tarihi', _ldcTarih(new Date().toISOString())]
   ];
   c.push(_ldcTablo([30, 70], null, bilgi.map(([a, b]) => [{ m: a, o: { kalin: true, dolgu: _LDC_GRI } }, { m: b, o: { dolgu: 'FFFFFF' } }])));
@@ -253,9 +253,9 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   // ---- 1. Yönetici özeti ----
   c.push(_ldcBaslik('1. Yönetici Özeti', 1));
   const degerlendirilmedi = Math.max(0, ist.toplam - ist.cevaplanan);
-  c.push(_ldcP(`${tarihMetni} tarihinde ${firma ? firma.ad + ' işyerinde ' : ''}${bolumler.length} bölümde ${d.ziyaretler.length} lokasyon denetlenmiştir. Lokasyonlarda toplam ${ist.toplam} kontrol maddesi uygulanmış; ${ist.uygun} madde uygun, ${ist.uygunDegil} madde uygun değil, ${ist.uygulanamaz} madde uygulanamaz olarak değerlendirilmiştir${degerlendirilmedi > 0 ? ` (${degerlendirilmedi} madde değerlendirilmemiştir)` : ''}. Uygulanabilir maddeler üzerinden genel uygunluk oranı ${ist.puan == null ? '-' : '%' + ist.puan} olarak hesaplanmıştır.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
+  c.push(_ldcP(`${tarihMetni} tarihinde ${firma ? firma.ad + ' işyerinde ' : ''}${bolumler.length} bölümde ${d.ziyaretler.length} lokasyon kontrol edilmiştir. Lokasyonlarda toplam ${ist.toplam} kontrol maddesi uygulanmış; ${ist.uygun} madde uygun, ${ist.uygunDegil} madde uygun değil, ${ist.uygulanamaz} madde uygulanamaz olarak değerlendirilmiştir${degerlendirilmedi > 0 ? ` (${degerlendirilmedi} madde değerlendirilmemiştir)` : ''}. Uygulanabilir maddeler üzerinden genel uygunluk oranı ${ist.puan == null ? '-' : '%' + ist.puan} olarak hesaplanmıştır.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
   const listeDisi = bulgular.filter(b => b.madde.cevap.serbest).length;
-  if (bulgular.length) c.push(_ldcP(`Denetimde ${bulgular.length} uygunsuzluk (bulgu) tespit edilmiştir${listeDisi ? `; bunların ${listeDisi} adedi kontrol listesi dışında yapılan gözlemlerdir` : ''}. Bulguların ayrıntıları, ilgili mevzuat ve önerilen önlemler 4. bölümde verilmiştir.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
+  if (bulgular.length) c.push(_ldcP(`Kontrolde ${bulgular.length} uygunsuzluk (bulgu) tespit edilmiştir${listeDisi ? `; bunların ${listeDisi} adedi kontrol listesi dışında yapılan gözlemlerdir` : ''}. Bulguların ayrıntıları, ilgili mevzuat ve önerilen önlemler 4. bölümde verilmiştir.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
 
   const ozet = [
     [{ m: 'Uygun', o: { dolgu: 'E2EFDA' } }, { m: String(ist.uygun), o: { hiza: docx.AlignmentType.CENTER } }],
@@ -275,8 +275,9 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
     c.push(_ldcTablo([60, 40], ['Risk Seviyesi', 'Bulgu Sayısı'], riskSatir));
   }
 
-  c.push(_ldcBaslik('Denetim Yöntemi', 2));
-  c.push(_ldcP('Denetim, her lokasyonun girişine asılı barkodun okutulmasıyla başlatılmış; lokasyonun faaliyetine göre seçilen kategorilerde, ilgili iş sağlığı ve güvenliği mevzuatına dayanan kontrol maddeleri yerinde gözlem ve inceleme yoluyla değerlendirilmiştir. Maddeler "Uygun", "Uygun Değil" ve "Uygulanamaz" olarak işaretlenmiş; uygunluk oranı Uygun ÷ (Uygun + Uygun Değil) formülüyle hesaplanmıştır. Acil durum ekipmanlarının durumu, Acil Durum modülündeki periyodik kontrol kayıtlarından alınmıştır.', { size: 18 }, { alignment: docx.AlignmentType.JUSTIFIED }));
+  c.push(_ldcBaslik('Kontrol Yöntemi', 2));
+  // Kullanıcı isteği: raporda barkod okutulduğundan söz edilmesin.
+  c.push(_ldcP('Her lokasyonda, lokasyonun faaliyetine göre seçilen kategorilerde, ilgili iş sağlığı ve güvenliği mevzuatına dayanan kontrol maddeleri yerinde gözlem ve inceleme yoluyla değerlendirilmiştir. Maddeler "Uygun", "Uygun Değil" ve "Uygulanamaz" olarak işaretlenmiş; uygunluk oranı Uygun ÷ (Uygun + Uygun Değil) formülüyle hesaplanmıştır. Acil durum ekipmanlarının durumu, Acil Durum modülündeki periyodik kontrol kayıtlarından alınmıştır.', { size: 18 }, { alignment: docx.AlignmentType.JUSTIFIED }));
 
   // ---- 2. Lokasyon bazında ----
   c.push(_ldcBaslik('2. Lokasyon Bazında Sonuçlar', 1));
@@ -310,7 +311,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   // ---- 4. Bulgular ----
   c.push(_ldcBaslik('4. Tespit Edilen Uygunsuzluklar', 1, true));
   if (!bulgular.length) {
-    c.push(_ldcP('Denetlenen lokasyonlarda uygunsuzluk tespit edilmemiştir.'));
+    c.push(_ldcP('Kontrol edilen lokasyonlarda uygunsuzluk tespit edilmemiştir.'));
   } else {
     c.push(_ldcBaslik('4.1 Bulgu Listesi', 2));
     c.push(_ldcTablo([8, 22, 40, 15, 15], ['No', 'Lokasyon', 'Tespit', 'Risk Seviyesi', 'Takip No'], bulgular.map(b => {
@@ -354,11 +355,11 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   c.push(_ldcBaslik('5. Acil Durum Ekipmanlarının Durumu', 1, true));
   const ekipmanli = d.ziyaretler.filter(z => (z.ekipmanOzeti || []).length);
   if (!ekipmanli.length) {
-    c.push(_ldcP('Denetlenen lokasyonlarla eşleşen acil durum ekipmanı kaydı bulunmamaktadır (Acil Durum modülü).'));
+    c.push(_ldcP('Kontrol edilen lokasyonlarla eşleşen acil durum ekipmanı kaydı bulunmamaktadır (Acil Durum modülü).'));
   } else {
     const tum = ekipmanli.flatMap(z => z.ekipmanOzeti);
     const say = m => tum.filter(e => e.sonucMetni === m).length;
-    c.push(_ldcP(`Denetlenen lokasyonlarda Acil Durum modülünde kayıtlı ${tum.length} acil durum ekipmanı bulunmaktadır. Periyodik kontrol kayıtlarına göre ${say('Uygun')} ekipman uygun; ${say('Uygunsuzluk var')} ekipmanda son kontrolde uygunsuzluk, ${say('Kontrol süresi geçmiş')} ekipmanda kontrol süresi aşımı, ${say('Kontrol kaydı yok')} ekipmanda kontrol kaydı eksikliği bulunmaktadır.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
+    c.push(_ldcP(`Kontrol edilen lokasyonlarda Acil Durum modülünde kayıtlı ${tum.length} acil durum ekipmanı bulunmaktadır. Periyodik kontrol kayıtlarına göre ${say('Uygun')} ekipman uygun; ${say('Uygunsuzluk var')} ekipmanda son kontrolde uygunsuzluk, ${say('Kontrol süresi geçmiş')} ekipmanda kontrol süresi aşımı, ${say('Kontrol kaydı yok')} ekipmanda kontrol kaydı eksikliği bulunmaktadır.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
     ekipmanli.forEach(z => {
       c.push(_ldcP(`${z.bolum} — ${z.lokasyon}  (kayıt tarihi: ${_ldcTarih(z.ekipmanOzetiTarihi)})`, { bold: true }, { spacing: { before: 160, after: 60 }, keepNext: true }));
       c.push(_ldcTablo([13, 18, 19, 12, 12, 26], ['Ekipman No', 'Tür', 'Yeri', 'Son Kontrol', 'Sonraki', 'Durum'], z.ekipmanOzeti.map(e => [
@@ -376,8 +377,8 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   } else {
     const yuksek = bulgular.filter(b => ['Tolerans Gösterilemez', 'Esaslı Risk'].includes(b.madde.cevap.risk)).length;
     c.push(_ldcP(bulgular.length
-      ? `Denetimde tespit edilen ${bulgular.length} uygunsuzluğun, risk seviyeleri dikkate alınarak öncelik sırasıyla giderilmesi gerekmektedir.${yuksek ? ` Bunlardan ${yuksek} adedi yüksek risk seviyesinde olup bu bulgulara ilişkin önlemlerin gecikmeksizin alınması, gerekli hallerde ilgili faaliyetin önlem alınıncaya kadar durdurulması gerekmektedir.` : ''} Alınan önlemlerin etkinliği bir sonraki saha denetiminde kontrol edilmelidir.`
-      : 'Denetlenen lokasyonlarda uygunsuzluk tespit edilmemiştir. Mevcut uygulamaların sürdürülmesi ve periyodik denetimlere devam edilmesi gerekmektedir.', null, { alignment: docx.AlignmentType.JUSTIFIED }));
+      ? `Kontrolde tespit edilen ${bulgular.length} uygunsuzluğun, risk seviyeleri dikkate alınarak öncelik sırasıyla giderilmesi gerekmektedir.${yuksek ? ` Bunlardan ${yuksek} adedi yüksek risk seviyesinde olup bu bulgulara ilişkin önlemlerin gecikmeksizin alınması, gerekli hallerde ilgili faaliyetin önlem alınıncaya kadar durdurulması gerekmektedir.` : ''} Alınan önlemlerin etkinliği bir sonraki saha kontrolünde değerlendirilmelidir.`
+      : 'Kontrol edilen lokasyonlarda uygunsuzluk tespit edilmemiştir. Mevcut uygulamaların sürdürülmesi ve periyodik kontrollere devam edilmesi gerekmektedir.', null, { alignment: docx.AlignmentType.JUSTIFIED }));
   }
 
   // İmza
@@ -388,14 +389,14 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
     new docx.Paragraph({ spacing: { before: 600 }, alignment: docx.AlignmentType.CENTER, children: [_ldcRun('İmza', { color: '999999', size: 16 })] })
   ], o: { dolgu: 'FFFFFF' } }];
   const denetciler = (d.denetciler || '').split(',').map(s => s.trim()).filter(Boolean);
-  const imzaSatir = [imza('Denetimi Yapan', denetciler[0] || ''), imza(denetciler[1] ? 'Denetimi Yapan' : 'Bölüm Sorumlusu', denetciler[1] || ''), imza('İşveren / İşveren Vekili', '')].map(x => x[0]);
+  const imzaSatir = [imza('Kontrolü Yapan', denetciler[0] || ''), imza(denetciler[1] ? 'Kontrolü Yapan' : 'Bölüm Sorumlusu', denetciler[1] || ''), imza('İşveren / İşveren Vekili', '')].map(x => x[0]);
   c.push(_ldcTablo([33.3, 33.3, 33.4], null, [imzaSatir]));
 
   // ---- EK-1 kontrol listeleri ----
   d.ziyaretler.forEach((z, i) => {
     c.push(_ldcBaslik(`EK-1.${i + 1}  Kontrol Listesi: ${z.bolum} — ${z.lokasyon}`, 1, true));
     const s = ldZiyaretIstatistik(z);
-    c.push(_ldcP(`Lokasyon kodu: ${z.kod || '-'}   |   Giriş: ${_ldcTarih(z.girisZamani)}${z.girisYontemi === 'barkod' ? ' (barkod ile)' : ''}   |   Uygunluk: ${s.puan == null ? '-' : '%' + s.puan}`, { size: 17, color: '555555' }));
+    c.push(_ldcP(`Lokasyon kodu: ${z.kod || '-'}   |   Tarih: ${_ldcTarih(z.girisZamani)}   |   Uygunluk: ${s.puan == null ? '-' : '%' + s.puan}`, { size: 17, color: '555555' }));
     const satirlar = [];
     let sonKat = null;
     let no = 0;
@@ -426,7 +427,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
         ? [new docx.ImageRun({ data: logo.veri, transformation: { width: logo.gen, height: logo.yuk } })]
         : [_ldcRun(firma ? firma.ad : '', { bold: true, size: 18, color: _LDC_LACIVERT })] })] }),
       new docx.TableCell({ width: { size: Math.round(_LDC_SAYFA_GEN * 0.6), type: docx.WidthType.DXA }, verticalAlign: docx.VerticalAlign.CENTER, children: [
-        new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [_ldcRun('SAHA DENETİM RAPORU', { bold: true, size: 18, color: _LDC_LACIVERT })] }),
+        new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, children: [_ldcRun('SAHA KONTROL RAPORU', { bold: true, size: 18, color: _LDC_LACIVERT })] }),
         new docx.Paragraph({ alignment: docx.AlignmentType.RIGHT, spacing: { after: 60 }, children: [_ldcRun(`${d.denetimNo}  |  ${tarihMetni}`, { size: 16, color: '555555' })] })
       ] })
     ] })]
@@ -438,7 +439,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
 
   const belge = new docx.Document({
     creator: 'İSG Platform',
-    title: `Saha Denetim Raporu ${d.denetimNo}`,
+    title: `Saha Kontrol Raporu ${d.denetimNo}`,
     styles: { default: { document: { run: { font: 'Calibri', size: 19 } } } },
     sections: [{
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1300, bottom: 1000, left: 1021, right: 1021, header: 500, footer: 450 } } },
@@ -448,5 +449,5 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
     }]
   });
   const blob = await docx.Packer.toBlob(belge);
-  saveAs(blob, `Saha_Denetim_Raporu_${d.denetimNo}_${(firma ? firma.ad : 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
+  saveAs(blob, `Saha_Kontrol_Raporu_${d.denetimNo}_${(firma ? firma.ad : 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
