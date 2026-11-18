@@ -12,6 +12,40 @@
 <link rel="icon" href="../../assets/icons/favicon-32.png">
 <title>İSG Platform - Risk Değerlendirmesi</title>
 <link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* Günlük Risk İncelemesi (bkz. inceleme.js) */
+  .in-ust { display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end; background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); }
+  .in-ilerleme-baslik { display:flex; justify-content:space-between; gap:8px; font-size:13px; margin-bottom:6px; }
+  .in-cubuk { height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
+  .in-cubuk > div { height:100%; background:var(--celik-mavi); border-radius:999px; transition:width .3s; }
+  .in-cubuk.yesil > div { background:var(--basari); }
+  .in-ust-eylemler { display:flex; gap:8px; flex-wrap:wrap; }
+  .in-bilgi { font-size:12.5px; color:var(--metin-soluk); }
+  .in-kart { background:var(--kart-bg); border:1px solid var(--kenarlik); border-left:5px solid #f59e0b; border-radius:12px; box-shadow:var(--golge); margin-bottom:14px; }
+  .in-kart.onayli { border-left-color:var(--basari); }
+  .in-kart-bas { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 14px; cursor:default; }
+  .in-kart.onayli .in-kart-bas { cursor:pointer; }
+  .in-baslik { font-weight:700; font-size:15px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .in-rp { font-size:12px; color:var(--metin-soluk); font-weight:600; }
+  .in-ozet { font-size:13px; margin-top:4px; }
+  .in-govde { padding:0 14px 14px; border-top:1px solid var(--kenarlik); }
+  .in-alan { display:block; margin-top:10px; }
+  .in-alan > span { display:block; font-size:12px; font-weight:600; color:var(--metin-soluk); margin-bottom:3px; }
+  .in-alan input, .in-alan select, .in-alan textarea { margin:0; width:100%; }
+  .in-izgara { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  .in-izgara.in-uclu { grid-template-columns:repeat(3, 1fr); }
+  .in-bolum-baslik { margin-top:14px; font-size:13px; font-weight:600; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .in-fotolar { display:flex; gap:8px; margin-top:10px; }
+  .in-fotolar img { width:110px; height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik); }
+  .in-hata { color:var(--hata); font-size:13px; min-height:18px; margin-top:8px; }
+  .in-eylemler { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .in-eylemler button { width:auto; }
+  .in-tamam { background:#ecfdf5; color:#065f46; border-radius:10px; padding:14px 16px; margin-bottom:14px; font-weight:600; }
+  .in-gun-baslik { font-weight:700; margin:16px 0 6px; }
+  .in-sayac { display:inline-block; min-width:20px; padding:1px 6px; margin-left:4px; border-radius:999px; background:#f59e0b; color:#fff; font-size:11.5px; }
+  .in-afis { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:#fffbeb; border:1px solid #fde68a; color:#92400e; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13.5px; }
+  @media (max-width:760px) { .in-ust { grid-template-columns:1fr; } .in-izgara, .in-izgara.in-uclu { grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
   <div class="ust-cubuk">
@@ -34,6 +68,13 @@
       <button type="button" id="sekmeKayitlar">Risk Kayıtları</button>
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
       <button type="button" id="sekmeEkipler" class="sekme-seciliDegil">Risk Değerlendirme Ekipleri</button>
+      <button type="button" id="sekmeInceleme" class="sekme-seciliDegil" title="Her gün en son yılın onaylanmamış risklerinden 10 tanesi">Günlük İnceleme</button>
+    </div>
+
+    <!-- Günlük inceleme hatırlatması (bkz. inceleme.js). -->
+    <div class="in-afis" id="incelemeAfisi" style="display:none;">
+      <span>🔎 <span data-in-afis-metin></span></span>
+      <button type="button" class="birincil" id="incelemeAfisBtn" style="width:auto;">İncelemeye Başla</button>
     </div>
 
     <!-- Kullanıcı isteği (2026-11-18): yıl yıl ayırma — yıl, konu ve risklerin
@@ -110,6 +151,9 @@
       <div id="riskDahaFazla" style="display:none; margin:10px 0; font-size:13px; color:var(--metin-soluk);"></div>
       <div class="bos-durum" id="bosDurum"></div>
     </div>
+
+    <!-- Günlük Risk İncelemesi (bkz. inceleme.js) -->
+    <div id="incelemeBolumu" style="display:none;"></div>
 
     <div id="ozetBolumu" style="display:none;">
       <div id="ozetKutusu"></div>
@@ -373,10 +417,11 @@
   <script src="validation.js?v=20261022k"></script>
   <script src="repository.js?v=20261118a"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261118a"></script>
+  <script src="service.js?v=20261118b"></script>
   <script src="cikti.js?v=20261118a"></script>
-  <script src="ui.js?v=20261118b"></script>
+  <script src="ui.js?v=20261118c"></script>
   <script src="ekipler.js?v=20261022k"></script>
+  <script src="inceleme.js?v=20261118a"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 

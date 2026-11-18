@@ -459,6 +459,7 @@ function riskSayfasiniBaslat() {
   _riskSiralamaHazirla();
   _riskYilCubuguCiz();
   _bolumFiltreDoldur();
+  if (typeof riskIncelemeBaslat === 'function') riskIncelemeBaslat();
   gorunumDegistir('kayitlar');
 }
 
@@ -637,13 +638,19 @@ function gorunumDegistir(gorunum) {
   document.getElementById('sekmeKayitlar').classList.toggle('sekme-seciliDegil', gorunum !== 'kayitlar');
   document.getElementById('sekmeOzet').classList.toggle('sekme-seciliDegil', gorunum !== 'ozet');
   document.getElementById('sekmeEkipler').classList.toggle('sekme-seciliDegil', gorunum !== 'ekipler');
+  const incSekme = document.getElementById('sekmeInceleme');
+  if (incSekme) incSekme.classList.toggle('sekme-seciliDegil', gorunum !== 'inceleme');
   document.getElementById('kayitlarBolumu').style.display = gorunum === 'kayitlar' ? '' : 'none';
   document.getElementById('ozetBolumu').style.display = gorunum === 'ozet' ? '' : 'none';
   document.getElementById('ekiplerBolumu').style.display = gorunum === 'ekipler' ? '' : 'none';
+  const incBolum = document.getElementById('incelemeBolumu');
+  if (incBolum) incBolum.style.display = gorunum === 'inceleme' ? '' : 'none';
 
   if (gorunum === 'kayitlar') kayitlariCiz(document.getElementById('aramaKutusu').value);
   else if (gorunum === 'ekipler') ekipleriCiz();
+  else if (gorunum === 'inceleme') { if (typeof riskIncelemeCiz === 'function') riskIncelemeCiz(); }
   else ozetiCiz();
+  if (typeof _riskIncelemeSekmeEtiketi === 'function') _riskIncelemeSekmeEtiketi();
 }
 
 function duzeySinifAdi(etiket) {
@@ -751,7 +758,7 @@ let _riskTabloDinleyiciKuruldu = false;
 function _riskSatirHtml(r) {
   return `<tr>
       <td><input type="checkbox" data-sec data-id="${r.id}"></td>
-      <td>${_riskKacir(r.riskNo)}${r.kaynak ? `<div style="font-size:10.5px; color:var(--metin-soluk); margin-top:2px;" title="Bu risk ${_riskKacir(r.kaynak.modulAdi)} modülünden aktarıldı">↩ ${_riskKacir(r.kaynak.modulAdi)}${r.kaynak.etiket ? ' ' + _riskKacir(r.kaynak.etiket) : ''}</div>` : ''}</td>
+      <td>${_riskKacir(r.riskNo)}${r.inceleme && r.inceleme.onayli ? `<div style="font-size:10.5px; color:#15803d; font-weight:600; margin-top:2px;" title="Günlük incelemede ${_riskKacir(gunAyYil(r.inceleme.tarih))} tarihinde${r.inceleme.kullanici ? ' ' + _riskKacir(r.inceleme.kullanici) + ' tarafından' : ''} onaylandı">✓ Onaylı</div>` : ''}${r.kaynak ? `<div style="font-size:10.5px; color:var(--metin-soluk); margin-top:2px;" title="Bu risk ${_riskKacir(r.kaynak.modulAdi)} modülünden aktarıldı">↩ ${_riskKacir(r.kaynak.modulAdi)}${r.kaynak.etiket ? ' ' + _riskKacir(r.kaynak.etiket) : ''}</div>` : ''}</td>
       <td>${_riskKacir(r.yontem)}</td>
       <td>${_riskKacir(riskBolumGoruntu(r))}</td>
       <td>${_riskKacir(r.yer)}</td>
@@ -1105,6 +1112,8 @@ function formGonderildi(e) {
   _bekleyenHaritaKonum = null;
   modalKapat();
   _bolumFiltreDoldur();
+  // Günlük İnceleme'den "Tam formda aç" ile düzenlendiyse kartlar güncellensin.
+  if (_riskGorunum === 'inceleme' && typeof riskIncelemeCiz === 'function') { riskIncelemeCiz(); return; }
   // Düzenleme sonrası liste aynı yerde kalsın (gösterilen satır sayısı korunur).
   kayitlariCiz(document.getElementById('aramaKutusu').value, true);
 }
