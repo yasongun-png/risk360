@@ -409,7 +409,7 @@
   <script src="../../core/data.js?v=6"></script>
   <script src="../../core/auth.js"></script>
   <script src="../../core/tenant.js"></script>
-  <script src="../../core/plana-ekle.js?v=6"></script>
+  <script src="../../core/plana-ekle.js?v=7"></script>
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
@@ -443,6 +443,8 @@
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
           document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' firmasına ait risk değerlendirmesi kayıtları';
           riskSayfasiniBaslat();
+          // Termini yaklaşan / geçen riskler İş Planım'a (core/plana-ekle.js).
+          if (typeof riskTerminleriniPlanaEsitle === 'function') riskTerminleriniPlanaEsitle();
 
           // Saha Dijital Haritası köprüsü — bkz. modules/harita/ui.js.
           // ?ac=<id>: haritadan "haritada gör/konum ekle" dönüşünde ilgili

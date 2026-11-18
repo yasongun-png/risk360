@@ -370,6 +370,80 @@ function yukleniciGeciciOnayPlaniniEsitle() {
   return degisti;
 }
 
+// ==================== RİSK TERMİNLERİ ====================
+// Kullanıcı isteği (2026-11-18): "termini gelen riskleri ekranda bana
+// hatırlatsın iş planında". En son değerlendirme yılının (bkz. modules/risk
+// model.js riskYili: yıl alanı olmayan kayıt 2026) TARİHLİ terminli, açık
+// (Kapalı / İptal / Operasyonel olmayan) riskleri, termine 7 gün kala ya da
+// termini geçmişse İş Planım'a otomatik eklenir; plan termine 2 gün kala sarı,
+// son gün kırmızı, geçince mor yanıp söner. "Sürekli", "Her defasında" gibi
+// metin terminler eklenmez. Risk kapatılır / operasyonel yapılır / termini
+// değişirse açık iş tamamlanır (yeni termin yaklaşınca yeni iş açılır).
+// Kullanıcının sildiği iş aynı termin için tekrar eklenmez (islenenKaynaklar).
+const _PE_RISK_TERMIN_ONEK = 'risk-termin:';
+const _PE_RISK_HATIRLATMA_GUN = 7;
+
+function _peRiskYili(k) {
+  const y = Number(k && k.yil);
+  return Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : 2026;
+}
+
+function riskTerminleriniPlanaEsitle() {
+  const riskAnahtari = tenantAnahtar('risk_kayitlari');
+  if (!riskAnahtari || !tenantAnahtar('planlayici')) return 0;
+  const kullaniciId = _peKullaniciId();
+  if (!kullaniciId) return 0;
+  const riskler = oku(riskAnahtari, []);
+  if (!Array.isArray(riskler)) return 0;
+  const yillar = (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(Number.isInteger);
+  const sonYil = Math.max.apply(null, [2026].concat(yillar, riskler.map(_peRiskYili)));
+  const bugun = _peBugun();
+  const sinir = (() => { const d = new Date(bugun + 'T00:00:00'); d.setDate(d.getDate() + _PE_RISK_HATIRLATMA_GUN); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  const url = location.pathname.replace(/(modules\/[^/]+\/)?[^/]*$/, 'modules/risk/index.html');
+  const veri = _pePlanVerisi();
+  const islenen = Array.isArray(veri.islenenKaynaklar[kullaniciId]) ? veri.islenenKaynaklar[kullaniciId] : [];
+  const benim = veri.gorevler.filter(g => g.olusturanId === kullaniciId && String(g.kaynakAnahtar || '').startsWith(_PE_RISK_TERMIN_ONEK));
+  const mevcut = new Set(benim.map(g => g.kaynakAnahtar).concat(islenen));
+  const gecerli = new Set();
+  let degisti = 0;
+
+  riskler.forEach(r => {
+    if (!r || _peRiskYili(r) !== sonYil) return;
+    if (['Kapalı', 'İptal', 'Operasyonel'].includes(r.durum)) return;
+    const termin = String(r.termin || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(termin)) return;
+    const anahtar = _PE_RISK_TERMIN_ONEK + r.id + ':' + termin;
+    gecerli.add(anahtar);
+    if (termin > sinir || mevcut.has(anahtar)) return;
+    const gecti = termin < bugun;
+    veri.gorevler.push({
+      id: rastgeleId(),
+      baslik: `Risk termini: ${r.riskNo || ''} — ${r.planlanan || r.tehlike || ''}`.slice(0, 200),
+      aciklama: [
+        r.bolum ? 'Konu: ' + r.bolum : '', r.yer ? 'Yer: ' + r.yer : '', r.tehlike ? 'Tehlike: ' + r.tehlike : '',
+        r.planlanan ? 'Alınacak önlem: ' + r.planlanan : '', r.sorumlu ? 'Sorumlu: ' + r.sorumlu : '',
+        'Risk tamamlanınca Risk Değerlendirmesi\'nde durumunu Kapalı (ya da Operasyonel) yapın; bu iş kendiliğinden kapanır.'
+      ].filter(Boolean).join('\n'),
+      baslangicTarihi: gecti ? termin : bugun, tarih: termin, saat: '', oncelik: gecti ? 'Yüksek' : 'Normal',
+      kategori: 'Risk Değerlendirmesi', sorumlu: r.sorumlu || '', durum: 'Yapılacak', tekrar: 'Bir defalık', sonrakiId: '', tamamlanmaTarihi: '',
+      kaynak: 'Risk Değerlendirmesi · ' + (r.riskNo || ''), kaynakUrl: url, kaynakAnahtar: anahtar,
+      olusturanId: kullaniciId, olusturmaTarihi: new Date().toISOString()
+    });
+    islenen.push(anahtar);
+    degisti++;
+  });
+  veri.islenenKaynaklar[kullaniciId] = islenen;
+  benim.forEach(g => {
+    if (g.durum !== 'Tamamlandı' && !gecerli.has(g.kaynakAnahtar)) {
+      g.durum = 'Tamamlandı'; g.tamamlanmaTarihi = _peBugun();
+      g.aciklama = (g.aciklama ? g.aciklama + '\n' : '') + 'Risk kapatıldı / operasyonel yapıldı / termini değişti — otomatik kapatıldı.';
+      degisti++;
+    }
+  });
+  if (degisti) yaz(tenantAnahtar('planlayici'), veri);
+  return degisti;
+}
+
 function _peKaydet() {
   const v = _peAcikVeri || {};
   const baslik = document.getElementById('peBaslik').value.trim();
