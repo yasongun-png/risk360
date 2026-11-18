@@ -360,6 +360,85 @@ async function ekipmanKontrolFormuListeWordOlustur(firma, turFiltre, bolumFiltre
   saveAs(blob, `Acil_Durum_Ekipman_Kontrol_Listesi_${turAdi}${bolumAdi}_${(firma.ad || 'firma').replace(/[^\p{L}\p{N}]+/gu, '_')}.docx`);
 }
 
+// Kullanıcı isteği (2026-11-18): "bir bölümü seçtiğimde oradaki tüm
+// ekipmanların kontrolünü yapabilmem için ekipman no, yeri, sorular boş form
+// indirmek istiyorum" — sahaya götürülüp doldurulacak BOŞ Excel kontrol
+// formu. Her ekipman türü ayrı sayfa; her ekipman bir blok (Ekipman No ve
+// Lokasyon blok boyunca birleşik), türün kontrol maddeleri satır satır,
+// Sonuç sütununda açılır liste, sonda Bulgular / Yapılan İşlem satırı.
+// Ekipman Dolabı / İtfaiye Aracı'nda envanterdeki malzemeler de madde olur.
+// liste: rapora girecek ekipmanlar (ekrandaki filtre ya da işaretli satırlar).
+async function ekipmanBosKontrolFormuExcel(firma, liste, bolumAdi) {
+  if (typeof xlsxSayfaXml !== 'function') { alert('Excel bileşeni yüklenemedi.'); return; }
+  if (!liste || !liste.length) { alert('Forma girecek ekipman yok.'); return; }
+  const X = XLSX_STIL;
+  const h = (v, s) => ({ v, s });
+  const secenekler = (typeof EKIPMAN_KONTROL_CEVAP_SECENEKLERI !== 'undefined' ? EKIPMAN_KONTROL_CEVAP_SECENEKLERI : ['Uygun', 'Uygun Değil', 'İlgili Değil']).join(',');
+  const turler = EKIPMAN_TURLERI.filter(t => liste.some(e => e.tur === t))
+    .concat(Array.from(new Set(liste.map(e => e.tur))).filter(t => !EKIPMAN_TURLERI.includes(t)));
+  const kullanilanAd = new Set();
+  const sayfalar = [];
+
+  turler.forEach(tur => {
+    const ekipmanlar = liste.filter(e => e.tur === tur).sort(_kfEkipmanNoKarsilastir);
+    const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
+    const satirlar = [];
+    const birlesik = [];
+    const sonucAraliklari = [];
+    const ekle = (hucreler, yukseklik) => { satirlar.push({ hucreler, yukseklik }); return satirlar.length; };
+
+    let r = ekle([h('ACİL DURUM EKİPMAN KONTROL FORMU', X.baslik)], 26); birlesik.push(`A${r}:F${r}`);
+    r = ekle([h(firma ? firma.ad || '' : '', X.altBaslik)], 18); birlesik.push(`A${r}:F${r}`);
+    r = ekle([h('Bölüm', X.bilgiEtiket), h(bolumAdi || 'Tüm bölümler', X.bilgiDeger), null, h('Ekipman Türü', X.bilgiEtiket), h(`${tur} (${ekipmanlar.length} adet)`, X.bilgiDeger), null], 20);
+    birlesik.push(`B${r}:C${r}`, `E${r}:F${r}`);
+    r = ekle([h('Kontrol Tarihi', X.bilgiEtiket), h('', X.bilgiDeger), null, h('Kontrol Eden', X.bilgiEtiket), h('', X.bilgiDeger), null], 20);
+    birlesik.push(`B${r}:C${r}`, `E${r}:F${r}`);
+    r = ekle([h(`Sonuç sütununda ${secenekler.split(',').join(' / ')} seçin; uygun olmayan maddeleri Açıklama sütununa yazın.`, X.normal)], 18);
+    birlesik.push(`A${r}:F${r}`);
+    const baslikSatiri = ekle(['No', 'Ekipman No', 'Lokasyon', 'Kontrol Maddesi', 'Sonuç', 'Açıklama'].map(b => h(b, X.tabloBaslik)), 22);
+
+    ekipmanlar.forEach((e, i) => {
+      const maddeler = sorular.map(s => s.soru);
+      if (Array.isArray(e.malzemeListesi) && e.malzemeListesi.length) {
+        e.malzemeListesi.forEach(m => maddeler.push(`Malzeme: ${m.ad} (${m.adet || 1} adet)`));
+      }
+      if (!maddeler.length) maddeler.push('Genel durum uygun');
+      const ilk = satirlar.length + 1;
+      maddeler.forEach((madde, j) => {
+        ekle([
+          j === 0 ? h(i + 1, X.hucreOrta) : h('', X.hucreOrta),
+          j === 0 ? h(e.ekipmanNo || '-', X.hucreKalin) : h('', X.hucreKalin),
+          j === 0 ? h(e.lokasyon || '', X.hucre) : h('', X.hucre),
+          h(madde, X.hucre), h('', X.hucreOrta), h('', X.hucre)
+        ], 20);
+      });
+      const son = satirlar.length;
+      sonucAraliklari.push(`E${ilk}:E${son}`);
+      r = ekle([h('', X.hucreOrta), h('', X.hucreKalin), h('', X.hucre), h('Bulgular / Yapılan İşlem', X.bilgiEtiket), h('', X.hucre), null], 30);
+      birlesik.push(`E${r}:F${r}`);
+      ['A', 'B', 'C'].forEach(k => birlesik.push(`${k}${ilk}:${k}${r}`));
+    });
+
+    ekle([]);
+    r = ekle([h('Kontrol Eden', X.bilgiEtiket), h('Ad Soyad:', X.bilgiDeger), null, h('İmza', X.bilgiEtiket), h('', X.bilgiDeger), null], 34);
+    birlesik.push(`B${r}:C${r}`, `E${r}:F${r}`);
+
+    let xml = xlsxSayfaXml(satirlar, { genislikler: [5, 13, 30, 52, 15, 34], birlesik, dondur: baslikSatiri, yatay: false });
+    if (sonucAraliklari.length) {
+      const dv = `<dataValidations count="1"><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${sonucAraliklari.join(' ')}"><formula1>"${xlsxXmlKacir(secenekler)}"</formula1></dataValidation></dataValidations>`;
+      xml = xml.replace('<pageMargins', dv + '<pageMargins');
+    }
+    let ad = String(tur).replace(/[\[\]:*?\/\\]/g, '-').slice(0, 28) || 'Sayfa';
+    let n = 2;
+    while (kullanilanAd.has(ad)) ad = `${String(tur).slice(0, 24)} (${n++})`;
+    kullanilanAd.add(ad);
+    sayfalar.push({ ad, xml, baslikSatiri });
+  });
+
+  const dosya = `Ekipman_Bos_Kontrol_Formu${bolumAdi ? '_' + bolumAdi : ''}_${(firma && firma.ad) || 'firma'}`.replace(/[^\p{L}\p{N}]+/gu, '_');
+  await xlsxKitapIndir(`${dosya}.xlsx`, sayfalar);
+}
+
 // Kullanıcı isteği: "acil durum malzeme dolapları envanter listesini
 // çıktı alıp asmak da istiyorum word olarak bu listeyi de indirebileyim
 // ekipman bazında" — kontrol sonuçlarından bağımsız, dolabın İÇİNDE NE

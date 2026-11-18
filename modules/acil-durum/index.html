@@ -96,6 +96,7 @@
           <button type="button" class="ikincil" id="ekipmanYazdirBtn">Yazdır</button>
           <button type="button" class="ikincil" id="ekipmanKontrolFormuWordBtn">📄 Kontrol Formu (Word)</button>
           <button type="button" class="ikincil" id="ekipmanListeRaporuWordBtn">📋 Ekipman Kontrol Listesi (Word)</button>
+          <button type="button" class="ikincil" id="ekipmanBosFormExcelBtn" title="Seçili bölümdeki (işaretli satır varsa yalnız onların) ekipmanları için sahada doldurulacak boş kontrol formu">📝 Boş Kontrol Formu (Excel)</button>
           <!-- Kullanıcı isteği: "acil durım malzeme dolapları envanter
                lşstesini çıktı alıp aşmak da istiyorum word olarak bu
                listeyi de indirebileyim ekşpman bazında" — kontrol
@@ -1179,6 +1180,7 @@
   <script src="../../core/tenant.js?v=3"></script>
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/rapor.js"></script>
+  <script src="../../core/xlsx-bicimli.js"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="../personel/model.js"></script>
   <script src="../personel/validation.js"></script>
@@ -1189,12 +1191,12 @@
   <script src="validation.js?v=4"></script>
   <script src="repository.js?v=5"></script>
   <script src="service.js?v=19"></script>
-  <script src="kontrol-formu-cikti.js?v=17"></script>
+  <script src="kontrol-formu-cikti.js?v=18"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
   <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
   <script src="gaz-olcum-ui.js?v=2"></script>
-  <script src="ui.js?v=32"></script>
+  <script src="ui.js?v=33"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

@@ -366,6 +366,12 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   document.getElementById('ekipmanDisaAktarBtn').addEventListener('click', () => {
     _ekipmanExcelDisaAktar(_ekipmanRaporListesi());
   });
+  // Kullanıcı isteği (2026-11-18): seçili bölümdeki ekipmanlar için sahada
+  // doldurulacak boş kontrol formu (Excel) — bkz. ekipmanBosKontrolFormuExcel.
+  document.getElementById('ekipmanBosFormExcelBtn').addEventListener('click', async () => {
+    try { await ekipmanBosKontrolFormuExcel(_adFirma, _ekipmanRaporListesi(), _ekipmanAktifBolum); }
+    catch (hata) { console.error(hata); alert('Form oluşturulamadı: ' + (hata.message || hata)); }
+  });
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanRaporListesi());
   });
