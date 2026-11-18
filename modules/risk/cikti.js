@@ -892,25 +892,58 @@ async function riskPptxOlustur() {
   }
 
   // Risk slaytları
+  // Kullanıcı raporu (2026-11-18): "pptx indirince çakışmalar oluyor" —
+  // metin kutularına yükseklik verilmediği için PowerPoint uzun metni dikeyde
+  // ortalayıp başlığın ve fotoğrafların üstüne taşırıyordu, sağdaki
+  // Sorumlu kutusu da slayttan dışarı çıkıyordu. Artık her kutu sabit
+  // konum/boyutta, metin üstten başlar ve kaydırılır; yazı boyutu metin
+  // uzunluğuna ve fotoğraf olup olmamasına göre küçülür. Slayt 10 x 5.625 in.
+  const renkler = { 'Açık': 'dc2626', 'Devam Ediyor': 'f59e0b', 'Kapalı': '16a34a', 'Gecikmiş': 'dc2626', 'İptal': '9ca3af' };
+  const duzeyRenk = { 'Tolerans Gösterilemez': 'C00000', 'Esaslı Risk': 'E26B0A', 'Önemli Risk': 'B7791F', 'Olası Risk': '2E7D32', 'Önemsiz Risk': '555555' };
+  const metinKutusu = { valign: 'top', align: 'left', margin: 0.05, wrap: true };
+  const fotoEkle = (s, kaynak, x, y, w, h, etiket) => {
+    if (!kaynak) return;
+    s.addImage(Object.assign(/^https?:\/\//i.test(kaynak) ? { path: kaynak } : { data: kaynak }, { x, y, w, h, sizing: { type: 'contain', w, h } }));
+    s.addText(etiket, { x, y: y + h + 0.02, w, h: 0.22, fontSize: 9, color: '666666', align: 'center', valign: 'top', margin: 0 });
+  };
   riskler.forEach(r => {
     const s = pptx.addSlide();
-    s.addText(`RİSK – ${r.riskNo}`, { x: 0.5, y: 0.3, fontSize: 18, bold: true });
-    s.addText(
-      `Konu: ${r.bolum || '-'}\nBölüm: ${riskBolumGoruntu(r) || '-'}\nYer: ${r.yer || '-'}\nFaaliyet: ${r.faaliyet || '-'}\nTehlike: ${r.tehlike || '-'}\n\nRisk: ${r.risk || '-'}`,
-      { x: 0.5, y: 1.2, w: 5.8, fontSize: 13 }
-    );
-    s.addText(`RP1: ${r.RP1}\n${r.duzey1}`, { x: 6.3, y: 1.0, fontSize: 14, bold: true });
-    s.addText(`Sorumlu: ${r.sorumlu || '-'}\nTermin: ${gunAyYil(r.termin) || '-'}`, { x: 6.3, y: 2.2, fontSize: 12 });
+    const fotoVar = !!(r.fotoOncesi || r.fotoSonrasi);
+    s.addText(`RİSK – ${r.riskNo}`, { x: 0.5, y: 0.2, w: 9.0, h: 0.5, fontSize: 18, bold: true, color: '0B2C52', valign: 'middle', margin: 0 });
+    s.addShape(pptx.ShapeType.line, { x: 0.5, y: 0.72, w: 9.0, h: 0, line: { color: '0B2C52', width: 1 } });
 
-    const renkler = { 'Açık': 'dc2626', 'Devam Ediyor': 'f59e0b', 'Kapalı': '16a34a', 'Gecikmiş': 'dc2626', 'İptal': '9ca3af' };
+    const sol = [
+      ['Konu', r.bolum], ['Bölüm', riskBolumGoruntu(r)], ['Yer', r.yer], ['Faaliyet', r.faaliyet],
+      ['Tehlike', r.tehlike], ['Risk', r.risk], ['Mevcut Önlemler', r.onlem], ['Planlanan', r.planlanan]
+    ].filter(([, v]) => v && String(v).trim());
+    const uzunluk = sol.reduce((t, [k, v]) => t + k.length + String(v).length + 20, 0);
+    const solH = fotoVar ? 2.45 : 4.55;
+    const kapasite = fotoVar ? 520 : 1000; // ~12 pt'de sığan karakter
+    const solPunto = uzunluk <= kapasite ? 12 : uzunluk <= kapasite * 1.4 ? 10.5 : uzunluk <= kapasite * 1.9 ? 9 : 8;
+    s.addText(sol.flatMap(([k, v], i) => [
+      { text: `${k}: `, options: { bold: true, breakLine: false } },
+      { text: String(v).trim(), options: { breakLine: i < sol.length - 1 } }
+    ]), Object.assign({ x: 0.5, y: 0.85, w: 5.9, h: solH, fontSize: solPunto, paraSpaceAfter: 3 }, metinKutusu));
+
+    // Sağ panel: puan/düzey, sorumlu/termin, durum
+    s.addText([
+      { text: `RP1: ${r.RP1 ?? '-'}`, options: { bold: true, fontSize: 16, breakLine: true } },
+      { text: r.duzey1 || '-', options: { bold: true, fontSize: 13, color: duzeyRenk[r.duzey1] || '333333' } }
+    ], Object.assign({ x: 6.7, y: 0.85, w: 2.8, h: 0.9 }, metinKutusu));
+    const sorumluMetni = `Sorumlu: ${r.sorumlu || '-'}`;
+    s.addText([
+      { text: 'Sorumlu: ', options: { bold: true, breakLine: false } }, { text: r.sorumlu || '-', options: { breakLine: true } },
+      { text: 'Termin: ', options: { bold: true, breakLine: false } }, { text: gunAyYil(r.termin) || '-' }
+    ], Object.assign({ x: 6.7, y: 1.85, w: 2.8, h: 1.5, fontSize: sorumluMetni.length > 110 ? 9 : 11 }, metinKutusu));
     s.addText((r.durumGoruntu || '-').toUpperCase(), {
-      x: 7.3, y: 4.6, w: 2.2, h: 0.6,
-      align: 'center', valign: 'middle',
-      fontSize: 18, bold: true, color: 'FFFFFF', fill: renkler[r.durumGoruntu] || '9ca3af', rectRadius: 0.15
+      x: 7.3, y: 4.75, w: 2.2, h: 0.55,
+      align: 'center', valign: 'middle', margin: 0,
+      fontSize: 16, bold: true, color: 'FFFFFF', fill: { color: renkler[r.durumGoruntu] || '9ca3af' }, rectRadius: 0.1, shape: pptx.ShapeType.roundRect
     });
 
-    if (r.fotoOncesi) s.addImage(/^https?:\/\//i.test(r.fotoOncesi) ? { path: r.fotoOncesi, x: 0.5, y: 3.2, w: 3.2, h: 1.8 } : { data: r.fotoOncesi, x: 0.5, y: 3.2, w: 3.2, h: 1.8 });
-    if (r.fotoSonrasi) s.addImage(/^https?:\/\//i.test(r.fotoSonrasi) ? { path: r.fotoSonrasi, x: 4.0, y: 3.2, w: 3.2, h: 1.8 } : { data: r.fotoSonrasi, x: 4.0, y: 3.2, w: 3.2, h: 1.8 });
+    // Fotoğraflar sol metnin altında, oranı korunarak.
+    fotoEkle(s, r.fotoOncesi, 0.5, 3.4, 3.0, 1.7, 'Öncesi');
+    fotoEkle(s, r.fotoSonrasi, 3.7, 3.4, 3.0, 1.7, 'Sonrası');
   });
 
   await pptx.writeFile({ fileName: `Risk_Degerlendirme_${gunAyYil(_bugun()).replace(/\./g, '-')}.pptx` });
