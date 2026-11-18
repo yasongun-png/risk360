@@ -456,6 +456,7 @@ function riskSayfasiniBaslat() {
   _riskYilCubuguCiz();
   _bolumFiltreDoldur();
   if (typeof riskIncelemeBaslat === 'function') riskIncelemeBaslat();
+  if (typeof riskTerminleriBaslat === 'function') riskTerminleriBaslat();
   gorunumDegistir('kayitlar');
 }
 
@@ -667,12 +668,18 @@ function gorunumDegistir(gorunum) {
   document.getElementById('ekiplerBolumu').style.display = gorunum === 'ekipler' ? '' : 'none';
   const incBolum = document.getElementById('incelemeBolumu');
   if (incBolum) incBolum.style.display = gorunum === 'inceleme' ? '' : 'none';
+  const trmSekme = document.getElementById('sekmeTerminler');
+  if (trmSekme) trmSekme.classList.toggle('sekme-seciliDegil', gorunum !== 'terminler');
+  const trmBolum = document.getElementById('terminlerBolumu');
+  if (trmBolum) trmBolum.style.display = gorunum === 'terminler' ? '' : 'none';
 
   if (gorunum === 'kayitlar') kayitlariCiz(document.getElementById('aramaKutusu').value);
   else if (gorunum === 'ekipler') ekipleriCiz();
   else if (gorunum === 'inceleme') { if (typeof riskIncelemeCiz === 'function') riskIncelemeCiz(); }
+  else if (gorunum === 'terminler') { if (typeof riskTerminleriCiz === 'function') riskTerminleriCiz(); }
   else ozetiCiz();
   if (typeof _riskIncelemeSekmeEtiketi === 'function') _riskIncelemeSekmeEtiketi();
+  if (typeof riskTerminSekmeEtiketi === 'function') riskTerminSekmeEtiketi();
 }
 
 function duzeySinifAdi(etiket) {
@@ -1138,7 +1145,10 @@ function formGonderildi(e) {
   modalKapat();
   _bolumFiltreDoldur();
   // Günlük İnceleme'den "Tam formda aç" ile düzenlendiyse kartlar güncellensin.
+  // Termin değişmiş olabilir: İş Planım hatırlatmaları güncellensin (core/plana-ekle.js).
+  if (typeof riskTerminleriniPlanaEsitle === 'function') riskTerminleriniPlanaEsitle();
   if (_riskGorunum === 'inceleme' && typeof riskIncelemeCiz === 'function') { riskIncelemeCiz(); return; }
+  if (_riskGorunum === 'terminler' && typeof riskTerminleriCiz === 'function') { riskTerminleriCiz(); return; }
   // Düzenleme sonrası liste aynı yerde kalsın (gösterilen satır sayısı korunur).
   kayitlariCiz(document.getElementById('aramaKutusu').value, true);
 }

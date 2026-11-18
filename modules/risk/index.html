@@ -70,6 +70,7 @@
       <button type="button" id="sekmeOzet" class="sekme-seciliDegil">Özet</button>
       <button type="button" id="sekmeEkipler" class="sekme-seciliDegil">Risk Değerlendirme Ekipleri</button>
       <button type="button" id="sekmeInceleme" class="sekme-seciliDegil" title="Her gün en son yılın onaylanmamış risklerinden 10 tanesi">Günlük İnceleme</button>
+      <button type="button" id="sekmeTerminler" class="sekme-seciliDegil" title="Termini geçmiş, bugün ya da 7 gün içinde olan açık riskler">⏰ Risk Terminleri</button>
     </div>
 
     <!-- Günlük inceleme hatırlatması (bkz. inceleme.js). -->
@@ -155,6 +156,9 @@
 
     <!-- Günlük Risk İncelemesi (bkz. inceleme.js) -->
     <div id="incelemeBolumu" style="display:none;"></div>
+
+    <!-- Risk Terminleri (bkz. terminler.js) -->
+    <div id="terminlerBolumu" style="display:none;"></div>
 
     <div id="ozetBolumu" style="display:none;">
       <div id="ozetKutusu"></div>
@@ -427,9 +431,10 @@
   <script src="sablon-repository.js"></script>
   <script src="service.js?v=20261118d"></script>
   <script src="cikti.js?v=20261118d"></script>
-  <script src="ui.js?v=20261118e"></script>
+  <script src="ui.js?v=20261118f"></script>
   <script src="ekipler.js?v=20261022k"></script>
   <script src="inceleme.js?v=20261118e"></script>
+  <script src="terminler.js?v=20261118a"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 
