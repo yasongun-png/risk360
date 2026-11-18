@@ -342,13 +342,16 @@
     // (ana sayfadaki _ekipmanKontrolListesiCiz ile aynı kural).
     function _ekSorulariCiz(ekipman) {
       const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
-      const oncekiCevaplar = ekipman.kontrolCevaplari || {};
+      // Kullanıcı isteği: "barkod tarattığımda hepsi uygun seçili gelmeli
+      // ben istersem uygun değil yaparım" — barkodla açılan her kontrol YENİ
+      // bir kontroldür: önceki cevaplardan bağımsız olarak tüm maddeler
+      // "Uygun" seçili gelir ve seçimler artık DEĞİŞTİRİLEBİLİR (disabled
+      // kaldırıldı); kayıtta seçilen değerler yazılır.
       document.getElementById('ekSorularAlani').innerHTML = sorular.map(s => `
         <div class="ek-soru-satir">
           <span>${_ekKacir(s.soru)}</span>
-          <select data-ek-soru="${s.id}" disabled>
-            <option value="">— Seçilmedi —</option>
-            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${(oncekiCevaplar[s.id] || 'Uygun') === o ? 'selected' : ''}>${o}</option>`).join('')}
+          <select data-ek-soru="${s.id}">
+            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${o === 'Uygun' ? 'selected' : ''}>${o}</option>`).join('')}
           </select>
         </div>
       `).join('');
