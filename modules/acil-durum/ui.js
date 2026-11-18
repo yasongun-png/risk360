@@ -1083,6 +1083,9 @@ function _ekBarkodOkundu(kod) {
 function _ekipmanBarkodIleKontrolBaslat(ekipman) {
   ekipmanModalAc(Object.assign({}, ekipman, {
     sonKontrol: bugunIso(),
+    // Kullanıcı isteği: "yeni kontrolde sonraki kontrol tarihi de otomatik
+    // değişsin" — bugün + kontrol periyodu.
+    sonrakiKontrol: gunEkle(bugunIso(), Number(ekipman.periyotGun || 90)),
     kontrolCevaplari: {},
     // malzemeListesi (dolabın kalıcı envanteri) KORUNUR — yalnızca önceki
     // kontrolün tik/çarpı işaretleri (malzemeKontrolleri) temizlenir.
@@ -1311,6 +1314,17 @@ function ekipmanModalAc(ekipman) {
   document.getElementById('ekipmanPeriyot').value = ekipman ? ekipman.periyotGun : 90;
   document.getElementById('ekipmanSonKontrol').value = ekipman ? ekipman.sonKontrol : '';
   document.getElementById('ekipmanSonrakiKontrol').value = ekipman ? ekipman.sonrakiKontrol : '';
+  // Kullanıcı isteği: "yeni kontrolde sonraki kontrol tarihi de otomatik
+  // değişsin" — Son Kontrol veya Periyot değiştirildiğinde Sonraki Kontrol
+  // (Son Kontrol + periyot gün) yeniden hesaplanır; elle girilen tarih,
+  // bu iki alandan biri tekrar değiştirilmedikçe korunur.
+  const _sonrakiKontroluHesapla = () => {
+    const son = document.getElementById('ekipmanSonKontrol').value;
+    const periyot = Number(document.getElementById('ekipmanPeriyot').value) || 90;
+    if (son) document.getElementById('ekipmanSonrakiKontrol').value = gunEkle(son, periyot);
+  };
+  document.getElementById('ekipmanSonKontrol').onchange = _sonrakiKontroluHesapla;
+  document.getElementById('ekipmanPeriyot').oninput = _sonrakiKontroluHesapla;
   document.getElementById('ekipmanSorumlu').value = ekipman ? ekipman.sorumlu : '';
   // Kullanıcı isteği: "bir yerde örneğin kimyasal var, orada göz duşu
   // olması gerekiyor ama şu anda yok, bu eksikliği de yazabilmem lazım" —
