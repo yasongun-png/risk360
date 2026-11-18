@@ -337,6 +337,9 @@
     // okunabilir olduğundan (yalnızca native form-submit'te atlanır, bu
     // sayfa değerleri doğrudan JS ile okuyup Firestore'a yazıyor) mevcut
     // cevaplar kayıtta bozulmadan korunur.
+    // Kullanıcı isteği: "acil durum ekipman kontrolü kontrol hepsi uygun
+    // seçili gelsin" — cevabı olmayan maddeler varsayılan "Uygun" gelir
+    // (ana sayfadaki _ekipmanKontrolListesiCiz ile aynı kural).
     function _ekSorulariCiz(ekipman) {
       const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
       const oncekiCevaplar = ekipman.kontrolCevaplari || {};
@@ -344,8 +347,8 @@
         <div class="ek-soru-satir">
           <span>${_ekKacir(s.soru)}</span>
           <select data-ek-soru="${s.id}" disabled>
-            <option value="" ${oncekiCevaplar[s.id] ? '' : 'selected'}>— Seçilmedi —</option>
-            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${oncekiCevaplar[s.id] === o ? 'selected' : ''}>${o}</option>`).join('')}
+            <option value="">— Seçilmedi —</option>
+            ${EKIPMAN_KONTROL_CEVAP_SECENEKLERI.map(o => `<option value="${o}" ${(oncekiCevaplar[s.id] || 'Uygun') === o ? 'selected' : ''}>${o}</option>`).join('')}
           </select>
         </div>
       `).join('');
