@@ -5,6 +5,57 @@ function _bugun() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ---- Değerlendirme yılı (bkz. model.js riskYili) ----
+// Ekranda seçili yıl; liste, özet, raporlar ve yeni kayıtlar bu yıla göre
+// çalışır. Seçim bu tarayıcıda firma bazında hatırlanır (kişisel kolaylık).
+let _riskAktifYilDegeri = null;
+
+function _riskAktifYilYerelAnahtar() {
+  const f = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  return 'isg_risk_aktif_yil_' + ((f && (f.slug || f.id)) || '');
+}
+
+function riskYillariListesi() {
+  const kume = new Set(riskYillariKayitliGetir());
+  riskTumunuGetir().forEach(r => kume.add(riskYili(r)));
+  bolumleriTumunuGetir().forEach(b => kume.add(riskYili(b)));
+  if (!kume.size) kume.add(RISK_ESKI_KAYIT_YILI);
+  return Array.from(kume).filter(y => Number.isInteger(y)).sort((a, b) => a - b);
+}
+
+function riskAktifYil() {
+  const yillar = riskYillariListesi();
+  if (_riskAktifYilDegeri && yillar.includes(_riskAktifYilDegeri)) return _riskAktifYilDegeri;
+  let kayitli = null;
+  try { kayitli = Number(localStorage.getItem(_riskAktifYilYerelAnahtar())); } catch (e) { /* yok sayılır */ }
+  _riskAktifYilDegeri = yillar.includes(kayitli) ? kayitli : yillar[yillar.length - 1];
+  return _riskAktifYilDegeri;
+}
+
+function riskAktifYilAyarla(yil) {
+  _riskAktifYilDegeri = Number(yil);
+  try { localStorage.setItem(_riskAktifYilYerelAnahtar(), String(_riskAktifYilDegeri)); } catch (e) { /* yok sayılır */ }
+}
+
+function riskYilEkle(yil) {
+  const y = Number(String(yil || '').trim());
+  if (!Number.isInteger(y) || y < 2000 || y > 2100) return { basarili: false, hata: 'Geçerli bir yıl yazın (ör. 2027).' };
+  if (riskYillariListesi().includes(y)) return { basarili: false, hata: `${y} yılı zaten var.` };
+  riskYillariKaydet(Array.from(new Set(riskYillariKayitliGetir().concat([y]))).sort((a, b) => a - b));
+  return { basarili: true, yil: y };
+}
+
+// Seçili yıla ait riskler / kalıcı konular.
+function _yilRiskleri(yil) {
+  const y = yil || riskAktifYil();
+  return riskTumunuGetir().filter(r => riskYili(r) === y);
+}
+
+function _yilBolumleri(yil) {
+  const y = yil || riskAktifYil();
+  return bolumleriTumunuGetir().filter(b => riskYili(b) === y);
+}
+
 // Ham kaydı, RP1/düzey/RP2/düzey2/azalma/görüntülenecek-durum ile zenginleştirir.
 // Hesaplanan alanlar depoya YAZILMAZ; her okumada türetilir.
 function _riskiZenginlestir(risk) {
@@ -42,8 +93,8 @@ function riskBolumGoruntu(r) {
 // o bölümde hâlâ risk varsa listede görünmeye devam eder (veri kaybı olmaz).
 // grup: 'devam' (analizi süren konular), 'tamamlanan' ya da boş (hepsi).
 function bolumleriGetir(grup) {
-  const kalicilar = bolumleriTumunuGetir();
-  const risklerdenGelenler = Array.from(new Set(riskTumunuGetir().map(r => r.bolum).filter(Boolean)));
+  const kalicilar = _yilBolumleri();
+  const risklerdenGelenler = Array.from(new Set(_yilRiskleri().map(r => r.bolum).filter(Boolean)));
   const adSeti = new Set(kalicilar.map(b => b.ad));
   risklerdenGelenler.forEach(ad => { if (!adSeti.has(ad)) { adSeti.add(ad); kalicilar.push({ id: '', ad }); } });
   const liste = grup === 'tamamlanan' ? kalicilar.filter(b => b.tamamlandi)
@@ -59,9 +110,10 @@ function bolumleriGetir(grup) {
 function bolumTamamlandiAyarla(ad, tamamlandi) {
   if (!ad) return { basarili: false, hata: 'Önce bir risk değerlendirme konusu seçin.' };
   const kalicilar = bolumleriTumunuGetir();
-  let kayit = kalicilar.find(b => b.ad === ad);
+  const yil = riskAktifYil();
+  let kayit = kalicilar.find(b => b.ad === ad && riskYili(b) === yil);
   if (!kayit) {
-    kayit = bolumOlustur({ ad });
+    kayit = bolumOlustur({ ad, yil });
     kalicilar.push(kayit);
   }
   kayit.tamamlandi = !!tamamlandi;
@@ -74,9 +126,9 @@ function bolumEkle(ad) {
   const temiz = (ad || '').trim();
   if (!temiz) return { basarili: false, hata: 'Konu adı boş olamaz.' };
   if (bolumleriGetir().some(b => b.ad.toLocaleLowerCase('tr-TR') === temiz.toLocaleLowerCase('tr-TR'))) {
-    return { basarili: false, hata: 'Bu risk değerlendirme konusu zaten var.' };
+    return { basarili: false, hata: `Bu risk değerlendirme konusu ${riskAktifYil()} yılında zaten var.` };
   }
-  const yeni = bolumOlustur({ ad: temiz });
+  const yeni = bolumOlustur({ ad: temiz, yil: riskAktifYil() });
   bolumEkleRepo(yeni);
   return { basarili: true, bolum: yeni };
 }
@@ -85,7 +137,7 @@ function bolumEkle(ad) {
 // bölümlerin kalıcı karşılığı olmayabilir, id'siz gösterilirler).
 function bolumSil(ad) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
-  const kayit = bolumleriTumunuGetir().find(b => b.ad === ad);
+  const kayit = _yilBolumleri().find(b => b.ad === ad);
   if (!kayit) return { basarili: false, hata: 'Bu konu kalıcı listede değil (risk kayıtlarından türemiş olabilir).' };
   bolumSilRepo(kayit.id);
   return { basarili: true };
@@ -105,17 +157,20 @@ async function bolumYenidenAdlandir(eskiAd, yeniAd, birlestir) {
   if (cakisan && !birlestir) return { basarili: false, cakisma: cakisan.ad };
   const hedefAd = cakisan ? cakisan.ad : yeni;
 
-  const idler = riskTumunuGetir().filter(r => r.bolum === eskiAd).map(r => r.id);
+  // Yalnızca seçili yıldaki konu ve riskleri etkiler (diğer yıllardaki aynı adlı konu değişmez).
+  const yil = riskAktifYil();
+  const idler = _yilRiskleri(yil).filter(r => r.bolum === eskiAd).map(r => r.id);
   if (idler.length) {
     const sonuc = await riskBolumTopluGuncelleRepo(idler, hedefAd);
     if (!sonuc.basarili) return { basarili: false, hata: 'Bulut yazımı başarısız oldu, konu adı değiştirilmedi.' };
   }
 
   const kalicilar = bolumleriTumunuGetir();
-  const hedefVar = kalicilar.some(b => b.ad === hedefAd);
+  const buYil = b => riskYili(b) === yil;
+  const hedefVar = kalicilar.some(b => buYil(b) && b.ad === hedefAd);
   const yeniKalicilar = kalicilar
-    .filter(b => !(b.ad === eskiAd && hedefVar))
-    .map(b => b.ad === eskiAd ? Object.assign({}, b, { ad: hedefAd }) : b);
+    .filter(b => !(buYil(b) && b.ad === eskiAd && hedefVar))
+    .map(b => buYil(b) && b.ad === eskiAd ? Object.assign({}, b, { ad: hedefAd }) : b);
   if (JSON.stringify(yeniKalicilar) !== JSON.stringify(kalicilar)) _bolumListesiKaydet(yeniKalicilar);
 
   const ekipler = riskEkipleriGetir();
@@ -165,7 +220,8 @@ async function riskTopluKopyala(idler, yeniBolum) {
 
 function riskleriGetir(aramaMetni, filtreler) {
   const f = filtreler || {};
-  let liste = riskTumunuGetir().map(_riskiZenginlestir);
+  // Seçili değerlendirme yılı (f.tumYillar ile tüm yıllar).
+  let liste = (f.tumYillar ? riskTumunuGetir() : _yilRiskleri(f.yil)).map(_riskiZenginlestir);
 
   if (f.bolum) liste = liste.filter(r => r.bolum === f.bolum);
   else if (f.bolumler) {
@@ -228,11 +284,12 @@ function riskSiralamaUygula(liste, siralama) {
 // İki risk kaydının "aynı risk" sayılması için karşılaştırılan alanlar —
 // risk no, id, tarih, durum ve fotoğraflar hariç içerik alanları. Büyük/küçük
 // harf ve boşluk farkları yok sayılır.
-const _RISK_MUKERRER_ALANLARI = ['bolum', 'altBolum', 'yer', 'faaliyet', 'tehlike', 'risk', 'onlem', 'O', 'F', 'S', 'planlanan', 'On', 'Fn', 'Sn'];
+// 'yil': farklı yıllardaki aynı içerikli kayıtlar (yıllık revizyon) mükerrer sayılmaz.
+const _RISK_MUKERRER_ALANLARI = ['yil', 'bolum', 'altBolum', 'yer', 'faaliyet', 'tehlike', 'risk', 'onlem', 'O', 'F', 'S', 'planlanan', 'On', 'Fn', 'Sn'];
 
 function riskMukerrerAnahtari(kayit) {
   return _RISK_MUKERRER_ALANLARI
-    .map(alan => String(kayit[alan] ?? '').toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim())
+    .map(alan => alan === 'yil' ? String(riskYili(kayit)) : String(kayit[alan] ?? '').toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim())
     .join('|');
 }
 
@@ -276,7 +333,7 @@ async function riskExcelTopluEkle(verilerListesi) {
       return;
     }
     const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutListe.concat(basariliKayitlar));
-    const kayit = riskKaydiOlustur(Object.assign({}, veriler, { riskNo }));
+    const kayit = riskKaydiOlustur(Object.assign({}, veriler, { riskNo, yil: riskAktifYil() }));
     const anahtar = riskMukerrerAnahtari(kayit);
     if (mevcutAnahtarlar.has(anahtar)) { atlanan++; return; }
     mevcutAnahtarlar.add(anahtar);
@@ -295,7 +352,7 @@ function riskEkle(veriler) {
 
   const mevcutRiskler = riskTumunuGetir();
   const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutRiskler);
-  const yeniRisk = riskKaydiOlustur(Object.assign({}, veriler, { riskNo }));
+  const yeniRisk = riskKaydiOlustur(Object.assign({}, veriler, { riskNo, yil: veriler.yil || riskAktifYil() }));
   riskEkleRepo(yeniRisk);
   return { basarili: true, risk: yeniRisk };
 }
@@ -476,7 +533,8 @@ async function riskKayitlariniJsondanIceAktar(kayitlarHam) {
       _riskFotoYenidenSaklaIhtiyacHalinde(veriler.fotoOncesi, firmaSlug),
       _riskFotoYenidenSaklaIhtiyacHalinde(veriler.fotoSonrasi, firmaSlug)
     ]);
-    yeniKayitlar.push(riskKaydiOlustur(Object.assign({}, veriler, { fotoOncesi, fotoSonrasi })));
+    // JSON'daki yıl korunur; yıl alanı olmayan (eski) yedekler seçili yıla girer.
+    yeniKayitlar.push(riskKaydiOlustur(Object.assign({}, veriler, { fotoOncesi, fotoSonrasi, yil: veriler.yil || riskAktifYil() })));
   }
 
   const yazimSonucu = await riskKayitlariTopluEkleRepo(yeniKayitlar);

@@ -139,10 +139,30 @@ function riskSeviyesiSirasi(duzeyEtiketi) {
   return RISK_SEVIYESI_SIRASI[duzeyEtiketi] || 0;
 }
 
+// Kullanıcı isteği (2026-11-18): "yıl yıl ayırmak istiyorum, örneğin 2027 yılı
+// açıp altına riskleri ekleyeyim, bölümleri falan; şu an mevcutlar 2026 olsun".
+// Yıl, konu ve risklerin üstündeki kaptır: her konu ve risk bir değerlendirme
+// yılına aittir. Yıl alanı olmayan (bu özellikten önceki) kayıtlar 2026 sayılır.
+const RISK_ESKI_KAYIT_YILI = 2026;
+
+function riskYili(kayit) {
+  const y = Number(kayit && kayit.yil);
+  return Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : RISK_ESKI_KAYIT_YILI;
+}
+
+// Yeni kaydın varsayılan yılı (barkodla bildirim, başka modülden aktarım gibi
+// yıl seçilmeyen yerler): açılmış en son yıl.
+function riskEnSonYil(riskler, yillar) {
+  const tum = [RISK_ESKI_KAYIT_YILI].concat((yillar || []).map(Number), (riskler || []).map(riskYili))
+    .filter(y => Number.isInteger(y) && y >= 2000 && y <= 2100);
+  return Math.max.apply(null, tum);
+}
+
 function bolumOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
     ad: (veriler.ad || '').trim(),
+    yil: riskYili(veriler),
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
     // Risk analizi bitmiş konu "Tamamlanan Değerlendirmeler" altında listelenir.
     tamamlandi: !!veriler.tamamlandi,
@@ -366,6 +386,8 @@ function riskKaydiOlustur(veriler) {
   return {
     id: veriler.id || rastgeleId(),
     riskNo: veriler.riskNo || '',
+    // Değerlendirme yılı (bkz. riskYili) — verilmezse 2026 (eski kayıt) sayılır.
+    yil: riskYili(veriler),
     yontem: RISK_YONTEMLERI.includes(veriler.yontem) ? veriler.yontem : 'Fine-Kinney',
     // Kullanıcı isteği (2026-10-22): üstteki gruplama "Risk Değerlendirme
     // Konusu", formdaki "Bölüm" ayrı bir alan olsun. Mevcut kayıtlarla ve

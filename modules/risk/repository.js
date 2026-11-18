@@ -151,3 +151,13 @@ function bolumEkleRepo(bolum) {
 function bolumSilRepo(id) {
   _bolumListesiKaydet(bolumleriTumunuGetir().filter(b => b.id !== id));
 }
+
+// ---- Değerlendirme yılları ("2027 yılını aç") — henüz kaydı olmayan açılmış
+// yıllar da listelensin diye ayrı tutulur. ----
+function riskYillariKayitliGetir() {
+  return (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(Number.isInteger);
+}
+
+function riskYillariKaydet(yillar) {
+  yaz(tenantAnahtar('risk_yillari'), yillar);
+}

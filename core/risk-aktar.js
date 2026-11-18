@@ -62,11 +62,27 @@ function riskeAktarButonHtml(modul, id) {
     : `<button type="button" class="tablo-buton" data-riske-aktar="${_raKacir(id)}" title="Bu kaydı Risk Değerlendirmesi'ne yeni risk olarak aktar">⚠ Riske Aktar</button>`;
 }
 
+// Risk modülündeki değerlendirme yılı (bkz. modules/risk/model.js riskYili):
+// yıl alanı olmayan eski kayıtlar 2026 sayılır. Başka modülden aktarılan risk,
+// açılmış en son yıla eklenir; konu önerileri de o yılın konularıdır.
+function _raKayitYili(k) {
+  const y = Number(k && k.yil);
+  return Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : 2026;
+}
+
+function _raHedefYil() {
+  const yillar = (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(Number.isInteger);
+  const riskler = oku(_raRiskAnahtari(), []) || [];
+  const konular = oku(tenantAnahtar('risk_bolumleri'), []) || [];
+  return Math.max.apply(null, [2026].concat(yillar, riskler.map(_raKayitYili), konular.map(_raKayitYili)));
+}
+
 function _raBolumleri() {
   // Risk analizi tamamlanmış konular önerilmez (risk modülünde "Tamamlanan Değerlendirmeler").
-  const kalicilar = oku(tenantAnahtar('risk_bolumleri'), []) || [];
+  const yil = _raHedefYil();
+  const kalicilar = (oku(tenantAnahtar('risk_bolumleri'), []) || []).filter(b => _raKayitYili(b) === yil);
   const tamamlanan = new Set(kalicilar.filter(b => b.tamamlandi).map(b => b.ad));
-  const risklerden = (oku(_raRiskAnahtari(), []) || []).map(r => r.bolum);
+  const risklerden = (oku(_raRiskAnahtari(), []) || []).filter(r => _raKayitYili(r) === yil).map(r => r.bolum);
   return Array.from(new Set(kalicilar.map(b => b.ad).concat(risklerden).filter(ad => ad && !tamamlanan.has(ad))))
     .sort((a, b) => a.localeCompare(b, 'tr'));
 }
@@ -135,7 +151,7 @@ function riskeAktarModaliAc(istek) {
   document.getElementById('raKonuListesi').innerHTML = konular.map(b => `<option value="${_raKacir(b)}">`).join('');
   // Kaynak kaydın bölümü mevcut bir konuyla aynı adı taşıyorsa konu da önerilir.
   deger('raKonu', konular.includes(a.bolum) ? a.bolum : '');
-  document.getElementById('raKaynak').textContent = `Kaynak: ${istek.modulAdi || istek.modul}${istek.etiket ? ' — ' + istek.etiket : ''}. Alanlar kayıttan dolduruldu; kontrol edip O/F/Ş puanlarını seçin.`;
+  document.getElementById('raKaynak').textContent = `Kaynak: ${istek.modulAdi || istek.modul}${istek.etiket ? ' — ' + istek.etiket : ''}. ${_raHedefYil()} yılı değerlendirmesine eklenir. Alanlar kayıttan dolduruldu; kontrol edip O/F/Ş puanlarını seçin.`;
   const onceki = riskeAktarilanRiskNo(istek.modul, istek.id);
   const uyari = document.getElementById('raUyari');
   uyari.style.display = onceki ? '' : 'none';
@@ -165,6 +181,7 @@ async function _raKaydet() {
   const kayit = {
     id: rastgeleId(),
     riskNo: _raRiskNoUret(bolum, mevcut),
+    yil: _raHedefYil(),
     yontem: 'Fine-Kinney',
     bolum, altBolum: v('raBolum'), yer: v('raYer'), faaliyet: v('raFaaliyet'), tehlike: v('raTehlike'), risk: v('raRisk'), onlem: v('raOnlem'),
     O: v('raO'), F: v('raF'), S: v('raS'),

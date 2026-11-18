@@ -36,6 +36,16 @@
       <button type="button" id="sekmeEkipler" class="sekme-seciliDegil">Risk Değerlendirme Ekipleri</button>
     </div>
 
+    <!-- Kullanıcı isteği (2026-11-18): yıl yıl ayırma — yıl, konu ve risklerin
+         üstündeki kaptır; mevcut kayıtlar 2026. Liste, özet ve raporlar seçili yıla göredir.
+         (Ana sekme çubuğundan SONRA durmalı: core/dokumanlar.js butonunu sayfadaki
+         ilk .sekme-cubugu'ya ekler.) -->
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--kart-bg); border-radius:10px; padding:10px 14px; box-shadow:var(--golge); margin-bottom:12px;">
+      <span style="font-size:13px; font-weight:700;">Değerlendirme Yılı</span>
+      <div class="sekme-cubugu" id="riskYilCubugu" style="margin:0; flex-wrap:wrap;"></div>
+      <button type="button" class="ikincil" id="riskYeniYilBtn" title="Yeni bir değerlendirme yılı açar; konular ve riskler o yılın altına eklenir">+ Yeni Yıl</button>
+    </div>
+
     <div id="kayitlarBolumu">
       <div style="background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); margin-bottom:14px;">
         <!-- Kullanıcı isteği (2026-10-23): analizi bitmiş konular ayrı, devam edenler ayrı yerde. -->
@@ -359,13 +369,13 @@
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=20261023a"></script>
+  <script src="model.js?v=20261118a"></script>
   <script src="validation.js?v=20261022k"></script>
-  <script src="repository.js?v=20261026a"></script>
+  <script src="repository.js?v=20261118a"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261116a"></script>
+  <script src="service.js?v=20261118a"></script>
   <script src="cikti.js?v=20261118a"></script>
-  <script src="ui.js?v=20261116a"></script>
+  <script src="ui.js?v=20261118a"></script>
   <script src="ekipler.js?v=20261022k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');

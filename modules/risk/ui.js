@@ -436,9 +436,42 @@ function riskSayfasiniBaslat() {
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
 
+  document.getElementById('riskYilCubugu').addEventListener('click', e => {
+    const b = e.target.closest('[data-risk-yil]');
+    if (b) _riskYilSec(Number(b.getAttribute('data-risk-yil')));
+  });
+  document.getElementById('riskYeniYilBtn').addEventListener('click', async () => {
+    const yillar = riskYillariListesi();
+    const oneri = String(Math.max(yillar[yillar.length - 1] + 1, new Date().getFullYear()));
+    const girilen = await metinIstemModali('Açılacak değerlendirme yılı:', oneri, 'ör. 2027');
+    if (girilen === null) return;
+    const sonuc = riskYilEkle(girilen);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    _riskYilSec(sonuc.yil);
+  });
+
   _riskSiralamaHazirla();
+  _riskYilCubuguCiz();
   _bolumFiltreDoldur();
   gorunumDegistir('kayitlar');
+}
+
+// ---- Değerlendirme yılı seçimi (bkz. service.js riskAktifYil) ----
+function _riskYilCubuguCiz() {
+  const aktif = riskAktifYil();
+  const sayilar = {};
+  riskTumunuGetir().forEach(r => { const y = riskYili(r); sayilar[y] = (sayilar[y] || 0) + 1; });
+  document.getElementById('riskYilCubugu').innerHTML = riskYillariListesi().map(y =>
+    `<button type="button" data-risk-yil="${y}" class="${y === aktif ? '' : 'sekme-seciliDegil'}" title="${y} yılı: ${sayilar[y] || 0} risk">${y} <span style="font-weight:400; opacity:.75;">(${sayilar[y] || 0})</span></button>`
+  ).join('');
+}
+
+function _riskYilSec(yil) {
+  riskAktifYilAyarla(yil);
+  document.getElementById('bolumFiltre').value = '';
+  _riskYilCubuguCiz();
+  _bolumFiltreDoldur();
+  gorunumDegistir(_riskGorunum || 'kayitlar');
 }
 
 // ---- PDF Raporu: hazırlayan seçimi ----
@@ -637,6 +670,8 @@ function _bolumFiltreDoldur() {
 
   document.getElementById('konuGrubuDevamSayi').textContent = `(${bolumleriGetir('devam').length})`;
   document.getElementById('konuGrubuTamamSayi').textContent = `(${bolumleriGetir('tamamlanan').length})`;
+  // Risk eklenip silindikçe yıl sekmelerindeki sayılar da güncellensin.
+  if (document.getElementById('riskYilCubugu')) _riskYilCubuguCiz();
 }
 
 // Kullanıcı isteği (2026-10-23): analizi bitmiş konular "Tamamlanan
