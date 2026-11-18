@@ -79,6 +79,7 @@
 
     <div class="sekme-cubugu">
       <button type="button" data-sekme="isler">🗓️ İş Planı</button>
+      <button type="button" data-sekme="riskler" class="sekme-seciliDegil" title="Termini 7 gün içinde gelen ya da geçen açık riskler (Risk Değerlendirmesi)">⚠️ Risk Terminleri</button>
       <button type="button" data-sekme="notlar" class="sekme-seciliDegil">🗒️ Notlar</button>
     </div>
 
@@ -99,6 +100,12 @@
         <button type="button" class="ikincil" id="planExcelBtn" style="width:auto;" title="Ekrandaki filtreye göre: Açık İşler ve Tamamlanan sayfaları">📊 Excel İndir</button>
       </div>
       <div id="gorevListesi"></div>
+    </div>
+
+    <!-- Risk termin uyarıları (core/plana-ekle.js riskTerminleriniPlanaEsitle). -->
+    <div id="bolum-riskler" style="display:none;">
+      <p style="font-size:12.5px; color:var(--metin-soluk); margin:0 0 10px;">Risk Değerlendirmesi'nde (en son yıl) termini 7 gün içinde gelen ya da geçmiş, açık riskler. Risk Kapalı veya Operasyonel yapılınca buradan kendiliğinden düşer; 📎 etiketiyle riske gidebilirsiniz. Termine 2 gün kala sarı, son gün kırmızı, geçince mor yanıp söner.</p>
+      <div id="riskTerminListesi"></div>
     </div>
 
     <div id="bolum-notlar" style="display:none;">
@@ -177,8 +184,8 @@
   <script src="../../core/metin-istem.js"></script>
   <script src="model.js?v=5"></script>
   <script src="repository.js?v=2"></script>
-  <script src="service.js?v=4"></script>
-  <script src="ui.js?v=16"></script>
+  <script src="service.js?v=5"></script>
+  <script src="ui.js?v=17"></script>
   <script>
     const kullanici = girisGerekliModul('planlayici');
 

@@ -10,6 +10,14 @@ function planGorevleriGetir() {
   return planVerisiGetir().gorevler.filter(g => g.olusturanId === id);
 }
 
+// Risk termin hatırlatmaları (core/plana-ekle.js riskTerminleriniPlanaEsitle)
+// İş Planı'nda değil ayrı "Risk Terminleri" sekmesinde gösterilir.
+function planRiskTerminiMi(g) { return String((g && g.kaynakAnahtar) || '').startsWith('risk-termin:'); }
+
+function planIsleriGetir() {
+  return planGorevleriGetir().filter(g => !planRiskTerminiMi(g));
+}
+
 function planGoreviKaydet(veriler, id) {
   const dogrulama = planGoreviDogrula(veriler);
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
@@ -103,7 +111,7 @@ function planGorevleriGrupla(liste) {
 }
 
 function planOzetiHesapla() {
-  const liste = planGorevleriGetir();
+  const liste = planIsleriGetir();
   const { gruplar, tamamlanan } = planGorevleriGrupla(liste);
   const sayi = a => gruplar.find(g => g.anahtar === a).liste.length;
   const buAy = bugunIso().slice(0, 7);

@@ -46,15 +46,17 @@ function planlayiciSayfasiniBaslat() {
     `<label class="pl-renk" title="${r.ad}" style="background:${r.renk};"><input type="radio" name="nRenk" value="${r.renk}"></label>`).join('');
 
   const sekme = (location.hash || '').replace('#', '');
-  _plSekmeDegistir(sekme === 'notlar' ? 'notlar' : 'isler');
+  _plSekmeDegistir(['notlar', 'riskler'].includes(sekme) ? sekme : 'isler');
 }
 
 function _plSekmeDegistir(ad) {
   document.querySelectorAll('[data-sekme]').forEach(b => b.classList.toggle('sekme-seciliDegil', b.getAttribute('data-sekme') !== ad));
   document.getElementById('bolum-isler').style.display = ad === 'isler' ? '' : 'none';
+  document.getElementById('bolum-riskler').style.display = ad === 'riskler' ? '' : 'none';
   document.getElementById('bolum-notlar').style.display = ad === 'notlar' ? '' : 'none';
   history.replaceState(null, '', '#' + ad);
-  if (ad === 'isler') gorevleriCiz(); else notlariCiz();
+  if (ad === 'isler') gorevleriCiz(); else if (ad === 'riskler') riskTerminleriniCiz(); else notlariCiz();
+  _plRiskSekmeEtiketi();
 }
 
 // ==================== İŞLER ====================
@@ -92,7 +94,7 @@ function _plFiltreliGorevler() {
   const kategori = document.getElementById('kategoriFiltre').value;
   const sorumlu = document.getElementById('sorumluFiltre').value;
   const arama = document.getElementById('gorevArama').value.trim().toLocaleLowerCase('tr-TR');
-  return planGorevleriGetir().filter(g => (!kategori || g.kategori === kategori)
+  return planIsleriGetir().filter(g => (!kategori || g.kategori === kategori)
     && (!sorumlu || (sorumlu === '-' ? !g.sorumlu : g.sorumlu === sorumlu))
     && (!arama || (g.baslik + ' ' + g.aciklama + ' ' + (g.sorumlu || '')).toLocaleLowerCase('tr-TR').includes(arama)));
 }
@@ -128,7 +130,7 @@ function _plEkranGruplari(liste) {
 function gorevleriCiz() {
   _plOzetCiz();
   const kategori = document.getElementById('kategoriFiltre').value;
-  const tumu = planGorevleriGetir();
+  const tumu = planIsleriGetir();
   const kategoriler = [...new Set(tumu.map(g => g.kategori).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
   const secim = document.getElementById('kategoriFiltre');
   secim.innerHTML = '<option value="">Tüm Kategoriler</option>' + kategoriler.map(k => `<option ${k === kategori ? 'selected' : ''}>${_plKacir(k)}</option>`).join('');
@@ -141,13 +143,59 @@ function gorevleriCiz() {
   sorumluSecim.style.display = sorumlular.length ? '' : 'none';
   if (sorumlu && !sorumlular.includes(sorumlu) && sorumlu !== '-') sorumluSecim.value = '';
   const liste = _plFiltreliGorevler();
+  const { dolu, tamamlanan } = _plEkranGruplari(liste);
+  const satir = _plSatirUretici();
+
+  // Tamamlananlar en altta, kapalı (tıklayınca açılır) — kullanıcı açık hâlini beğenmedi.
+  document.getElementById('gorevListesi').innerHTML = (dolu.length
+    ? dolu.map(gr => `<div class="pl-grup">
+        <div class="pl-grup-baslik" style="color:${gr.renk};">${gr.baslik} <small>${gr.liste.length}</small></div>
+        ${gr.liste.map(satir).join('')}
+      </div>`).join('')
+    : `<div class="bos-durum gorunur">${tumu.length ? 'Açık iş yok. 🎉' : 'Henüz iş eklemediniz. Yukarıdaki kutuya yazıp Enter\'a basın.'}</div>`)
+    + (tamamlanan.length ? `<details class="pl-grup"><summary class="pl-grup-baslik" style="color:var(--basari); cursor:pointer;">✔ Tamamlanan İşler <small>${tamamlanan.length}</small></summary>${tamamlanan.map(satir).join('')}</details>` : '');
+
+  _plListeOlaylariniBagla(document.getElementById('gorevListesi'), gorevleriCiz);
+  _plRiskSekmeEtiketi();
+}
+
+// ==================== RİSK TERMİNLERİ SEKMESİ ====================
+// Kullanıcı isteği (2026-11-18): "risk termin uyarılarını iş planı yanında
+// ayrı bir sekmede göster". core/plana-ekle.js riskTerminleriniPlanaEsitle'nin
+// eklediği işler (kaynakAnahtar 'risk-termin:') İş Planı listesinde değil, bu
+// sekmede; aynı satır görünümü, yanıp sönme ve tamamla/sil davranışıyla.
+function _plRiskSekmeEtiketi() {
+  const btn = document.querySelector('[data-sekme="riskler"]');
+  if (!btn) return;
+  const bugun = bugunIso();
+  const acik = planGorevleriGetir().filter(g => planRiskTerminiMi(g) && g.durum !== 'Tamamlandı');
+  const acil = acik.filter(g => g.tarih && g.tarih <= bugun).length;
+  btn.innerHTML = `⚠️ Risk Terminleri${acik.length ? ` <span style="display:inline-block; min-width:20px; padding:0 6px; border-radius:999px; background:${acil ? '#dc2626' : '#f59e0b'}; color:#fff; font-size:11.5px;">${acik.length}</span>` : ''}`;
+}
+
+function riskTerminleriniCiz() {
+  const liste = planGorevleriGetir().filter(planRiskTerminiMi);
+  const { dolu, tamamlanan } = _plEkranGruplari(liste);
+  const satir = _plSatirUretici();
+  const kutu = document.getElementById('riskTerminListesi');
+  kutu.innerHTML = (dolu.length
+    ? dolu.map(gr => `<div class="pl-grup">
+        <div class="pl-grup-baslik" style="color:${gr.renk};">${gr.baslik.replace('İşler', 'Riskler')} <small>${gr.liste.length}</small></div>
+        ${gr.liste.map(satir).join('')}
+      </div>`).join('')
+    : '<div class="bos-durum gorunur">Termini yaklaşan (7 gün içinde) ya da geçmiş açık risk yok. 🎉</div>')
+    + (tamamlanan.length ? `<details class="pl-grup"><summary class="pl-grup-baslik" style="color:var(--basari); cursor:pointer;">✔ Kapanan Risk Terminleri <small>${tamamlanan.length}</small></summary>${tamamlanan.map(satir).join('')}</details>` : '');
+  _plListeOlaylariniBagla(kutu, riskTerminleriniCiz);
+  _plRiskSekmeEtiketi();
+}
+
+// İş satırı HTML üreticisi (İş Planı ve Risk Terminleri sekmeleri ortak).
+function _plSatirUretici() {
   const tekrarliMi = g => g.tekrar && g.tekrar !== 'Bir defalık';
   const bugun = bugunIso();
   const t = g => g.tarih || g.baslangicTarihi || '';
-  const { dolu, tamamlanan } = _plEkranGruplari(liste);
-
   const durdurulanlar = _plSonGunDurdurulanlar();
-  const satir = g => {
+  return g => {
     const bitti = g.durum === 'Tamamlandı';
     const saat = g.saat ? ' ' + g.saat : '';
     const tarih = [
@@ -191,17 +239,10 @@ function gorevleriCiz() {
       <button type="button" class="tablo-buton sil" data-sil="${g.id}" title="Sil">✕</button>
     </div>`;
   };
+}
 
-  // Tamamlananlar en altta, kapalı (tıklayınca açılır) — kullanıcı açık hâlini beğenmedi.
-  document.getElementById('gorevListesi').innerHTML = (dolu.length
-    ? dolu.map(gr => `<div class="pl-grup">
-        <div class="pl-grup-baslik" style="color:${gr.renk};">${gr.baslik} <small>${gr.liste.length}</small></div>
-        ${gr.liste.map(satir).join('')}
-      </div>`).join('')
-    : `<div class="bos-durum gorunur">${tumu.length ? 'Açık iş yok. 🎉' : 'Henüz iş eklemediniz. Yukarıdaki kutuya yazıp Enter\'a basın.'}</div>`)
-    + (tamamlanan.length ? `<details class="pl-grup"><summary class="pl-grup-baslik" style="color:var(--basari); cursor:pointer;">✔ Tamamlanan İşler <small>${tamamlanan.length}</small></summary>${tamamlanan.map(satir).join('')}</details>` : '');
-
-  const kutu = document.getElementById('gorevListesi');
+// Liste kutusundaki satırlara tıklama/tamamla/düzenle/sil davranışı (ortak).
+function _plListeOlaylariniBagla(kutu, yenidenCiz) {
   // Yanıp sönen satıra ilk tıklama yalnızca durdurur (düzenleme penceresi açılmaz);
   // kutucuğa veya sil düğmesine tıklanırsa hem durur hem o işlem yapılır.
   kutu.querySelectorAll('.pl-yanip').forEach(s => s.addEventListener('click', e => {
@@ -210,13 +251,13 @@ function gorevleriCiz() {
     s.removeAttribute('title');
     if (!e.target.closest('[data-tamamla], [data-sil]')) e.stopPropagation();
   }, { capture: true, once: true }));
-  kutu.querySelectorAll('[data-tamamla]').forEach(c => c.addEventListener('change', () => { planGoreviTamamla(c.getAttribute('data-tamamla'), c.checked); gorevleriCiz(); }));
+  kutu.querySelectorAll('[data-tamamla]').forEach(c => c.addEventListener('change', () => { planGoreviTamamla(c.getAttribute('data-tamamla'), c.checked); yenidenCiz(); }));
   kutu.querySelectorAll('[data-duzenle]').forEach(d => d.addEventListener('click', e => {
     if (e.target.closest('a')) return; // kaynak bağlantısı: sayfaya gider, düzenleme açılmaz
     gorevModalAc(d.getAttribute('data-duzenle'));
   }));
   kutu.querySelectorAll('[data-sil]').forEach(b => b.addEventListener('click', async () => {
-    if (await onayModali('Bu iş silinsin mi?', 'Sil')) { planGoreviSil(b.getAttribute('data-sil')); gorevleriCiz(); }
+    if (await onayModali('Bu iş silinsin mi?', 'Sil')) { planGoreviSil(b.getAttribute('data-sil')); yenidenCiz(); }
   }));
 }
 
@@ -358,7 +399,7 @@ function gorevFormGonderildi(e) {
     return;
   }
   gorevModalKapat();
-  gorevleriCiz();
+  if (document.getElementById('bolum-riskler').style.display !== 'none') riskTerminleriniCiz(); else gorevleriCiz();
 }
 
 // ==================== NOTLAR ====================
