@@ -1592,6 +1592,10 @@ function _ekipmanMalzemeKontrolListesiCiz() {
     kutu.innerHTML = '<div style="font-size:12px; color:var(--metin-soluk);">Kontrol edilecek malzeme yok — önce yukarıdan malzeme ekleyin.</div>';
     return;
   }
+  // Kullanıcı isteği: "acil durum ekipman kontrolü kontrol hepsi uygun
+  // seçili gelsin" — işaretlenmemiş malzemeler varsayılan "Uygun" (✓)
+  // gelir; dokunuş Uygun ↔ Uygun Değil arasında geçiş yapar.
+  _ekipmanMalzemeListesi.forEach(m => { if (!_ekipmanMalzemeKontrolleri[m.id]) _ekipmanMalzemeKontrolleri[m.id] = 'Uygun'; });
   kutu.innerHTML = _ekipmanMalzemeListesi.map(m => {
     const durum = _ekipmanMalzemeKontrolleri[m.id] || '';
     const { etiket, stil } = _ekipmanMalzemeDurumButonuHtml(durum);
@@ -1605,8 +1609,7 @@ function _ekipmanMalzemeKontrolListesiCiz() {
   kutu.querySelectorAll('[data-ekipman-malzeme-durum]').forEach(btn => btn.addEventListener('click', () => {
     const id = btn.getAttribute('data-ekipman-malzeme-durum');
     const mevcut = _ekipmanMalzemeKontrolleri[id] || '';
-    const sonraki = mevcut === '' ? 'Uygun' : mevcut === 'Uygun' ? 'Uygun Değil' : '';
-    if (sonraki) _ekipmanMalzemeKontrolleri[id] = sonraki; else delete _ekipmanMalzemeKontrolleri[id];
+    _ekipmanMalzemeKontrolleri[id] = mevcut === 'Uygun' ? 'Uygun Değil' : 'Uygun';
     _ekipmanMalzemeKontrolListesiCiz();
   }));
 }
