@@ -45,6 +45,8 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
   _ldEl('ldBarkodOkutBtn').addEventListener('click', _ldTaramaBaslat);
   _ldEl('ldLokasyonSecBtn').addEventListener('click', _ldLokasyonSecAc);
   _ldEl('ldWordRaporBtn').addEventListener('click', () => _ldWordRapor(_ldAktifDenetimId));
+  _ldEl('ldFormYukleBtn').addEventListener('click', () => _ldEl('ldFormYukleDosya').click());
+  _ldEl('ldFormYukleDosya').addEventListener('change', _ldFormDosyasiSecildi);
   _ldEl('ldTopluAktarBtn').addEventListener('click', _ldTopluAktarAc);
   _ldEl('ldDenetimDuzenleBtn').addEventListener('click', () => _ldDenetimModalAc(ldDenetimGetir(_ldAktifDenetimId)));
   _ldEl('ldTamamlaBtn').addEventListener('click', _ldTamamlaTiklandi);
@@ -686,6 +688,40 @@ function _ldRiskeAktar(zid, anahtar) {
       fotoOncesi: (c.fotolar || [])[0] || ''
     },
     sonra: () => _ldDetayCiz()
+  });
+}
+
+// Sahada doldurulan Kontrol Formu (Excel) → açık kontrole aktarılır. Her
+// sayfa bir lokasyondur (gizli H sütunundaki kodlarla eşlenir).
+function _ldFormDosyasiSecildi(e) {
+  const dosya = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  const d = ldDenetimGetir(_ldAktifDenetimId);
+  if (!d) return;
+  if (d.tamamlandiMi) { alert('Bu kontrol tamamlanmış. Önce "Kontrolü Yeniden Aç" ile düzenlemeye açın.'); return; }
+  xlsxHazirOlduğunda(async () => {
+    try {
+      const kitap = XLSX.read(await dosya.arrayBuffer(), { type: 'array' });
+      const sayfalar = kitap.SheetNames.map(ad => ({ ad, satirlar: XLSX.utils.sheet_to_json(kitap.Sheets[ad], { header: 1, defval: '', raw: false }) }))
+        .filter(s => ldKontrolFormuMu(s.satirlar));
+      if (!sayfalar.length) { alert('Dosyada uygulamadan indirilmiş saha kontrol formu bulunamadı. Formu "Kontrol Formu (Excel)" ile indirip doldurun.'); return; }
+      const mevcutLok = new Set(d.ziyaretler.filter(z => Object.keys(z.cevaplar || {}).length).map(z => z.lokasyonId));
+      const cakisan = sayfalar.map(s => ldKontrolFormuLokasyonuBul(s.satirlar)).filter(l => l && mevcutLok.has(l.id));
+      if (cakisan.length && !(await onayModali(`${cakisan.map(l => l.bolum + ' — ' + l.lokasyon).join(', ')} bu kontrolde zaten doldurulmuş. Formdaki dolu cevaplar mevcutların üzerine yazılsın mı? (Formda boş bırakılan maddeler değişmez.)`, 'Yükle'))) return;
+      const ozet = [];
+      sayfalar.forEach(s => {
+        const r = ldKontrolFormuSatirlariniIsle(d.id, s.satirlar);
+        if (r.hata) { ozet.push(`✗ ${s.ad}: ${r.hata}`); return; }
+        if (r.ziyaretId) _ldAcikZiyaretler.add(r.ziyaretId);
+        ozet.push(`✓ ${r.lokasyon.bolum} — ${r.lokasyon.lokasyon}: ${r.islenen} madde${r.bulgu ? `, ${r.bulgu} bulgu` : ''}${r.serbest ? ` (${r.serbest} ek tespit)` : ''}${r.atlanan.length ? `\n   Atlanan: ${r.atlanan.slice(0, 5).join('; ')}${r.atlanan.length > 5 ? ' …' : ''}` : ''}`);
+      });
+      _ldDetayCiz();
+      alert('Form yüklendi:\n' + ozet.join('\n') + '\n\nFotoğrafları uygulamada ilgili bulguya ekleyebilirsiniz.');
+    } catch (hata) {
+      console.error(hata);
+      alert('Excel okunamadı: ' + (hata.message || hata));
+    }
   });
 }
 

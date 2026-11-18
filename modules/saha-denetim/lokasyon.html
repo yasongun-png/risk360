@@ -99,6 +99,8 @@
       <div class="ld-ust-eylemler">
         <button type="button" class="birincil" id="ldBarkodOkutBtn">📷 Lokasyon Barkodu Okut</button>
         <button type="button" class="ikincil" id="ldLokasyonSecBtn">+ Listeden Lokasyon Ekle</button>
+        <button type="button" class="ikincil" id="ldFormYukleBtn" title="Sahada doldurulan Kontrol Formu (Excel) dosyasını bu kontrole aktarır">📥 Doldurulmuş Formu Yükle</button>
+        <input type="file" id="ldFormYukleDosya" accept=".xlsx,.xls" style="display:none;">
         <button type="button" class="ikincil" id="ldWordRaporBtn">📄 Word Raporu</button>
         <button type="button" class="ikincil" id="ldTopluAktarBtn">↪ Bulguları Uygunsuzluğa Aktar</button>
         <button type="button" class="ikincil" id="ldDenetimDuzenleBtn">✎ Kontrol Bilgileri</button>
@@ -280,6 +282,7 @@
   <script src="../../core/metin-istem.js"></script>
   <script src="../../core/belge-yukle.js"></script>
   <script src="../../core/xlsx-bicimli.js"></script>
+  <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/risk-aktar.js"></script>
   <script src="../uygunsuzluk/model.js?v=20261112c"></script>
   <script src="../uygunsuzluk/validation.js"></script>
@@ -287,9 +290,9 @@
   <script src="../uygunsuzluk/service.js?v=20261112c"></script>
   <script src="../acil-durum/model.js?v=19"></script>
   <script src="lokasyon-model.js?v=3"></script>
-  <script src="lokasyon-service.js?v=3"></script>
-  <script src="lokasyon-cikti.js?v=4"></script>
-  <script src="lokasyon-ui.js?v=4"></script>
+  <script src="lokasyon-service.js?v=5"></script>
+  <script src="lokasyon-cikti.js?v=5"></script>
+  <script src="lokasyon-ui.js?v=5"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 

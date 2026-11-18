@@ -280,6 +280,111 @@ function ldSerbestBulguSil(denetimId, ziyaretId, anahtar) {
   return _ldZiyaretDegistir(denetimId, ziyaretId, z => { delete z.cevaplar[anahtar]; });
 }
 
+// ---------- Doldurulmuş Excel formunu içe aktarma ----------
+// Kullanıcı isteği (2026-11-18): "doldurulan Excel formu tekrar sisteme
+// yüklenebilsin". satirlar: SheetJS sheet_to_json({header:1}) dizisi (A..H).
+// Gizli H sütunundaki kodlarla eşlenir: LD-FORM-1 (form imzası), lokasyon
+// kodu (LOK-0001), madde kodu ("kategori.soruId"), "serbest" (listede olmayan
+// tespit), "not" (lokasyon notu). Boş bırakılan sonuçlar mevcut cevabı
+// silmez; uygunsuzluğa aktarılmış maddeler değiştirilmez.
+function _ldSonucNormallestir(v) {
+  const s = ldNormalize(v).replace(/ı/g, 'i').replace(/ğ/g, 'g');
+  if (!s) return '';
+  if (/^(uygun degil|uygunsuz|ud|x|hayir)$/.test(s)) return 'Uygun Değil';
+  if (/^(uygun|u|evet|ok|tamam)$/.test(s)) return 'Uygun';
+  if (/^(uygulanamaz|u d|ilgili degil|na|n a)$/.test(s)) return 'Uygulanamaz';
+  return null;
+}
+
+function _ldRiskNormallestir(v) {
+  const s = ldNormalize(v);
+  if (!s || typeof RISK_SEVIYELERI === 'undefined') return '';
+  return RISK_SEVIYELERI.find(r => ldNormalize(r) === s) || '';
+}
+
+function ldKontrolFormuLokasyonuBul(satirlar) {
+  const hucre = (r, c) => String(((satirlar[r] || [])[c]) ?? '').trim();
+  for (let r = 0; r < Math.min(8, satirlar.length); r++) {
+    const kod = hucre(r, 7);
+    if (/^LOK-\d+$/i.test(kod)) { const l = ldLokasyonKodlaBul(kod); if (l) return l; }
+    const m = hucre(r, 4).match(/\((LOK-\d+)\)/i);
+    if (m) { const l = ldLokasyonKodlaBul(m[1]); if (l) return l; }
+  }
+  // "Tüm maddeler" formu: Bölüm (B) ve Lokasyon (E) elle yazıldıysa adla bulunur.
+  for (let r = 0; r < Math.min(8, satirlar.length); r++) {
+    if (ldNormalize(hucre(r, 0)) !== ldNormalize('Bölüm')) continue;
+    const bolum = ldNormalize(hucre(r, 1));
+    const lok = ldNormalize(hucre(r, 4).replace(/\(LOK-\d+\)/i, ''));
+    if (!bolum || !lok) return null;
+    return ldLokasyonlariGetir().find(l => ldNormalize(l.bolum) === bolum && ldNormalize(l.lokasyon) === lok) || null;
+  }
+  return null;
+}
+
+function ldKontrolFormuMu(satirlar) {
+  return (satirlar || []).some(r => String((r || [])[7] ?? '').trim() === 'LD-FORM-1');
+}
+
+function ldKontrolFormuSatirlariniIsle(denetimId, satirlar) {
+  const sonuc = { lokasyon: null, islenen: 0, bulgu: 0, serbest: 0, atlanan: [], hata: '' };
+  if (!ldKontrolFormuMu(satirlar)) { sonuc.hata = 'Bu sayfa uygulamadan indirilen saha kontrol formu değil.'; return sonuc; }
+  const lok = ldKontrolFormuLokasyonuBul(satirlar);
+  if (!lok) { sonuc.hata = 'Lokasyon bulunamadı: formdaki Bölüm ve Lokasyon/Kat tanımlı bir lokasyonla eşleşmiyor (tüm maddeler formunda bu iki alanı lokasyon listesindeki gibi yazın).'; return sonuc; }
+  sonuc.lokasyon = lok;
+  const giris = ldZiyaretBaslat(denetimId, lok.id, 'excel');
+  if (!giris.basarili) { sonuc.hata = giris.hata; return sonuc; }
+  const ziyaretId = giris.ziyaret.id;
+  const metin = (r, c) => String((r || [])[c] ?? '').trim();
+  const ziyaret = () => ldDenetimGetir(denetimId).ziyaretler.find(x => x.id === ziyaretId);
+  const eklenecekKategoriler = new Set();
+
+  satirlar.forEach((r, i) => {
+    const kod = metin(r, 7);
+    if (!kod || kod === 'Kod' || kod === 'LD-FORM-1' || kod === 'lokasyon' || /^LOK-/i.test(kod)) return;
+    if (kod === 'not') {
+      if (metin(r, 1)) ldZiyaretAlanGuncelle(denetimId, ziyaretId, { lokasyonNotu: metin(r, 1) });
+      return;
+    }
+    const sonucDeger = _ldSonucNormallestir(metin(r, 3));
+    const tespit = metin(r, 4), oneri = metin(r, 5), risk = _ldRiskNormallestir(metin(r, 6));
+    if (kod === 'serbest') {
+      const s = tespit || metin(r, 1);
+      if (!s) return;
+      const anahtar = ldSerbestBulguEkle(denetimId, ziyaretId, s, LD_SERBEST_KATEGORI.id, metin(r, 2));
+      const madde = anahtar && ldZiyaretMaddeleri(ziyaret()).find(m => m.anahtar === anahtar);
+      if (madde && (oneri || risk)) ldCevapGuncelle(denetimId, ziyaretId, anahtar, madde, { oneri, risk });
+      if (anahtar) { sonuc.serbest++; sonuc.bulgu++; }
+      return;
+    }
+    const [kid, sid] = kod.split('.');
+    const kat = ldKategoriGetir(kid);
+    const soru = kat && kat.sorular && kat.sorular.find(s => s.id === sid);
+    if (!soru) { sonuc.atlanan.push(`Satır ${i + 1}: tanınmayan madde`); return; }
+    if (sonucDeger === null) { sonuc.atlanan.push(`Satır ${i + 1}: "${metin(r, 3)}" sonucu anlaşılmadı`); return; }
+    if (!sonucDeger && !tespit && !oneri && !risk) return;
+    const z = ziyaret();
+    const mevcut = (z.cevaplar || {})[kod];
+    if (mevcut && mevcut.uygId) { sonuc.atlanan.push(`Satır ${i + 1}: uygunsuzluğa aktarılmış madde değiştirilmedi`); return; }
+    const madde = { anahtar: kod, kategori: kat, soru: soru.soru, mevzuat: soru.mevzuat, cevap: mevcut || null };
+    const degisiklik = {};
+    if (sonucDeger) degisiklik.sonuc = sonucDeger;
+    if (tespit) degisiklik.not = tespit;
+    if (oneri) degisiklik.oneri = oneri;
+    if (risk) degisiklik.risk = risk;
+    ldCevapGuncelle(denetimId, ziyaretId, kod, madde, degisiklik);
+    if (!(z.kategoriler || []).includes(kid)) eklenecekKategoriler.add(kid);
+    sonuc.islenen++;
+    if ((sonucDeger || (mevcut && mevcut.sonuc)) === 'Uygun Değil') sonuc.bulgu++;
+  });
+
+  if (eklenecekKategoriler.size) {
+    const z = ziyaret();
+    ldZiyaretKategorileriGuncelle(denetimId, ziyaretId, Array.from(new Set((z.kategoriler || []).concat(Array.from(eklenecekKategoriler)))));
+  }
+  sonuc.ziyaretId = ziyaretId;
+  return sonuc;
+}
+
 // ---------- Aktarımlar ----------
 
 // Risk Değerlendirmesi'ne aktarılan kaydın kaynak id'si (core/risk-aktar.js).
