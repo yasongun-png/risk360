@@ -1035,6 +1035,8 @@ function modalAc(risk) {
   _riskFotoOnizlemeCiz('fotoSonrasiOnizleme', _riskFotoSonrasi, () => { _riskFotoSonrasi = ''; _riskFotoOnizlemeCiz('fotoSonrasiOnizleme', '', null); });
 
   document.getElementById('sorumlu').value = risk ? risk.sorumlu : '';
+  // Kullanıcı isteği: sorumlu Uygunsuzluk'taki gibi bölüm butonlarından seçilebilsin.
+  if (typeof bolumButonlariCiz === 'function') bolumButonlariCiz('sorumluBolumButonlari', 'sorumlu', 'tekli');
   _riskTerminAyarla(risk ? risk.termin : '');
   document.getElementById('tespit').value = risk ? risk.tespit : '';
   if (!risk) document.getElementById('durum').value = 'Açık';

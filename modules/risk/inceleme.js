@@ -154,8 +154,8 @@ function _inKartHtml(r) {
       <div class="in-izgara in-uclu">
         ${secim('On', 'Olasılık', olc.O, z.On)}${secim('Fn', 'Frekans', olc.F, z.Fn)}${secim('Sn', 'Şiddet', olc.S, z.Sn)}
       </div>
-      <div class="in-izgara in-uclu">
-        ${alan('sorumlu', 'Sorumlu', z.sorumlu)}
+      <label class="in-alan"><span>Sorumlu <span style="font-weight:400;">(yazın ya da aşağıdan bölüm seçin; birden çok seçilebilir)</span></span><input type="text" id="inSorumlu_${r.id}" data-in-alan="sorumlu" value="${_inK(z.sorumlu)}"><div id="inSorumluBtn_${r.id}" class="in-sorumlu-btn"></div></label>
+      <div class="in-izgara">
         <label class="in-alan"><span>Termin</span>
           <select data-in-termin="tur">${riskTerminSecenekleriHtml(z.termin)}</select>
           <input type="date" data-in-termin="tarih" value="${_inK(riskTerminTarihMi(z.termin) ? z.termin : '')}" style="margin-top:4px;${riskTerminTuru(z.termin) === 'tarih' ? '' : ' display:none;'}">
@@ -207,6 +207,10 @@ function riskIncelemeCiz() {
       : `<div class="in-tamam">${ist.toplam ? `${ist.yil} yılının tüm riskleri onaylı.` : `${ist.yil} yılında henüz risk kaydı yok.`}</div>`)}`;
 
   if (typeof fotoReferanslariCoz === 'function') fotoReferanslariCoz(kutu);
+  // Sorumlu: Uygunsuzluk'taki gibi firma bölümlerinden hızlı seçim (core/bolum-butonlari.js).
+  if (typeof bolumButonlariCiz === 'function') {
+    riskler.forEach(r => { if (document.getElementById('inSorumluBtn_' + r.id)) bolumButonlariCiz('inSorumluBtn_' + r.id, 'inSorumlu_' + r.id, 'tekli'); });
+  }
   _riskIncelemeSekmeEtiketi();
 }
 

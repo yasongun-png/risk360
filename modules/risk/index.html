@@ -37,6 +37,7 @@
   .in-bolum-baslik { margin-top:14px; font-size:13px; font-weight:600; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   .in-fotolar { display:flex; gap:8px; margin-top:10px; }
   .in-fotolar img { width:110px; height:80px; object-fit:cover; border-radius:6px; border:1px solid var(--kenarlik); }
+  .in-sorumlu-btn { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
   .in-hata { color:var(--hata); font-size:13px; min-height:18px; margin-top:8px; }
   .in-eylemler { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .in-eylemler button { width:auto; }
@@ -269,6 +270,8 @@
           <div>
             <label for="sorumlu">Sorumlu</label>
             <input type="text" id="sorumlu">
+            <!-- Uygunsuzluk'taki gibi firma bölümlerinden hızlı seçim (core/bolum-butonlari.js). -->
+            <div id="sorumluBolumButonlari" style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 8px;"></div>
           </div>
           <div>
             <label for="terminTur">Termin</label>
@@ -413,6 +416,7 @@
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/form-ayarlari.js"></script>
   <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/bolum-butonlari.js?v=20261118a"></script>
   <script src="../personel/model.js"></script>
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
@@ -423,9 +427,9 @@
   <script src="sablon-repository.js"></script>
   <script src="service.js?v=20261118d"></script>
   <script src="cikti.js?v=20261118d"></script>
-  <script src="ui.js?v=20261118d"></script>
+  <script src="ui.js?v=20261118e"></script>
   <script src="ekipler.js?v=20261022k"></script>
-  <script src="inceleme.js?v=20261118d"></script>
+  <script src="inceleme.js?v=20261118e"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 
