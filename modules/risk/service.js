@@ -570,7 +570,8 @@ function riskOzetiHesapla(verilenListe) {
 
   return {
     toplam: liste.length,
-    acik: liste.filter(r => r.durumGoruntu !== 'Kapalı' && r.durumGoruntu !== 'İptal').length,
+    acik: liste.filter(r => !['Kapalı', 'İptal', 'Operasyonel'].includes(r.durumGoruntu)).length,
+    operasyonel: liste.filter(r => r.durum === 'Operasyonel').length,
     kapali: liste.filter(r => r.durum === 'Kapalı').length,
     gecikmis: liste.filter(r => r.durumGoruntu === 'Gecikmiş').length,
     onemliVeUstu: liste.filter(r => riskSeviyesiSirasi(r.duzey1) >= 4).length,

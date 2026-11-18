@@ -294,15 +294,11 @@ function riskSayfasiniBaslat() {
       }
       satirlar.forEach(satir => {
         satir.bolum = String(satir.bolum || '').trim() || seciliKonu;
-        satir.termin = excelTarihiNormallestir(satir.termin);
-        // Termin sütununda tarih yerine "İş başlamadan önce", "Hemen" gibi metin
-        // olabiliyor — satır reddedilmesin: metin Planlanan Faaliyet'in sonuna
-        // eklenir, Termin boş bırakılır.
-        if (satir.termin && !/^\d{4}-\d{2}-\d{2}$/.test(satir.termin)) {
-          const not = 'Termin: ' + String(satir.termin).trim();
-          satir.planlanan = [String(satir.planlanan || '').trim(), not].filter(Boolean).join('\n');
-          satir.termin = '';
-        }
+        // Termin tarih ya da "Sürekli", "Her defasında" gibi metin olabilir
+        // (kullanıcı isteği 2026-11-18) — metin olduğu gibi Termin'de kalır.
+        satir.termin = String(excelTarihiNormallestir(satir.termin) || '').trim();
+        const hazir = RISK_TERMIN_IFADELERI.find(i => i.toLocaleLowerCase('tr-TR') === satir.termin.toLocaleLowerCase('tr-TR'));
+        if (hazir) satir.termin = hazir;
       });
       const konuSayilari = {};
       satirlar.forEach(s => { konuSayilari[s.bolum] = (konuSayilari[s.bolum] || 0) + 1; });
@@ -461,6 +457,32 @@ function riskSayfasiniBaslat() {
   _bolumFiltreDoldur();
   if (typeof riskIncelemeBaslat === 'function') riskIncelemeBaslat();
   gorunumDegistir('kayitlar');
+}
+
+// ---- Termin: tarih ya da ifade (bkz. model.js RISK_TERMIN_IFADELERI) ----
+function _riskTerminGorunumGuncelle() {
+  const tur = document.getElementById('terminTur').value;
+  document.getElementById('terminTarih').style.display = tur === 'tarih' ? '' : 'none';
+  document.getElementById('terminMetin').style.display = tur === 'diger' ? '' : 'none';
+}
+
+function _riskTerminAyarla(deger) {
+  const tur = document.getElementById('terminTur');
+  if (!tur.dataset.kuruldu) {
+    tur.dataset.kuruldu = '1';
+    tur.addEventListener('change', _riskTerminGorunumGuncelle);
+  }
+  tur.innerHTML = riskTerminSecenekleriHtml(deger);
+  document.getElementById('terminTarih').value = riskTerminTarihMi(deger) ? deger : '';
+  document.getElementById('terminMetin').value = riskTerminTuru(deger) === 'diger' ? String(deger || '') : '';
+  document.getElementById('termin').value = deger || '';
+  _riskTerminGorunumGuncelle();
+}
+
+function _riskTerminOku() {
+  const deger = riskTerminBirlestir(document.getElementById('terminTur').value, document.getElementById('terminTarih').value, document.getElementById('terminMetin').value);
+  document.getElementById('termin').value = deger;
+  return deger;
 }
 
 // ---- Değerlendirme yılı seçimi (bkz. service.js riskAktifYil) ----
@@ -773,7 +795,7 @@ function _riskSatirHtml(r) {
       <td>${_riskKacir(r.azalma) || '-'}</td>
       <td>${_riskFotoHucresiUret(r.fotoSonrasi, 'Sonrası')}</td>
       <td>${_riskKacir(r.sorumlu) || '-'}</td>
-      <td>${_riskKacir(r.termin) || '-'}</td>
+      <td>${_riskKacir(gunAyYil(r.termin)) || '-'}</td>
       <td>${_riskKacir(r.durumGoruntu)}</td>
       <td>
         <button class="tablo-buton" data-duzenle="${r.id}">Düzenle</button>
@@ -782,7 +804,7 @@ function _riskSatirHtml(r) {
           anahtar: 'risk:' + r.id,
           baslik: [r.riskNo, r.planlanan || r.tehlike].filter(Boolean).join(' — '),
           aciklama: [r.yer ? 'Yer: ' + r.yer : '', r.tehlike ? 'Tehlike: ' + r.tehlike : '', r.risk ? 'Risk: ' + r.risk : '', r.sorumlu ? 'Sorumlu: ' + r.sorumlu : ''].filter(Boolean).join('\n'),
-          bitis: r.termin,
+          bitis: riskTerminTarihMi(r.termin) ? r.termin : '',
           kaynak: 'Risk Değerlendirmesi' + (r.riskNo ? ' · ' + r.riskNo : '')
         }) : ''}
         <button class="tablo-buton sil" data-sil="${r.id}">Sil</button>
@@ -884,6 +906,7 @@ function ozetiCiz() {
     <div class="ozet-grid">
       ${kartHtml('Toplam Risk', ozet.toplam)}
       ${kartHtml('Açık', ozet.acik)}
+      ${kartHtml('Operasyonel', ozet.operasyonel)}
       ${kartHtml('Kapalı', ozet.kapali)}
       ${kartHtml('Gecikmiş', ozet.gecikmis)}
       ${kartHtml('Önemli / Yüksek ve Üzeri', ozet.onemliVeUstu)}
@@ -1012,7 +1035,7 @@ function modalAc(risk) {
   _riskFotoOnizlemeCiz('fotoSonrasiOnizleme', _riskFotoSonrasi, () => { _riskFotoSonrasi = ''; _riskFotoOnizlemeCiz('fotoSonrasiOnizleme', '', null); });
 
   document.getElementById('sorumlu').value = risk ? risk.sorumlu : '';
-  document.getElementById('termin').value = risk ? risk.termin : '';
+  _riskTerminAyarla(risk ? risk.termin : '');
   document.getElementById('tespit').value = risk ? risk.tespit : '';
   if (!risk) document.getElementById('durum').value = 'Açık';
 
@@ -1086,7 +1109,7 @@ function formGonderildi(e) {
     Sn: document.getElementById('Sn').value,
     fotoSonrasi: _riskFotoSonrasi,
     sorumlu: document.getElementById('sorumlu').value,
-    termin: document.getElementById('termin').value,
+    termin: _riskTerminOku(),
     durum: document.getElementById('durum').value,
     tespit: document.getElementById('tespit').value
   };

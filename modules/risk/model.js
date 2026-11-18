@@ -5,7 +5,10 @@
 
 const RISK_YONTEMLERI = ['Fine-Kinney', '5x5'];
 
-const RISK_DURUMLARI = ['Açık', 'Devam Ediyor', 'Kapalı', 'Gecikmiş', 'İptal'];
+// Kullanıcı isteği (2026-11-18): "durumda kapalı dışında operasyonel gibi bir
+// şey eklesek" — Operasyonel: önlem işletme/kontrol rutini olarak sürekli
+// uygulanıyor (ör. termin "Sürekli"); açık iş sayılmaz, gecikmiş olmaz.
+const RISK_DURUMLARI = ['Açık', 'Devam Ediyor', 'Operasyonel', 'Kapalı', 'Gecikmiş', 'İptal'];
 
 // Standart Fine-Kinney ölçekleri (Türkiye'de yaygın kullanılan referans tablo).
 const OLASILIK_SECENEKLERI = [
@@ -117,8 +120,37 @@ function sonrakiRiskNoUret(bolum, mevcutRiskler) {
   return onEk + String(maks + 1).padStart(4, '0');
 }
 
+// Kullanıcı isteği (2026-11-18): "termine tarih dışında sürekli, her defasında
+// vb. eklemeler" — termin bir tarih (YYYY-MM-DD) YA DA metin olabilir. Metin
+// terminli riskler gecikmiş sayılmaz (bkz. riskGecikmisMi).
+const RISK_TERMIN_IFADELERI = ['Sürekli', 'Her defasında', 'İş başlamadan önce', 'Hemen', 'Periyodik olarak', 'Her vardiya başında'];
+
+function riskTerminTarihMi(t) { return /^\d{4}-\d{2}-\d{2}$/.test(String(t || '')); }
+
+// Seçim kutusu türü: '' | 'tarih' | ifade | 'diger'
+function riskTerminTuru(t) {
+  const s = String(t || '').trim();
+  if (!s) return '';
+  if (riskTerminTarihMi(s)) return 'tarih';
+  return RISK_TERMIN_IFADELERI.includes(s) ? s : 'diger';
+}
+
+function riskTerminBirlestir(tur, tarih, metin) {
+  if (!tur) return '';
+  if (tur === 'tarih') return riskTerminTarihMi(tarih) ? tarih : '';
+  if (tur === 'diger') return String(metin || '').trim();
+  return tur;
+}
+
+function riskTerminSecenekleriHtml(t) {
+  const tur = riskTerminTuru(t);
+  const k = v => String(v).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  return [['', '— Termin yok —'], ['tarih', 'Tarih seç…']].concat(RISK_TERMIN_IFADELERI.map(i => [i, i]), [['diger', 'Diğer (yazın)…']])
+    .map(([v, e]) => `<option value="${k(v)}" ${v === tur ? 'selected' : ''}>${k(e)}</option>`).join('');
+}
+
 function riskGecikmisMi(risk, bugunStr) {
-  if (risk.durum === 'Kapalı' || risk.durum === 'İptal') return false;
+  if (risk.durum === 'Kapalı' || risk.durum === 'İptal' || risk.durum === 'Operasyonel') return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(risk.termin || '')) return false;
   return risk.termin < (bugunStr || new Date().toISOString().slice(0, 10));
 }

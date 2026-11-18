@@ -156,7 +156,11 @@ function _inKartHtml(r) {
       </div>
       <div class="in-izgara in-uclu">
         ${alan('sorumlu', 'Sorumlu', z.sorumlu)}
-        <label class="in-alan"><span>Termin</span><input type="date" data-in-alan="termin" value="${_inK(/^\d{4}-\d{2}-\d{2}$/.test(z.termin || '') ? z.termin : '')}"></label>
+        <label class="in-alan"><span>Termin</span>
+          <select data-in-termin="tur">${riskTerminSecenekleriHtml(z.termin)}</select>
+          <input type="date" data-in-termin="tarih" value="${_inK(riskTerminTarihMi(z.termin) ? z.termin : '')}" style="margin-top:4px;${riskTerminTuru(z.termin) === 'tarih' ? '' : ' display:none;'}">
+          <input type="text" data-in-termin="metin" placeholder="ör. Her bakım öncesi" value="${_inK(riskTerminTuru(z.termin) === 'diger' ? z.termin : '')}" style="margin-top:4px;${riskTerminTuru(z.termin) === 'diger' ? '' : ' display:none;'}">
+        </label>
         <label class="in-alan"><span>Durum</span><select data-in-alan="durum">${RISK_DURUMLARI.filter(d => d !== 'Gecikmiş').map(d => `<option ${z.durum === d ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
       </div>
       ${z.fotoOncesi || z.fotoSonrasi ? `<div class="in-fotolar">${z.fotoOncesi ? `<img data-foto-ref="${_inK(z.fotoOncesi)}" alt="Öncesi" title="Öncesi">` : ''}${z.fotoSonrasi ? `<img data-foto-ref="${_inK(z.fotoSonrasi)}" alt="Sonrası" title="Sonrası">` : ''}</div>` : ''}
@@ -226,6 +230,8 @@ function _inGecmisHtml(liste) {
 function _inKarttanVeri(kart) {
   const v = {};
   kart.querySelectorAll('[data-in-alan]').forEach(el => { v[el.getAttribute('data-in-alan')] = el.value; });
+  const t = ad => { const el = kart.querySelector(`[data-in-termin="${ad}"]`); return el ? el.value : ''; };
+  v.termin = riskTerminBirlestir(t('tur'), t('tarih'), t('metin'));
   return v;
 }
 
@@ -287,6 +293,12 @@ function riskIncelemeBaslat() {
   });
   kutu.addEventListener('change', e => {
     const el = e.target;
+    if (el.getAttribute && el.getAttribute('data-in-termin') === 'tur') {
+      const kap = el.closest('label');
+      kap.querySelector('[data-in-termin="tarih"]').style.display = el.value === 'tarih' ? '' : 'none';
+      kap.querySelector('[data-in-termin="metin"]').style.display = el.value === 'diger' ? '' : 'none';
+      return;
+    }
     const ad = el.getAttribute && el.getAttribute('data-in-alan');
     if (!['O', 'F', 'S', 'On', 'Fn', 'Sn'].includes(ad)) return;
     const kart = el.closest('[data-in-kart]');

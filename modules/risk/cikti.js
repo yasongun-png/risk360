@@ -898,7 +898,7 @@ async function riskPptxOlustur() {
   // Sorumlu kutusu da slayttan dışarı çıkıyordu. Artık her kutu sabit
   // konum/boyutta, metin üstten başlar ve kaydırılır; yazı boyutu metin
   // uzunluğuna ve fotoğraf olup olmamasına göre küçülür. Slayt 10 x 5.625 in.
-  const renkler = { 'Açık': 'dc2626', 'Devam Ediyor': 'f59e0b', 'Kapalı': '16a34a', 'Gecikmiş': 'dc2626', 'İptal': '9ca3af' };
+  const renkler = { 'Açık': 'dc2626', 'Devam Ediyor': 'f59e0b', 'Operasyonel': '2563eb', 'Kapalı': '16a34a', 'Gecikmiş': 'dc2626', 'İptal': '9ca3af' };
   const duzeyRenk = { 'Tolerans Gösterilemez': 'C00000', 'Esaslı Risk': 'E26B0A', 'Önemli Risk': 'B7791F', 'Olası Risk': '2E7D32', 'Önemsiz Risk': '555555' };
   const metinKutusu = { valign: 'top', align: 'left', margin: 0.05, wrap: true };
   const fotoEkle = (s, kaynak, x, y, w, h, etiket) => {

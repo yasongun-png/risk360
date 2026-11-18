@@ -15,8 +15,9 @@ function riskDogrula(veriler) {
   if (veriler.yontem !== '5x5' && !veriler.F) hatalar.F = 'Frekans seçiniz.';
   if (!veriler.S) hatalar.S = 'Şiddet seçiniz.';
 
-  if (veriler.termin && !/^\d{4}-\d{2}-\d{2}$/.test(veriler.termin)) {
-    hatalar.termin = 'Geçerli bir tarih giriniz.';
+  // Termin tarih ya da "Sürekli", "Her defasında" gibi bir ifade olabilir (bkz. model.js RISK_TERMIN_IFADELERI).
+  if (veriler.termin && String(veriler.termin).length > 120) {
+    hatalar.termin = 'Termin metni çok uzun (en fazla 120 karakter).';
   }
 
   return { gecerli: Object.keys(hatalar).length === 0, hatalar };

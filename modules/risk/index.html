@@ -271,8 +271,12 @@
             <input type="text" id="sorumlu">
           </div>
           <div>
-            <label for="termin">Termin</label>
-            <input type="date" id="termin">
+            <label for="terminTur">Termin</label>
+            <!-- Tarih ya da "Sürekli", "Her defasında" gibi ifade (bkz. model.js RISK_TERMIN_IFADELERI). -->
+            <select id="terminTur"></select>
+            <input type="date" id="terminTarih" style="display:none;">
+            <input type="text" id="terminMetin" placeholder="ör. Her bakım öncesi" style="display:none;">
+            <input type="hidden" id="termin">
             <div class="alan-hatasi" id="terminHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
           </div>
         </div>
@@ -413,15 +417,15 @@
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=20261118a"></script>
-  <script src="validation.js?v=20261022k"></script>
+  <script src="model.js?v=20261118d"></script>
+  <script src="validation.js?v=20261118d"></script>
   <script src="repository.js?v=20261118a"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261118b"></script>
-  <script src="cikti.js?v=20261118a"></script>
-  <script src="ui.js?v=20261118c"></script>
+  <script src="service.js?v=20261118d"></script>
+  <script src="cikti.js?v=20261118d"></script>
+  <script src="ui.js?v=20261118d"></script>
   <script src="ekipler.js?v=20261022k"></script>
-  <script src="inceleme.js?v=20261118a"></script>
+  <script src="inceleme.js?v=20261118d"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 
