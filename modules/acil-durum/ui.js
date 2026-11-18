@@ -372,6 +372,8 @@ function _acilDurumExcelRaporBaglantilariniKur() {
     try { await ekipmanBosKontrolFormuExcel(_adFirma, _ekipmanRaporListesi(), _ekipmanAktifBolum); }
     catch (hata) { console.error(hata); alert('Form oluşturulamadı: ' + (hata.message || hata)); }
   });
+  document.getElementById('ekipmanFormYukleBtn').addEventListener('click', () => document.getElementById('ekipmanFormYukleDosya').click());
+  document.getElementById('ekipmanFormYukleDosya').addEventListener('change', _ekipmanFormDosyasiSecildi);
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanRaporListesi());
   });
@@ -2306,6 +2308,40 @@ async function _ekipmanKontrolFormuWordBtnTiklandi() {
   } finally {
     dugme.disabled = false;
   }
+}
+
+// Sahada doldurulan Boş Kontrol Formu (Excel) → ekipmanlara yeni kontrol
+// olarak yazılır (bkz. service.js ekipmanKontrolFormuSatirlariniIsle).
+function _ekipmanFormDosyasiSecildi(e) {
+  const dosya = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  xlsxHazirOlduğunda(async () => {
+    try {
+      const kitap = XLSX.read(await dosya.arrayBuffer(), { type: 'array', cellDates: true });
+      const sayfalar = kitap.SheetNames.map(ad => ({ ad, satirlar: XLSX.utils.sheet_to_json(kitap.Sheets[ad], { header: 1, defval: '', raw: true }) }))
+        .filter(s => ekipmanKontrolFormuMu(s.satirlar));
+      if (!sayfalar.length) { alert('Dosyada uygulamadan indirilmiş ekipman kontrol formu bulunamadı. Formu "Boş Kontrol Formu (Excel)" ile indirip doldurun.'); return; }
+      if (!(await onayModali(`${sayfalar.length} sayfalık form yüklenecek. Formda en az bir maddesi doldurulan her ekipman için yeni kontrol kaydedilir (son kontrol tarihi formdaki tarih, cevaplar formdakiler). Devam edilsin mi?`, 'Yükle'))) return;
+      const guncellenen = [];
+      const atlanan = [];
+      sayfalar.forEach(s => {
+        const r = ekipmanKontrolFormuSatirlariniIsle(s.satirlar, bugunIso());
+        if (r.hata) { atlanan.push(`${s.ad}: ${r.hata}`); return; }
+        guncellenen.push(...r.guncellenen);
+        atlanan.push(...r.atlanan.map(a => `${s.ad}: ${a}`));
+      });
+      if (guncellenen.length && typeof yanginTupuEkipmanEsitle === 'function') yanginTupuEkipmanEsitle();
+      if (typeof _ekipmanBolumSekmeleriCiz === 'function') _ekipmanBolumSekmeleriCiz();
+      ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+      alert(`${guncellenen.length} ekipmanın kontrolü kaydedildi${guncellenen.length ? ': ' + guncellenen.join(', ') : ''}.` +
+        (atlanan.length ? `\n\nAtlanan/uyarı:\n${atlanan.slice(0, 15).join('\n')}${atlanan.length > 15 ? '\n…' : ''}` : '') +
+        '\n\nFotoğrafları uygulamada ilgili ekipmana ekleyebilirsiniz.');
+    } catch (hata) {
+      console.error(hata);
+      alert('Excel okunamadı: ' + (hata.message || hata));
+    }
+  });
 }
 
 // Tablodaki işaretli ekipmanların id'leri; hiçbiri işaretli değilse null

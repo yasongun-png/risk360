@@ -388,33 +388,36 @@ async function ekipmanBosKontrolFormuExcel(firma, liste, bolumAdi) {
     const ekle = (hucreler, yukseklik) => { satirlar.push({ hucreler, yukseklik }); return satirlar.length; };
 
     let r = ekle([h('ACİL DURUM EKİPMAN KONTROL FORMU', X.baslik)], 26); birlesik.push(`A${r}:F${r}`);
-    r = ekle([h(firma ? firma.ad || '' : '', X.altBaslik)], 18); birlesik.push(`A${r}:F${r}`);
+    // G sütunu (gizli) "Kod": doldurulan form geri yüklenirken satırı doğru
+    // ekipmana/maddeye eşlemek için (bkz. service.js ekipmanKontrolFormuSatirlariniIsle).
+    const kod = v => h(v, X.normal);
+    r = ekle([h(firma ? firma.ad || '' : '', X.altBaslik), null, null, null, null, null, kod('AD-EKF-1')], 18); birlesik.push(`A${r}:F${r}`);
     r = ekle([h('Bölüm', X.bilgiEtiket), h(bolumAdi || 'Tüm bölümler', X.bilgiDeger), null, h('Ekipman Türü', X.bilgiEtiket), h(`${tur} (${ekipmanlar.length} adet)`, X.bilgiDeger), null], 20);
     birlesik.push(`B${r}:C${r}`, `E${r}:F${r}`);
-    r = ekle([h('Kontrol Tarihi', X.bilgiEtiket), h('', X.bilgiDeger), null, h('Kontrol Eden', X.bilgiEtiket), h('', X.bilgiDeger), null], 20);
+    r = ekle([h('Kontrol Tarihi', X.bilgiEtiket), h('', X.bilgiDeger), null, h('Kontrol Eden', X.bilgiEtiket), h('', X.bilgiDeger), null, kod('baslik')], 20);
     birlesik.push(`B${r}:C${r}`, `E${r}:F${r}`);
-    r = ekle([h(`Sonuç sütununda ${secenekler.split(',').join(' / ')} seçin; uygun olmayan maddeleri Açıklama sütununa yazın.`, X.normal)], 18);
+    r = ekle([h(`Sonuç sütununda ${secenekler.split(',').join(' / ')} seçin; uygun olmayan maddeleri Açıklama sütununa yazın. Doldurduktan sonra Acil Durum > Ekipman'daki "Doldurulmuş Formu Yükle" ile aktarabilirsiniz.`, X.normal)], 30);
     birlesik.push(`A${r}:F${r}`);
-    const baslikSatiri = ekle(['No', 'Ekipman No', 'Lokasyon', 'Kontrol Maddesi', 'Sonuç', 'Açıklama'].map(b => h(b, X.tabloBaslik)), 22);
+    const baslikSatiri = ekle(['No', 'Ekipman No', 'Lokasyon', 'Kontrol Maddesi', 'Sonuç', 'Açıklama'].map(b => h(b, X.tabloBaslik)).concat([kod('Kod')]), 22);
 
     ekipmanlar.forEach((e, i) => {
-      const maddeler = sorular.map(s => s.soru);
+      const maddeler = sorular.map(s => ({ metin: s.soru, kod: `${e.id}|s|${s.id}` }));
       if (Array.isArray(e.malzemeListesi) && e.malzemeListesi.length) {
-        e.malzemeListesi.forEach(m => maddeler.push(`Malzeme: ${m.ad} (${m.adet || 1} adet)`));
+        e.malzemeListesi.forEach(m => maddeler.push({ metin: `Malzeme: ${m.ad} (${m.adet || 1} adet)`, kod: `${e.id}|m|${m.id}` }));
       }
-      if (!maddeler.length) maddeler.push('Genel durum uygun');
+      if (!maddeler.length) maddeler.push({ metin: 'Genel durum uygun', kod: `${e.id}|g` });
       const ilk = satirlar.length + 1;
       maddeler.forEach((madde, j) => {
         ekle([
           j === 0 ? h(i + 1, X.hucreOrta) : h('', X.hucreOrta),
           j === 0 ? h(e.ekipmanNo || '-', X.hucreKalin) : h('', X.hucreKalin),
           j === 0 ? h(e.lokasyon || '', X.hucre) : h('', X.hucre),
-          h(madde, X.hucre), h('', X.hucreOrta), h('', X.hucre)
+          h(madde.metin, X.hucre), h('', X.hucreOrta), h('', X.hucre), kod(madde.kod)
         ], 20);
       });
       const son = satirlar.length;
       sonucAraliklari.push(`E${ilk}:E${son}`);
-      r = ekle([h('', X.hucreOrta), h('', X.hucreKalin), h('', X.hucre), h('Bulgular / Yapılan İşlem', X.bilgiEtiket), h('', X.hucre), null], 30);
+      r = ekle([h('', X.hucreOrta), h('', X.hucreKalin), h('', X.hucre), h('Bulgular / Yapılan İşlem', X.bilgiEtiket), h('', X.hucre), null, kod(`${e.id}|b`)], 30);
       birlesik.push(`E${r}:F${r}`);
       ['A', 'B', 'C'].forEach(k => birlesik.push(`${k}${ilk}:${k}${r}`));
     });
@@ -423,7 +426,8 @@ async function ekipmanBosKontrolFormuExcel(firma, liste, bolumAdi) {
     r = ekle([h('Kontrol Eden', X.bilgiEtiket), h('Ad Soyad:', X.bilgiDeger), null, h('İmza', X.bilgiEtiket), h('', X.bilgiDeger), null], 34);
     birlesik.push(`B${r}:C${r}`, `E${r}:F${r}`);
 
-    let xml = xlsxSayfaXml(satirlar, { genislikler: [5, 13, 30, 52, 15, 34], birlesik, dondur: baslikSatiri, yatay: false });
+    let xml = xlsxSayfaXml(satirlar, { genislikler: [5, 13, 30, 52, 15, 34, 12], birlesik, dondur: baslikSatiri, yatay: false });
+    xml = xml.replace('<col min="7" max="7" width="12" customWidth="1"/>', '<col min="7" max="7" width="12" hidden="1" customWidth="1"/>');
     if (sonucAraliklari.length) {
       const dv = `<dataValidations count="1"><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${sonucAraliklari.join(' ')}"><formula1>"${xlsxXmlKacir(secenekler)}"</formula1></dataValidation></dataValidations>`;
       xml = xml.replace('<pageMargins', dv + '<pageMargins');

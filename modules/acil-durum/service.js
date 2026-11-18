@@ -295,6 +295,85 @@ function ekipmanGuncelle(id, veriler) {
   return { basarili: true, ekipman: guncellenen };
 }
 
+// Kullanıcı isteği (2026-11-18): "ekipman boş formu da doldurulup geri
+// yüklenebilsin" — kontrol-formu-cikti.js ekipmanBosKontrolFormuExcel ile
+// indirilen formun SheetJS satırları (header:1, A..G). Gizli G sütunundaki
+// kodlar: AD-EKF-1 (form imzası), baslik (tarih/kontrol eden satırı),
+// "<ekipmanId>|s|<soruId>", "<ekipmanId>|m|<malzemeId>", "<ekipmanId>|g",
+// "<ekipmanId>|b" (Bulgular / Yapılan İşlem). Formda en az bir sonucu ya da
+// bulgusu doldurulan her ekipman için yeni kontrol yazılır (barkodla kontrol
+// gibi: Son Kontrol = formdaki tarih, cevaplar formdakiler); hiç
+// doldurulmayan ekipmanlar değişmez.
+function _ekFormSonuc(v) {
+  const s = String(v ?? '').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/[./]/g, ' ').trim();
+  if (!s) return '';
+  if (/^(uygun degil|uygunsuz|ud|x|hayir|eksik)$/.test(s)) return 'Uygun Değil';
+  if (/^(uygun|u|evet|ok|tamam|mevcut|var)$/.test(s)) return 'Uygun';
+  if (/^(ilgili degil|uygulanamaz|u d|id|na|n a)$/.test(s)) return 'İlgili Değil';
+  return null;
+}
+
+function ekipmanKontrolFormuMu(satirlar) {
+  return (satirlar || []).some(r => String((r || [])[6] ?? '').trim() === 'AD-EKF-1');
+}
+
+function ekipmanKontrolFormuSatirlariniIsle(satirlar, varsayilanTarih) {
+  const sonuc = { guncellenen: [], atlanan: [], hata: '' };
+  if (!ekipmanKontrolFormuMu(satirlar)) { sonuc.hata = 'Bu sayfa uygulamadan indirilen ekipman kontrol formu değil.'; return sonuc; }
+  const metin = (r, c) => {
+    const v = (r || [])[c];
+    return v instanceof Date ? v : String(v ?? '').trim();
+  };
+  const baslik = satirlar.find(r => metin(r, 6) === 'baslik');
+  const tarihHam = baslik ? metin(baslik, 1) : '';
+  let tarih = tarihHam ? (typeof excelTarihiNormallestir === 'function' ? excelTarihiNormallestir(tarihHam) : String(tarihHam)) : '';
+  if (tarih && !/^\d{4}-\d{2}-\d{2}$/.test(tarih)) { sonuc.atlanan.push(`Kontrol tarihi "${tarihHam}" anlaşılmadı, bugünün tarihi kullanıldı`); tarih = ''; }
+  tarih = tarih || varsayilanTarih;
+  const kontrolEden = baslik ? String(metin(baslik, 4) || '') : '';
+
+  // Ekipman bazında topla.
+  const bloklar = new Map();
+  const blok = id => { if (!bloklar.has(id)) bloklar.set(id, { cevap: {}, malzeme: {}, aciklama: [], bulgu: '', doluMu: false }); return bloklar.get(id); };
+  satirlar.forEach((r, i) => {
+    const kod = String(metin(r, 6) || '');
+    const m = kod.match(/^([^|]+)\|([smgb])(?:\|(.+))?$/);
+    if (!m) return;
+    const [, eid, tip, altId] = m;
+    const b = blok(eid);
+    if (tip === 'b') {
+      const v = String(metin(r, 4) || '');
+      if (v) { b.bulgu = v; b.doluMu = true; }
+      return;
+    }
+    const ham = String(metin(r, 4) || '');
+    const deger = _ekFormSonuc(ham);
+    const aciklama = String(metin(r, 5) || '');
+    if (deger === null) { sonuc.atlanan.push(`Satır ${i + 1}: "${ham}" sonucu anlaşılmadı`); return; }
+    if (deger || aciklama) b.doluMu = true;
+    if (tip === 's' && deger) b.cevap[altId] = deger;
+    if (tip === 'm' && deger) b.malzeme[altId] = deger;
+    if (aciklama) b.aciklama.push(`${String(metin(r, 3) || '')}: ${aciklama}`);
+  });
+
+  bloklar.forEach((b, eid) => {
+    if (!b.doluMu) return;
+    const mevcut = ekipmanIdIleGetirRepo(eid);
+    if (!mevcut) { sonuc.atlanan.push('Formdaki bir ekipman artık kayıtlı değil'); return; }
+    const bulgular = [b.bulgu, ...b.aciklama].filter(Boolean).join('\n');
+    const s = ekipmanGuncelle(eid, Object.assign({}, mevcut, {
+      sonKontrol: tarih,
+      sonrakiKontrol: '',
+      kontrolEden: kontrolEden || mevcut.kontrolEden || '',
+      kontrolCevaplari: b.cevap,
+      malzemeKontrolleri: b.malzeme,
+      bulgular: bulgular || (Object.values(b.cevap).concat(Object.values(b.malzeme)).some(v => v === 'Uygun Değil') ? '' : 'Uygun')
+    }));
+    if (s.basarili) sonuc.guncellenen.push(mevcut.ekipmanNo || eid);
+    else sonuc.atlanan.push(`${mevcut.ekipmanNo || eid}: ${Object.values(s.hatalar || {}).join(' ')}`);
+  });
+  return sonuc;
+}
+
 function ekipmanSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   ekipmanSilRepo(id);
