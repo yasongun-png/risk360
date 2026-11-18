@@ -113,6 +113,93 @@ function ldBarkodEtiketleriPdf(lokasyonlar, firma, urlUret) {
   pdf.save(`${ad.replace(/[^\p{L}\p{N}]+/gu, '_')}.pdf`);
 }
 
+// ===================== BOŞ KONTROL FORMU (EXCEL) =====================
+// Kullanıcı isteği (2026-11-18): "saha kontrol raporundaki soruları form
+// olarak da hazırla, excel indirebileyim". Lokasyon seçiliyse her lokasyon
+// kendi sayfasında, yalnız o lokasyonun kategorileriyle; seçili değilse tek
+// sayfada tüm kategoriler. Sonuç ve Risk Seviyesi sütunlarında açılır liste var.
+function _ldcSayfaAdi(ad, kullanilan) {
+  let temel = String(ad || 'Sayfa').replace(/[\[\]:*?\/\\]/g, '-').slice(0, 28).trim() || 'Sayfa';
+  let aday = temel;
+  let n = 2;
+  while (kullanilan.has(aday)) aday = `${temel.slice(0, 25)} (${n++})`;
+  kullanilan.add(aday);
+  return aday;
+}
+
+function _ldcFormSayfasi(firma, lok, kategoriIdleri) {
+  const X = XLSX_STIL;
+  const h = (v, s) => ({ v, s });
+  const satirlar = [];
+  const birlesik = [];
+  const satirEkle = (hucreler, yukseklik) => { satirlar.push({ hucreler, yukseklik }); return satirlar.length; };
+
+  let r = satirEkle([h('SAHA KONTROL FORMU', X.baslik)], 26);
+  birlesik.push(`A${r}:G${r}`);
+  r = satirEkle([h(firma ? firma.ad : '', X.altBaslik)], 18);
+  birlesik.push(`A${r}:G${r}`);
+  r = satirEkle([h('Bölüm', X.bilgiEtiket), h(lok ? lok.bolum : '', X.bilgiDeger), null, h('Lokasyon / Kat', X.bilgiEtiket), h(lok ? `${lok.lokasyon}${lok.kod ? '  (' + lok.kod + ')' : ''}` : '', X.bilgiDeger), null, null], 20);
+  birlesik.push(`B${r}:C${r}`, `E${r}:G${r}`);
+  r = satirEkle([h('Tarih', X.bilgiEtiket), h('', X.bilgiDeger), null, h('Kontrol Eden', X.bilgiEtiket), h('', X.bilgiDeger), null, null], 20);
+  birlesik.push(`B${r}:C${r}`, `E${r}:G${r}`);
+  r = satirEkle([h('Sonuç sütununda Uygun / Uygun Değil / Uygulanamaz seçin. "Uygun Değil" maddelerde görülen durumu Tespit sütununa yazın.', X.normal)], 18);
+  birlesik.push(`A${r}:G${r}`);
+  const baslikSatiri = satirEkle(['No', 'Kontrol Maddesi', 'Mevzuat', 'Sonuç', 'Tespit', 'Önerilen Önlem', 'Risk Seviyesi'].map(b => h(b, X.tabloBaslik)), 24);
+  const ilkVeri = baslikSatiri + 1;
+
+  let no = 0;
+  kategoriIdleri.map(ldKategoriGetir).filter(k => k && k.sorular).forEach(kat => {
+    r = satirEkle([h(kat.ad, X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet)], 18);
+    birlesik.push(`A${r}:G${r}`);
+    kat.sorular.forEach(s => {
+      no++;
+      satirEkle([h(no, X.hucreOrta), h(s.soru, X.hucre), h(s.mevzuat, X.hucre), h('', X.hucreOrta), h('', X.hucre), h('', X.hucre), h('', X.hucre)], 32);
+    });
+  });
+  // Listede olmayan tespitler için boş satırlar.
+  r = satirEkle([h('Diğer Tespitler (listede olmayan)', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet)], 18);
+  birlesik.push(`A${r}:G${r}`);
+  for (let i = 0; i < 5; i++) {
+    no++;
+    satirEkle([h(no, X.hucreOrta), h('', X.hucre), h('', X.hucre), h('Uygun Değil', X.hucreOrta), h('', X.hucre), h('', X.hucre), h('', X.hucre)], 32);
+  }
+  const sonVeri = satirlar.length;
+
+  satirEkle([]);
+  r = satirEkle([h('Lokasyon Notu', X.bilgiEtiket), h('', X.bilgiDeger), null, null, null, null, null], 40);
+  birlesik.push(`B${r}:G${r}`);
+  r = satirEkle([h('Kontrol Eden', X.bilgiEtiket), h('Ad Soyad:', X.bilgiDeger), null, h('İmza', X.bilgiEtiket), h('', X.bilgiDeger), null, null], 34);
+  birlesik.push(`B${r}:C${r}`, `E${r}:G${r}`);
+
+  let xml = xlsxSayfaXml(satirlar, { genislikler: [6, 52, 30, 15, 34, 30, 17], birlesik, dondur: baslikSatiri, yatay: true });
+  const riskler = (typeof RISK_SEVIYELERI !== 'undefined' ? RISK_SEVIYELERI : ['Önemsiz Risk', 'Olası Risk', 'Önemli Risk', 'Esaslı Risk', 'Tolerans Gösterilemez']).join(',');
+  const dogrulama = `<dataValidations count="2">` +
+    `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="D${ilkVeri}:D${sonVeri}"><formula1>"${xlsxXmlKacir(LD_SONUCLAR.join(','))}"</formula1></dataValidation>` +
+    `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="G${ilkVeri}:G${sonVeri}"><formula1>"${xlsxXmlKacir(riskler)}"</formula1></dataValidation>` +
+    `</dataValidations>`;
+  xml = xml.replace('<pageMargins', dogrulama + '<pageMargins');
+  return { xml, baslikSatiri };
+}
+
+async function ldKontrolFormuExcelIndir(lokasyonlar, firma) {
+  if (typeof xlsxSayfaXml !== 'function') { alert('Excel bileşeni yüklenemedi.'); return; }
+  const kullanilan = new Set();
+  const sayfalar = [];
+  if (lokasyonlar && lokasyonlar.length) {
+    lokasyonlar.forEach(l => {
+      const s = _ldcFormSayfasi(firma, l, l.kategoriler);
+      sayfalar.push({ ad: _ldcSayfaAdi(`${l.bolum} - ${l.lokasyon}`, kullanilan), xml: s.xml, baslikSatiri: s.baslikSatiri });
+    });
+  } else {
+    const s = _ldcFormSayfasi(firma, null, LD_KATEGORILER.map(k => k.id));
+    sayfalar.push({ ad: _ldcSayfaAdi('Tüm Kontrol Maddeleri', kullanilan), xml: s.xml, baslikSatiri: s.baslikSatiri });
+  }
+  const ad = lokasyonlar && lokasyonlar.length === 1
+    ? `Saha_Kontrol_Formu_${lokasyonlar[0].bolum}_${lokasyonlar[0].lokasyon}`
+    : (lokasyonlar && lokasyonlar.length ? 'Saha_Kontrol_Formlari' : 'Saha_Kontrol_Formu_Tum_Maddeler');
+  await xlsxKitapIndir(`${ad.replace(/[^\p{L}\p{N}]+/gu, '_')}.xlsx`, sayfalar);
+}
+
 // ===================== WORD RAPORU =====================
 
 const _LDC_LACIVERT = '1F3A5F';

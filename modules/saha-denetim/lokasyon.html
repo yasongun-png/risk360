@@ -79,7 +79,7 @@
     <div id="ldDenetimListesiBolumu">
       <div class="arac-cubugu">
         <input type="text" id="ldDenetimArama" class="arama-kutusu" placeholder="Kontrol no, kontrol eden veya bölüm ara..." style="margin:0;">
-        <button type="button" class="birincil" id="ldYeniDenetimBtn" style="width:auto;">+ Yeni Kontrol</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;"><button type="button" class="ikincil" id="ldBosFormExcelBtn" title="Tüm kategorilerdeki kontrol maddeleriyle boş form">📋 Boş Kontrol Formu (Excel)</button><button type="button" class="birincil" id="ldYeniDenetimBtn" style="width:auto;">+ Yeni Kontrol</button></div>
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
@@ -120,6 +120,7 @@
       <div class="arac-cubugu">
         <input type="text" id="ldLokasyonArama" class="arama-kutusu" placeholder="Bölüm, lokasyon veya kod ara..." style="margin:0;">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="ldFormExcelBtn" title="Seçili lokasyonların (seçim yoksa tüm maddelerin) boş kontrol formu">📋 Kontrol Formu (Excel)</button>
           <button type="button" class="ikincil" id="ldBarkodPdfBtn">🏷 Barkod Etiketleri (PDF)</button>
           <button type="button" class="birincil" id="ldYeniLokasyonBtn" style="width:auto;">+ Lokasyon Ekle</button>
         </div>
@@ -278,6 +279,7 @@
   <script src="../../core/tenant.js?v=3"></script>
   <script src="../../core/metin-istem.js"></script>
   <script src="../../core/belge-yukle.js"></script>
+  <script src="../../core/xlsx-bicimli.js"></script>
   <script src="../../core/risk-aktar.js"></script>
   <script src="../uygunsuzluk/model.js?v=20261112c"></script>
   <script src="../uygunsuzluk/validation.js"></script>
@@ -286,8 +288,8 @@
   <script src="../acil-durum/model.js?v=19"></script>
   <script src="lokasyon-model.js?v=3"></script>
   <script src="lokasyon-service.js?v=3"></script>
-  <script src="lokasyon-cikti.js?v=3"></script>
-  <script src="lokasyon-ui.js?v=3"></script>
+  <script src="lokasyon-cikti.js?v=4"></script>
+  <script src="lokasyon-ui.js?v=4"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 

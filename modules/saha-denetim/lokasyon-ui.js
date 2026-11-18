@@ -98,6 +98,17 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
     if (!liste.length) { alert('Barkodu basılacak lokasyon yok. Önce lokasyon ekleyin.'); return; }
     ldBarkodEtiketleriPdf(liste, _ldFirma, _ldBarkodUrl);
   });
+  // Boş kontrol formu (Excel): seçili lokasyonlar varsa her biri kendi
+  // sayfasında kendi kategorileriyle; seçim yoksa tüm maddeler tek sayfada.
+  const formIndir = async lokasyonlar => {
+    try { await ldKontrolFormuExcelIndir(lokasyonlar, _ldFirma); }
+    catch (hata) { console.error(hata); alert('Excel oluşturulamadı: ' + (hata.message || hata)); }
+  };
+  _ldEl('ldBosFormExcelBtn').addEventListener('click', () => formIndir(null));
+  _ldEl('ldFormExcelBtn').addEventListener('click', () => {
+    const secili = new Set(Array.from(document.querySelectorAll('#ldLokasyonGovde [data-lok-cb]:checked')).map(cb => cb.getAttribute('data-lok-cb')));
+    formIndir(secili.size ? _ldLokasyonFiltreli().filter(l => secili.has(l.id)) : null);
+  });
 
   _ldDenetimListesiCiz();
   _ldLokasyonListesiCiz();
