@@ -282,13 +282,18 @@ function riskSayfasiniBaslat() {
     excelIceAktar(dosya, RISK_IMPORT_KOLONLARI, async (satirlar, hataMesaji) => {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
-      // Kullanıcı isteği: "hangi konu açıksa ona kaydetsin, bölümlere
-      // dağıtmasın" + "yazdığım bölümü konu ismi olarak atamasın" -- tüm
-      // satırlar açık konuya yazılır; dosyadaki Konu/Bölüm sütunları konu
-      // belirlemez (Bölüm sütunu yalnızca satırın bölüm bilgisi olarak kalır).
+      // Kullanıcı isteği (2026-11-18): "risk değerlendirmesi konusunu tablodan
+      // almalı içe aktarırken" -- satırdaki "Risk Değerlendirme Konusu" sütunu
+      // doluysa konu odur; boşsa açık (seçili) konuya yazılır. Önceki isteğe
+      // uygun olarak "Bölüm" sütunu konu yapılmaz, yalnız satırın bölümüdür.
       const seciliKonu = document.getElementById('bolumFiltre').value;
-      if (!seciliKonu) { alert('Önce içe aktaracağınız risk değerlendirme konusunu seçin (yoksa "+ Yeni Konu" ile oluşturun). Tüm satırlar o konuya eklenir.'); return; }
+      const konusuzSatir = satirlar.filter(s => !String(s.bolum || '').trim()).length;
+      if (konusuzSatir && !seciliKonu) {
+        alert(`${konusuzSatir} satırda "Risk Değerlendirme Konusu" boş. Bu satırların ekleneceği konuyu yukarıdan seçin (yoksa "+ Yeni Konu" ile oluşturun) ya da tabloda konu sütununu doldurun.`);
+        return;
+      }
       satirlar.forEach(satir => {
+        satir.bolum = String(satir.bolum || '').trim() || seciliKonu;
         satir.termin = excelTarihiNormallestir(satir.termin);
         // Termin sütununda tarih yerine "İş başlamadan önce", "Hemen" gibi metin
         // olabiliyor — satır reddedilmesin: metin Planlanan Faaliyet'in sonuna
@@ -298,11 +303,12 @@ function riskSayfasiniBaslat() {
           satir.planlanan = [String(satir.planlanan || '').trim(), not].filter(Boolean).join('\n');
           satir.termin = '';
         }
-        satir.bolum = seciliKonu;
       });
+      const konuSayilari = {};
+      satirlar.forEach(s => { konuSayilari[s.bolum] = (konuSayilari[s.bolum] || 0) + 1; });
       const sonuc = await riskExcelTopluEkle(satirlar);
       let mesaj = excelIceAktarOzetMesaji(sonuc);
-      if (sonuc.basarili) mesaj += `\nKayıtlar "${seciliKonu}" konusuna eklendi.`;
+      if (sonuc.basarili) mesaj += `\n${riskAktifYil()} yılı konuları: ` + Object.entries(konuSayilari).map(([k, n]) => `"${k}" (${n} satır)`).join(', ');
       if (sonuc.atlanan) mesaj += `\n${sonuc.atlanan} satır zaten kayıtlı olduğu için tekrar eklenmedi.`;
       alert(mesaj);
       _bolumFiltreDoldur();
