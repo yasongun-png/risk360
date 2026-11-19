@@ -320,6 +320,9 @@ function ldZiyaretMaddeleri(ziyaret) {
     const c = ziyaret.cevaplar[anahtar];
     const kat = ldKategoriGetir(c.k) || LD_SERBEST_KATEGORI;
     if (!c.serbest && !c.sonuc) return;
+    // Eski 'Kalanlar Uygun' hatasının seçilmeyen sorulara yazdığı boş 'Uygun'
+    // cevaplar gösterilmez (not/foto/öneri girilmiş olanlar korunur).
+    if (secili && !c.serbest && c.sonuc === 'Uygun' && ldSoruGetir(anahtar) && !c.not && !c.oneri && !(c.fotolar || []).length) return;
     sonuc.push({ anahtar, kategori: kat, soru: c.s || '', mevzuat: c.m || '', cevap: c });
   });
   return sonuc;

@@ -330,8 +330,12 @@ function ldKategoriTumunuUygun(denetimId, ziyaretId, kategoriId) {
     const kat = ldKategoriGetir(kategoriId);
     if (!kat || !kat.sorular) return false;
     z.cevaplar = z.cevaplar || {};
+    // Kullanıcı raporu (2026-11-19): 'Kalanlar Uygun' seçilmeyen soruları da
+    // Uygun işaretliyordu — yalnızca bu lokasyonda sorulan maddeler işaretlenir.
+    const secili = Array.isArray(z.sorular) ? new Set(z.sorular) : null;
     kat.sorular.forEach(s => {
       const a = kategoriId + '.' + s.id;
+      if (secili && !secili.has(a)) return;
       const c = z.cevaplar[a];
       if (c && c.sonuc) return;
       z.cevaplar[a] = Object.assign({ k: kategoriId, s: s.soru, m: s.mevzuat, not: '', oneri: '', risk: '', fotolar: [] }, c || {}, { sonuc: 'Uygun' });
