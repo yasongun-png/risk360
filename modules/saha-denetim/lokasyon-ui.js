@@ -120,6 +120,17 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
     catch (hata) { console.error(hata); alert('Excel oluşturulamadı: ' + (hata.message || hata)); }
   };
   _ldEl('ldBosFormExcelBtn').addEventListener('click', () => formIndir(null));
+  _ldEl('ldTopluOneriBtn').addEventListener('click', () => {
+    const secili = new Set(Array.from(document.querySelectorAll('#ldLokasyonGovde [data-lok-cb]:checked')).map(cb => cb.getAttribute('data-lok-cb')));
+    let liste = _ldLokasyonFiltreli();
+    if (secili.size) liste = liste.filter(l => secili.has(l.id));
+    _ldTopluOneriAc(liste);
+  });
+  _ldEl('ldOneriIptal').addEventListener('click', () => _ldModalKapat('ldOneriModal'));
+  _ldEl('ldOneriKaydet').addEventListener('click', _ldTopluOneriKaydet);
+  _ldEl('ldOneriListe').addEventListener('click', _ldOneriSorTiklandi);
+  _ldEl('ldLOnerBtn').addEventListener('click', _ldFormOneriUygula);
+  _ldEl('ldLOneriSor').addEventListener('click', _ldFormOneriSorTiklandi);
   _ldEl('ldFormExcelBtn').addEventListener('click', () => {
     const secili = new Set(Array.from(document.querySelectorAll('#ldLokasyonGovde [data-lok-cb]:checked')).map(cb => cb.getAttribute('data-lok-cb')));
     formIndir(secili.size ? _ldLokasyonFiltreli().filter(l => secili.has(l.id)) : null);
@@ -1049,6 +1060,8 @@ function _ldLokasyonModalAc(l) {
   _ldEl('ldLCokluSecimEtiket').classList.toggle('ld-gizli', !!l);
   _ldEl('ldLAciklama').value = l ? l.aciklama : '';
   _ldSoruSeciciKur('ldLKategoriler', l ? ldSecilenSorular(l) : ldSecilenSorular({ kategoriler: ldVarsayilanKategoriler() }));
+  _ldEl('ldLOneriSor').innerHTML = '';
+  _ldEl('ldLOneriOzet').textContent = l ? '' : 'Bölüm ve lokasyonu girdikten sonra basın; az ve öz bir liste seçilir.';
   ['ldLBolumHata', 'ldLLokasyonHata', 'ldLKategorilerHata'].forEach(id => { _ldEl(id).textContent = ''; });
   // Ekipman seçimi: kayıtlı seçim varsa o, yoksa ad eşleşmesiyle önerilir.
   _ldEkipmanSecili = l && Array.isArray(l.ekipmanIdleri) ? new Set(l.ekipmanIdleri) : null;
@@ -1155,4 +1168,121 @@ function _ldLokasyonModalKaydet() {
   if (!s.basarili) { hataGoster(s.hatalar); return; }
   _ldModalKapat('ldLokasyonModal');
   _ldLokasyonListesiCiz();
+}
+
+
+// ---------------------------------------------------------------------------
+// Kullanıcı isteği (2026-11-19): "lokasyonlara göre soru listesini oluştur ...
+// olması gereken soruları tahmin et, düzenle; az soru olsun; 'şunu da
+// ekleyelim mi bu alana' diye bana sorabilirsin" — öneri motoru:
+// lokasyon-model.js ldSoruOnerisi.
+function _ldLokasyonEkipmanTurleri(l) {
+  return Array.from(new Set(ldLokasyonEkipmanlari(l.bolum, l.lokasyon, l.ekipmanIdleri).map(e => e.tur)));
+}
+
+function _ldOneriSoruSatiri(a, neden, isaretli, ekAttr) {
+  const s = ldSoruGetir(a);
+  if (!s) return '';
+  return `<label style="display:flex; gap:8px; align-items:flex-start; font-weight:400; font-size:12.5px; margin:3px 0;">
+    <input type="checkbox" ${ekAttr} value="${_ldK(a)}" ${isaretli ? 'checked' : ''} style="width:auto; margin:2px 0 0;">
+    <span>${_ldK(s.soru.soru)} <span class="ld-bilgi">· ${_ldK(s.kategori.ad)} — ${_ldK(neden)}</span></span></label>`;
+}
+
+function _ldOneriSorHtml(liste, attr) {
+  if (!liste.length) return '';
+  return `<div style="margin-top:8px; padding:8px; border:1px dashed #d97706; border-radius:8px; background:rgba(217,119,6,.06);">
+    <div style="font-weight:700; font-size:12.5px; margin-bottom:4px;">🤔 Bunu da ekleyelim mi?</div>
+    ${liste.map(o => {
+      const s = ldSoruGetir(o.anahtar);
+      return s ? `<div data-oneri-sor="${_ldK(o.anahtar)}" style="display:flex; gap:8px; align-items:center; padding:3px 0; border-top:1px solid rgba(0,0,0,.05); font-size:12.5px;">
+        <span style="flex:1;">${_ldK(s.soru.soru)} <span class="ld-bilgi">· ${_ldK(o.neden)}</span></span>
+        <button type="button" class="tablo-buton" ${attr}="evet" style="font-size:11px;">Evet, ekle</button>
+        <button type="button" class="tablo-buton" ${attr}="hayir" style="font-size:11px;">Hayır</button>
+      </div>` : '';
+    }).join('')}
+  </div>`;
+}
+
+// ---- Toplu: lokasyon listesi için ----
+let _ldOneriBaglam = [];
+
+function _ldTopluOneriAc(lokasyonlar) {
+  if (!lokasyonlar || !lokasyonlar.length) { alert('Öneri yapılacak lokasyon yok. Önce lokasyon ekleyin.'); return; }
+  _ldOneriBaglam = lokasyonlar.map(l => ({ l, oneri: ldSoruOnerisi(l, _ldLokasyonEkipmanTurleri(l)) }));
+  _ldEl('ldOneriListe').innerHTML = _ldOneriBaglam.map(({ l, oneri }, i) => {
+    const mevcut = ldSecilenSorular(l).length;
+    return `<div data-oneri-lok="${i}" style="border:1px solid var(--kenarlik); border-radius:10px; padding:10px; margin-bottom:10px;">
+      <label style="display:flex; gap:8px; align-items:center; margin:0 0 6px;">
+        <input type="checkbox" data-oneri-uygula checked style="width:auto; margin:0;">
+        <span style="font-weight:700; font-size:14px;">${_ldK(l.kod)} · ${_ldK(l.bolum)} — ${_ldK(l.lokasyon)}</span>
+      </label>
+      <div class="ld-bilgi" style="margin-bottom:6px;">Algılanan alan: <b>${_ldK(oneri.turler.join(', ') || 'belirlenemedi (genel liste)')}</b> · Şu an ${mevcut} madde → önerilen ${oneri.sorular.length} madde</div>
+      <div data-oneri-secili>${oneri.sorular.map(o => _ldOneriSoruSatiri(o.anahtar, o.neden, true, 'data-oneri-madde')).join('')}</div>
+      <div data-oneri-sor-kutu>${_ldOneriSorHtml(oneri.sorulsun, 'data-oneri-cevap')}</div>
+    </div>`;
+  }).join('');
+  _ldEl('ldOneriHata').textContent = '';
+  _ldModalAc('ldOneriModal');
+}
+
+function _ldOneriSorTiklandi(e) {
+  const btn = e.target.closest('[data-oneri-cevap]');
+  if (!btn) return;
+  const satir = btn.closest('[data-oneri-sor]');
+  const kart = btn.closest('[data-oneri-lok]');
+  const a = satir.getAttribute('data-oneri-sor');
+  if (btn.getAttribute('data-oneri-cevap') === 'evet') {
+    const oneri = _ldOneriBaglam[Number(kart.getAttribute('data-oneri-lok'))].oneri;
+    const o = oneri.sorulsun.find(x => x.anahtar === a);
+    kart.querySelector('[data-oneri-secili]').insertAdjacentHTML('beforeend', _ldOneriSoruSatiri(a, (o ? o.neden : '') + ' (sizin onayınızla)', true, 'data-oneri-madde'));
+  }
+  satir.remove();
+  const kutu = kart.querySelector('[data-oneri-sor-kutu] > div');
+  if (kutu && !kutu.querySelector('[data-oneri-sor]')) kutu.remove();
+}
+
+function _ldTopluOneriKaydet() {
+  let n = 0;
+  const hatalar = [];
+  document.querySelectorAll('#ldOneriListe [data-oneri-lok]').forEach(kart => {
+    if (!kart.querySelector('[data-oneri-uygula]').checked) return;
+    const { l } = _ldOneriBaglam[Number(kart.getAttribute('data-oneri-lok'))];
+    const sorular = Array.from(kart.querySelectorAll('[data-oneri-madde]:checked')).map(i => i.value);
+    if (!sorular.length) { hatalar.push(`${l.kod}: hiç madde seçilmedi`); return; }
+    const s = ldLokasyonKaydet(Object.assign({}, l, { sorular, kategoriler: Array.from(new Set(sorular.map(a => a.split('.')[0]))) }));
+    if (s.basarili) n++; else hatalar.push(`${l.kod}: ${Object.values(s.hatalar || {}).join(' ')}`);
+  });
+  if (!n && hatalar.length) { _ldEl('ldOneriHata').textContent = hatalar.join(' · '); return; }
+  _ldModalKapat('ldOneriModal');
+  _ldLokasyonListesiCiz();
+  _ldBildirim(`${n} lokasyonun soru listesi güncellendi.${hatalar.length ? ' Uygulanamayan: ' + hatalar.join(', ') : ''}`);
+}
+
+// ---- Lokasyon formu içinde ----
+let _ldFormOneri = null;
+
+function _ldFormOneriUygula() {
+  const bolum = _ldEl('ldLBolum').value.trim();
+  const coklu = _ldEl('ldLCoklu').checked;
+  const lokasyon = coklu ? _ldEl('ldLLokasyonCoklu').value.split('\n').map(x => x.trim()).filter(Boolean).join(' ') : _ldEl('ldLLokasyon').value.trim();
+  if (!bolum && !lokasyon) { _ldEl('ldLOneriOzet').textContent = 'Önce bölümü ve lokasyonu girin.'; return; }
+  const turler = Array.from(new Set(_ldEkipmanSecimOku().map(id => (ldAcilEkipmanGetir(id) || {}).tur).filter(Boolean)));
+  _ldFormOneri = ldSoruOnerisi({ bolum, lokasyon, aciklama: _ldEl('ldLAciklama').value }, turler);
+  _ldSoruSeciciKur('ldLKategoriler', _ldFormOneri.sorular.map(o => o.anahtar));
+  _ldEl('ldLOneriOzet').textContent = `Algılanan alan: ${_ldFormOneri.turler.join(', ') || 'belirlenemedi (genel liste)'} — ${_ldFormOneri.sorular.length} madde seçildi. Aşağıdan düzenleyebilirsiniz.`;
+  _ldEl('ldLOneriSor').innerHTML = _ldOneriSorHtml(_ldFormOneri.sorulsun, 'data-form-oneri');
+}
+
+function _ldFormOneriSorTiklandi(e) {
+  const btn = e.target.closest('[data-form-oneri]');
+  if (!btn) return;
+  const satir = btn.closest('[data-oneri-sor]');
+  if (btn.getAttribute('data-form-oneri') === 'evet') {
+    const secili = _ldSoruSeciciOku('ldLKategoriler').sorular;
+    secili.push(satir.getAttribute('data-oneri-sor'));
+    _ldSoruSeciciKur('ldLKategoriler', secili);
+  }
+  const kutu = satir.parentElement;
+  satir.remove();
+  if (!kutu.querySelector('[data-oneri-sor]')) kutu.remove();
 }

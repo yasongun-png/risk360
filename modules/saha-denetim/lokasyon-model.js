@@ -379,3 +379,93 @@ function ldPuanSinifi(puan) {
 function ldNormalize(s) {
   return String(s || '').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').replace(/[.\-_/]+/g, ' ').trim();
 }
+
+
+// ---------------------------------------------------------------------------
+// Kullanıcı isteği (2026-11-19): "lokasyonlara göre soru listesini oluştur,
+// benim eklediğim lokasyonlara göre olması gereken soruları tahmin et,
+// düzenle; az soru olsun sorun değil; 'şunu da ekleyelim mi bu alana' diye
+// bana sorabilirsin". Lokasyonun bölüm/lokasyon/açıklama metni ve oradaki
+// acil durum ekipmanlarının türleri anahtar kelimelerle eşleştirilir:
+//   sorular  → doğrudan önerilen (az ve öz) maddeler
+//   sorulsun → "Bunu da ekleyelim mi?" diye kullanıcıya sorulacak maddeler
+// Her madde için bir gerekçe (neden) tutulur.
+const LD_ONERI_CEKIRDEK = ['genel.gecis', 'elektrik.panoKapak', 'acil.sondurucu', 'acil.kacisYolu', 'isaret.kacis'];
+const LD_ONERI_CEKIRDEK_SOR = ['genel.atik', 'elektrik.kablo'];
+const LD_ONERI_KURALLARI = [
+  { ad: 'Depo / ambar', kelime: /depo|ambar|stok|antrepo|sevkiyat|yukleme|bosaltma|raf|mal kabul|lojistik|hangar|saha/,
+    sorular: ['genel.istif', 'kaldirma.forklift', 'kaldirma.yayaYolu', 'kaldirma.raf'],
+    sorulsun: ['kaldirma.forkliftIkaz', 'ortam.elleTasima', 'kkd.kullanim', 'acil.dolap'] },
+  { ad: 'Üretim / atölye', kelime: /uretim|imalat|atolye|fabrika|\bhat|hatti|makine|paketleme|dolum|granul|kirma|eleme|torba|mamul|proses|reaktor/,
+    sorular: ['makine.hareketli', 'makine.acilStop', 'makine.koruyucuSaglam', 'kkd.kullanim'],
+    sorulsun: ['makine.loto', 'makine.periyodik', 'makine.talimat', 'ortam.olcum', 'kkd.kulak', 'isaret.uyari'] },
+  { ad: 'Konveyör / bant', kelime: /konveyor|bant|elevator|helezon/,
+    sorular: ['konveyor.emniyetTeli', 'konveyor.acilStopButon', 'konveyor.muhafaza'],
+    sorulsun: ['konveyor.levha', 'konveyor.pano', 'makine.loto'] },
+  { ad: 'Kimyasal alan', kelime: /kimya|laboratuvar|\blab\b|asit|boya|solvent|tank ciftligi|amonyak|kostik|gubre|hammadde|katki|yag/,
+    sorular: ['kimyasal.etiket', 'kimyasal.gbf', 'kimyasal.sekonder'],
+    sorulsun: ['kimyasal.gozDusu', 'kimyasal.havalandirma', 'kimyasal.uyumsuz', 'kimyasal.yanici'] },
+  { ad: 'Basınçlı kap / gaz', kelime: /kompresor|kazan|buhar|basinc|tup|\bgaz\b|azot|oksijen|lpg|dogalgaz|hava tanki|sogutma/,
+    sorular: ['basincli.periyodik', 'basincli.ventil'],
+    sorulsun: ['basincli.tupSabit', 'basincli.tupAyri', 'basincli.hortum', 'isaret.boru'] },
+  { ad: 'Bakım / kaynak', kelime: /bakim|kaynak|tamir|mekanik|torna|tesviye|onarim|teknik servis/,
+    sorular: ['makine.loto', 'sicakIs.izin', 'sicakIs.yanici'],
+    sorulsun: ['sicakIs.makine', 'sicakIs.duman', 'sicakIs.kkd', 'elektrik.seyyar', 'basincli.tupSabit'] },
+  { ad: 'Kapalı alan', kelime: /silo|kuyu|rogar|bunker|havuz|tank|hazne|kanal/,
+    sorular: ['kapaliAlan.tanim', 'kapaliAlan.agizlar'],
+    sorulsun: ['kapaliAlan.izinOlcum', 'kapaliAlan.gozcu'] },
+  { ad: 'Yüksekte çalışma', kelime: /cati|platform|iskele|asma kat|galeri|yuksek|kule|teras|bant ustu/,
+    sorular: ['genel.korkuluk', 'yuksekte.kirilgan'],
+    sorulsun: ['yuksekte.izin', 'yuksekte.kemer', 'yuksekte.seyyarMerdiven', 'yuksekte.dusenCisim'] },
+  { ad: 'Kaldırma / liman', kelime: /vinc|liman|rihtim|iskele basi|gemi|kaldirma|caraskal|portal/,
+    sorular: ['kaldirma.vincPeriyodik', 'kaldirma.sapan'],
+    sorulsun: ['kaldirma.swl', 'kaldirma.yayaYolu', 'yuksekte.dusenCisim'] },
+  { ad: 'Elektrik odası', kelime: /pano|trafo|elektrik|jenerator|enerji|\bmcc\b|kompanzasyon|ups|santral/,
+    sorular: ['elektrik.panoOnu', 'elektrik.topraklama'],
+    sorulsun: ['elektrik.kacakAkim', 'isaret.uyari', 'acil.alarm'] },
+  { ad: 'Ofis / idari', kelime: /ofis|idari|buro|yonetim|toplanti|muhasebe|insan kaynaklari|bilgi islem|arsiv|resepsiyon|kontrol odasi|laboratuvar ofis/,
+    sorular: ['elektrik.seyyar', 'ortam.aydinlatma'],
+    sorulsun: ['ortam.sicaklik', 'acil.plan', 'genel.kapiCam', 'acil.ilkyardim'], ofis: true },
+  { ad: 'Sosyal alan', kelime: /yemekhane|mutfak|kantin|soyunma|wc|tuvalet|\bdus\b|sosyal|revir|mescit|dinlenme|kafeterya/,
+    sorular: ['sosyal.soyunma', 'sosyal.su'],
+    sorulsun: ['sosyal.dinlenme', 'acil.ilkyardim', 'genel.zemin'], ofis: true },
+  { ad: 'Katlı yapı', kelime: /\bkat\b|zemin|bodrum|merdiven/,
+    sorular: ['genel.merdiven'],
+    sorulsun: ['acil.cikisKapi', 'acil.plan'] }
+];
+// Acil durum ekipman türü → ilgili madde.
+const LD_ONERI_EKIPMAN = {
+  'Göz Duşu': 'kimyasal.gozDusu', 'Göz ve Boy Duşu': 'kimyasal.gozDusu', 'Döküntü Kiti': 'kimyasal.sekonder',
+  'Yangın Dolabı': 'acil.dolap', 'Hidrant': 'acil.dolap', 'Alarm / Siren': 'acil.alarm',
+  'Acil Çıkış Kapısı': 'acil.cikisKapi', 'Acil Aydınlatma': 'acil.kacisYolu', 'Konveyör Hattı': 'konveyor.emniyetTeli'
+};
+
+// lokasyon: {bolum, lokasyon, aciklama}; ekipmanTurleri: o lokasyondaki ekipman türleri.
+function ldSoruOnerisi(lokasyon, ekipmanTurleri) {
+  const metin = ' ' + ldNormalize([lokasyon.bolum, lokasyon.lokasyon, lokasyon.aciklama].filter(Boolean).join(' '))
+    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/â/g, 'a') + ' ';
+  const eslesen = LD_ONERI_KURALLARI.filter(k => k.kelime.test(metin));
+  const sorular = new Map(); // anahtar → neden
+  const sorulsun = new Map();
+  const ekle = (harita, a, neden) => { if (ldSoruGetir(a) && !harita.has(a)) harita.set(a, neden); };
+  const sadeceOfis = eslesen.length && eslesen.every(k => k.ofis || k.ad === 'Katlı yapı');
+  LD_ONERI_CEKIRDEK.forEach(a => ekle(sorular, a, 'Her lokasyonda temel madde'));
+  eslesen.forEach(k => {
+    k.sorular.forEach(a => ekle(sorular, a, k.ad + ' olduğu için'));
+    k.sorulsun.forEach(a => ekle(sorulsun, a, k.ad + ' olduğu için'));
+  });
+  (ekipmanTurleri || []).forEach(t => { if (LD_ONERI_EKIPMAN[t]) ekle(sorular, LD_ONERI_EKIPMAN[t], `Lokasyonda ${t} olduğu için`); });
+  // Hiçbir kurala uymadıysa: genel saha varsayımıyla üretim maddelerini sor.
+  if (!eslesen.length) {
+    ['makine.hareketli', 'kkd.kullanim', 'genel.istif', 'isaret.uyari', 'acil.plan'].forEach(a => ekle(sorulsun, a, 'Lokasyon adından türü anlaşılamadı'));
+  } else if (!sadeceOfis) {
+    ['kkd.levha', 'isaret.uyari', 'ortam.aydinlatma'].forEach(a => ekle(sorulsun, a, 'Çalışma alanı olduğu için'));
+  }
+  LD_ONERI_CEKIRDEK_SOR.concat(['acil.ilkyardim', 'belge.talimatlar']).forEach(a => ekle(sorulsun, a, 'Genel öneri'));
+  sorular.forEach((_, a) => sorulsun.delete(a));
+  return {
+    turler: eslesen.map(k => k.ad),
+    sorular: Array.from(sorular, ([anahtar, neden]) => ({ anahtar, neden })),
+    sorulsun: Array.from(sorulsun, ([anahtar, neden]) => ({ anahtar, neden }))
+  };
+}
