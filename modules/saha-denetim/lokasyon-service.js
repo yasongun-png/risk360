@@ -113,7 +113,7 @@ function ldAcilEkipmanNoIleBul(kod) {
 function ldEkipmanOzetiCikar(bolum, lokasyon, idler) {
   const bugun = _ldBugun();
   const soruMetni = (tur, id) => {
-    const liste = (typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[tur]) || [];
+    const liste = typeof ekipmanSorulariGetir === 'function' ? ekipmanSorulariGetir(tur, bolum, null, true) : ((typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[tur]) || []);
     const s = liste.find(x => x.id === id);
     return s ? s.soru : id;
   };

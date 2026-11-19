@@ -418,6 +418,78 @@ const YANGIN_TUPU_KONTROL_SORULARI = [
 // service.js yanginTupuEkipmanEsitle).
 EKIPMAN_KONTROL_SORULARI['Yangın Tüpü'] = YANGIN_TUPU_KONTROL_SORULARI;
 
+// Kullanıcı isteği (2026-11-19): "istediğim soruları o bölümden
+// kaldırabileyim, kaldırdıktan sonra o bölüm için o soru olmasın" + "hatta
+// istersem soruyu istediğim gibi sadece o bölüm için düzenleyebileyim".
+// Firma bazlı tek kayıt (bölümü olmayan ekipmanlar için bölüm anahtarı ''):
+//   { [bölüm]: { [tür]: { kaldirilan: [soruId], metinler: {soruId: metin},
+//                          ekler: [{id, soru}] } } }
+// Kontrol formu, Word/Excel formları, barkodla açılan mobil form ve lokasyon
+// kontrolü soruları HEP ekipmanSorulariGetir ile alır. Değişiklik yalnızca
+// o bölüm + tür için geçerlidir; standart liste ve diğer bölümler etkilenmez.
+const EKIPMAN_SORU_KALDIRMA_ADI = 'acil_durum_bolum_sorulari';
+function _ekSoruKaldirmaAnahtari(firmaSlug) {
+  if (firmaSlug) return 'isg_' + firmaSlug + '_' + EKIPMAN_SORU_KALDIRMA_ADI;
+  return typeof tenantAnahtar === 'function' ? tenantAnahtar(EKIPMAN_SORU_KALDIRMA_ADI) : null;
+}
+function ekipmanBolumSoruAyarlariGetir(firmaSlug) {
+  const k = _ekSoruKaldirmaAnahtari(firmaSlug);
+  const v = k && typeof oku === 'function' ? oku(k, {}) : {};
+  return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+}
+function ekipmanBolumSoruAyari(tur, bolum, firmaSlug) {
+  const a = (ekipmanBolumSoruAyarlariGetir(firmaSlug)[(bolum || '').trim()] || {})[tur] || {};
+  return {
+    kaldirilan: Array.isArray(a.kaldirilan) ? a.kaldirilan : [],
+    metinler: a.metinler && typeof a.metinler === 'object' ? a.metinler : {},
+    ekler: Array.isArray(a.ekler) ? a.ekler.filter(s => s && s.id && s.soru) : []
+  };
+}
+// Bir ekipmanın (ya da tür + bölümün) o bölümde geçerli kontrol soruları:
+// standart sorular (kaldırılanlar hariç, bölüme özel metinle) + bölüme özel
+// eklenen sorular. tumu=true ise kaldırılanlar da {kaldirildi:true} ile döner.
+function ekipmanSorulariGetir(turVeyaEkipman, bolum, firmaSlug, tumu) {
+  const tur = turVeyaEkipman && typeof turVeyaEkipman === 'object' ? turVeyaEkipman.tur : turVeyaEkipman;
+  const bol = turVeyaEkipman && typeof turVeyaEkipman === 'object' ? turVeyaEkipman.bolum : bolum;
+  const a = ekipmanBolumSoruAyari(tur, bol, firmaSlug);
+  const kaldirilan = new Set(a.kaldirilan);
+  const liste = (EKIPMAN_KONTROL_SORULARI[tur] || []).map(s => ({
+    id: s.id, soru: (a.metinler[s.id] || '').trim() || s.soru, standart: s.soru,
+    duzenlendi: !!(a.metinler[s.id] || '').trim() && a.metinler[s.id].trim() !== s.soru,
+    kaldirildi: kaldirilan.has(s.id)
+  })).concat(a.ekler.map(s => ({ id: s.id, soru: s.soru, standart: '', ozel: true, kaldirildi: false })));
+  return tumu ? liste : liste.filter(s => !s.kaldirildi);
+}
+// Cevap saklarken geçerli sayılan tüm soru id'leri (standart + o bölüme özel).
+function ekipmanGecerliSoruIdleri(tur, bolum) {
+  return ekipmanSorulariGetir(tur, bolum, null, true).map(s => s.id);
+}
+// ayar: {kaldirilan, metinler, ekler} — o bölüm + tür için tamamını yazar.
+function ekipmanBolumSoruAyariKaydet(bolum, tur, ayar) {
+  const k = _ekSoruKaldirmaAnahtari();
+  if (!k || typeof yaz !== 'function') return false;
+  const tum = Object.assign({}, ekipmanBolumSoruAyarlariGetir());
+  const bol = (bolum || '').trim();
+  const b = Object.assign({}, tum[bol] || {});
+  const standart = new Map((EKIPMAN_KONTROL_SORULARI[tur] || []).map(s => [s.id, s.soru]));
+  const ekler = (ayar.ekler || []).map(s => ({ id: s.id || ('oz_' + Math.random().toString(36).slice(2, 9)), soru: String(s.soru || '').trim() })).filter(s => s.soru);
+  const ekIdleri = new Set(ekler.map(s => s.id));
+  const kaldirilan = Array.from(new Set(ayar.kaldirilan || [])).filter(id => standart.has(id));
+  const metinler = {};
+  Object.keys(ayar.metinler || {}).forEach(id => {
+    const m = String(ayar.metinler[id] || '').trim();
+    if (standart.has(id) && m && m !== standart.get(id)) metinler[id] = m;
+  });
+  const kayit = {};
+  if (kaldirilan.length) kayit.kaldirilan = kaldirilan;
+  if (Object.keys(metinler).length) kayit.metinler = metinler;
+  if (ekler.length) kayit.ekler = ekler;
+  if (Object.keys(kayit).length) b[tur] = kayit; else delete b[tur];
+  if (Object.keys(b).length) tum[bol] = b; else delete tum[bol];
+  yaz(k, tum);
+  return !!ekIdleri;
+}
+
 // Md.11: Söndürme/Kurtarma/Koruma ekiplerinin her biri için tehlike sınıfına göre bu sayıya
 // kadar her çalışan grubunda en az 1 destek elemanı.
 const MUDAHALE_EKIP_ORANI = { 'Çok Tehlikeli': 30, 'Tehlikeli': 40, 'Az Tehlikeli': 50 };
@@ -602,7 +674,7 @@ function ekipmanOlustur(veriler) {
   const sonKontrol = veriler.sonKontrol || '';
   const sonrakiKontrol = veriler.sonrakiKontrol || (sonKontrol ? gunEkle(sonKontrol, periyotGun) : '');
   const tur = veriler.tur || 'Diğer';
-  const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
+  const sorular = ekipmanSorulariGetir(tur, veriler.bolum, null, true);
   return {
     id: veriler.id || rastgeleId(),
     ekipmanNo: veriler.ekipmanNo || '',

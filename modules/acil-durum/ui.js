@@ -374,7 +374,19 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   });
   document.getElementById('ekipmanFormYukleBtn').addEventListener('click', () => document.getElementById('ekipmanFormYukleDosya').click());
   document.getElementById('ekipmanFormYukleDosya').addEventListener('change', _ekipmanFormDosyasiSecildi);
-  document.getElementById('ekipmanUygAktarBtn').addEventListener('click', () => _ekUygAktarAc(_ekipmanRaporListesi().map(e => e.id)));
+  document.getElementById('ekipmanSoruDuzenleBtn').addEventListener('click', () => _ekSoruDuzenleAc(_ekipmanAktifBolum, '', () => ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value)));
+  document.getElementById('ekSoruBolum').addEventListener('change', _ekSoruTaslakYukle);
+  document.getElementById('ekSoruTur').addEventListener('change', _ekSoruTaslakYukle);
+  document.getElementById('ekSoruEkleBtn').addEventListener('click', _ekSoruEkle);
+  document.getElementById('ekSoruYeni').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); _ekSoruEkle(); } });
+  document.getElementById('ekSoruKaydetBtn').addEventListener('click', _ekSoruKaydet);
+  document.getElementById('ekSoruIptalBtn').addEventListener('click', _ekSoruKapat);
+  document.getElementById('ekSoruSifirlaBtn').addEventListener('click', async () => {
+    if (!(await onayModali('Bu bölümdeki bu tür için tüm değişiklikler silinip standart soru listesine dönülsün mü?', 'Sıfırla'))) return;
+    ekipmanBolumSoruAyariKaydet(document.getElementById('ekSoruBolum').value, document.getElementById('ekSoruTur').value, {});
+    _ekSoruTaslakYukle();
+  });
+  document.getElementById('ekipmanUygAktarBtn').addEventListener('click',() => _ekUygAktarAc(_ekipmanRaporListesi().map(e => e.id)));
   document.getElementById('ekUygIptalBtn').addEventListener('click', () => document.getElementById('ekUygAktarModal').classList.remove('acik'));
   document.getElementById('ekUygKaydetBtn').addEventListener('click', _ekUygAktarKaydet);
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
@@ -1361,6 +1373,12 @@ function ekipmanModalAc(ekipman) {
   _ekipmanMalzemeListesi = ekipman && Array.isArray(ekipman.malzemeListesi) ? ekipman.malzemeListesi.slice() : [];
   _ekipmanMalzemeKontrolleri = ekipman && ekipman.malzemeKontrolleri ? Object.assign({}, ekipman.malzemeKontrolleri) : {};
   _ekipmanMalzemeBolumuCiz();
+  // Bölüme özel soru listesi (bkz. model.js ekipmanSorulariGetir) — bölüm
+  // değişince sorular o bölüme göre yeniden çizilir, girilen cevaplar korunur.
+  document.getElementById('ekipmanBolum').onchange = () => {
+    const mevcut = _ekipmanKontrolListesiTopla();
+    _ekipmanKontrolListesiCiz(ekipman ? Object.assign({}, ekipman, { kontrolCevaplari: Object.assign({}, ekipman.kontrolCevaplari || {}, mevcut) }) : null);
+  };
   document.getElementById('ekipmanTur').onchange = () => {
     _ekipmanKontrolListesiCiz(ekipman);
     _ekipmanBasincBolumuCiz();
@@ -1460,8 +1478,13 @@ function _ekipmanKontrolListesiCiz(ekipman) {
   const kutu = document.getElementById('ekipmanKontrolListesi');
   if (!kutu) return;
   const tur = document.getElementById('ekipmanTur').value;
-  const sorular = EKIPMAN_KONTROL_SORULARI[tur] || [];
+  const bolumEl = document.getElementById('ekipmanBolum');
+  const bolum = bolumEl ? bolumEl.value : '';
+  const sorular = ekipmanSorulariGetir(tur, bolum);
   const cevaplar = ekipman ? ekipman.kontrolCevaplari || {} : {};
+  // Kullanıcı isteği (2026-11-19): soruları bölüm bazında düzenleme kısayolu.
+  const duzenleLink = (EKIPMAN_KONTROL_SORULARI[tur] || []).length
+    ? `<div style="text-align:right; margin-bottom:4px;"><button type="button" class="tablo-buton" id="ekipmanFormSoruDuzenleBtn" style="font-size:11px;">✎ ${_adKacir(bolum || 'Bölümsüz')} bölümü için soruları düzenle</button></div>` : '';
   // Kullanıcı isteği: "acil ekipman kontrol formlarından bundan sonra yeni
   // ekleyeceğim ekipmanlarda da uygun seçili gelsin eskiler aynı kalsın" —
   // yalnızca YENİ ekipman eklerken (ekipman parametresi yok/null) her
@@ -1469,7 +1492,7 @@ function _ekipmanKontrolListesiCiz(ekipman) {
   // düzenlenirken (ekipman verilmişse, barkodla yeniden kontrol başlatma
   // dahil) davranış DEĞİŞMEDİ — cevapsız maddeler eskisi gibi "— Seçilmedi —" kalır.
   const yeniEkipmanMi = !ekipman;
-  kutu.innerHTML = sorular.map(s => `
+  kutu.innerHTML = duzenleLink + sorular.map(s => `
     <div style="display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--kenarlik);">
       <span style="flex:1; font-size:13px;">${_adKacir(s.soru)}</span>
       <select data-kontrol-soru="${s.id}" style="width:auto; min-width:150px;">
@@ -1478,6 +1501,13 @@ function _ekipmanKontrolListesiCiz(ekipman) {
       </select>
     </div>
   `).join('');
+  const duzenleBtn = document.getElementById('ekipmanFormSoruDuzenleBtn');
+  if (duzenleBtn) duzenleBtn.addEventListener('click', () => {
+    const mevcut = _ekipmanKontrolListesiTopla();
+    _ekSoruDuzenleAc(bolum, tur, () => {
+      _ekipmanKontrolListesiCiz(ekipman ? Object.assign({}, ekipman, { kontrolCevaplari: Object.assign({}, cevaplar, mevcut) }) : null);
+    });
+  });
 }
 
 function _ekipmanKontrolListesiTopla() {
@@ -2453,4 +2483,133 @@ function _ekUygAktarKaydet() {
   ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
   alert(`${nolar.length} uygunsuzluk kaydı oluşturuldu${nolar.filter(Boolean).length ? ': ' + nolar.filter(Boolean).join(', ') : ''}.`
     + (hatalar.filter(Boolean).length ? '\nAktarılamayan: ' + hatalar.filter(Boolean).join('\n') : ''));
+}
+
+// ---------------------------------------------------------------------------
+// Kullanıcı isteği (2026-11-19): "istediğim soruları o bölümden
+// kaldırabileyim ... kaldırdıktan sonra o bölüm için o soru olmasın" +
+// "hatta istersem soruyu istediğim gibi sadece o bölüm için
+// düzenleyebileyim". Araç çubuğundaki "✎ Bölüm Soruları" düğmesi ve ekipman
+// formundaki kısayol bu pencereyi açar. Kayıt: model.js ekipmanBolumSoruAyariKaydet.
+let _ekSoruTaslak = null;
+let _ekSoruKapaninca = null;
+
+function _ekSoruDuzenleAc(bolum, tur, kapaninca) {
+  _ekSoruKapaninca = typeof kapaninca === 'function' ? kapaninca : null;
+  const bolumSec = document.getElementById('ekSoruBolum');
+  const bolumler = (_adFirma && Array.isArray(_adFirma.ekipmanBolumleri) ? _adFirma.ekipmanBolumleri : []).slice();
+  ekipmanlariTumunuGetir().forEach(e => { const b = (e.bolum || '').trim(); if (b && !bolumler.includes(b)) bolumler.push(b); });
+  bolumler.sort((a, b) => a.localeCompare(b, 'tr'));
+  const secBolum = bolum || bolumler[0] || '';
+  bolumSec.innerHTML = bolumler.map(b => `<option ${b === secBolum ? 'selected' : ''}>${_adKacir(b)}</option>`).join('')
+    + `<option value="" ${secBolum ? '' : 'selected'}>(Bölümü olmayan ekipmanlar)</option>`;
+  _ekSoruTurleriDoldur(tur);
+  _ekSoruTaslakYukle();
+  const modal = document.getElementById('ekSoruDuzenleModal');
+  modal.style.zIndex = '3000';
+  modal.classList.add('acik');
+}
+
+// Tür listesi: seçili bölümde ekipmanı olan türler önce.
+function _ekSoruTurleriDoldur(secili) {
+  const bolum = document.getElementById('ekSoruBolum').value;
+  const turSec = document.getElementById('ekSoruTur');
+  const onceki = secili || turSec.value;
+  const bolumdeki = new Set(ekipmanlariTumunuGetir().filter(e => (e.bolum || '').trim() === bolum).map(e => e.tur));
+  const turler = EKIPMAN_TURLERI.filter(t => (EKIPMAN_KONTROL_SORULARI[t] || []).length || bolumdeki.has(t));
+  const sirali = turler.filter(t => bolumdeki.has(t)).concat(turler.filter(t => !bolumdeki.has(t)));
+  const sec = sirali.includes(onceki) ? onceki : sirali[0];
+  turSec.innerHTML = sirali.map(t => `<option value="${_adKacir(t)}" ${t === sec ? 'selected' : ''}>${_adKacir(t)}${bolumdeki.has(t) ? ' (bu bölümde var)' : ''}</option>`).join('');
+}
+
+function _ekSoruTaslakYukle(ev) {
+  if (ev && ev.target && ev.target.id === 'ekSoruBolum') _ekSoruTurleriDoldur();
+  const bolum = document.getElementById('ekSoruBolum').value;
+  const tur = document.getElementById('ekSoruTur').value;
+  _ekSoruTaslak = {
+    bolum, tur,
+    satirlar: ekipmanSorulariGetir(tur, bolum, null, true).map(s => ({ id: s.id, soru: s.soru, standart: s.standart, ozel: !!s.ozel, kullan: !s.kaldirildi }))
+  };
+  document.getElementById('ekSoruHata').textContent = '';
+  document.getElementById('ekSoruYeni').value = '';
+  _ekSoruListeCiz();
+}
+
+function _ekSoruTaslakOku() {
+  document.querySelectorAll('#ekSoruListe [data-ek-soru-i]').forEach(satir => {
+    const s = _ekSoruTaslak.satirlar[Number(satir.getAttribute('data-ek-soru-i'))];
+    if (!s) return;
+    s.kullan = satir.querySelector('[data-ek-soru-kullan]').checked;
+    s.soru = satir.querySelector('[data-ek-soru-metin]').value;
+  });
+}
+
+function _ekSoruListeCiz() {
+  const kutu = document.getElementById('ekSoruListe');
+  const satirlar = _ekSoruTaslak.satirlar;
+  if (!satirlar.length) { kutu.innerHTML = '<div style="font-size:12.5px; color:var(--metin-soluk); padding:6px;">Bu türün standart sorusu yok. Aşağıdan bu bölüme özel soru ekleyebilirsiniz.</div>'; return; }
+  const kullanilan = satirlar.filter(s => s.kullan).length;
+  kutu.innerHTML = `<div style="font-size:12px; color:var(--metin-soluk); margin-bottom:6px;">${kullanilan}/${satirlar.length} soru bu bölümde kullanılıyor.</div>`
+    + satirlar.map((s, i) => {
+      const degisti = !s.ozel && s.standart && s.soru.trim() !== s.standart;
+      return `
+      <div data-ek-soru-i="${i}" style="display:flex; gap:8px; align-items:flex-start; padding:5px 0; border-bottom:1px solid var(--kenarlik); ${s.kullan ? '' : 'opacity:.55;'}">
+        <input type="checkbox" data-ek-soru-kullan ${s.kullan ? 'checked' : ''} title="İşareti kaldırılan soru bu bölümde sorulmaz" style="width:auto; margin-top:9px;">
+        <div style="flex:1;">
+          <input type="text" data-ek-soru-metin value="${_adKacir(s.soru)}" style="margin:0; font-size:12.5px; ${s.kullan ? '' : 'text-decoration:line-through;'}">
+          <div style="font-size:11px; color:var(--metin-soluk); margin-top:2px;">
+            ${s.ozel ? '<b style="color:#7c3aed;">Bu bölüme özel soru</b>' : degisti ? `<b style="color:#b45309;">Düzenlendi</b> — standart: ${_adKacir(s.standart)}` : 'Standart soru'}
+            ${s.kullan ? '' : ' · <b style="color:#b91c1c;">Bu bölümde kaldırıldı</b>'}
+          </div>
+        </div>
+        ${degisti ? `<button type="button" class="tablo-buton" data-ek-soru-geri="${i}" title="Standart metne döndür" style="font-size:11px;">↺</button>` : ''}
+        ${s.ozel ? `<button type="button" class="tablo-buton sil" data-ek-soru-sil="${i}" style="font-size:11px;">Sil</button>` : ''}
+      </div>`;
+    }).join('');
+  kutu.querySelectorAll('[data-ek-soru-kullan]').forEach(cb => cb.addEventListener('change', () => { _ekSoruTaslakOku(); _ekSoruListeCiz(); }));
+  kutu.querySelectorAll('[data-ek-soru-metin]').forEach(inp => inp.addEventListener('change', () => { _ekSoruTaslakOku(); _ekSoruListeCiz(); }));
+  kutu.querySelectorAll('[data-ek-soru-geri]').forEach(btn => btn.addEventListener('click', () => {
+    _ekSoruTaslakOku();
+    const s = _ekSoruTaslak.satirlar[Number(btn.getAttribute('data-ek-soru-geri'))];
+    s.soru = s.standart;
+    _ekSoruListeCiz();
+  }));
+  kutu.querySelectorAll('[data-ek-soru-sil]').forEach(btn => btn.addEventListener('click', () => {
+    _ekSoruTaslakOku();
+    _ekSoruTaslak.satirlar.splice(Number(btn.getAttribute('data-ek-soru-sil')), 1);
+    _ekSoruListeCiz();
+  }));
+}
+
+function _ekSoruEkle() {
+  const girdi = document.getElementById('ekSoruYeni');
+  const metin = girdi.value.trim();
+  if (!metin) return;
+  _ekSoruTaslakOku();
+  _ekSoruTaslak.satirlar.push({ id: 'oz_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), soru: metin, standart: '', ozel: true, kullan: true });
+  girdi.value = '';
+  _ekSoruListeCiz();
+}
+
+function _ekSoruKaydet() {
+  if (!_ekSoruTaslak) return;
+  _ekSoruTaslakOku();
+  const bos = _ekSoruTaslak.satirlar.find(s => s.kullan && !s.soru.trim());
+  if (bos) { document.getElementById('ekSoruHata').textContent = 'Soru metni boş bırakılamaz (kullanmayacaksanız işaretini kaldırın).'; return; }
+  const ayar = { kaldirilan: [], metinler: {}, ekler: [] };
+  _ekSoruTaslak.satirlar.forEach(s => {
+    if (s.ozel) { if (s.kullan && s.soru.trim()) ayar.ekler.push({ id: s.id, soru: s.soru.trim() }); return; }
+    if (!s.kullan) ayar.kaldirilan.push(s.id);
+    if (s.soru.trim() && s.soru.trim() !== s.standart) ayar.metinler[s.id] = s.soru.trim();
+  });
+  ekipmanBolumSoruAyariKaydet(_ekSoruTaslak.bolum, _ekSoruTaslak.tur, ayar);
+  _ekSoruTaslakYukle();
+  document.getElementById('ekSoruHata').innerHTML = `<span style="color:#15803d;">✓ ${_adKacir(_ekSoruTaslak.bolum || 'Bölümsüz')} — ${_adKacir(_ekSoruTaslak.tur)} soruları kaydedildi.</span>`;
+}
+
+function _ekSoruKapat() {
+  document.getElementById('ekSoruDuzenleModal').classList.remove('acik');
+  const geri = _ekSoruKapaninca;
+  _ekSoruKapaninca = null;
+  if (geri) geri();
 }

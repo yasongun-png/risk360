@@ -99,6 +99,7 @@
           <button type="button" class="ikincil" id="ekipmanBosFormExcelBtn" title="Seçili bölümdeki (işaretli satır varsa yalnız onların) ekipmanları için sahada doldurulacak boş kontrol formu">📝 Boş Kontrol Formu (Excel)</button>
           <button type="button" class="ikincil" id="ekipmanFormYukleBtn" title="Sahada doldurulan Boş Kontrol Formu (Excel) dosyasını yükler; doldurulan her ekipmana yeni kontrol yazılır">📥 Doldurulmuş Formu Yükle</button>
           <input type="file" id="ekipmanFormYukleDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="ekipmanSoruDuzenleBtn" title="Kontrol sorularını seçili bölüm için kaldır, düzenle ya da yeni soru ekle">✎ Bölüm Soruları</button>
           <button type="button" class="ikincil" id="ekipmanUygAktarBtn" title="Seçili (işaretli satır yoksa ekrandaki tüm) ekipmanların son kontroldeki uygunsuz maddelerini Uygunsuzluk modülüne aktarır">↪ Uygunsuzluğa Aktar</button>
           <!-- Kullanıcı isteği: "acil durım malzeme dolapları envanter
                lşstesini çıktı alıp aşmak da istiyorum word olarak bu
@@ -417,6 +418,33 @@
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="ekUygIptalBtn">İptal</button>
         <button type="button" class="birincil" id="ekUygKaydetBtn" style="width:auto;">Aktar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kullanıcı isteği (2026-11-19): kontrol sorularını bölüm bazında
+       kaldırma / düzenleme / ekleme — bkz. ui.js _ekSoruDuzenleAc. -->
+  <div class="modal-katman" id="ekSoruDuzenleModal">
+    <div class="modal-kutu" style="max-width:760px;">
+      <h3>Bölüme Özel Kontrol Soruları</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Değişiklikler yalnızca seçilen bölümdeki seçilen ekipman türü için geçerlidir; standart liste ve diğer bölümler değişmez.
+        İşareti kaldırılan soru bu bölümde kontrol formunda, Word/Excel formlarında, barkod formunda ve lokasyon kontrolünde çıkmaz. Soru metnini düzeltebilir, bölüme yeni soru ekleyebilirsiniz.
+      </p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px;"><label for="ekSoruBolum">Bölüm</label><select id="ekSoruBolum"></select></div>
+        <div style="flex:1; min-width:200px;"><label for="ekSoruTur">Ekipman Türü</label><select id="ekSoruTur"></select></div>
+      </div>
+      <div id="ekSoruListe" style="max-height:48vh; overflow:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:8px; align-items:flex-end;">
+        <div style="flex:1;"><label for="ekSoruYeni">Bu bölüme yeni soru ekle</label><input type="text" id="ekSoruYeni" placeholder="Örn: Duş başlığı toz kapağı takılı"></div>
+        <button type="button" class="ikincil" id="ekSoruEkleBtn" style="width:auto; margin-bottom:14px;">+ Ekle</button>
+      </div>
+      <div class="hata-mesaji" id="ekSoruHata"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ekSoruSifirlaBtn" style="margin-right:auto;">Standart listeye döndür</button>
+        <button type="button" class="ikincil" id="ekSoruIptalBtn">Kapat</button>
+        <button type="button" class="birincil" id="ekSoruKaydetBtn" style="width:auto;">Kaydet</button>
       </div>
     </div>
   </div>
@@ -1222,16 +1250,16 @@
   <script src="../uygunsuzluk/validation.js"></script>
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js?v=20261112c"></script>
-  <script src="model.js?v=19"></script>
+  <script src="model.js?v=20"></script>
   <script src="validation.js?v=4"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=21"></script>
-  <script src="kontrol-formu-cikti.js?v=19"></script>
+  <script src="service.js?v=22"></script>
+  <script src="kontrol-formu-cikti.js?v=20"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
   <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
   <script src="gaz-olcum-ui.js?v=2"></script>
-  <script src="ui.js?v=35"></script>
+  <script src="ui.js?v=36"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 

@@ -307,7 +307,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="core/data.js?v=6"></script>
-  <script src="modules/acil-durum/model.js?v=19"></script>
+  <script src="modules/acil-durum/model.js?v=20"></script>
   <script>
     function _ekKacir(v) {
       return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -338,7 +338,7 @@
     // sayfa değerleri doğrudan JS ile okuyup Firestore'a yazıyor) mevcut
     // cevaplar kayıtta bozulmadan korunur.
     function _ekSorulariCiz(ekipman) {
-      const sorular = EKIPMAN_KONTROL_SORULARI[ekipman.tur] || [];
+      const sorular = ekipmanSorulariGetir(ekipman, null, _ekFirma && _ekFirma.slug);
       const oncekiCevaplar = ekipman.kontrolCevaplari || {};
       document.getElementById('ekSorularAlani').innerHTML = sorular.map(s => `
         <div class="ek-soru-satir">
@@ -630,7 +630,7 @@
         gonderBtn.textContent = 'Kaydediliyor…';
 
         try {
-          const sorular = EKIPMAN_KONTROL_SORULARI[_ekBulunanEkipman.tur] || [];
+          const sorular = ekipmanSorulariGetir(_ekBulunanEkipman, null, _ekFirma && _ekFirma.slug, true);
           const cevaplar = {};
           document.querySelectorAll('[data-ek-soru]').forEach(sel => { cevaplar[sel.getAttribute('data-ek-soru')] = sel.value; });
           const bulgular = document.getElementById('ekBulgular').value;

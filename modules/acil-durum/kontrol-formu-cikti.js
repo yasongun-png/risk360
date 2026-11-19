@@ -217,7 +217,7 @@ async function ekipmanKontrolFormuWordOlustur(firma, turFiltre, bolumFiltre, gor
     for (const grup of _kfBolumleraGrupla(kayitlar)) {
       cocuklar.push(_kfBaslik(`Bölüm: ${grup.bolum}`, docx.HeadingLevel.HEADING_2));
       for (const ekipman of grup.kayitlar) {
-        cocuklar.push(...(await _kfEkipmanBlogu(ekipman, sorular, !ilkEkipmanBuTurde)));
+        cocuklar.push(...(await _kfEkipmanBlogu(ekipman, ekipmanSorulariGetir(ekipman), !ilkEkipmanBuTurde)));
         ilkEkipmanBuTurde = false;
       }
     }
@@ -401,7 +401,7 @@ async function ekipmanBosKontrolFormuExcel(firma, liste, bolumAdi) {
     const baslikSatiri = ekle(['No', 'Ekipman No', 'Lokasyon', 'Kontrol Maddesi', 'Sonuç', 'Açıklama'].map(b => h(b, X.tabloBaslik)).concat([kod('Kod')]), 22);
 
     ekipmanlar.forEach((e, i) => {
-      const maddeler = sorular.map(s => ({ metin: s.soru, kod: `${e.id}|s|${s.id}` }));
+      const maddeler = ekipmanSorulariGetir(e).map(s => ({ metin: s.soru, kod: `${e.id}|s|${s.id}` }));
       if (Array.isArray(e.malzemeListesi) && e.malzemeListesi.length) {
         e.malzemeListesi.forEach(m => maddeler.push({ metin: `Malzeme: ${m.ad} (${m.adet || 1} adet)`, kod: `${e.id}|m|${m.id}` }));
       }

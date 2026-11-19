@@ -219,7 +219,7 @@ function ekipmanGuncelle(id, veriler) {
   const periyotGun = Number(veriler.periyotGun || 30);
   const sonrakiKontrol = veriler.sonrakiKontrol || (veriler.sonKontrol ? gunEkle(veriler.sonKontrol, periyotGun) : '');
   const mevcut = ekipmanIdIleGetirRepo(id) || {};
-  const sorular = EKIPMAN_KONTROL_SORULARI[veriler.tur] || [];
+  const sorular = ekipmanSorulariGetir(veriler.tur, veriler.bolum, null, true);
   const guncellenen = ekipmanGuncelleRepo(id, {
     // Kullanıcı isteği: "bu no ları istersem kendim de düzeltebileyim" —
     // boş bırakılırsa mevcut numara korunur, otomatik yeniden üretilmez.
@@ -1288,7 +1288,7 @@ function ekipmanUygunsuzBulgulari(e) {
   const etiket = _ekEtiket(e);
   const yer = [e.bolum, e.lokasyon].filter(Boolean).join(' — ');
   const liste = [];
-  (EKIPMAN_KONTROL_SORULARI[e.tur] || []).forEach(s => {
+  ekipmanSorulariGetir(e).forEach(s => {
     if ((e.kontrolCevaplari || {})[s.id] !== 'Uygun Değil') return;
     liste.push({ anahtar: 's:' + s.id, kriter: s.soru,
       tespit: `${etiket}${yer ? ' (' + yer + ')' : ''}: "${s.soru}" şartı sağlanmıyor.` });

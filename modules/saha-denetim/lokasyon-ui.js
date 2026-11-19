@@ -375,7 +375,7 @@ function _ldMaddeHtml(d, z, m, kilitli) {
 const _ldAcikEkipmanlar = new Set();
 
 function _ldEkipmanMaddeleri(e) {
-  const sorular = ((typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[e.tur]) || []).map(s => ({ tip: 's', id: s.id, metin: s.soru }));
+  const sorular = (typeof ekipmanSorulariGetir === 'function' ? ekipmanSorulariGetir(e) : ((typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[e.tur]) || [])).map(s => ({ tip: 's', id: s.id, metin: s.soru }));
   return sorular.concat((Array.isArray(e.malzemeListesi) ? e.malzemeListesi : []).map(m => ({ tip: 'm', id: m.id, metin: `Malzeme: ${m.ad} (${m.adet || 1} adet)` })));
 }
 
