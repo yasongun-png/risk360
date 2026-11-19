@@ -73,7 +73,13 @@ function ldAcilLokasyonlari(bolum) {
 // Lokasyonla eşleşen ekipmanlar: bölüm aynı ve ekipmanın lokasyon metni
 // lokasyon/kat adını içeriyor (ya da tersi). Ör. lokasyon "Zemin Kat",
 // ekipman lokasyonu "Zemin kat - doğu kapısı" -> eşleşir.
-function ldLokasyonEkipmanlari(bolum, lokasyon) {
+function ldLokasyonEkipmanlari(bolum, lokasyon, idler) {
+  // Lokasyonda ekipmanlar elle seçildiyse (ekipmanIdleri) yalnız onlar.
+  if (Array.isArray(idler)) {
+    const set = new Set(idler);
+    return _ldAcilEkipmanlari().filter(e => set.has(e.id))
+      .sort((a, b) => (a.tur || '').localeCompare(b.tur || '', 'tr') || (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true }));
+  }
   const nb = ldNormalize(bolum);
   const nl = ldNormalize(lokasyon);
   return _ldAcilEkipmanlari().filter(e => {
@@ -88,14 +94,30 @@ function _ldBugun() { return new Date().toISOString().slice(0, 10); }
 
 // Acil Durum > Ekipman kontrollerinin o anki durumunun özeti (denetim
 // raporuna "Acil Durum Ekipmanları" bölümü olarak girer).
-function ldEkipmanOzetiCikar(bolum, lokasyon) {
+// Bir bölümdeki tüm acil durum ekipmanları (lokasyon formunda seçim listesi için).
+function ldBolumunEkipmanlari(bolum) {
+  const nb = ldNormalize(bolum);
+  return _ldAcilEkipmanlari().filter(e => !nb || ldNormalize(e.bolum) === nb)
+    .sort((a, b) => ldNormalize(a.lokasyon).localeCompare(ldNormalize(b.lokasyon), 'tr', { numeric: true }) || (a.ekipmanNo || '').localeCompare(b.ekipmanNo || '', 'tr', { numeric: true }));
+}
+
+function ldAcilEkipmanGetir(id) {
+  return _ldAcilEkipmanlari().find(e => e.id === id) || null;
+}
+
+function ldAcilEkipmanNoIleBul(kod) {
+  const k = String(kod || '').trim().toUpperCase();
+  return k ? _ldAcilEkipmanlari().find(e => String(e.ekipmanNo || '').trim().toUpperCase() === k) || null : null;
+}
+
+function ldEkipmanOzetiCikar(bolum, lokasyon, idler) {
   const bugun = _ldBugun();
   const soruMetni = (tur, id) => {
     const liste = (typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[tur]) || [];
     const s = liste.find(x => x.id === id);
     return s ? s.soru : id;
   };
-  return ldLokasyonEkipmanlari(bolum, lokasyon).map(e => {
+  return ldLokasyonEkipmanlari(bolum, lokasyon, idler).map(e => {
     const cevaplar = e.kontrolCevaplari || {};
     const uygunDegil = Object.keys(cevaplar).filter(id => cevaplar[id] === 'Uygun Değil').map(id => soruMetni(e.tur, id));
     const malzemeCevap = e.malzemeKontrolleri || {};
@@ -185,8 +207,8 @@ function ldZiyaretBaslat(denetimId, lokasyonId, yontem) {
     if (ziyaret) return false;
     ziyaret = ldZiyaretOlustur({
       lokasyonId: lok.id, bolum: lok.bolum, lokasyon: lok.lokasyon, kod: lok.kod,
-      kategoriler: lok.kategoriler, girisYontemi: yontem || 'manuel',
-      ekipmanOzeti: ldEkipmanOzetiCikar(lok.bolum, lok.lokasyon), ekipmanOzetiTarihi: new Date().toISOString()
+      kategoriler: lok.kategoriler, sorular: lok.sorular, ekipmanIdleri: lok.ekipmanIdleri, girisYontemi: yontem || 'manuel',
+      ekipmanOzeti: ldEkipmanOzetiCikar(lok.bolum, lok.lokasyon, lok.ekipmanIdleri), ekipmanOzetiTarihi: new Date().toISOString()
     });
     d.ziyaretler.push(ziyaret);
     yeniMi = true;
@@ -219,9 +241,63 @@ function ldZiyaretAlanGuncelle(denetimId, ziyaretId, alanlar) {
 
 function ldZiyaretEkipmanYenile(denetimId, ziyaretId) {
   return _ldZiyaretDegistir(denetimId, ziyaretId, z => {
-    z.ekipmanOzeti = ldEkipmanOzetiCikar(z.bolum, z.lokasyon);
+    z.ekipmanOzeti = ldEkipmanOzetiCikar(z.bolum, z.lokasyon, z.ekipmanIdleri);
     z.ekipmanOzetiTarihi = new Date().toISOString();
   });
+}
+
+// Ziyarette sorulacak maddeleri değiştirir (sonradan ekleme/çıkarma).
+// Çıkarılan maddelerin (uygunsuzluğa aktarılmamış) cevapları silinir.
+function ldZiyaretSorulariGuncelle(denetimId, ziyaretId, sorular) {
+  const secili = new Set(sorular);
+  return _ldZiyaretDegistir(denetimId, ziyaretId, z => {
+    z.sorular = sorular.slice();
+    z.kategoriler = Array.from(new Set(sorular.map(a => a.split('.')[0])));
+    Object.keys(z.cevaplar || {}).forEach(a => {
+      const c = z.cevaplar[a];
+      if (!c.serbest && !secili.has(a) && !c.uygId) delete z.cevaplar[a];
+    });
+  });
+}
+
+// ---------- Lokasyondaki acil durum ekipmanlarının kontrolü ----------
+// Kullanıcı isteği (2026-11-19): ekipmanlar ve soruları "diğer kontrolden"
+// (Acil Durum ekipman kontrolü) alınır; kaydedince sonuç ekipmanın kendi
+// kaydına yazılır (Son Kontrol, sonraki kontrol, cevaplar, bulgular, kontrol eden).
+function ldEkipmanCevapGuncelle(denetimId, ziyaretId, ekipmanId, degistir) {
+  return _ldZiyaretDegistir(denetimId, ziyaretId, z => {
+    z.ekipmanCevaplari = z.ekipmanCevaplari || {};
+    const c = z.ekipmanCevaplari[ekipmanId] || { cevap: {}, malzeme: {}, bulgular: '', kaydedildi: '' };
+    degistir(c);
+    z.ekipmanCevaplari[ekipmanId] = c;
+  });
+}
+
+function ldEkipmanKontrolKaydet(denetimId, ziyaretId, ekipmanId, kontrolEden, tarih) {
+  const d = ldDenetimGetir(denetimId);
+  const z = d && d.ziyaretler.find(x => x.id === ziyaretId);
+  const c = z && (z.ekipmanCevaplari || {})[ekipmanId];
+  if (!c) return { basarili: false, hata: 'Önce kontrol maddelerini işaretleyin.' };
+  const liste = _ldAcilEkipmanlari();
+  const e = liste.find(x => x.id === ekipmanId);
+  if (!e) return { basarili: false, hata: 'Ekipman Acil Durum modülünde bulunamadı.' };
+  const gun = tarih || _ldBugun();
+  const periyot = Number(e.periyotGun || 30);
+  const sonraki = (() => { const t = new Date(gun + 'T00:00:00'); t.setDate(t.getDate() + periyot); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
+  const cevaplar = Object.assign({}, c.cevap);
+  const uygunDegilVar = Object.values(cevaplar).concat(Object.values(c.malzeme || {})).includes('Uygun Değil');
+  Object.assign(e, {
+    sonKontrol: gun,
+    sonrakiKontrol: sonraki,
+    kontrolEden: kontrolEden || e.kontrolEden || '',
+    kontrolCevaplari: cevaplar,
+    malzemeKontrolleri: Object.assign({}, c.malzeme || {}),
+    bulgular: (c.bulgular || '').trim() || (uygunDegilVar ? '' : 'Uygun')
+  });
+  yaz(_ldAcilEkipmanAnahtar(), liste);
+  ldEkipmanCevapGuncelle(denetimId, ziyaretId, ekipmanId, x => { x.kaydedildi = new Date().toISOString(); });
+  ldZiyaretEkipmanYenile(denetimId, ziyaretId);
+  return { basarili: true, ekipman: e };
 }
 
 // Kategori çıkarılınca o kategorinin cevapları (aktarılmamış olanlar) silinir.

@@ -151,10 +151,14 @@ function _ldcFormSayfasi(firma, lok, kategoriIdleri) {
   const ilkVeri = baslikSatiri + 1;
 
   let no = 0;
+  // Lokasyonda madde seçildiyse yalnız seçilenler (bkz. ldSecilenSorular).
+  const secili = lok ? new Set(ldSecilenSorular(lok)) : null;
   kategoriIdleri.map(ldKategoriGetir).filter(k => k && k.sorular).forEach(kat => {
+    const maddeler = kat.sorular.filter(s => !secili || secili.has(`${kat.id}.${s.id}`));
+    if (!maddeler.length) return;
     r = satirEkle([h(kat.ad, X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet), h('', X.ozet)], 18);
     birlesik.push(`A${r}:G${r}`);
-    kat.sorular.forEach(s => {
+    maddeler.forEach(s => {
       no++;
       satirEkle([h(no, X.hucreOrta), h(s.soru, X.hucre), h(s.mevzuat, X.hucre), h('', X.hucreOrta), h('', X.hucre), h('', X.hucre), h('', X.hucre), kod(`${kat.id}.${s.id}`)], 32);
     });

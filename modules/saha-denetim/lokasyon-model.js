@@ -186,8 +186,35 @@ function ldLokasyonOlustur(v) {
     aciklama: (v.aciklama || '').trim(),
     sira: Number(v.sira) || 0,
     kategoriler: Array.isArray(v.kategoriler) && v.kategoriler.length ? v.kategoriler.filter(k => ldKategoriGetir(k)) : ldVarsayilanKategoriler(),
+    // Kullanıcı isteği (2026-11-19): "önce lokasyonları belirlerim, o lokasyona
+    // göre soruları seçerim, bundan sonra sadece seçtiğim sorular olur; sonradan
+    // ekleme çıkarma duruma göre yapılır". sorular: seçilen madde anahtarları
+    // ("kategori.soruId"); null = seçilen kategorilerin tüm maddeleri (eski kayıtlar).
+    sorular: Array.isArray(v.sorular) ? v.sorular.filter(a => ldSoruGetir(a)) : null,
+    // "O lokasyondaki ekipmanlar (yangın dolabı, göz ve boy duşu...)": Acil Durum
+    // ekipman kayıt id'leri; null = bölüm/lokasyon adı eşleşmesi (eski kayıtlar).
+    ekipmanIdleri: Array.isArray(v.ekipmanIdleri) ? v.ekipmanIdleri.slice() : null,
     olusturmaTarihi: v.olusturmaTarihi || new Date().toISOString()
   };
+}
+
+// "kategori.soruId" → { kategori, soru } ya da null.
+function ldSoruGetir(anahtar) {
+  const [kid, sid] = String(anahtar || '').split('.');
+  const kat = ldKategoriGetir(kid);
+  const soru = kat && kat.sorular && kat.sorular.find(s => s.id === sid);
+  return soru ? { kategori: kat, soru } : null;
+}
+
+// Lokasyonun (ya da ziyaretin) sorulacak madde anahtarları.
+function ldSecilenSorular(kayit) {
+  if (Array.isArray(kayit.sorular)) return kayit.sorular.slice();
+  const liste = [];
+  (kayit.kategoriler || []).forEach(kid => {
+    const kat = ldKategoriGetir(kid);
+    (kat && kat.sorular || []).forEach(s => liste.push(kid + '.' + s.id));
+  });
+  return liste;
 }
 
 function ldSonrakiLokasyonKodu(liste) {
@@ -242,6 +269,12 @@ function ldZiyaretOlustur(v) {
     lokasyon: (v.lokasyon || '').trim(),
     kod: v.kod || '',
     kategoriler: Array.isArray(v.kategoriler) ? v.kategoriler.slice() : ldVarsayilanKategoriler(),
+    // Lokasyonda seçilen maddeler (ziyaret sırasında da eklenip çıkarılabilir); null = kategorilerin tümü.
+    sorular: Array.isArray(v.sorular) ? v.sorular.slice() : null,
+    // Bu lokasyonun acil durum ekipmanları ve kontrol sırasında verilen cevaplar:
+    // ekipmanCevaplari[ekipmanId] = { cevap:{}, malzeme:{}, bulgular, kaydedildi }
+    ekipmanIdleri: Array.isArray(v.ekipmanIdleri) ? v.ekipmanIdleri.slice() : null,
+    ekipmanCevaplari: v.ekipmanCevaplari || {},
     girisZamani: v.girisZamani || new Date().toISOString(),
     girisYontemi: v.girisYontemi || 'manuel',
     cevaplar: v.cevaplar || {},
@@ -255,11 +288,14 @@ function ldZiyaretOlustur(v) {
 // serbest bulgular. Dönüş: [{ anahtar, kategori, soru, mevzuat, cevap }]
 function ldZiyaretMaddeleri(ziyaret) {
   const sonuc = [];
+  const secili = Array.isArray(ziyaret.sorular) ? new Set(ziyaret.sorular) : null;
   (ziyaret.kategoriler || []).forEach(kid => {
     const kat = ldKategoriGetir(kid);
     if (!kat || !kat.sorular) return;
     kat.sorular.forEach(s => {
       const anahtar = kid + '.' + s.id;
+      // Yalnızca seçilen maddeler (cevaplanmış eski maddeler aşağıda yine eklenir).
+      if (secili && !secili.has(anahtar)) return;
       const c = (ziyaret.cevaplar || {})[anahtar];
       sonuc.push({ anahtar, kategori: kat, soru: c && c.s ? c.s : s.soru, mevzuat: c && c.m ? c.m : s.mevzuat, cevap: c || null });
     });
@@ -269,7 +305,7 @@ function ldZiyaretMaddeleri(ziyaret) {
     if (sonuc.some(m => m.anahtar === anahtar)) return;
     const c = ziyaret.cevaplar[anahtar];
     const kat = ldKategoriGetir(c.k) || LD_SERBEST_KATEGORI;
-    if (!c.serbest && !(ziyaret.kategoriler || []).includes(c.k) && !c.sonuc) return;
+    if (!c.serbest && !c.sonuc) return;
     sonuc.push({ anahtar, kategori: kat, soru: c.s || '', mevzuat: c.m || '', cevap: c });
   });
   return sonuc;

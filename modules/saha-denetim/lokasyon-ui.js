@@ -56,6 +56,12 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
   const ziyaretKutusu = _ldEl('ldZiyaretler');
   ziyaretKutusu.addEventListener('click', _ldZiyaretTiklandi);
   ziyaretKutusu.addEventListener('change', _ldZiyaretDegisti);
+  // Ekipman kartlarının açık/kapalı durumu yeniden çizimde korunsun ('toggle' kabarcıklanmaz → capture).
+  ziyaretKutusu.addEventListener('toggle', e => {
+    const a = e.target && e.target.getAttribute && e.target.getAttribute('data-ek-anahtar');
+    if (!a) return;
+    if (e.target.open) _ldAcikEkipmanlar.add(a); else _ldAcikEkipmanlar.delete(a);
+  }, true);
 
   // Lokasyon seçimi / kategori / serbest bulgu / aktar / tarama modalları
   _ldEl('ldLokasyonSecKapat').addEventListener('click', () => _ldModalKapat('ldLokasyonSecModal'));
@@ -88,6 +94,13 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
   _ldEl('ldLokasyonModalKaydet').addEventListener('click', _ldLokasyonModalKaydet);
   _ldEl('ldLBolum').addEventListener('input', _ldLokasyonModalBolumDegisti);
   _ldEl('ldLLokasyon').addEventListener('input', _ldLokasyonEkipmanBilgisiCiz);
+  _ldEl('ldLEkipmanAra').addEventListener('input', _ldEkipmanSecimCiz);
+  _ldEl('ldLEkipmanSecim').addEventListener('change', e => {
+    if (!e.target.hasAttribute('data-ek-sec')) return;
+    if (!_ldEkipmanSecili) _ldEkipmanSecili = new Set(_ldEkipmanSecimOku());
+    if (e.target.checked) _ldEkipmanSecili.add(e.target.value); else _ldEkipmanSecili.delete(e.target.value);
+    _ldEkipmanSecimCiz();
+  });
   _ldEl('ldLCoklu').addEventListener('change', _ldCokluModGuncelle);
   _ldEl('ldLokasyonGovde').addEventListener('click', _ldLokasyonListesiTiklandi);
   _ldEl('ldLokTumunuSec').addEventListener('change', e => {
@@ -303,7 +316,7 @@ function _ldZiyaretKartiHtml(d, z) {
   return `<div class="ld-kart" id="ldKart_${z.id}">${bas}
     <div class="ld-kart-govde">
       ${kilitli ? '' : `<div class="ld-eylemler" style="margin-top:10px;">
-        <button type="button" class="ikincil" data-kat-duzenle="${z.id}" style="width:auto;">☰ Kategoriler</button>
+        <button type="button" class="ikincil" data-kat-duzenle="${z.id}" style="width:auto;" title="Bu lokasyonda sorulacak maddeleri ekle / çıkar">☰ Maddeleri Düzenle</button>
         <button type="button" class="ikincil" data-serbest-ekle="${z.id}" style="width:auto;">+ Listede Olmayan Tespit</button>
         <button type="button" class="ikincil sil" data-ziyaret-sil="${z.id}" style="width:auto;">Lokasyonu Kontrolden Çıkar</button>
       </div>`}
@@ -355,25 +368,57 @@ function _ldMaddeHtml(d, z, m, kilitli) {
   </div>`;
 }
 
+// Kullanıcı isteği (2026-11-19): lokasyondaki acil durum ekipmanları (yangın
+// dolabı, göz ve boy duşu...) bu kontrolde, Acil Durum ekipman kontrolünün
+// kendi maddeleriyle kontrol edilir; "Kontrolü Kaydet" sonucu ekipmanın Acil
+// Durum kaydına yazar (bkz. lokasyon-service.js ldEkipmanKontrolKaydet).
+const _ldAcikEkipmanlar = new Set();
+
+function _ldEkipmanMaddeleri(e) {
+  const sorular = ((typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[e.tur]) || []).map(s => ({ tip: 's', id: s.id, metin: s.soru }));
+  return sorular.concat((Array.isArray(e.malzemeListesi) ? e.malzemeListesi : []).map(m => ({ tip: 'm', id: m.id, metin: `Malzeme: ${m.ad} (${m.adet || 1} adet)` })));
+}
+
 function _ldEkipmanPaneliHtml(z, kilitli) {
-  const liste = z.ekipmanOzeti || [];
+  const ekipmanlar = ldLokasyonEkipmanlari(z.bolum, z.lokasyon, z.ekipmanIdleri);
   const yenile = kilitli ? '' : `<button type="button" class="tablo-buton" data-ekipman-yenile="${z.id}">↻ Güncelle</button>`;
-  if (!liste.length) {
+  if (!ekipmanlar.length) {
     return `<div class="ld-kategori"><div class="ld-kategori-bas"><span>🧯 Acil Durum Ekipmanları</span>${yenile}</div>
-      <div class="ld-bilgi" style="padding:8px 2px;">Bu bölüm/lokasyon adıyla eşleşen acil durum ekipmanı bulunamadı (Acil Durum > Ekipmanlar'daki bölüm ve lokasyon adları bu lokasyonla aynı yazılmalı).</div></div>`;
+      <div class="ld-bilgi" style="padding:8px 2px;">Bu lokasyona acil durum ekipmanı atanmadı. "Lokasyonlar ve Barkodlar" sekmesinde lokasyonu düzenleyip ekipmanları seçin.</div></div>`;
   }
-  const rozet = e => e.sonucMetni === 'Uygun' ? 'rozet-uygun' : e.kontrolYok || e.gecikmis ? 'rozet-gecikmis' : 'rozet-orta';
-  return `<div class="ld-kategori"><div class="ld-kategori-bas"><span>🧯 Acil Durum Ekipmanları (${liste.length}) <span class="ld-bilgi" style="font-weight:400;">— Acil Durum modülündeki son kontrollere göre, ${_ldTarihGoster(z.ekipmanOzetiTarihi)}</span></span>${yenile}</div>
-    <div class="tablo-scroll"><table class="veri-tablosu ld-ekipman-tablo">
-      <thead><tr><th>Ekipman</th><th>Tür</th><th>Son / Sonraki Kontrol</th><th>Durum</th><th></th></tr></thead>
-      <tbody>${liste.map(e => `<tr>
-        <td><b>${_ldK(e.ekipmanNo || '-')}</b><div class="ld-bilgi">${_ldK(e.lokasyon)}</div></td>
-        <td>${_ldK(e.tur)}</td>
-        <td>${_ldTarihGoster(e.sonKontrol)} / ${_ldTarihGoster(e.sonrakiKontrol)}</td>
-        <td><span class="genel-rozet ${rozet(e)}">${_ldK(e.sonucMetni)}</span>${e.uygunDegil.length ? `<div class="ld-bilgi">${e.uygunDegil.map(_ldK).join('; ')}</div>` : ''}</td>
-        <td>${!kilitli && e.sonucMetni !== 'Uygun' ? `<button type="button" class="tablo-buton" data-ekipman-bulgu="${_ldK(e.id)}" data-z="${z.id}">+ Bulgu</button>` : ''}</td>
-      </tr>`).join('')}</tbody>
-    </table></div></div>`;
+  const secenekler = typeof EKIPMAN_KONTROL_CEVAP_SECENEKLERI !== 'undefined' ? EKIPMAN_KONTROL_CEVAP_SECENEKLERI : ['Uygun', 'Uygun Değil', 'İlgili Değil'];
+  const sinif = { 'Uygun': 'secili-uygun', 'Uygun Değil': 'secili-uygun-degil', 'İlgili Değil': 'secili-uygulanamaz' };
+  const kisa = { 'Uygun': '✓ Uygun', 'Uygun Değil': '✗ Uygun Değil', 'İlgili Değil': 'İlgisiz' };
+  const bugun = new Date().toISOString().slice(0, 10);
+  const kartlar = ekipmanlar.map(e => {
+    const c = (z.ekipmanCevaplari || {})[e.id] || { cevap: {}, malzeme: {}, bulgular: '', kaydedildi: '' };
+    const maddeler = _ldEkipmanMaddeleri(e);
+    const n = maddeler.filter(m => (m.tip === 'm' ? c.malzeme : c.cevap)[m.id]).length;
+    const oz = (z.ekipmanOzeti || []).find(x => x.id === e.id);
+    const durumRozet = oz ? `<span class="genel-rozet ${oz.sonucMetni === 'Uygun' ? 'rozet-uygun' : oz.kontrolYok || oz.gecikmis ? 'rozet-gecikmis' : 'rozet-orta'}">${_ldK(oz.sonucMetni)}</span>` : '';
+    const anahtar = z.id + '_' + e.id;
+    const acik = _ldAcikEkipmanlar.has(anahtar);
+    const uygunDegilVar = Object.values(c.cevap).concat(Object.values(c.malzeme || {})).includes('Uygun Değil');
+    return `<details class="ld-ek${c.kaydedildi ? ' kaydedildi' : ''}" id="ldEk_${anahtar}" data-ek-anahtar="${anahtar}" ${acik ? 'open' : ''}>
+      <summary><span><b>${_ldK(e.ekipmanNo || '-')}</b> · ${_ldK(e.tur)} <span class="ld-bilgi">· ${_ldK(e.lokasyon)}</span></span>
+        <span class="ld-bilgi">Son kontrol: ${_ldTarihGoster(e.sonKontrol)} ${durumRozet} ${c.kaydedildi ? `<span class="genel-rozet rozet-uygun">✓ Bu kontrolde kaydedildi ${_ldSaatGoster(c.kaydedildi)}</span>` : `${n}/${maddeler.length}`}</span></summary>
+      <div class="ld-ek-govde">
+        ${maddeler.map(m => {
+          const v = (m.tip === 'm' ? c.malzeme : c.cevap)[m.id] || '';
+          return `<div class="ld-ek-madde"><span class="metin">${_ldK(m.metin)}</span><span class="ld-sonuc">${secenekler.map(s =>
+            `<button type="button" ${kilitli ? 'disabled' : ''} class="${v === s ? sinif[s] || '' : ''}" data-ek-cevap="${_ldK(s)}" data-z="${z.id}" data-e="${_ldK(e.id)}" data-ek-m="${_ldK(m.id)}" data-ek-tip="${m.tip}">${kisa[s] || _ldK(s)}</button>`).join('')}</span></div>`;
+        }).join('')}
+        <textarea rows="2" data-ek-bulgu data-z="${z.id}" data-e="${_ldK(e.id)}" ${kilitli ? 'disabled' : ''} placeholder="Bulgular / yapılan işlem" style="margin-top:6px;">${_ldK(c.bulgular)}</textarea>
+        ${kilitli ? '' : `<div class="ld-eylemler">
+          <button type="button" class="tablo-buton" data-ek-tumu data-z="${z.id}" data-e="${_ldK(e.id)}">Kalanlar Uygun</button>
+          <button type="button" class="birincil" data-ek-kaydet data-z="${z.id}" data-e="${_ldK(e.id)}" style="width:auto;" title="Sonucu Acil Durum > Ekipman kaydına yazar (son kontrol bugün)">💾 Kontrolü Kaydet</button>
+          ${uygunDegilVar || (oz && oz.sonucMetni !== 'Uygun') ? `<button type="button" class="tablo-buton" data-ekipman-bulgu="${_ldK(e.id)}" data-z="${z.id}">+ Bulgu olarak ekle</button>` : ''}
+        </div>`}
+      </div>
+    </details>`;
+  }).join('');
+  const kaydedilen = ekipmanlar.filter(e => ((z.ekipmanCevaplari || {})[e.id] || {}).kaydedildi).length;
+  return `<div class="ld-kategori"><div class="ld-kategori-bas"><span>🧯 Acil Durum Ekipmanları — ${kaydedilen}/${ekipmanlar.length} kontrol edildi <span class="ld-bilgi" style="font-weight:400;">(sorular Acil Durum ekipman kontrolünden; kaydedince ekipmanın kaydına yazılır)</span></span>${yenile}</div>${kartlar}</div>`;
 }
 
 function _ldMaddeBul(z, anahtar) {
@@ -451,10 +496,53 @@ async function _ldZiyaretTiklandi(e) {
     _ldDetayCiz();
   } else if (b.hasAttribute('data-ekipman-bulgu')) {
     const z = _ldAktifZiyaret(zid);
-    const e2 = z && (z.ekipmanOzeti || []).find(x => x.id === b.getAttribute('data-ekipman-bulgu'));
-    if (!e2) return;
-    const tespit = `${e2.tur} ${e2.ekipmanNo}${e2.lokasyon ? ' (' + e2.lokasyon + ')' : ''}: ${e2.sonucMetni}${e2.uygunDegil.length ? ' — ' + e2.uygunDegil.join('; ') : ''}${e2.gecikmis ? ` (sonraki kontrol tarihi ${_ldTarihGoster(e2.sonrakiKontrol)})` : ''}`;
-    ldSerbestBulguEkle(did, zid, tespit, 'acil', e2.tur === 'Yangın Tüpü' || e2.tur === 'Yangın Dolabı' || e2.tur === 'Hidrant' ? _LD_M.yangin : _LD_M.acil);
+    const eid = b.getAttribute('data-ekipman-bulgu');
+    const ek = ldAcilEkipmanGetir(eid);
+    const e2 = z && (z.ekipmanOzeti || []).find(x => x.id === eid);
+    if (!z || (!ek && !e2)) return;
+    // Bu kontrolde işaretlenen "Uygun Değil" maddeler önceliklidir; yoksa son kontrol özeti.
+    const c = (z.ekipmanCevaplari || {})[eid];
+    const taslak = c && ek ? _ldEkipmanMaddeleri(ek).filter(m => (m.tip === 'm' ? c.malzeme : c.cevap)[m.id] === 'Uygun Değil').map(m => m.metin) : [];
+    const tur = (ek || e2).tur, no = (ek || e2).ekipmanNo, yer = (ek || e2).lokasyon;
+    const tespit = taslak.length
+      // Tespit = denetçinin yazdığı bulgu; madde metni "olması gereken" olduğundan ayrıca belirtilir.
+      ? `${tur} ${no}${yer ? ' (' + yer + ')' : ''}: ${(c.bulgular || '').trim() || 'Kontrol maddeleri karşılanmıyor'} — karşılanmayan madde: ${taslak.join('; ')}`
+      : `${tur} ${no}${yer ? ' (' + yer + ')' : ''}: ${e2.sonucMetni}${e2.uygunDegil.length ? ' — ' + e2.uygunDegil.join('; ') : ''}${e2.gecikmis ? ` (sonraki kontrol tarihi ${_ldTarihGoster(e2.sonrakiKontrol)})` : ''}`;
+    ldSerbestBulguEkle(did, zid, tespit, 'acil', ['Yangın Tüpü', 'Yangın Dolabı', 'Hidrant'].includes(tur) ? _LD_M.yangin : _LD_M.acil);
+    _ldDetayCiz();
+  } else if (b.hasAttribute('data-ek-cevap')) {
+    const eid = b.getAttribute('data-e');
+    const v = b.getAttribute('data-ek-cevap');
+    const mid = b.getAttribute('data-ek-m');
+    const tip = b.getAttribute('data-ek-tip');
+    ldEkipmanCevapGuncelle(did, zid, eid, c => {
+      const hedef = tip === 'm' ? (c.malzeme = c.malzeme || {}) : (c.cevap = c.cevap || {});
+      hedef[mid] = hedef[mid] === v ? '' : v;
+      c.kaydedildi = '';
+    });
+    _ldDetayCiz();
+  } else if (b.hasAttribute('data-ek-tumu')) {
+    const eid = b.getAttribute('data-e');
+    const ek = ldAcilEkipmanGetir(eid);
+    if (!ek) return;
+    ldEkipmanCevapGuncelle(did, zid, eid, c => {
+      c.cevap = c.cevap || {}; c.malzeme = c.malzeme || {};
+      _ldEkipmanMaddeleri(ek).forEach(m => { const h = m.tip === 'm' ? c.malzeme : c.cevap; if (!h[m.id]) h[m.id] = 'Uygun'; });
+      c.kaydedildi = '';
+    });
+    _ldDetayCiz();
+  } else if (b.hasAttribute('data-ek-kaydet')) {
+    const eid = b.getAttribute('data-e');
+    const ek = ldAcilEkipmanGetir(eid);
+    const z = _ldAktifZiyaret(zid);
+    const c = z && (z.ekipmanCevaplari || {})[eid];
+    const toplam = ek ? _ldEkipmanMaddeleri(ek).length : 0;
+    const n = c && ek ? _ldEkipmanMaddeleri(ek).filter(m => (m.tip === 'm' ? c.malzeme || {} : c.cevap || {})[m.id]).length : 0;
+    if (!n) { alert('Önce kontrol maddelerini işaretleyin.'); return; }
+    if (n < toplam && !(await onayModali(`${toplam - n} madde işaretlenmedi. Yine de ${ek.ekipmanNo} kontrolü Acil Durum kaydına yazılsın mı?`, 'Kaydet'))) return;
+    const s = ldEkipmanKontrolKaydet(did, zid, eid, (_ldKullanici && _ldKullanici.adSoyad) || '', _ldBugunIso());
+    if (!s.basarili) { alert(s.hata); return; }
+    _ldBildirim(`${ek.ekipmanNo} kontrolü Acil Durum kaydına yazıldı.`);
     _ldDetayCiz();
   }
 }
@@ -464,6 +552,10 @@ async function _ldZiyaretDegisti(e) {
   const did = _ldAktifDenetimId;
   if (t.hasAttribute('data-lok-not')) {
     ldZiyaretAlanGuncelle(did, t.getAttribute('data-lok-not'), { lokasyonNotu: t.value.trim() });
+    return;
+  }
+  if (t.hasAttribute('data-ek-bulgu')) {
+    ldEkipmanCevapGuncelle(did, t.getAttribute('data-z'), t.getAttribute('data-e'), c => { c.bulgular = t.value; c.kaydedildi = ''; });
     return;
   }
   const zid = t.getAttribute('data-z');
@@ -579,23 +671,69 @@ function _ldLokasyonSecListeCiz() {
 
 // ---------- Kategori / serbest bulgu ----------
 
-function _ldKategoriSecimHtml(secili, ad) {
-  return LD_KATEGORILER.map(k => `<label><input type="checkbox" name="${ad}" value="${k.id}" ${secili.includes(k.id) ? 'checked' : ''}> ${_ldK(k.ad)} <span class="ld-bilgi">(${k.sorular.length})</span></label>`).join('');
+// ---- Madde (soru) seçici: kategori kutusu + açılır madde listesi ----
+// Kullanıcı isteği (2026-11-19): lokasyona göre sorular tek tek seçilir,
+// sonradan ekleme/çıkarma yapılabilir.
+function _ldSoruSeciciKur(kutuId, seciliAnahtarlar) {
+  const kutu = _ldEl(kutuId);
+  const set = new Set(seciliAnahtarlar || []);
+  kutu.innerHTML = LD_KATEGORILER.map(k => {
+    const n = k.sorular.filter(s => set.has(k.id + '.' + s.id)).length;
+    return `<div class="ld-ss-kat">
+      <div class="ld-ss-ust">
+        <input type="checkbox" data-ss-kat="${k.id}" ${n === k.sorular.length ? 'checked' : ''} title="Kategorinin tüm maddelerini seç / bırak">
+        <details ${n && n < k.sorular.length ? 'open' : ''}><summary>${_ldK(k.ad)} <span class="ld-bilgi" data-ss-sayi="${k.id}">${n}/${k.sorular.length}</span></summary>
+          <div class="ld-ss-liste">${k.sorular.map(s => `<label><input type="checkbox" data-ss-madde="${k.id}" value="${k.id}.${s.id}" ${set.has(k.id + '.' + s.id) ? 'checked' : ''}> ${_ldK(s.soru)}</label>`).join('')}</div>
+        </details>
+      </div>
+    </div>`;
+  }).join('');
+  const katGuncelle = kid => {
+    const maddeler = kutu.querySelectorAll(`[data-ss-madde="${kid}"]`);
+    const n = Array.from(maddeler).filter(m => m.checked).length;
+    const kc = kutu.querySelector(`[data-ss-kat="${kid}"]`);
+    kc.checked = n === maddeler.length;
+    kc.indeterminate = n > 0 && n < maddeler.length;
+    kutu.querySelector(`[data-ss-sayi="${kid}"]`).textContent = `${n}/${maddeler.length}`;
+  };
+  LD_KATEGORILER.forEach(k => katGuncelle(k.id));
+  if (!kutu.dataset.bagli) {
+    kutu.dataset.bagli = '1';
+    kutu.addEventListener('change', e => {
+      const t = e.target;
+      if (t.hasAttribute('data-ss-kat')) {
+        const kid = t.getAttribute('data-ss-kat');
+        kutu.querySelectorAll(`[data-ss-madde="${kid}"]`).forEach(m => { m.checked = t.checked; });
+        katGuncelle(kid);
+      } else if (t.hasAttribute('data-ss-madde')) {
+        katGuncelle(t.getAttribute('data-ss-madde'));
+      }
+    });
+  }
+}
+
+function _ldSoruSeciciOku(kutuId) {
+  const sorular = Array.from(_ldEl(kutuId).querySelectorAll('[data-ss-madde]:checked')).map(i => i.value);
+  return { sorular, kategoriler: Array.from(new Set(sorular.map(a => a.split('.')[0]))) };
 }
 
 function _ldKategoriModalAc(zid) {
   const z = _ldAktifZiyaret(zid);
   if (!z) return;
   _ldKategoriBaglam = { ziyaretId: zid };
-  _ldEl('ldKategoriSecim').innerHTML = _ldKategoriSecimHtml(z.kategoriler, 'ldKatZ');
+  _ldSoruSeciciKur('ldKategoriSecim', ldSecilenSorular(z));
   _ldModalAc('ldKategoriModal');
 }
 
 function _ldKategoriKaydet() {
   if (!_ldKategoriBaglam) return;
-  const secili = Array.from(document.querySelectorAll('input[name="ldKatZ"]:checked')).map(i => i.value);
-  if (!secili.length) { alert('En az bir kategori seçin.'); return; }
-  ldZiyaretKategorileriGuncelle(_ldAktifDenetimId, _ldKategoriBaglam.ziyaretId, secili);
+  const { sorular, kategoriler } = _ldSoruSeciciOku('ldKategoriSecim');
+  if (!sorular.length) { alert('En az bir madde seçin.'); return; }
+  const z = ldZiyaretSorulariGuncelle(_ldAktifDenetimId, _ldKategoriBaglam.ziyaretId, sorular);
+  if (z && _ldEl('ldSoruLokasyonaKaydet').checked) {
+    const lok = ldLokasyonGetir(z.lokasyonId);
+    if (lok) ldLokasyonKaydet(Object.assign({}, lok, { sorular, kategoriler }));
+  }
   _ldModalKapat('ldKategoriModal');
   _ldDetayCiz();
 }
@@ -780,14 +918,41 @@ function _ldKodOkundu(metin) {
   const kod = _ldKoddanLokasyonKodu(metin);
   const lok = ldLokasyonKodlaBul(kod);
   const durum = _ldEl('ldTaramaDurum');
-  if (!lok) {
-    durum.textContent = `"${kod}" koduyla tanımlı lokasyon bulunamadı, taramaya devam ediliyor…`;
-    durum.classList.add('gorunur');
+  if (lok) {
+    _ldTaramaMesgul = true;
+    _ldTaramaDurdur();
+    _ldLokasyonaGir(lok.id, 'barkod');
     return;
   }
-  _ldTaramaMesgul = true;
-  _ldTaramaDurdur();
-  _ldLokasyonaGir(lok.id, 'barkod');
+  // Kullanıcı isteği (2026-11-19): "barkodlama diğer kontroldeki barkodla aynı" —
+  // Acil Durum'daki ekipman barkodu (Ekipman No) okutulursa ekipmanın atandığı
+  // lokasyon kontrole eklenir/açılır ve ekipmanın kontrol kartı açılır.
+  const ek = ldAcilEkipmanNoIleBul(kod);
+  if (ek) {
+    const d = ldDenetimGetir(_ldAktifDenetimId);
+    const icerir = x => ldLokasyonEkipmanlari(x.bolum, x.lokasyon, x.ekipmanIdleri).some(e => e.id === ek.id);
+    const ziyaret = d && d.ziyaretler.find(icerir);
+    const hedefLok = ziyaret ? ldLokasyonGetir(ziyaret.lokasyonId) : ldLokasyonlariGetir().find(icerir);
+    if (!ziyaret && !hedefLok) {
+      durum.textContent = `${ek.ekipmanNo} (${ek.tur}) hiçbir lokasyona atanmamış. Lokasyonlar sekmesinde ilgili lokasyonu düzenleyip ekipmanı seçin.`;
+      durum.classList.add('gorunur');
+      return;
+    }
+    _ldTaramaMesgul = true;
+    _ldTaramaDurdur();
+    if (ziyaret) { _ldAcikZiyaretler.add(ziyaret.id); } else { _ldLokasyonaGir(hedefLok.id, 'barkod'); }
+    const z = ldDenetimGetir(_ldAktifDenetimId).ziyaretler.find(icerir);
+    if (!z) return;
+    _ldAcikZiyaretler.add(z.id);
+    _ldAcikEkipmanlar.add(z.id + '_' + ek.id);
+    _ldDetayCiz();
+    const kart = _ldEl('ldEk_' + z.id + '_' + ek.id);
+    if (kart) kart.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    _ldBildirim(`${ek.ekipmanNo} · ${ek.tur} — ${z.bolum} / ${z.lokasyon}`);
+    return;
+  }
+  durum.textContent = `"${kod}" koduyla lokasyon ya da ekipman bulunamadı, taramaya devam ediliyor…`;
+  durum.classList.add('gorunur');
 }
 
 // Telefon kamerasıyla QR okutulup sayfa ?lok= ile açıldıysa: açık denetime
@@ -838,14 +1003,14 @@ function _ldLokasyonListesiCiz() {
   }
   bos.classList.remove('gorunur');
   govde.innerHTML = liste.map(l => {
-    const ekipman = ldLokasyonEkipmanlari(l.bolum, l.lokasyon).length;
+    const ekipman = ldLokasyonEkipmanlari(l.bolum, l.lokasyon, l.ekipmanIdleri).length;
     const katAdlari = l.kategoriler.map(k => (ldKategoriGetir(k) || {}).ad).filter(Boolean).join(', ');
     return `<tr>
       <td><input type="checkbox" data-lok-cb="${l.id}" style="width:auto; margin:0;"></td>
       <td class="ld-kod">${_ldK(l.kod)}</td>
       <td>${_ldK(l.bolum)}</td>
       <td>${_ldK(l.lokasyon)}${l.aciklama ? `<div class="ld-bilgi">${_ldK(l.aciklama)}</div>` : ''}</td>
-      <td title="${_ldK(katAdlari)}">${l.kategoriler.length} kategori</td>
+      <td title="${_ldK(katAdlari)}">${ldSecilenSorular(l).length} madde <span class="ld-bilgi">(${l.kategoriler.length} kategori)</span></td>
       <td>${ekipman ? ekipman + ' ekipman' : '<span class="ld-bilgi">eşleşme yok</span>'}</td>
       <td>
         <button class="tablo-buton" data-lok-duzenle="${l.id}">Düzenle</button>
@@ -883,12 +1048,41 @@ function _ldLokasyonModalAc(l) {
   _ldEl('ldLCoklu').checked = false;
   _ldEl('ldLCokluSecimEtiket').classList.toggle('ld-gizli', !!l);
   _ldEl('ldLAciklama').value = l ? l.aciklama : '';
-  _ldEl('ldLKategoriler').innerHTML = _ldKategoriSecimHtml(l ? l.kategoriler : ldVarsayilanKategoriler(), 'ldKatL');
+  _ldSoruSeciciKur('ldLKategoriler', l ? ldSecilenSorular(l) : ldSecilenSorular({ kategoriler: ldVarsayilanKategoriler() }));
   ['ldLBolumHata', 'ldLLokasyonHata', 'ldLKategorilerHata'].forEach(id => { _ldEl(id).textContent = ''; });
   _ldEl('ldAcilBolumListesi').innerHTML = ldAcilBolumleri().map(b => `<option value="${_ldK(b)}">`).join('');
+  // Ekipman seçimi: kayıtlı seçim varsa o, yoksa ad eşleşmesiyle önerilir.
+  _ldEkipmanSecili = l && Array.isArray(l.ekipmanIdleri) ? new Set(l.ekipmanIdleri) : null;
+  _ldEl('ldLEkipmanAra').value = '';
   _ldCokluModGuncelle();
   _ldLokasyonModalBolumDegisti();
   _ldModalAc('ldLokasyonModal');
+}
+
+// Lokasyon formundaki ekipman seçimi. null = kullanıcı henüz elle seçmedi
+// (bölüm/lokasyon adı eşleşmesiyle önerilir).
+let _ldEkipmanSecili = null;
+
+function _ldEkipmanSecimCiz() {
+  const bolum = _ldEl('ldLBolum').value.trim();
+  const kutu = _ldEl('ldLEkipmanSecim');
+  const bilgi = _ldEl('ldLEkipmanBilgi');
+  if (!bolum) { kutu.innerHTML = '<div class="ld-bilgi" style="padding:6px;">Önce bölümü yazın.</div>'; bilgi.textContent = ''; return; }
+  const lok = _ldEl('ldLCoklu').checked ? '' : _ldEl('ldLLokasyon').value.trim();
+  const tumu = ldBolumunEkipmanlari(bolum);
+  const secili = _ldEkipmanSecili || new Set(ldLokasyonEkipmanlari(bolum, lok).map(e => e.id));
+  const ara = ldNormalize(_ldEl('ldLEkipmanAra').value);
+  const gorunen = tumu.filter(e => !ara || ldNormalize(`${e.ekipmanNo} ${e.tur} ${e.lokasyon}`).includes(ara));
+  kutu.innerHTML = gorunen.length ? gorunen.map(e => `<label><input type="checkbox" data-ek-sec value="${_ldK(e.id)}" ${secili.has(e.id) ? 'checked' : ''}> <span><b>${_ldK(e.ekipmanNo || '-')}</b> · ${_ldK(e.tur)} <span class="ld-bilgi">· ${_ldK(e.lokasyon)}</span></span></label>`).join('')
+    : `<div class="ld-bilgi" style="padding:6px;">${tumu.length ? 'Aramayla eşleşen ekipman yok.' : 'Acil Durum modülünde bu bölümde ekipman yok (bölüm adı oradakiyle aynı yazılmalı).'}</div>`;
+  bilgi.textContent = `${secili.size} ekipman seçili${_ldEkipmanSecili ? '' : ' (lokasyon adına göre önerildi)'} — ${tumu.length} ekipman bu bölümde.`;
+}
+
+function _ldEkipmanSecimOku() {
+  if (_ldEkipmanSecili) return Array.from(_ldEkipmanSecili);
+  const bolum = _ldEl('ldLBolum').value.trim();
+  const lok = _ldEl('ldLLokasyon').value.trim();
+  return ldLokasyonEkipmanlari(bolum, lok).map(e => e.id);
 }
 
 function _ldCokluModGuncelle() {
@@ -904,19 +1098,15 @@ function _ldLokasyonModalBolumDegisti() {
 }
 
 function _ldLokasyonEkipmanBilgisiCiz() {
-  const bolum = _ldEl('ldLBolum').value.trim();
-  const kutu = _ldEl('ldLEkipmanBilgi');
-  if (!bolum) { kutu.textContent = ''; return; }
-  const lok = _ldEl('ldLCoklu').checked ? '' : _ldEl('ldLLokasyon').value.trim();
-  const n = ldLokasyonEkipmanlari(bolum, lok).length;
-  kutu.textContent = n
-    ? `🧯 Acil Durum modülünde bu ${lok ? 'lokasyonla' : 'bölümle'} eşleşen ${n} ekipman var; son kontrol durumları kontrole gelecek.`
-    : '🧯 Acil Durum modülünde bu adla eşleşen ekipman yok (adları oradakiyle aynı yazarsanız ekipman durumları kontrole gelir).';
+  _ldEkipmanSecimCiz();
 }
 
 function _ldLokasyonModalKaydet() {
-  const kategoriler = Array.from(document.querySelectorAll('input[name="ldKatL"]:checked')).map(i => i.value);
-  const ortak = { bolum: _ldEl('ldLBolum').value, aciklama: _ldEl('ldLAciklama').value, kategoriler };
+  const { sorular, kategoriler } = _ldSoruSeciciOku('ldLKategoriler');
+  if (!sorular.length) { _ldEl('ldLKategorilerHata').textContent = 'En az bir madde seçin.'; return; }
+  const coklu = !_ldLokasyonDuzenlenenId && _ldEl('ldLCoklu').checked;
+  // Çoklu eklemede her lokasyonun ekipmanı kendi adına göre eşleşir (null).
+  const ortak = { bolum: _ldEl('ldLBolum').value, aciklama: _ldEl('ldLAciklama').value, kategoriler, sorular, ekipmanIdleri: coklu ? null : _ldEkipmanSecimOku() };
   ['ldLBolumHata', 'ldLLokasyonHata', 'ldLKategorilerHata'].forEach(id => { _ldEl(id).textContent = ''; });
   const hataGoster = h => {
     _ldEl('ldLBolumHata').textContent = h.bolum || '';

@@ -48,6 +48,24 @@
   .ld-kat-secim { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:4px 12px; margin-bottom:12px; }
   .ld-kat-secim label { display:flex; gap:6px; align-items:center; font-weight:400; font-size:13.5px; margin:0; }
   .ld-kat-secim input { width:auto; margin:0; }
+  /* Madde (soru) seçici ve ekipman seçimi */
+  .ld-soru-secim { max-height:42vh; overflow:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:6px 10px; margin-bottom:8px; }
+  .ld-ss-kat { border-bottom:1px solid var(--kenarlik); padding:4px 0; }
+  .ld-ss-kat:last-child { border-bottom:none; }
+  .ld-ss-ust { display:flex; align-items:center; gap:8px; }
+  .ld-ss-ust input { width:auto; margin:0; }
+  .ld-ss-ust details { flex:1; }
+  .ld-ss-ust summary { cursor:pointer; font-size:13.5px; font-weight:600; }
+  .ld-ss-liste label, .ld-ekipman-secim label { display:flex; gap:6px; align-items:flex-start; font-weight:400; font-size:13px; margin:4px 0 4px 6px; }
+  .ld-ss-liste input, .ld-ekipman-secim input { width:auto; margin:2px 0 0; }
+  .ld-ekipman-secim { max-height:30vh; overflow:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:4px 8px; }
+  /* Kontroldeki ekipman kartları */
+  .ld-ek { border:1px solid var(--kenarlik); border-left:4px solid #f59e0b; border-radius:8px; margin:8px 0; }
+  .ld-ek.kaydedildi { border-left-color:var(--basari); }
+  .ld-ek > summary { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:8px 10px; cursor:pointer; font-size:13.5px; }
+  .ld-ek-govde { padding:0 10px 10px; }
+  .ld-ek-madde { display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; padding:5px 0; border-top:1px solid var(--kenarlik); font-size:13px; }
+  .ld-ek-madde span.metin { flex:1 1 260px; }
   .ld-ekipman-tablo td, .ld-ekipman-tablo th { font-size:12.5px; }
   .ld-bilgi { font-size:12.5px; color:var(--metin-soluk); }
   @media (max-width:600px) {
@@ -129,7 +147,7 @@
       </div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
-          <thead><tr><th><input type="checkbox" id="ldLokTumunuSec" style="width:auto; margin:0;"></th><th>Kod</th><th>Bölüm</th><th>Lokasyon / Kat</th><th>Kategoriler</th><th>Acil Durum Ekipmanı</th><th>İşlemler</th></tr></thead>
+          <thead><tr><th><input type="checkbox" id="ldLokTumunuSec" style="width:auto; margin:0;"></th><th>Kod</th><th>Bölüm</th><th>Lokasyon / Kat</th><th>Sorulacak Maddeler</th><th>Acil Durum Ekipmanı</th><th>İşlemler</th></tr></thead>
           <tbody id="ldLokasyonGovde"></tbody>
         </table>
       </div>
@@ -177,12 +195,15 @@
       <textarea id="ldLLokasyonCoklu" rows="4" class="ld-gizli" placeholder="Her satıra bir lokasyon:&#10;Zemin Kat&#10;1. Kat&#10;2. Kat"></textarea>
       <label id="ldLCokluSecimEtiket" style="display:flex; gap:6px; align-items:center; font-weight:400; font-size:13px; margin-top:-6px;"><input type="checkbox" id="ldLCoklu" style="width:auto; margin:0;"> Aynı bölüme birden çok lokasyon ekle (her satıra bir tane)</label>
       <div class="hata-mesaji" id="ldLLokasyonHata"></div>
-      <div id="ldLEkipmanBilgi" class="ld-bilgi" style="margin:4px 0 10px;"></div>
       <label for="ldLAciklama">Açıklama <span class="ld-bilgi">(opsiyonel)</span></label>
       <input type="text" id="ldLAciklama" placeholder="Ör. Paketleme hattı ve forklift şarj alanı dahil">
-      <label>Bu lokasyonda kontrol edilecek kategoriler</label>
-      <div class="ld-kat-secim" id="ldLKategoriler"></div>
+      <label>Bu lokasyonda sorulacak maddeler <span class="ld-bilgi">(kategoriyi açıp maddeleri tek tek seçin; kontrolde yalnız seçilenler sorulur, sonradan değiştirebilirsiniz)</span></label>
+      <div class="ld-soru-secim" id="ldLKategoriler"></div>
       <div class="hata-mesaji" id="ldLKategorilerHata"></div>
+      <label style="margin-top:12px;">🧯 Bu lokasyondaki acil durum ekipmanları <span class="ld-bilgi">(Acil Durum modülünden; kontrol soruları oradan gelir, sonuç oraya yazılır)</span></label>
+      <div id="ldLEkipmanBilgi" class="ld-bilgi" style="margin:2px 0 6px;"></div>
+      <input type="text" id="ldLEkipmanAra" placeholder="Ekipman ara (no, tür, yer)..." style="margin:0 0 6px;">
+      <div class="ld-ekipman-secim" id="ldLEkipmanSecim"></div>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="ldLokasyonModalIptal">İptal</button>
         <button type="button" class="birincil" id="ldLokasyonModalKaydet" style="width:auto;">Kaydet</button>
@@ -205,9 +226,10 @@
   <!-- KATEGORİ DÜZENLE (ziyaret) -->
   <div class="modal-katman" id="ldKategoriModal">
     <div class="modal-kutu" style="max-width:720px;">
-      <h3>Bu Lokasyonda Kontrol Edilecek Kategoriler</h3>
-      <p class="ld-bilgi" style="margin-top:-6px;">Yalnızca bu kontroldeki ziyareti etkiler. Çıkarılan kategorinin (uygunsuzluğa aktarılmamış) cevapları silinir.</p>
-      <div class="ld-kat-secim" id="ldKategoriSecim"></div>
+      <h3>Bu Lokasyonda Sorulacak Maddeler</h3>
+      <p class="ld-bilgi" style="margin-top:-6px;">Madde ekleyip çıkarabilirsiniz. Çıkarılan maddelerin (uygunsuzluğa aktarılmamış) cevapları silinir.</p>
+      <div class="ld-soru-secim" id="ldKategoriSecim"></div>
+      <label style="display:flex; gap:6px; align-items:center; font-weight:400; font-size:13px; margin-top:8px;"><input type="checkbox" id="ldSoruLokasyonaKaydet" checked style="width:auto; margin:0;"> Bu seçimi lokasyon tanımına da kaydet (sonraki kontrollerde de bu maddeler sorulsun)</label>
       <div class="modal-eylemler">
         <button type="button" class="ikincil" id="ldKategoriIptal">İptal</button>
         <button type="button" class="birincil" id="ldKategoriKaydet" style="width:auto;">Kaydet</button>
@@ -289,10 +311,10 @@
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js?v=20261112c"></script>
   <script src="../acil-durum/model.js?v=19"></script>
-  <script src="lokasyon-model.js?v=3"></script>
-  <script src="lokasyon-service.js?v=5"></script>
-  <script src="lokasyon-cikti.js?v=5"></script>
-  <script src="lokasyon-ui.js?v=5"></script>
+  <script src="lokasyon-model.js?v=6"></script>
+  <script src="lokasyon-service.js?v=6"></script>
+  <script src="lokasyon-cikti.js?v=6"></script>
+  <script src="lokasyon-ui.js?v=7"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 
