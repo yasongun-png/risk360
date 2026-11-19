@@ -374,6 +374,9 @@ function _acilDurumExcelRaporBaglantilariniKur() {
   });
   document.getElementById('ekipmanFormYukleBtn').addEventListener('click', () => document.getElementById('ekipmanFormYukleDosya').click());
   document.getElementById('ekipmanFormYukleDosya').addEventListener('change', _ekipmanFormDosyasiSecildi);
+  document.getElementById('ekipmanUygAktarBtn').addEventListener('click', () => _ekUygAktarAc(_ekipmanRaporListesi().map(e => e.id)));
+  document.getElementById('ekUygIptalBtn').addEventListener('click', () => document.getElementById('ekUygAktarModal').classList.remove('acik'));
+  document.getElementById('ekUygKaydetBtn').addEventListener('click', _ekUygAktarKaydet);
   document.getElementById('ekipmanYazdirBtn').addEventListener('click', () => {
     raporListesiYazdir('Acil Durum Ekipmanları', _adFirma ? _adFirma.ad : '', EKIPMAN_EXPORT_KOLONLARI, _ekipmanRaporListesi());
   });
@@ -859,13 +862,20 @@ function ekipmanlariCiz(aramaMetni) {
 
   liste.forEach(e => {
     const satir = document.createElement('tr');
+    // Kullanıcı isteği (2026-11-19): uygunsuz maddeleri Uygunsuzluğa aktarma.
+    const uygBulgular = ekipmanUygunsuzBulgulari(e);
+    const uygBekleyen = uygBulgular.filter(b => !b.aktarim).length;
+    const uygNolar = Array.from(new Set(uygBulgular.filter(b => b.aktarim).map(b => b.aktarim.uygNo).filter(Boolean)));
+    const uygHtml = (uygNolar.length ? `<div style="font-size:11px; color:#15803d; font-weight:600; margin-top:3px;">✓ Uygunsuzluk: ${uygNolar.map(_adKacir).join(', ')}</div>` : '');
+    const uygButon = uygBekleyen ? `<button class="tablo-buton" data-uyg-aktar="${e.id}" title="Son kontroldeki uygunsuz maddeleri Uygunsuzluk modülüne aktar">↪ Uygunsuzluğa Aktar (${uygBekleyen})</button>` : '';
     satir.innerHTML = `
       <td><input type="checkbox" data-ekipman-sec data-id="${e.id}"></td>
       <td>${_adKacir(e.ekipmanNo)}${e.fotoUrl ? ` <a data-foto-ref-href="${e.fotoUrl}" target="_blank" rel="noopener" title="Fotoğrafı büyüt"><img data-foto-ref="${e.fotoUrl}" style="width:22px; height:22px; object-fit:cover; border-radius:4px; vertical-align:middle; border:1px solid var(--kenarlik);"></a>` : ''}</td><td>${_adKacir(e.tur)}</td><td>${_adKacir(e.bolum) || '-'}</td><td>${_adKacir(e.lokasyon)}</td>
       <td>${e.sonKontrol || '-'}</td><td>${e.sonrakiKontrol || '-'}</td>
       <td><span class="genel-rozet rozet-${rozetSinifAdi(e.durumGoruntu)}">${_adKacir(e.durumGoruntu)}</span></td>
-      <td>${_adKacir(e.bulgular) || '-'}</td>
+      <td>${_adKacir(e.bulgular) || '-'}${uygHtml}</td>
       <td>
+        ${uygButon}
         <button class="tablo-buton" data-duzenle="${e.id}">Düzenle</button>
         <button class="tablo-buton sil" data-sil="${e.id}">Sil</button>
       </td>
@@ -875,6 +885,7 @@ function ekipmanlariCiz(aramaMetni) {
 
   fotoReferanslariCoz(govde);
   govde.querySelectorAll('[data-duzenle]').forEach(btn => btn.addEventListener('click', () => ekipmanModalAc(ekipmanIdIleGetirRepo(btn.getAttribute('data-duzenle')))));
+  govde.querySelectorAll('[data-uyg-aktar]').forEach(btn => btn.addEventListener('click', () => _ekUygAktarAc([btn.getAttribute('data-uyg-aktar')])));
   govde.querySelectorAll('[data-sil]').forEach(btn => btn.addEventListener('click', async () => {
     if (await onayModali('Bu ekipmanı silmek istediğinize emin misiniz?', 'Sil')) { ekipmanSil(btn.getAttribute('data-sil')); _ekipmanBolumSekmeleriCiz(); ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value); }
   }));
@@ -2366,4 +2377,80 @@ function formHatalariniGoster(hatalar, onEk) {
     const hataEl = document.getElementById(onEk + buyukAlan + 'Hata');
     if (hataEl) hataEl.textContent = hatalar[alan];
   });
+}
+
+
+// ---------------------------------------------------------------------------
+// Kullanıcı isteği (2026-11-19): "acil durum ekipman kontrollerinden
+// uygunsuzluğa aktarma yapalım" — satırdaki "↪ Uygunsuzluğa Aktar (n)"
+// düğmesi tek ekipman için, araç çubuğundaki düğme seçili (yoksa ekrandaki
+// tüm) ekipmanlar için aynı pencereyi açar. Bkz. service.js
+// ekipmanBulgulariniUygunsuzlugaAktar.
+let _ekUygAktarIdler = [];
+
+function _ekUygAktarAc(idler) {
+  const ekipmanlar = (idler || []).map(id => ekipmanIdIleGetirRepo(id)).filter(Boolean)
+    .map(e => ({ e, bulgular: ekipmanUygunsuzBulgulari(e).filter(b => !b.aktarim) }))
+    .filter(x => x.bulgular.length);
+  if (!ekipmanlar.length) {
+    alert('Aktarılmayı bekleyen uygunsuz kontrol maddesi bulunamadı.\n(Son kontrolde "Uygun Değil" işaretlenen madde ya da bulgu yok, ya da hepsi zaten aktarılmış.)');
+    return;
+  }
+  _ekUygAktarIdler = ekipmanlar.map(x => x.e.id);
+  const toplam = ekipmanlar.reduce((t, x) => t + x.bulgular.length, 0);
+  document.getElementById('ekUygAktarBaslik').textContent = ekipmanlar.length === 1
+    ? `Uygunsuzluğa Aktar — ${[ekipmanlar[0].e.ekipmanNo, ekipmanlar[0].e.tur].filter(Boolean).join(' ')}`
+    : `Uygunsuzluğa Aktar — ${ekipmanlar.length} ekipman, ${toplam} madde`;
+  document.getElementById('ekUygAktarListe').innerHTML = ekipmanlar.map(x => `
+    <div style="margin-bottom:10px;">
+      <div style="font-weight:700; font-size:13px; margin-bottom:4px;">${_adKacir([x.e.ekipmanNo, x.e.tur].filter(Boolean).join(' '))}
+        <span style="font-weight:normal; color:var(--metin-soluk); font-size:12px;">${_adKacir([x.e.bolum, x.e.lokasyon].filter(Boolean).join(' — '))}${x.e.sonKontrol ? ' · son kontrol ' + _adKacir(x.e.sonKontrol.split('-').reverse().join('.')) : ''}</span></div>
+      ${x.bulgular.map(b => `
+        <div style="display:flex; gap:8px; align-items:flex-start; margin:4px 0;">
+          <input type="checkbox" checked data-ek-uyg-sec data-ekipman="${_adKacir(x.e.id)}" data-anahtar="${_adKacir(b.anahtar)}" style="width:auto; margin-top:9px;">
+          <div style="flex:1;">
+            <textarea rows="2" data-ek-uyg-tespit style="width:100%; margin:0; font-size:12.5px;">${_adKacir(b.tespit)}</textarea>
+            ${b.kriter ? `<div style="font-size:11px; color:var(--metin-soluk);">Olması gereken: ${_adKacir(b.kriter)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+  const riskSec = document.getElementById('ekUygRisk');
+  const seviyeler = typeof RISK_SEVIYELERI !== 'undefined' ? RISK_SEVIYELERI : [];
+  const varsayilan = typeof UYG_VARSAYILAN_RISK !== 'undefined' ? UYG_VARSAYILAN_RISK : '';
+  riskSec.innerHTML = seviyeler.map(r => `<option ${r === varsayilan ? 'selected' : ''}>${_adKacir(r)}</option>`).join('');
+  document.getElementById('ekUygSorumlu').value = '';
+  document.getElementById('ekUygTermin').value = '';
+  document.getElementById('ekUygTekKayit').checked = false;
+  document.getElementById('ekUygHata').textContent = '';
+  if (typeof bolumButonlariCiz === 'function') bolumButonlariCiz('ekUygSorumluButonlari', 'ekUygSorumlu', 'tekli');
+  document.getElementById('ekUygAktarModal').classList.add('acik');
+}
+
+function _ekUygAktarKaydet() {
+  const secimler = {};
+  document.querySelectorAll('#ekUygAktarListe [data-ek-uyg-sec]').forEach(cb => {
+    if (!cb.checked) return;
+    const id = cb.getAttribute('data-ekipman');
+    const tespit = cb.parentElement.querySelector('[data-ek-uyg-tespit]').value;
+    (secimler[id] = secimler[id] || []).push({ anahtar: cb.getAttribute('data-anahtar'), tespit });
+  });
+  const idler = Object.keys(secimler);
+  if (!idler.length) { document.getElementById('ekUygHata').textContent = 'En az bir madde işaretleyin.'; return; }
+  const ek = {
+    sorumlu: document.getElementById('ekUygSorumlu').value.trim(),
+    termin: document.getElementById('ekUygTermin').value,
+    riskSeviyesi: document.getElementById('ekUygRisk').value,
+    tekKayit: document.getElementById('ekUygTekKayit').checked
+  };
+  const nolar = [];
+  const hatalar = [];
+  idler.forEach(id => {
+    const s = ekipmanBulgulariniUygunsuzlugaAktar(id, secimler[id], ek);
+    (s.kayitlar || []).forEach(k => nolar.push(k.aksiyonNo || ''));
+    if (!s.basarili || (s.hatalar || []).length) hatalar.push(s.hata || (s.hatalar || []).join(' '));
+  });
+  document.getElementById('ekUygAktarModal').classList.remove('acik');
+  ekipmanlariCiz(document.getElementById('ekipmanAramaKutusu').value);
+  alert(`${nolar.length} uygunsuzluk kaydı oluşturuldu${nolar.filter(Boolean).length ? ': ' + nolar.filter(Boolean).join(', ') : ''}.`
+    + (hatalar.filter(Boolean).length ? '\nAktarılamayan: ' + hatalar.filter(Boolean).join('\n') : ''));
 }

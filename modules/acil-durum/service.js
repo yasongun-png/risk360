@@ -1252,3 +1252,117 @@ function acilDurumEksikVerileriTespitEt(veri) {
   if (!veri.plan.hazirlayan || !veri.plan.onaylayan) eksikler.push('Doküman Kontrol — hazırlayan/onaylayan bilgisi eksik');
   return eksikler;
 }
+
+
+// ---------------------------------------------------------------------------
+// Kullanıcı isteği (2026-11-19): "acil durum ekipman kontrollerinden
+// uygunsuzluğa aktarma yapalım". Bir ekipmanın SON kontrolündeki "Uygun
+// Değil" maddeleri (kontrol soruları + dolap malzemeleri) ve serbest
+// "Bulgular" metni aktarılabilir bulgu olarak listelenir. Aktarılan her
+// bulgu ekipman kaydında uygAktarimlari[anahtar] = {uygId, uygNo, kontrol,
+// tarih} olarak işaretlenir. Aynı bulgu, bağlı uygunsuzluk hâlâ açıkken ya
+// da aynı kontrol tarihinde tekrar aktarılmaz; uygunsuzluk kapatıldıktan
+// sonraki bir kontrolde madde yine "Uygun Değil" çıkarsa tekrar aktarılabilir.
+// anahtar: "s:<soruId>" | "m:<malzemeId>" | "g" (serbest bulgular metni).
+function _ekUygKaydi(uygId) {
+  if (!uygId || typeof uygunsuzlukTumunuGetir !== 'function') return null;
+  return uygunsuzlukTumunuGetir().find(k => k.id === uygId) || null;
+}
+
+function _ekBulguAktarimi(e, anahtar) {
+  const a = (e.uygAktarimlari || {})[anahtar];
+  if (!a || !a.uygId) return null;
+  const uyg = _ekUygKaydi(a.uygId);
+  if (!uyg) return null; // uygunsuzluk silinmiş → tekrar aktarılabilir
+  const kapali = uyg.durum === 'Kapalı' || uyg.durum === 'İptal';
+  if (kapali && (a.kontrol || '') !== (e.sonKontrol || '')) return null;
+  return Object.assign({}, a, { uygNo: uyg.aksiyonNo || a.uygNo || '', durum: uyg.durum });
+}
+
+function _ekEtiket(e) {
+  return [e.ekipmanNo, e.tur].filter(Boolean).join(' ') || e.ad || 'Ekipman';
+}
+
+function ekipmanUygunsuzBulgulari(e) {
+  if (!e) return [];
+  const etiket = _ekEtiket(e);
+  const yer = [e.bolum, e.lokasyon].filter(Boolean).join(' — ');
+  const liste = [];
+  (EKIPMAN_KONTROL_SORULARI[e.tur] || []).forEach(s => {
+    if ((e.kontrolCevaplari || {})[s.id] !== 'Uygun Değil') return;
+    liste.push({ anahtar: 's:' + s.id, kriter: s.soru,
+      tespit: `${etiket}${yer ? ' (' + yer + ')' : ''}: "${s.soru}" şartı sağlanmıyor.` });
+  });
+  (e.malzemeListesi || []).forEach(m => {
+    if ((e.malzemeKontrolleri || {})[m.id] !== 'Uygun Değil') return;
+    liste.push({ anahtar: 'm:' + m.id, kriter: `Dolapta ${m.adet > 1 ? m.adet + ' adet ' : ''}${m.ad} bulunmalı ve kullanılabilir durumda olmalı.`,
+      tespit: `${etiket}${yer ? ' (' + yer + ')' : ''}: dolaptaki "${m.ad}" eksik / uygun değil.` });
+  });
+  const bulgu = (e.bulgular || '').trim();
+  if (bulgu && !/^(uygun|-|yok|uygunsuzluk yok)\.?$/i.test(bulgu)) {
+    liste.push({ anahtar: 'g', kriter: '', tespit: `${etiket}${yer ? ' (' + yer + ')' : ''}: ${bulgu}` });
+  }
+  return liste.map(b => Object.assign(b, { aktarim: _ekBulguAktarimi(e, b.anahtar) }));
+}
+
+function ekipmanBekleyenBulguSayisi(e) {
+  return ekipmanUygunsuzBulgulari(e).filter(b => !b.aktarim).length;
+}
+
+// secimler: [{anahtar, tespit}] — tekKayit true ise hepsi TEK uygunsuzlukta
+// birleştirilir. ek: {sorumlu, termin, riskSeviyesi}.
+function ekipmanBulgulariniUygunsuzlugaAktar(ekipmanId, secimler, ek) {
+  if (typeof uygunsuzlukEkle !== 'function') return { basarili: false, hata: 'Uygunsuzluk modülü yüklenemedi.' };
+  const e = ekipmanIdIleGetirRepo(ekipmanId);
+  if (!e) return { basarili: false, hata: 'Ekipman bulunamadı.' };
+  const bulgular = ekipmanUygunsuzBulgulari(e);
+  const secilen = (secimler || []).map(s => {
+    const b = bulgular.find(x => x.anahtar === s.anahtar);
+    return b && !b.aktarim ? Object.assign({}, b, { tespit: (s.tespit || '').trim() || b.tespit }) : null;
+  }).filter(Boolean);
+  if (!secilen.length) return { basarili: false, hata: 'Aktarılacak bulgu yok.' };
+
+  const ekBilgi = ek || {};
+  const fotolar = [e.fotoUrl, e.fotoUrl2, e.fotoUrl3].filter(Boolean);
+  const ortakAciklama = [
+    `Acil durum ekipman kontrolü tespiti${e.sonKontrol ? ' (' + e.sonKontrol.split('-').reverse().join('.') + ')' : ''}.`,
+    `Ekipman: ${_ekEtiket(e)}${e.ad && e.ad !== e.tur ? ' — ' + e.ad : ''}`,
+    [e.bolum, e.lokasyon].filter(Boolean).length ? `Yer: ${[e.bolum, e.lokasyon].filter(Boolean).join(' — ')}` : '',
+    e.kontrolEden ? `Kontrol eden: ${e.kontrolEden}` : ''
+  ].filter(Boolean);
+  const gruplar = ekBilgi.tekKayit ? [secilen] : secilen.map(b => [b]);
+  const olusan = [];
+  const hatalar = [];
+  gruplar.forEach(grup => {
+    const kriterler = grup.map(b => b.kriter).filter(Boolean);
+    const sonuc = uygunsuzlukEkle({
+      baslik: grup.length === 1 ? grup[0].tespit : `${_ekEtiket(e)}: ${grup.length} kontrol maddesi uygun değil`,
+      aciklama: ortakAciklama.concat(
+        grup.length > 1 ? ['Tespitler:'].concat(grup.map((b, i) => `${i + 1}. ${b.tespit}`)) : [],
+        kriterler.length ? [`Olması gereken: ${kriterler.join(' / ')}`] : []
+      ).join('\n'),
+      bolum: e.bolum || '',
+      lokasyon: e.lokasyon || '',
+      kaynakTuru: 'Saha Denetimi',
+      riskSeviyesi: ekBilgi.riskSeviyesi || (typeof UYG_VARSAYILAN_RISK !== 'undefined' ? UYG_VARSAYILAN_RISK : ''),
+      sorumlu: ekBilgi.sorumlu || e.sorumlu || '',
+      atayan: e.kontrolEden || '',
+      bildirimTarihi: e.sonKontrol || bugunIso(),
+      termin: ekBilgi.termin || '',
+      onayGerekliMi: true,
+      fotoOncesi: fotolar[0] || '', fotoOncesi2: fotolar[1] || '', fotoOncesi3: fotolar[2] || ''
+    });
+    if (!sonuc.basarili) { hatalar.push(Object.values(sonuc.hatalar || {}).join(' ') || 'Kaydedilemedi.'); return; }
+    olusan.push({ kayit: sonuc.kayit, anahtarlar: grup.map(b => b.anahtar) });
+  });
+  if (olusan.length) {
+    const guncel = ekipmanIdIleGetirRepo(ekipmanId) || e;
+    const aktarimlar = Object.assign({}, guncel.uygAktarimlari || {});
+    const simdi = new Date().toISOString();
+    olusan.forEach(o => o.anahtarlar.forEach(a => {
+      aktarimlar[a] = { uygId: o.kayit.id, uygNo: o.kayit.aksiyonNo || '', kontrol: e.sonKontrol || '', tarih: simdi };
+    }));
+    ekipmanGuncelleRepo(ekipmanId, { uygAktarimlari: aktarimlar });
+  }
+  return { basarili: olusan.length > 0, kayitlar: olusan.map(o => o.kayit), hatalar, hata: hatalar[0] || '' };
+}

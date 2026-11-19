@@ -99,6 +99,7 @@
           <button type="button" class="ikincil" id="ekipmanBosFormExcelBtn" title="Seçili bölümdeki (işaretli satır varsa yalnız onların) ekipmanları için sahada doldurulacak boş kontrol formu">📝 Boş Kontrol Formu (Excel)</button>
           <button type="button" class="ikincil" id="ekipmanFormYukleBtn" title="Sahada doldurulan Boş Kontrol Formu (Excel) dosyasını yükler; doldurulan her ekipmana yeni kontrol yazılır">📥 Doldurulmuş Formu Yükle</button>
           <input type="file" id="ekipmanFormYukleDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="ekipmanUygAktarBtn" title="Seçili (işaretli satır yoksa ekrandaki tüm) ekipmanların son kontroldeki uygunsuz maddelerini Uygunsuzluk modülüne aktarır">↪ Uygunsuzluğa Aktar</button>
           <!-- Kullanıcı isteği: "acil durım malzeme dolapları envanter
                lşstesini çıktı alıp aşmak da istiyorum word olarak bu
                listeyi de indirebileyim ekşpman bazında" — kontrol
@@ -393,6 +394,33 @@
        işletmeler ekle" -> "sen buraya bölüm ekleme ve silme ekle" -> "sadece
        bu listeye eklediklerimi liste olarak göster" -- modules/egitim/
        index.html turYonetModal ile aynı ekle/sil desen. -->
+  <!-- Kullanıcı isteği (2026-11-19): ekipman kontrol bulgularını
+       Uygunsuzluk modülüne aktarma — bkz. ui.js _ekUygAktarAc. -->
+  <div class="modal-katman" id="ekUygAktarModal">
+    <div class="modal-kutu" style="max-width:720px;">
+      <h3 id="ekUygAktarBaslik">Uygunsuzluğa Aktar</h3>
+      <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">
+        Son kontrolde "Uygun Değil" işaretlenen maddeler ve bulgular listelenir. Aktarılacakları işaretleyin; tespit metnini dilediğiniz gibi düzeltebilirsiniz.
+      </p>
+      <div id="ekUygAktarListe" style="max-height:46vh; overflow:auto; border:1px solid var(--kenarlik); border-radius:8px; padding:8px; margin-bottom:12px;"></div>
+      <label style="display:flex; gap:8px; align-items:center; font-weight:normal;">
+        <input type="checkbox" id="ekUygTekKayit" style="width:auto;"> Aynı ekipmanın seçili maddelerini tek uygunsuzluk kaydında birleştir
+      </label>
+      <label for="ekUygSorumlu">Sorumlu</label>
+      <input type="text" id="ekUygSorumlu" placeholder="Boş bırakılırsa ekipmanın sorumlusu yazılır">
+      <div id="ekUygSorumluButonlari" style="display:flex; flex-wrap:wrap; gap:4px; margin:-6px 0 10px;"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:160px;"><label for="ekUygTermin">Termin</label><input type="date" id="ekUygTermin"></div>
+        <div style="flex:1; min-width:160px;"><label for="ekUygRisk">Risk Seviyesi</label><select id="ekUygRisk"></select></div>
+      </div>
+      <div class="hata-mesaji" id="ekUygHata"></div>
+      <div class="modal-eylemler">
+        <button type="button" class="ikincil" id="ekUygIptalBtn">İptal</button>
+        <button type="button" class="birincil" id="ekUygKaydetBtn" style="width:auto;">Aktar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-katman" id="ekipmanBolumYonetModal">
     <div class="modal-kutu" style="max-width:420px;">
       <h3>Ekipman Bölümlerini Yönet</h3>
@@ -1189,16 +1217,21 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/org-repository.js"></script>
   <script src="../personel/service.js"></script>
+  <script src="../../core/bolum-butonlari.js?v=20261118a"></script>
+  <script src="../uygunsuzluk/model.js?v=20261112c"></script>
+  <script src="../uygunsuzluk/validation.js"></script>
+  <script src="../uygunsuzluk/repository.js"></script>
+  <script src="../uygunsuzluk/service.js?v=20261112c"></script>
   <script src="model.js?v=19"></script>
   <script src="validation.js?v=4"></script>
   <script src="repository.js?v=5"></script>
-  <script src="service.js?v=20"></script>
+  <script src="service.js?v=21"></script>
   <script src="kontrol-formu-cikti.js?v=19"></script>
   <script src="gorevlendirme-cikti.js?v=2"></script>
   <script src="gaz-olcum.js?v=2"></script>
   <script src="gaz-olcum-cikti.js?v=1"></script>
   <script src="gaz-olcum-ui.js?v=2"></script>
-  <script src="ui.js?v=34"></script>
+  <script src="ui.js?v=35"></script>
   <script>
     const kullanici = girisGerekliModul('acil-durum');
 
