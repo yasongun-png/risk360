@@ -333,7 +333,7 @@
         window.location.href = '../../firma-sec.html';
       } else {
         bulutFirmaHazirOlduğunda(aktifFirma.slug, () => {
-          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — bölüm/kat bazında, ÇSGB müfettiş kontrolü tarzında saha kontrolü';
+          document.getElementById('firmaEtiketi').textContent = aktifFirma.ad + ' — bölüm/kat bazında saha kontrolü';
           lokasyonDenetimSayfasiniBaslat(aktifFirma, kullanici);
         });
       }
