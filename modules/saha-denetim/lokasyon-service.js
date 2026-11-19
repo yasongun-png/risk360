@@ -112,14 +112,15 @@ function ldAcilEkipmanNoIleBul(kod) {
 
 function ldEkipmanOzetiCikar(bolum, lokasyon, idler) {
   const bugun = _ldBugun();
-  const soruMetni = (tur, id) => {
-    const liste = typeof ekipmanSorulariGetir === 'function' ? ekipmanSorulariGetir(tur, bolum, null, true) : ((typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[tur]) || []);
+  const soruMetni = (e, id) => {
+    const tur = e.tur;
+    const liste = typeof ekipmanSorulariGetir === 'function' ? ekipmanSorulariGetir(e) : ((typeof EKIPMAN_KONTROL_SORULARI !== 'undefined' && EKIPMAN_KONTROL_SORULARI[tur]) || []);
     const s = liste.find(x => x.id === id);
     return s ? s.soru : id;
   };
   return ldLokasyonEkipmanlari(bolum, lokasyon, idler).map(e => {
     const cevaplar = e.kontrolCevaplari || {};
-    const uygunDegil = Object.keys(cevaplar).filter(id => cevaplar[id] === 'Uygun Değil').map(id => soruMetni(e.tur, id));
+    const uygunDegil = Object.keys(cevaplar).filter(id => cevaplar[id] === 'Uygun Değil' && (typeof ekipmanSorulariGetir !== 'function' || ekipmanSorulariGetir(e).some(s => s.id === id))).map(id => soruMetni(e, id));
     const malzemeCevap = e.malzemeKontrolleri || {};
     (Array.isArray(e.malzemeListesi) ? e.malzemeListesi : []).forEach(m => {
       if (malzemeCevap[m.id] === 'Uygun Değil') uygunDegil.push('Eksik/uygun değil: ' + m.ad);

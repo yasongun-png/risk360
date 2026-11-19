@@ -92,7 +92,7 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
   _ldEl('ldYeniLokasyonBtn').addEventListener('click', () => _ldLokasyonModalAc(null));
   _ldEl('ldLokasyonModalIptal').addEventListener('click', () => _ldModalKapat('ldLokasyonModal'));
   _ldEl('ldLokasyonModalKaydet').addEventListener('click', _ldLokasyonModalKaydet);
-  _ldEl('ldLBolum').addEventListener('input', _ldLokasyonModalBolumDegisti);
+  _ldEl('ldLBolum').addEventListener('change', _ldLokasyonModalBolumDegisti);
   _ldEl('ldLLokasyon').addEventListener('input', _ldLokasyonEkipmanBilgisiCiz);
   _ldEl('ldLEkipmanAra').addEventListener('input', _ldEkipmanSecimCiz);
   _ldEl('ldLEkipmanSecim').addEventListener('change', e => {
@@ -1042,7 +1042,7 @@ async function _ldLokasyonListesiTiklandi(e) {
 function _ldLokasyonModalAc(l) {
   _ldLokasyonDuzenlenenId = l ? l.id : null;
   _ldEl('ldLokasyonModalBaslik').textContent = l ? `Lokasyonu Düzenle (${l.kod})` : 'Lokasyon Ekle';
-  _ldEl('ldLBolum').value = l ? l.bolum : '';
+  _ldBolumSecenekleriDoldur(l ? l.bolum : '');
   _ldEl('ldLLokasyon').value = l ? l.lokasyon : '';
   _ldEl('ldLLokasyonCoklu').value = '';
   _ldEl('ldLCoklu').checked = false;
@@ -1050,7 +1050,6 @@ function _ldLokasyonModalAc(l) {
   _ldEl('ldLAciklama').value = l ? l.aciklama : '';
   _ldSoruSeciciKur('ldLKategoriler', l ? ldSecilenSorular(l) : ldSecilenSorular({ kategoriler: ldVarsayilanKategoriler() }));
   ['ldLBolumHata', 'ldLLokasyonHata', 'ldLKategorilerHata'].forEach(id => { _ldEl(id).textContent = ''; });
-  _ldEl('ldAcilBolumListesi').innerHTML = ldAcilBolumleri().map(b => `<option value="${_ldK(b)}">`).join('');
   // Ekipman seçimi: kayıtlı seçim varsa o, yoksa ad eşleşmesiyle önerilir.
   _ldEkipmanSecili = l && Array.isArray(l.ekipmanIdleri) ? new Set(l.ekipmanIdleri) : null;
   _ldEl('ldLEkipmanAra').value = '';
@@ -1069,13 +1068,19 @@ function _ldEkipmanSecimCiz() {
   const bilgi = _ldEl('ldLEkipmanBilgi');
   if (!bolum) { kutu.innerHTML = '<div class="ld-bilgi" style="padding:6px;">Önce bölümü yazın.</div>'; bilgi.textContent = ''; return; }
   const lok = _ldEl('ldLCoklu').checked ? '' : _ldEl('ldLLokasyon').value.trim();
-  const tumu = ldBolumunEkipmanlari(bolum);
+  // Firma bölüm adı Acil Durum'daki ekipman bölümüyle birebir aynı değilse
+  // (bölümler artık firma yönetiminden geliyor) o bölümde ekipman bulunamaz;
+  // o durumda tüm ekipmanlar listelenir ve elle seçilir.
+  const bolumunkiler = ldBolumunEkipmanlari(bolum);
+  const tumBolumler = !bolumunkiler.length;
+  const tumu = tumBolumler ? _ldAcilEkipmanlari() : bolumunkiler;
   const secili = _ldEkipmanSecili || new Set(ldLokasyonEkipmanlari(bolum, lok).map(e => e.id));
   const ara = ldNormalize(_ldEl('ldLEkipmanAra').value);
   const gorunen = tumu.filter(e => !ara || ldNormalize(`${e.ekipmanNo} ${e.tur} ${e.lokasyon}`).includes(ara));
-  kutu.innerHTML = gorunen.length ? gorunen.map(e => `<label><input type="checkbox" data-ek-sec value="${_ldK(e.id)}" ${secili.has(e.id) ? 'checked' : ''}> <span><b>${_ldK(e.ekipmanNo || '-')}</b> · ${_ldK(e.tur)} <span class="ld-bilgi">· ${_ldK(e.lokasyon)}</span></span></label>`).join('')
-    : `<div class="ld-bilgi" style="padding:6px;">${tumu.length ? 'Aramayla eşleşen ekipman yok.' : 'Acil Durum modülünde bu bölümde ekipman yok (bölüm adı oradakiyle aynı yazılmalı).'}</div>`;
-  bilgi.textContent = `${secili.size} ekipman seçili${_ldEkipmanSecili ? '' : ' (lokasyon adına göre önerildi)'} — ${tumu.length} ekipman bu bölümde.`;
+  kutu.innerHTML = gorunen.length ? gorunen.map(e => `<label><input type="checkbox" data-ek-sec value="${_ldK(e.id)}" ${secili.has(e.id) ? 'checked' : ''}> <span><b>${_ldK(e.ekipmanNo || '-')}</b> · ${_ldK(e.tur)} <span class="ld-bilgi">· ${_ldK([tumBolumler ? e.bolum : '', e.lokasyon].filter(Boolean).join(' — '))}</span></span></label>`).join('')
+    : `<div class="ld-bilgi" style="padding:6px;">${tumu.length ? 'Aramayla eşleşen ekipman yok.' : 'Acil Durum modülünde kayıtlı ekipman yok.'}</div>`;
+  bilgi.textContent = `${secili.size} ekipman seçili${_ldEkipmanSecili ? '' : ' (lokasyon adına göre önerildi)'} — `
+    + (tumBolumler ? `Acil Durum'da "${bolum}" adlı ekipman bölümü yok; tüm bölümlerin ${tumu.length} ekipmanı gösteriliyor, bu lokasyondakileri işaretleyin.` : `${tumu.length} ekipman bu bölümde.`);
 }
 
 function _ldEkipmanSecimOku() {
@@ -1092,8 +1097,26 @@ function _ldCokluModGuncelle() {
   _ldEl('ldLLokasyonEtiket').textContent = coklu ? 'Lokasyonlar / Katlar (her satıra bir tane)' : 'Lokasyon / Kat';
 }
 
+// Kullanıcı isteği (2026-11-19): "lokasyonların üst başlığı firma
+// yönetimindeki bölümlerden çekilsin" — Bölüm artık serbest metin değil,
+// firma-yonetim.html'de tanımlanan firma.bolumler listesinden seçilir.
+// Düzenlenen eski kaydın bölümü listede yoksa kaybolmasın diye eklenir.
+function _ldBolumSecenekleriDoldur(secili) {
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const bolumler = (firma && Array.isArray(firma.bolumler) ? firma.bolumler : []).map(b => String(b || '').trim()).filter(Boolean);
+  const deger = (secili || '').trim();
+  const eskiMi = deger && !bolumler.includes(deger);
+  _ldEl('ldLBolum').innerHTML = `<option value="">— Bölüm seçiniz —</option>`
+    + bolumler.map(b => `<option value="${_ldK(b)}" ${b === deger ? 'selected' : ''}>${_ldK(b)}</option>`).join('')
+    + (eskiMi ? `<option value="${_ldK(deger)}" selected>${_ldK(deger)} (firma bölümlerinde yok)</option>` : '');
+  _ldEl('ldLBolumBilgi').textContent = bolumler.length
+    ? 'Bölümler Firma Yönetimi\'ndeki bölüm listesinden gelir.'
+    : 'Firma Yönetimi\'nde henüz bölüm tanımlanmamış — önce oradan bölümleri ekleyin.';
+}
+
 function _ldLokasyonModalBolumDegisti() {
-  _ldEl('ldAcilLokasyonListesi').innerHTML = ldAcilLokasyonlari(_ldEl('ldLBolum').value).map(b => `<option value="${_ldK(b)}">`).join('');
+  const bolumLok = ldAcilLokasyonlari(_ldEl('ldLBolum').value);
+  _ldEl('ldAcilLokasyonListesi').innerHTML = (bolumLok.length ? bolumLok : ldAcilLokasyonlari('')).map(b => `<option value="${_ldK(b)}">`).join('');
   _ldLokasyonEkipmanBilgisiCiz();
 }
 

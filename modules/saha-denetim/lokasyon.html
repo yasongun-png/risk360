@@ -188,7 +188,10 @@
       <datalist id="ldAcilBolumListesi"></datalist>
       <datalist id="ldAcilLokasyonListesi"></datalist>
       <label for="ldLBolum">Bölüm</label>
-      <input type="text" id="ldLBolum" list="ldAcilBolumListesi" placeholder="Ör. Can-An Ambarı">
+      <!-- Kullanıcı isteği (2026-11-19): "lokasyonların üst başlığı firma
+           yönetimindeki bölümlerden çekilsin" — bkz. lokasyon-ui.js _ldBolumSecenekleriDoldur. -->
+      <select id="ldLBolum"></select>
+      <div class="ld-bilgi" id="ldLBolumBilgi" style="margin-top:-6px;"></div>
       <div class="hata-mesaji" id="ldLBolumHata"></div>
       <label for="ldLLokasyon" id="ldLLokasyonEtiket">Lokasyon / Kat</label>
       <input type="text" id="ldLLokasyon" list="ldAcilLokasyonListesi" placeholder="Ör. Zemin Kat">
@@ -312,9 +315,9 @@
   <script src="../uygunsuzluk/service.js?v=20261112c"></script>
   <script src="../acil-durum/model.js?v=20"></script>
   <script src="lokasyon-model.js?v=6"></script>
-  <script src="lokasyon-service.js?v=7"></script>
+  <script src="lokasyon-service.js?v=8"></script>
   <script src="lokasyon-cikti.js?v=6"></script>
-  <script src="lokasyon-ui.js?v=8"></script>
+  <script src="lokasyon-ui.js?v=9"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 
