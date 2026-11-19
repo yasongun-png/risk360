@@ -82,8 +82,95 @@ function _ekipleriKaydetVeCiz(ekipler) {
   ekipleriCiz();
 }
 
+// ---- Konulara göre ekipler ----
+// Kullanıcı isteği (2026-11-19): "tüm bölümler için ayrı ayrı ekip
+// belirleyebilmek istiyorum". Her risk değerlendirme konusu (seçili yıl) bir
+// satır: hangi ekibin kullanılacağı seçilir ya da tek tıkla o konuya özel ekip
+// açılır. Bir konu yalnız bir ekibe atanır (seçince diğer ekiplerden çıkar).
+// Yeni konu ekibi, konu atanmamış genel ekipten kopyalanır; bölüme özgü
+// görevler (çalışan temsilcisi, destek elemanı, bilgi sahibi çalışan) boş gelir.
+const _EKIP_BOLUME_OZGU_GOREVLER = ['Çalışan Temsilcisi', 'Destek Elemanı', 'Bilgi Sahibi Çalışan'];
+
+// Genel ekip: hiçbir konuya atanmamış ve konuya özel açılmamış ekip (tüm konularda geçerli).
+function _ekipGenelMi(e) { return !(e.bolumler || []).length && !e.konuEkibi; }
+
+function _ekipKonuyaAta(ekipler, konu, hedefIndex) {
+  ekipler.forEach((e, i) => {
+    const liste = (e.bolumler || []).filter(b => b !== konu);
+    e.bolumler = i === hedefIndex ? liste.concat(konu) : liste;
+  });
+}
+
+function _ekipKonuIcinOlustur(ekipler, konu) {
+  const kaynak = ekipler.find(_ekipGenelMi) || ekipler[0];
+  const uyeler = kaynak && (kaynak.uyeler || []).length
+    ? kaynak.uyeler.map(u => ({ gorev: u.gorev, adSoyad: _EKIP_BOLUME_OZGU_GOREVLER.includes(u.gorev) ? '' : u.adSoyad, belgeNo: _EKIP_BOLUME_OZGU_GOREVLER.includes(u.gorev) ? '' : u.belgeNo }))
+    : RISK_EKIBI_GOREVLERI.map(gorev => ({ gorev, adSoyad: '', belgeNo: '' }));
+  // konuEkibi: konusu sonradan kaldırılsa bile "tüm konular" genel ekibi sayılmasın.
+  const kisaAd = String(konu).replace(/\s*Risk Değerlendirmesi\s*$/i, '').trim() || konu;
+  ekipler.push({ id: rastgeleId(), ad: `${kisaAd} Ekibi`, bolumler: [], uyeler, konuEkibi: true });
+  _ekipKonuyaAta(ekipler, konu, ekipler.length - 1);
+  return ekipler.length - 1;
+}
+
+function _ekipKonuTablosunuCiz() {
+  const kap = document.getElementById('ekipKonuTablosu');
+  if (!kap) return;
+  const ekipler = riskEkipleriGetir();
+  const konular = bolumleriGetir().map(b => b.ad);
+  if (!konular.length) { kap.innerHTML = ''; return; }
+  const genelIndex = ekipler.findIndex(_ekipGenelMi);
+  const ozelsiz = konular.filter(k => !ekipler.some(e => (e.bolumler || []).includes(k))).length;
+  kap.innerHTML = `
+    <div style="background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+        <div style="font-weight:700;">Konulara Göre Ekipler <span style="font-weight:400; font-size:12px; color:var(--metin-soluk);">(${riskAktifYil()} yılı konuları)</span></div>
+        ${ozelsiz ? `<button type="button" class="ikincil" id="ekipTumKonularBtn" style="width:auto;" title="Kendi ekibi olmayan her konu için genel ekipten kopyalanan ayrı bir ekip oluşturur">+ Ekibi olmayan ${ozelsiz} konu için ayrı ekip oluştur</button>` : ''}
+      </div>
+      <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 8px;">Her konunun raporunda kullanılacak ekibi seçin ya da "Ayrı ekip oluştur" ile o konuya özel ekip açın (İşveren, İSG uzmanı ve hekim genel ekipten kopyalanır; çalışan temsilcisi, destek elemanı ve bilgi sahibi çalışan boş gelir). Ekip üyeleri aşağıdaki kartlarda düzenlenir.</p>
+      <div class="tablo-scroll"><table class="veri-tablosu">
+        <thead><tr><th>Risk Değerlendirme Konusu</th><th style="width:38%;">Ekip</th><th style="width:170px;"></th></tr></thead>
+        <tbody>${konular.map(k => {
+          const atanan = ekipler.findIndex(e => (e.bolumler || []).includes(k));
+          const secenekler = `<option value="-1" ${atanan === -1 ? 'selected' : ''}>${genelIndex !== -1 ? 'Genel ekip: ' + _ekipKacir(ekipler[genelIndex].ad || 'Adsız ekip') : '— Ekip yok —'}</option>` +
+            ekipler.map((e, i) => !_ekipGenelMi(e) || atanan === i ? `<option value="${i}" ${atanan === i ? 'selected' : ''}>${_ekipKacir(e.ad || 'Adsız ekip')}</option>` : '').join('');
+          return `<tr>
+            <td>${_ekipKacir(k)}</td>
+            <td><select data-konu-ekip="${_ekipKacir(k)}" style="margin:0;">${secenekler}</select></td>
+            <td>${atanan === -1 ? `<button type="button" class="tablo-buton" data-konu-ekip-olustur="${_ekipKacir(k)}">+ Ayrı ekip oluştur</button>` : `<button type="button" class="tablo-buton" data-konu-ekip-git="${atanan}">Ekibi düzenle ↓</button>`}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  kap.querySelectorAll('[data-konu-ekip]').forEach(s => s.addEventListener('change', () => {
+    const liste = JSON.parse(JSON.stringify(riskEkipleriGetir()));
+    _ekipKonuyaAta(liste, s.getAttribute('data-konu-ekip'), Number(s.value));
+    _ekipleriKaydetVeCiz(liste);
+  }));
+  kap.querySelectorAll('[data-konu-ekip-olustur]').forEach(b => b.addEventListener('click', () => {
+    const liste = JSON.parse(JSON.stringify(riskEkipleriGetir()));
+    const i = _ekipKonuIcinOlustur(liste, b.getAttribute('data-konu-ekip-olustur'));
+    _ekipleriKaydetVeCiz(liste);
+    const kart = document.querySelector(`.ekip-karti[data-ekip="${i}"]`);
+    if (kart) kart.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+  kap.querySelectorAll('[data-konu-ekip-git]').forEach(b => b.addEventListener('click', () => {
+    const kart = document.querySelector(`.ekip-karti[data-ekip="${b.getAttribute('data-konu-ekip-git')}"]`);
+    if (kart) kart.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+  const tumBtn = document.getElementById('ekipTumKonularBtn');
+  if (tumBtn) tumBtn.addEventListener('click', async () => {
+    const liste = JSON.parse(JSON.stringify(riskEkipleriGetir()));
+    const eksik = konular.filter(k => !liste.some(e => (e.bolumler || []).includes(k)));
+    if (!(await onayModali(`${eksik.length} konu için ayrı ekip oluşturulsun mu? Üyeler genel ekipten kopyalanır, bölüme özgü görevler boş gelir.`, 'Oluştur'))) return;
+    eksik.forEach(k => _ekipKonuIcinOlustur(liste, k));
+    _ekipleriKaydetVeCiz(liste);
+  });
+}
+
 function ekipleriCiz() {
   _ekipGorevleriniCiz();
+  _ekipKonuTablosunuCiz();
   // Ad soyad önerileri (rapor penceresiyle ortak datalist).
   const dl = document.getElementById('riskEkibiPersonelListesi');
   if (dl && !dl.children.length && typeof personelleriGetir === 'function') {
@@ -152,7 +239,7 @@ function riskRaporIcinEkipIndex(bolum) {
     const i = ekipler.findIndex(e => (e.bolumler || []).includes(bolum));
     if (i !== -1) return i;
   }
-  const genel = ekipler.findIndex(e => !(e.bolumler || []).length);
+  const genel = ekipler.findIndex(_ekipGenelMi);
   return genel !== -1 ? genel : 0;
 }
 
