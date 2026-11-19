@@ -35,7 +35,8 @@ const _LD_M = {
   kanun: '6331 sayılı İş Sağlığı ve Güvenliği Kanunu',
   egitim: 'Çalışanların İş Sağlığı ve Güvenliği Eğitimlerinin Usul ve Esasları Hakkında Yönetmelik',
   risk: 'İş Sağlığı ve Güvenliği Risk Değerlendirmesi Yönetmeliği',
-  makine: 'Makine Emniyeti Yönetmeliği (2006/42/AT)'
+  makine: 'Makine Emniyeti Yönetmeliği (2006/42/AT)',
+  yapi: 'Yapı İşlerinde İş Sağlığı ve Güvenliği Yönetmeliği'
 };
 
 // varsayilan: yeni lokasyon tanımlanırken işaretli gelen kategoriler.
@@ -91,7 +92,20 @@ const LD_KATEGORILER = [
     { id: 'kemer', soru: 'Paraşüt tipi emniyet kemeri ve ankraj noktaları uygun ve kontrol edilmiş', mevzuat: _LD_M.kkd },
     { id: 'iskele', soru: 'İskele/platformlar korkuluklu ve sağlam; kontrol kartı (etiket) asılı', mevzuat: _LD_M.ieksg + ' Ek-2' },
     { id: 'kirilgan', soru: 'Çatı ve kırılgan yüzeylerde (şeffaf levha vb.) düşmeye karşı önlem alınmış', mevzuat: _LD_M.ibey },
-    { id: 'dusenCisim', soru: 'Düşen cisimlere karşı alt bölge kapatılmış/işaretlenmiş', mevzuat: _LD_M.ibey }
+    { id: 'dusenCisim', soru: 'Düşen cisimlere karşı alt bölge kapatılmış/işaretlenmiş', mevzuat: _LD_M.ibey },
+    // Kullanıcı isteği (2026-11-19): "yüksekte çalışma iskele güvenliği paraşüt kemer — soruları ekle"
+    { id: 'egitim', soru: 'Yüksekte çalışanlar yüksekte çalışma eğitimi almış; sağlık raporunda yüksekte çalışabilir ibaresi var', mevzuat: _LD_M.egitim },
+    { id: 'iskeleKurulum', soru: 'İskele ehil/yetkili kişilerce kurulmuş; kurulum sonrası ve periyodik kontrolü yapılmış, kullanıma uygunluk (yeşil) kartı asılı', mevzuat: _LD_M.ieksg + ' Ek-2' },
+    { id: 'iskeleZemin', soru: 'İskele ayakları sağlam ve düz zemine taban plakası ile oturtulmuş; tekerlekli iskelelerde tekerlek frenleri kilitli', mevzuat: _LD_M.ieksg + ' Ek-2' },
+    { id: 'iskeleBaglanti', soru: 'İskele yapıya ankrajlanmış; çapraz, kelepçe ve bağlantı elemanları eksiksiz ve sağlam', mevzuat: _LD_M.ieksg + ' Ek-2' },
+    { id: 'iskelePlatform', soru: 'Çalışma platformu boşluksuz tam döşenmiş; üst korkuluk, ara korkuluk ve topuk levhası mevcut', mevzuat: _LD_M.yapi },
+    { id: 'iskeleErisim', soru: 'İskeleye güvenli erişim (iç merdiven/kapaklı geçiş) sağlanmış; iskele dışından tırmanılmıyor', mevzuat: _LD_M.ieksg + ' Ek-2' },
+    { id: 'iskeleYuk', soru: 'İskele üzerinde aşırı malzeme yığılmamış, taşıma kapasitesi aşılmıyor; hasarlı/eksik iskele kırmızı kartla kullanıma kapatılmış', mevzuat: _LD_M.ieksg + ' Ek-2' },
+    { id: 'kemerUygun', soru: 'Paraşüt tipi emniyet kemerleri CE işaretli (EN 361), hasarsız; kullanım öncesi ve periyodik kontrolleri kayıt altında', mevzuat: _LD_M.kkd },
+    { id: 'kemerKullanim', soru: 'Kemer doğru giyilmiş (göğüs ve bacak kayışları ayarlı); lanyard her an sağlam bir ankraja bağlı', mevzuat: _LD_M.kkd },
+    { id: 'kemerSokEmici', soru: 'Şok emicili lanyard veya geri sarmalı düşüş durdurucu kullanılıyor; düşüş mesafesi için alt boşluk yeterli', mevzuat: _LD_M.kkd },
+    { id: 'ankrajHat', soru: 'Ankraj noktaları ve yaşam hattı yeterli dayanımda (en az 12 kN), uygun kurulmuş ve kontrol edilmiş', mevzuat: _LD_M.yapi },
+    { id: 'kurtarma', soru: 'Düşüş sonrası askıda kalan çalışan için kurtarma planı ve kurtarma ekipmanı hazır', mevzuat: _LD_M.acil }
   ] },
   { id: 'kimyasal', ad: 'Kimyasal Maddeler', varsayilan: false, sorular: [
     { id: 'etiket', soru: 'Kimyasal kaplar etiketli; başka kaba aktarılan kimyasallarda da etiket mevcut', mevzuat: _LD_M.kimyasal },
@@ -414,9 +428,9 @@ const LD_ONERI_KURALLARI = [
   { ad: 'Kapalı alan', kelime: /silo|kuyu|rogar|bunker|havuz|tank|hazne|kanal/,
     sorular: ['kapaliAlan.tanim', 'kapaliAlan.agizlar'],
     sorulsun: ['kapaliAlan.izinOlcum', 'kapaliAlan.gozcu'] },
-  { ad: 'Yüksekte çalışma', kelime: /cati|platform|iskele|asma kat|galeri|yuksek|kule|teras|bant ustu/,
+  { ad: 'Yüksekte çalışma', kelime: /cati|platform|iskele|asma kat|galeri|yuksek|kule|teras|bant ustu|cephe|kemer|silo ustu|tank ustu/,
     sorular: ['genel.korkuluk', 'yuksekte.kirilgan'],
-    sorulsun: ['yuksekte.izin', 'yuksekte.kemer', 'yuksekte.seyyarMerdiven', 'yuksekte.dusenCisim'] },
+    sorulsun: ['yuksekte.izin', 'yuksekte.kemerUygun', 'yuksekte.kemerKullanim', 'yuksekte.ankrajHat', 'yuksekte.egitim', 'yuksekte.iskeleKurulum', 'yuksekte.iskelePlatform', 'yuksekte.seyyarMerdiven', 'yuksekte.dusenCisim', 'yuksekte.kurtarma'] },
   { ad: 'Kaldırma / liman', kelime: /vinc|liman|rihtim|iskele basi|gemi|kaldirma|caraskal|portal/,
     sorular: ['kaldirma.vincPeriyodik', 'kaldirma.sapan'],
     sorulsun: ['kaldirma.swl', 'kaldirma.yayaYolu', 'yuksekte.dusenCisim'] },
