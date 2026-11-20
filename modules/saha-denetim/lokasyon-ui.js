@@ -326,7 +326,7 @@ function _ldZiyaretKartiHtml(d, z) {
     <div class="ld-kategori">
       <div class="ld-kategori-bas">
         <span>${_ldK(g.kategori.ad)}</span>
-        ${!kilitli && g.kategori.sorular ? `<button type="button" class="tablo-buton" data-tum-uygun="${g.kategori.id}" data-z="${z.id}" title="Cevaplanmamış maddeleri Uygun işaretle">Kalanlar Uygun</button>` : ''}
+        ${!kilitli && g.kategori.sorular ? `<button type="button" class="tablo-buton" data-tum-uygun="${g.kategori.id}" data-z="${z.id}" title="Cevaplanmamış maddeleri Evet işaretle">Kalanlar Evet</button>` : ''}
       </div>
       ${g.maddeler.map(m => _ldMaddeHtml(d, z, m, kilitli)).join('')}
     </div>`).join('');
@@ -379,7 +379,7 @@ function _ldMaddeHtml(d, z, m, kilitli) {
     <div class="ld-madde-ust">
       <div class="ld-madde-metin">${_ldK(m.soru)}${m.mevzuat ? `<div class="ld-mevzuat">${_ldK(m.mevzuat)}</div>` : ''}</div>
       <div class="ld-sonuc">
-        ${c.serbest ? '<span class="genel-rozet rozet-uygun-degil">Ek tespit</span>' : `${btn('Uygun', '✓ Uygun', 'secili-uygun')}${btn('Uygun Değil', '✗ Uygun Değil', 'secili-uygun-degil')}${btn('Uygulanamaz', 'U/D', 'secili-uygulanamaz')}`}
+        ${c.serbest ? '<span class="genel-rozet rozet-uygun-degil">Ek tespit</span>' : `${btn('Uygun', 'Evet', 'secili-uygun')}${btn('Uygun Değil', 'Hayır', 'secili-uygun-degil')}${btn('Uygulanamaz', 'Uygulanamaz', 'secili-uygulanamaz')}${btn('Gözlemlenemedi', 'Gözlemlenemedi', 'secili-gozlemlenemedi')}`}
       </div>
     </div>
     ${detay}

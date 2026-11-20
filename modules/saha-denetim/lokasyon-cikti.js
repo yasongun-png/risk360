@@ -168,7 +168,7 @@ function _ldcFormSayfasi(firma, lok, kategoriIdleri) {
   birlesik.push(`A${r}:G${r}`);
   for (let i = 0; i < 5; i++) {
     no++;
-    satirEkle([h(no, X.hucreOrta), h('', X.hucre), h('', X.hucre), h('Uygun Değil', X.hucreOrta), h('', X.hucre), h('', X.hucre), h('', X.hucre), kod('serbest')], 32);
+    satirEkle([h(no, X.hucreOrta), h('', X.hucre), h('', X.hucre), h('Hayır', X.hucreOrta), h('', X.hucre), h('', X.hucre), h('', X.hucre), kod('serbest')], 32);
   }
   const sonVeri = satirlar.length;
 
@@ -182,7 +182,7 @@ function _ldcFormSayfasi(firma, lok, kategoriIdleri) {
   xml = xml.replace('<col min="8" max="8" width="14" customWidth="1"/>', '<col min="8" max="8" width="14" hidden="1" customWidth="1"/>');
   const riskler = (typeof RISK_SEVIYELERI !== 'undefined' ? RISK_SEVIYELERI : ['Önemsiz Risk', 'Olası Risk', 'Önemli Risk', 'Esaslı Risk', 'Tolerans Gösterilemez']).join(',');
   const dogrulama = `<dataValidations count="2">` +
-    `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="D${ilkVeri}:D${sonVeri}"><formula1>"${xlsxXmlKacir(LD_SONUCLAR.join(','))}"</formula1></dataValidation>` +
+    `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="D${ilkVeri}:D${sonVeri}"><formula1>"${xlsxXmlKacir(LD_SONUCLAR.map(ldSonucEtiketi).join(','))}"</formula1></dataValidation>` +
     `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="G${ilkVeri}:G${sonVeri}"><formula1>"${xlsxXmlKacir(riskler)}"</formula1></dataValidation>` +
     `</dataValidations>`;
   xml = xml.replace('<pageMargins', dogrulama + '<pageMargins');
@@ -316,7 +316,7 @@ async function _ldcGorsel(ref, maksGen, maksYuk) {
 }
 
 function _ldcSonucHucresi(sonuc) {
-  const renk = { 'Uygun': ['E2EFDA', '2E7D32'], 'Uygun Değil': ['F4CCCC', 'B00020'], 'Uygulanamaz': ['EDEDED', '555555'] }[sonuc] || ['FFFFFF', '888888'];
+  const renk = { 'Uygun': ['E2EFDA', '2E7D32'], 'Uygun Değil': ['F4CCCC', 'B00020'], 'Uygulanamaz': ['EDEDED', '555555'], 'Gözlemlenemedi': ['FFF2CC', '8A6100'] }[sonuc] || ['FFFFFF', '888888'];
   return { m: sonuc || 'Değerlendirilmedi', o: { dolgu: renk[0], renk: renk[1], kalin: !!sonuc, hiza: docx.AlignmentType.CENTER } };
 }
 
@@ -348,7 +348,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   // ---- 1. Yönetici özeti ----
   c.push(_ldcBaslik('1. Yönetici Özeti', 1));
   const degerlendirilmedi = Math.max(0, ist.toplam - ist.cevaplanan);
-  c.push(_ldcP(`${tarihMetni} tarihinde ${firma ? firma.ad + ' işyerinde ' : ''}${bolumler.length} bölümde ${d.ziyaretler.length} lokasyon kontrol edilmiştir. Lokasyonlarda toplam ${ist.toplam} kontrol maddesi uygulanmış; ${ist.uygun} madde uygun, ${ist.uygunDegil} madde uygun değil, ${ist.uygulanamaz} madde uygulanamaz olarak değerlendirilmiştir${degerlendirilmedi > 0 ? ` (${degerlendirilmedi} madde değerlendirilmemiştir)` : ''}. Uygulanabilir maddeler üzerinden genel uygunluk oranı ${ist.puan == null ? '-' : '%' + ist.puan} olarak hesaplanmıştır.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
+  c.push(_ldcP(`${tarihMetni} tarihinde ${firma ? firma.ad + ' işyerinde ' : ''}${bolumler.length} bölümde ${d.ziyaretler.length} lokasyon kontrol edilmiştir. Lokasyonlarda toplam ${ist.toplam} kontrol maddesi uygulanmış; ${ist.uygun} madde uygun, ${ist.uygunDegil} madde uygun değil, ${ist.uygulanamaz} madde uygulanamaz${ist.gozlemlenemedi ? ', ' + ist.gozlemlenemedi + ' madde gözlemlenemedi' : ''} olarak değerlendirilmiştir${degerlendirilmedi > 0 ? ` (${degerlendirilmedi} madde değerlendirilmemiştir)` : ''}. Uygulanabilir maddeler üzerinden genel uygunluk oranı ${ist.puan == null ? '-' : '%' + ist.puan} olarak hesaplanmıştır.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
   const listeDisi = bulgular.filter(b => b.madde.cevap.serbest).length;
   if (bulgular.length) c.push(_ldcP(`Kontrolde ${bulgular.length} uygunsuzluk (bulgu) tespit edilmiştir${listeDisi ? `; bunların ${listeDisi} adedi kontrol listesi dışında yapılan gözlemlerdir` : ''}. Bulguların ayrıntıları, ilgili mevzuat ve önerilen önlemler 4. bölümde verilmiştir.`, null, { alignment: docx.AlignmentType.JUSTIFIED }));
 
@@ -356,6 +356,7 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
     [{ m: 'Uygun', o: { dolgu: 'E2EFDA' } }, { m: String(ist.uygun), o: { hiza: docx.AlignmentType.CENTER } }],
     [{ m: 'Uygun Değil (Bulgu)', o: { dolgu: 'F4CCCC' } }, { m: String(ist.uygunDegil), o: { hiza: docx.AlignmentType.CENTER } }],
     [{ m: 'Uygulanamaz', o: { dolgu: 'EDEDED' } }, { m: String(ist.uygulanamaz), o: { hiza: docx.AlignmentType.CENTER } }],
+    [{ m: 'Gözlemlenemedi', o: { dolgu: 'FFF2CC' } }, { m: String(ist.gozlemlenemedi || 0), o: { hiza: docx.AlignmentType.CENTER } }],
     [{ m: 'Değerlendirilmedi', o: {} }, { m: String(Math.max(0, degerlendirilmedi)), o: { hiza: docx.AlignmentType.CENTER } }],
     [{ m: 'Genel Uygunluk Oranı', o: { kalin: true, dolgu: _LDC_GRI } }, { m: ist.puan == null ? '-' : '%' + ist.puan, o: { kalin: true, hiza: docx.AlignmentType.CENTER, dolgu: _ldcPuanRenk(ist.puan) } }]
   ];

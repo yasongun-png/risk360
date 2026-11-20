@@ -16,7 +16,13 @@
 // ilgili mevzuata atıf taşır (rapordaki "Mevzuat" sütunu). İfadeler, "Uygun /
 // Uygun Değil / Uygulanamaz" ile değerlendirilen kriter cümleleridir.
 
-const LD_SONUCLAR = ['Uygun', 'Uygun Değil', 'Uygulanamaz'];
+// Kullanıcı isteği (2026-11-20): saha kontrolünde cevaplar kontrol listesindeki
+// gibi Evet / Hayır / Uygulanamaz / Gözlemlenemedi. İç değerler (Uygun, Uygun
+// Değil …) korunur — bulgu, uygunsuzluk aktarımı ve raporlar bunlara bağlı;
+// sahada görünen etiket LD_SONUC_ETIKET'tir.
+const LD_SONUCLAR = ['Uygun', 'Uygun Değil', 'Uygulanamaz', 'Gözlemlenemedi'];
+const LD_SONUC_ETIKET = { 'Uygun': 'Evet', 'Uygun Değil': 'Hayır', 'Uygulanamaz': 'Uygulanamaz', 'Gözlemlenemedi': 'Gözlemlenemedi' };
+function ldSonucEtiketi(s) { return LD_SONUC_ETIKET[s] || s || ''; }
 
 const _LD_M = {
   ibey: 'İşyeri Bina ve Eklentilerinde Alınacak Sağlık ve Güvenlik Önlemlerine İlişkin Yönetmelik',
@@ -334,23 +340,24 @@ function ldZiyaretIstatistik(ziyaret) {
   const uygun = say('Uygun');
   const uygunDegil = say('Uygun Değil');
   const uygulanamaz = say('Uygulanamaz');
+  const gozlemlenemedi = say('Gözlemlenemedi');
   const listedekiler = maddeler.filter(m => !(m.cevap && m.cevap.serbest));
   const toplam = listedekiler.length;
   // Serbest (listede olmayan) tespitler bulgu sayısına ve uygunluk oranına
   // girer, ama "değerlendirilen / toplam madde" oranına girmez.
   return {
-    toplam, uygun, uygunDegil, uygulanamaz,
+    toplam, uygun, uygunDegil, uygulanamaz, gozlemlenemedi,
     cevaplanan: listedekiler.filter(m => m.cevap && m.cevap.sonuc).length,
     puan: (uygun + uygunDegil) ? Math.round(uygun * 100 / (uygun + uygunDegil)) : null
   };
 }
 
 function ldDenetimIstatistik(denetim) {
-  const t = { lokasyon: 0, toplam: 0, uygun: 0, uygunDegil: 0, uygulanamaz: 0, cevaplanan: 0 };
+  const t = { lokasyon: 0, toplam: 0, uygun: 0, uygunDegil: 0, uygulanamaz: 0, gozlemlenemedi: 0, cevaplanan: 0 };
   (denetim.ziyaretler || []).forEach(z => {
     const s = ldZiyaretIstatistik(z);
     t.lokasyon++;
-    ['toplam', 'uygun', 'uygunDegil', 'uygulanamaz', 'cevaplanan'].forEach(k => { t[k] += s[k]; });
+    ['toplam', 'uygun', 'uygunDegil', 'uygulanamaz', 'gozlemlenemedi', 'cevaplanan'].forEach(k => { t[k] += s[k]; });
   });
   t.puan = (t.uygun + t.uygunDegil) ? Math.round(t.uygun * 100 / (t.uygun + t.uygunDegil)) : null;
   return t;

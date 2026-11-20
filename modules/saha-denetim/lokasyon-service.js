@@ -374,6 +374,7 @@ function _ldSonucNormallestir(v) {
   if (/^(uygun degil|uygunsuz|ud|x|hayir)$/.test(s)) return 'Uygun Değil';
   if (/^(uygun|u|evet|ok|tamam)$/.test(s)) return 'Uygun';
   if (/^(uygulanamaz|u d|ilgili degil|na|n a)$/.test(s)) return 'Uygulanamaz';
+  if (/^(gozlemlenemedi|gözlemlenemedi|gozlenemedi|gozlemlenmedi|g d)$/.test(s.replace(/ö/g, 'o'))) return 'Gözlemlenemedi';
   return null;
 }
 
