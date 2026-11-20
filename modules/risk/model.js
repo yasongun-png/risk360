@@ -125,6 +125,22 @@ function sonrakiRiskNoUret(bolum, mevcutRiskler) {
 // terminli riskler gecikmiş sayılmaz (bkz. riskGecikmisMi).
 const RISK_TERMIN_IFADELERI = ['Sürekli', 'Her defasında', 'İş başlamadan önce', 'Hemen', 'Periyodik olarak', 'Her vardiya başında'];
 
+// Kullanıcı isteği (2026-11-20): termine "1 ay, 2 ay, 3 ay, 6 ay, 1 yıl" gibi
+// seçenekler — seçilince bugünden itibaren tarih hesaplanır ve termin tarih olur.
+const RISK_TERMIN_SURELERI = [['+1a', '1 ay sonra', 1], ['+2a', '2 ay sonra', 2], ['+3a', '3 ay sonra', 3], ['+6a', '6 ay sonra', 6], ['+12a', '1 yıl sonra', 12]];
+function riskTerminSuredenTarih(kod, baz) {
+  const s = RISK_TERMIN_SURELERI.find(x => x[0] === kod);
+  if (!s) return '';
+  const t = baz ? new Date(baz + 'T00:00:00') : new Date();
+  const gun = t.getDate();
+  t.setDate(1); t.setMonth(t.getMonth() + s[2]);
+  // Ay sonu taşmasını önle (31 Ocak + 1 ay → 28/29 Şubat).
+  const ayinSonGunu = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+  t.setDate(Math.min(gun, ayinSonGunu));
+  const p = n => String(n).padStart(2, '0');
+  return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+}
+
 function riskTerminTarihMi(t) { return /^\d{4}-\d{2}-\d{2}$/.test(String(t || '')); }
 
 // Seçim kutusu türü: '' | 'tarih' | ifade | 'diger'
@@ -138,6 +154,7 @@ function riskTerminTuru(t) {
 function riskTerminBirlestir(tur, tarih, metin) {
   if (!tur) return '';
   if (tur === 'tarih') return riskTerminTarihMi(tarih) ? tarih : '';
+  if (String(tur).charAt(0) === '+') return riskTerminSuredenTarih(tur);
   if (tur === 'diger') return String(metin || '').trim();
   return tur;
 }
@@ -145,7 +162,7 @@ function riskTerminBirlestir(tur, tarih, metin) {
 function riskTerminSecenekleriHtml(t) {
   const tur = riskTerminTuru(t);
   const k = v => String(v).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
-  return [['', '— Termin yok —'], ['tarih', 'Tarih seç…']].concat(RISK_TERMIN_IFADELERI.map(i => [i, i]), [['diger', 'Diğer (yazın)…']])
+  return [['', '— Termin yok —'], ['tarih', 'Tarih seç…']].concat(RISK_TERMIN_SURELERI.map(s => [s[0], s[1] + ' (tarih hesaplanır)']), RISK_TERMIN_IFADELERI.map(i => [i, i]), [['diger', 'Diğer (yazın)…']])
     .map(([v, e]) => `<option value="${k(v)}" ${v === tur ? 'selected' : ''}>${k(e)}</option>`).join('');
 }
 

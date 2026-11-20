@@ -411,6 +411,7 @@ function riskIncelemeBaslat() {
     }
     if (el.getAttribute && el.getAttribute('data-in-termin') === 'tur') {
       const kap = el.closest('label');
+      if (el.value.charAt(0) === '+') { kap.querySelector('[data-in-termin="tarih"]').value = riskTerminSuredenTarih(el.value); el.value = 'tarih'; }
       kap.querySelector('[data-in-termin="tarih"]').style.display = el.value === 'tarih' ? '' : 'none';
       kap.querySelector('[data-in-termin="metin"]').style.display = el.value === 'diger' ? '' : 'none';
       return;

@@ -480,7 +480,10 @@ function riskSayfasiniBaslat() {
 
 // ---- Termin: tarih ya da ifade (bkz. model.js RISK_TERMIN_IFADELERI) ----
 function _riskTerminGorunumGuncelle() {
-  const tur = document.getElementById('terminTur').value;
+  const sec = document.getElementById('terminTur');
+  // "1 ay sonra" vb. seçilince tarih hesaplanır ve tür "Tarih"e döner.
+  if (sec.value.charAt(0) === '+') { document.getElementById('terminTarih').value = riskTerminSuredenTarih(sec.value); sec.value = 'tarih'; }
+  const tur = sec.value;
   document.getElementById('terminTarih').style.display = tur === 'tarih' ? '' : 'none';
   document.getElementById('terminMetin').style.display = tur === 'diger' ? '' : 'none';
 }
