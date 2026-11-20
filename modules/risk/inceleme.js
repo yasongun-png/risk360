@@ -58,6 +58,23 @@ function riskGunlukListeyeEkle(adet) {
   return yeni.length;
 }
 
+// Kullanıcı isteği (2026-11-20): "burada istersem riski tamamen sil butonu
+// olsun, silebileyim kontrol ederken" — risk kaydı silinir (riskSil), günün
+// listesinde yerine sıradaki onaylanmamış risk gelir.
+function riskGunlukSil(id) {
+  // Liste silmeden ÖNCE alınır: sonra okunursa silinen id listeden zaten
+  // atılmış olur ve yerine yenisi konamaz.
+  const kayit = riskGunlukListeGetir();
+  const s = riskSil(id);
+  if (!s.basarili) return s;
+  const haric = new Set(kayit.idler.concat(kayit.atlananlar || []));
+  const yerine = _inAdaylar(kayit.yil, haric)[0];
+  kayit.idler = kayit.idler.flatMap(x => x === id ? (yerine ? [yerine.id] : []) : [x]);
+  kayit.atlananlar = (kayit.atlananlar || []).filter(x => x !== id);
+  yaz(_inAnahtar(), kayit);
+  return { basarili: true, yerine: yerine || null };
+}
+
 // Riski bugünkü listeden çıkarıp yerine sıradaki adayı koyar.
 function riskGunlukAtla(id) {
   const kayit = riskGunlukListeGetir();
@@ -170,6 +187,7 @@ function _inKartHtml(r) {
           ? `<button type="button" class="ikincil" data-in-kaydet="${r.id}">💾 Değişiklikleri Kaydet</button><button type="button" class="ikincil" data-in-geri="${r.id}">↺ Onayı Geri Al</button>`
           : `<button type="button" class="birincil" data-in-onayla="${r.id}">✓ Kaydet ve Onayla</button><button type="button" class="ikincil" data-in-kaydet="${r.id}">💾 Sadece Kaydet</button><button type="button" class="ikincil" data-in-atla="${r.id}" title="Bugünün listesinden çıkar, yerine sıradakini getir">Atla</button>`}
         <button type="button" class="tablo-buton" data-in-form="${r.id}" title="Fotoğraf, harita ve tüm alanlar için tam formu açar">Tam formda aç</button>
+        <button type="button" class="tablo-buton sil" data-in-sil="${r.id}" title="Bu risk kaydını tamamen siler; yerine sıradaki risk gelir" style="margin-left:auto;">🗑 Riski Sil</button>
       </div>
     </div>
   </div>`;
@@ -283,8 +301,18 @@ function riskIncelemeBaslat() {
     if (!b) return;
     if (b.id === 'inDahaBtn') { const n = riskGunlukListeyeEkle(RISK_GUNLUK_HEDEF); if (!n) alert('Onaylanmamış başka risk kalmadı.'); riskIncelemeCiz(); return; }
     if (b.id === 'inGecmisBtn') { _inGecmisAcik = !_inGecmisAcik; riskIncelemeCiz(); return; }
-    const id = b.getAttribute('data-in-onayla') || b.getAttribute('data-in-kaydet') || b.getAttribute('data-in-atla') || b.getAttribute('data-in-geri') || b.getAttribute('data-in-form');
+    const id = b.getAttribute('data-in-onayla') || b.getAttribute('data-in-kaydet') || b.getAttribute('data-in-atla') || b.getAttribute('data-in-geri') || b.getAttribute('data-in-form') || b.getAttribute('data-in-sil');
     if (!id) return;
+    if (b.hasAttribute('data-in-sil')) {
+      const r = riskIdIleGetirRepo(id);
+      if (!r || !(await onayModali(`${r.riskNo || 'Bu'} risk kaydı tamamen silinsin mi? (${(r.tehlike || '').slice(0, 80)})`, 'Sil'))) return;
+      const s = riskGunlukSil(id);
+      if (!s.basarili) { alert(s.hata || 'Silinemedi.'); return; }
+      _inAcikKartlar.delete(id);
+      if (typeof _bolumFiltreDoldur === 'function') _bolumFiltreDoldur();
+      riskIncelemeCiz();
+      return;
+    }
     if (b.hasAttribute('data-in-onayla')) _inKaydet(id, true);
     else if (b.hasAttribute('data-in-kaydet')) _inKaydet(id, false);
     else if (b.hasAttribute('data-in-atla')) { if (!riskGunlukAtla(id)) alert('Yerine getirilecek başka onaylanmamış risk yok.'); riskIncelemeCiz(); }

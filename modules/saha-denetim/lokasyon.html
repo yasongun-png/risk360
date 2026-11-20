@@ -142,6 +142,7 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="ikincil" id="ldBankaYukleBtn" title="Tesis / Bölüm, Alt başlık, Kontrol sorusu, Tür sütunlu kontrol listesini (Excel) yükler; lokasyon kontrolünün soruları bununla değişir">📥 Soru Bankası Yükle</button>
           <input type="file" id="ldBankaYukleDosya" accept=".xlsx,.xls" style="display:none;">
+          <button type="button" class="ikincil" id="ldRiskAnaliziBtn" title="Soru bankasındaki her soruyu bir risk satırı yapar; Risk Değerlendirmesi modülüne içe aktarılabilir Fine-Kinney Excel'i indirir">📊 Risk Analizi Oluştur (Excel)</button>
           <button type="button" class="ikincil" id="ldTopluOneriBtn" title="Seçili (seçim yoksa tüm) lokasyonların soru listesini lokasyon adına ve ekipmanlarına göre önerir">✨ Soruları Lokasyonlara Göre Öner</button>
           <button type="button" class="ikincil" id="ldFormExcelBtn" title="Seçili lokasyonların (seçim yoksa tüm maddelerin) boş kontrol formu">📋 Kontrol Formu (Excel)</button>
           <button type="button" class="ikincil" id="ldBarkodPdfBtn">🏷 Barkod Etiketleri (PDF)</button>
@@ -341,7 +342,8 @@
   <script src="lokasyon-model.js?v=11"></script>
   <script src="lokasyon-service.js?v=10"></script>
   <script src="lokasyon-cikti.js?v=6"></script>
-  <script src="lokasyon-ui.js?v=11"></script>
+  <script src="lokasyon-risk.js?v=1"></script>
+  <script src="lokasyon-ui.js?v=12"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 

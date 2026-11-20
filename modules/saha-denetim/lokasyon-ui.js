@@ -133,7 +133,12 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
     _ldLokasyonListesiCiz();
   });
   _ldBankaBilgisiCiz();
-  _ldEl('ldTopluOneriBtn').addEventListener('click', () => {
+  _ldEl('ldRiskAnaliziBtn').addEventListener('click', async () => {
+    try {
+      const n = await ldRiskAnaliziExcelIndir(_ldFirma);
+      if (n) alert(n + ' soru, ' + n + ' risk satırı olarak indirildi.\n\nRisk Değerlendirmesi modülünde önce yılı seçin, sonra "İçe Aktar" ile bu dosyayı yükleyin; her Tesis/Bölüm ayrı bir konu olur. O/F/Ş değerleri başlangıç önerisidir, içe aktardıktan sonra düzenleyebilirsiniz.');
+    } catch (hata) { console.error(hata); alert('Risk analizi oluşturulamadı: ' + (hata.message || hata)); }
+  });  _ldEl('ldTopluOneriBtn').addEventListener('click', () => {
     const secili = new Set(Array.from(document.querySelectorAll('#ldLokasyonGovde [data-lok-cb]:checked')).map(cb => cb.getAttribute('data-lok-cb')));
     let liste = _ldLokasyonFiltreli();
     if (secili.size) liste = liste.filter(l => secili.has(l.id));
