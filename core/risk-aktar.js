@@ -41,8 +41,9 @@ function _raRiskNoUret(bolum, mevcut, yil) {
     .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'RSK').padEnd(3, 'X');
   let maks = 0;
   const y = Number(yil);
-  const kayitYili = r => { const x = Number(r && r.yil); return Number.isInteger(x) && x >= 2000 && x <= 2100 ? x : 2026; };
-  (Number.isInteger(y) && y > 0 ? mevcut.filter(r => kayitYili(r) === y) : mevcut).forEach(r => {
+  const gecerli = v => Number.isFinite(v) && v >= 2000 && v < 2101 && Math.abs(v * 10 - Math.round(v * 10)) < 1e-6;
+  const kayitYili = r => { const x = Number(r && r.yil); return gecerli(x) ? Math.round(x * 10) / 10 : 2026; };
+  (gecerli(y) ? mevcut.filter(r => kayitYili(r) === y) : mevcut).forEach(r => {
     if (!String(r.riskNo || '').startsWith(onEk)) return;
     const n = parseInt(String(r.riskNo).slice(3), 10);
     if (Number.isFinite(n) && n > maks) maks = n;
@@ -70,11 +71,11 @@ function riskeAktarButonHtml(modul, id) {
 // açılmış en son yıla eklenir; konu önerileri de o yılın konularıdır.
 function _raKayitYili(k) {
   const y = Number(k && k.yil);
-  return Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : 2026;
+  return (Number.isFinite(y) && y >= 2000 && y < 2101 && Math.abs(y * 10 - Math.round(y * 10)) < 1e-6) ? Math.round(y * 10) / 10 : 2026;
 }
 
 function _raHedefYil() {
-  const yillar = (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(Number.isInteger);
+  const yillar = (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(y => (Number.isFinite(y) && y >= 2000 && y < 2101 && Math.abs(y * 10 - Math.round(y * 10)) < 1e-6));
   const riskler = oku(_raRiskAnahtari(), []) || [];
   const konular = oku(tenantAnahtar('risk_bolumleri'), []) || [];
   return Math.max.apply(null, [2026].concat(yillar, riskler.map(_raKayitYili), konular.map(_raKayitYili)));

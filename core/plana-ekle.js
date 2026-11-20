@@ -385,7 +385,7 @@ const _PE_RISK_HATIRLATMA_GUN = 7;
 
 function _peRiskYili(k) {
   const y = Number(k && k.yil);
-  return Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : 2026;
+  return (Number.isFinite(y) && y >= 2000 && y < 2101 && Math.abs(y * 10 - Math.round(y * 10)) < 1e-6) ? Math.round(y * 10) / 10 : 2026;
 }
 
 function riskTerminleriniPlanaEsitle() {
@@ -395,7 +395,7 @@ function riskTerminleriniPlanaEsitle() {
   if (!kullaniciId) return 0;
   const riskler = oku(riskAnahtari, []);
   if (!Array.isArray(riskler)) return 0;
-  const yillar = (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(Number.isInteger);
+  const yillar = (oku(tenantAnahtar('risk_yillari'), []) || []).map(Number).filter(y => (Number.isFinite(y) && y >= 2000 && y < 2101 && Math.abs(y * 10 - Math.round(y * 10)) < 1e-6));
   const sonYil = Math.max.apply(null, [2026].concat(yillar, riskler.map(_peRiskYili)));
   const bugun = _peBugun();
   const sinir = (() => { const d = new Date(bugun + 'T00:00:00'); d.setDate(d.getDate() + _PE_RISK_HATIRLATMA_GUN); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();

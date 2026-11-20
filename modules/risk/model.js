@@ -115,7 +115,7 @@ function sonrakiRiskNoUret(bolum, mevcutRiskler, yil) {
   const onEk = riskNoOnEkiUret(bolum);
   let maks = 0;
   const y = Number(yil);
-  (Number.isInteger(y) && y > 0 ? mevcutRiskler.filter(r => riskYili(r) === y) : mevcutRiskler).forEach(r => {
+  (riskYilGecerliMi(y) ? mevcutRiskler.filter(r => riskYili(r) === y) : mevcutRiskler).forEach(r => {
     if (!String(r.riskNo || '').startsWith(onEk)) return;
     const kuyruk = parseInt(String(r.riskNo).slice(3), 10);
     if (Number.isFinite(kuyruk) && kuyruk > maks) maks = kuyruk;
@@ -197,16 +197,21 @@ function riskSeviyesiSirasi(duzeyEtiketi) {
 // yılına aittir. Yıl alanı olmayan (bu özellikten önceki) kayıtlar 2026 sayılır.
 const RISK_ESKI_KAYIT_YILI = 2026;
 
+// Kullanıcı isteği (2026-11-20): "aynı yıl içinde tekrar yıl girişi yapabileyim
+// 2027.1, 2027.2 gibi" — yıl tam sayı ya da tek ondalıklı dönem olabilir.
+function riskYilGecerliMi(y) { return typeof y === 'number' && (Number.isFinite(y) && y >= 2000 && y < 2101 && Math.abs(y * 10 - Math.round(y * 10)) < 1e-6); }
+function riskYilNormallestir(v) { const s = String(v ?? '').trim().replace(',', '.'); if (!/^\d{4}(\.[1-9])?$/.test(s)) return NaN; const y = Math.round(Number(s) * 10) / 10; return riskYilGecerliMi(y) ? y : NaN; }
+
 function riskYili(kayit) {
   const y = Number(kayit && kayit.yil);
-  return Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : RISK_ESKI_KAYIT_YILI;
+  return riskYilGecerliMi(y) ? Math.round(y * 10) / 10 : RISK_ESKI_KAYIT_YILI;
 }
 
 // Yeni kaydın varsayılan yılı (barkodla bildirim, başka modülden aktarım gibi
 // yıl seçilmeyen yerler): açılmış en son yıl.
 function riskEnSonYil(riskler, yillar) {
   const tum = [RISK_ESKI_KAYIT_YILI].concat((yillar || []).map(Number), (riskler || []).map(riskYili))
-    .filter(y => Number.isInteger(y) && y >= 2000 && y <= 2100);
+    .filter(y => riskYilGecerliMi(y));
   return Math.max.apply(null, tum);
 }
 

@@ -506,8 +506,8 @@ function riskSayfasiniBaslat() {
   });
   document.getElementById('riskYeniYilBtn').addEventListener('click', async () => {
     const yillar = riskYillariListesi();
-    const oneri = String(Math.max(yillar[yillar.length - 1] + 1, new Date().getFullYear()));
-    const girilen = await metinIstemModali('Açılacak değerlendirme yılı:', oneri, 'ör. 2027');
+    const oneri = String(Math.max(Math.floor(yillar[yillar.length - 1]) + 1, new Date().getFullYear()));
+    const girilen = await metinIstemModali('Açılacak değerlendirme yılı (aynı yıl içinde yeni dönem için ör. 2027.1, 2027.2):', 'ör. 2027 ya da 2027.1', oneri);
     if (girilen === null) return;
     const sonuc = riskYilEkle(girilen);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }

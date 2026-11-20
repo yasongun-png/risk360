@@ -20,7 +20,7 @@ function riskYillariListesi() {
   riskTumunuGetir().forEach(r => kume.add(riskYili(r)));
   bolumleriTumunuGetir().forEach(b => kume.add(riskYili(b)));
   if (!kume.size) kume.add(RISK_ESKI_KAYIT_YILI);
-  return Array.from(kume).filter(y => Number.isInteger(y)).sort((a, b) => a - b);
+  return Array.from(kume).filter(y => riskYilGecerliMi(y)).sort((a, b) => a - b);
 }
 
 function riskAktifYil() {
@@ -38,9 +38,9 @@ function riskAktifYilAyarla(yil) {
 }
 
 function riskYilEkle(yil) {
-  const y = Number(String(yil || '').trim());
-  if (!Number.isInteger(y) || y < 2000 || y > 2100) return { basarili: false, hata: 'Geçerli bir yıl yazın (ör. 2027).' };
-  if (riskYillariListesi().includes(y)) return { basarili: false, hata: `${y} yılı zaten var.` };
+  const y = riskYilNormallestir(yil);
+  if (Number.isNaN(y)) return { basarili: false, hata: 'Geçerli bir yıl yazın (ör. 2027; aynı yıl içinde yeni dönem için 2027.1, 2027.2 … 2027.9).' };
+  if (riskYillariListesi().includes(y)) return { basarili: false, hata: `${y} zaten var.` };
   riskYillariKaydet(Array.from(new Set(riskYillariKayitliGetir().concat([y]))).sort((a, b) => a - b));
   return { basarili: true, yil: y };
 }
