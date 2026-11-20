@@ -131,6 +131,26 @@ function _inPuanHtml(o, f, s, yontem) {
   return `<b>${rp}</b> <span class="duzey-rozet duzey-${slugOlustur(d.etiket)}">${_inK(d.etiket)}</span>`;
 }
 
+// Kullanıcı isteği (2026-11-20): "günlük risk analizi kontrolünde istersem
+// bölüm değiştirebilmek istiyorum" — kartta konu (o yılın konuları) ve bölüm
+// (yıldaki bölüm adları + firma bölümleri) düzenlenebilir.
+function _inKonuSecenekleri(r) {
+  const yil = riskYili(r);
+  const adlar = new Set(bolumleriTumunuGetir().filter(b => riskYili(b) === yil).map(b => b.ad));
+  riskTumunuGetir().forEach(x => { if (riskYili(x) === yil && x.bolum) adlar.add(x.bolum); });
+  if (r.bolum) adlar.add(r.bolum);
+  return Array.from(adlar).sort((a, b) => a.localeCompare(b, 'tr'))
+    .map(ad => `<option value="${_inK(ad)}" ${ad === r.bolum ? 'selected' : ''}>${_inK(ad)}</option>`).join('');
+}
+
+function _inBolumListesiHtml(yil) {
+  const adlar = new Set();
+  riskTumunuGetir().forEach(x => { if (riskYili(x) === yil) { const b = riskBolumGoruntu(x); if (b) adlar.add(b); } });
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  ((firma && firma.bolumler) || []).forEach(b => { if (b) adlar.add(String(b).trim()); });
+  return `<datalist id="inBolumListesi">${Array.from(adlar).sort((a, b) => a.localeCompare(b, 'tr')).map(a => `<option value="${_inK(a)}">`).join('')}</datalist>`;
+}
+
 function _inKartHtml(r) {
   const z = _riskiZenginlestir(r);
   const onayli = riskOnayliMi(r);
@@ -155,6 +175,10 @@ function _inKartHtml(r) {
   return `<div class="in-kart${onayli ? ' onayli' : ''}" id="inKart_${r.id}" data-in-kart="${r.id}">
     ${ust}
     <div class="in-govde">
+      <div class="in-izgara">
+        <label class="in-alan"><span>Risk Değerlendirme Konusu</span><select data-in-alan="bolum">${_inKonuSecenekleri(r)}</select></label>
+        <label class="in-alan"><span>Bölüm</span><input type="text" data-in-alan="altBolum" list="inBolumListesi" value="${_inK(z.altBolum || '')}" placeholder="${_inK(z.altBolum ? 'Listeden seçin ya da yazın' : (z.bolum || 'Listeden seçin ya da yazın'))}"></label>
+      </div>
       <div class="in-izgara">
         ${alan('yer', 'Yer / Ekipman', z.yer)}
         ${alan('faaliyet', 'Faaliyet', z.faaliyet)}
@@ -204,7 +228,7 @@ function riskIncelemeCiz() {
   const gecmis = _inGecmisAcik ? riskTumunuGetir().filter(r => riskYili(r) === ist.yil && riskOnayliMi(r))
     .sort((a, b) => (b.inceleme.zaman || b.inceleme.tarih || '').localeCompare(a.inceleme.zaman || a.inceleme.tarih || '')) : [];
 
-  kutu.innerHTML = `
+  kutu.innerHTML = _inBolumListesiHtml(ist.yil) + `
     <div class="in-ust">
       <div class="in-ilerleme">
         <div class="in-ilerleme-baslik"><b>Bugün (${_inK(gunAyYil(_inBugun()))})</b><span>${ist.bugunOnayli} / ${ist.bugunToplam} onaylandı</span></div>
