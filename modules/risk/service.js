@@ -313,7 +313,7 @@ async function riskMukerrerleriTemizle() {
   const { silinecekler } = riskMukerrerleriBul();
   if (!silinecekler.length) return { basarili: true, silinen: 0 };
   const silinecekIdler = new Set(silinecekler.map(r => r.id));
-  const yeniListe = riskTumunuGetir().filter(r => !silinecekIdler.has(r.id));
+  const yeniListe = _riskNumaraBosluklariniKapat(riskTumunuGetir().filter(r => !silinecekIdler.has(r.id)), silinecekler.map(riskYili)).liste;
   const sonuc = await yazVeSonucuGetir(tenantAnahtar('risk_kayitlari'), yeniListe);
   return sonuc.basarili ? { basarili: true, silinen: silinecekler.length } : { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
 }
@@ -390,16 +390,34 @@ function riskGuncelle(id, veriler) {
   return { basarili: true, risk: guncellenen };
 }
 
+// Kullanıcı isteği (2026-11-20): "sildiğim risklerden sonra da tekrar sıralama
+// … boş kalmasın diye" — silinen riskin yılındaki numaralar silmeyle aynı
+// yazımda 0001'den boşluksuz yeniden verilir (bkz. riskYilNumaralariOnizle).
+function _riskNumaraBosluklariniKapat(liste, yillar) {
+  const harita = new Map();
+  Array.from(new Set(yillar)).forEach(y => riskYilNumaralariOnizle(y, liste).forEach(d => harita.set(d.id, d.yeni)));
+  return { liste: harita.size ? liste.map(r => harita.has(r.id) ? Object.assign({}, r, { riskNo: harita.get(r.id) }) : r) : liste, degisen: harita.size };
+}
+
 function riskSil(id) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
-  riskSilRepo(id);
-  return { basarili: true };
+  const tum = riskTumunuGetir();
+  const silinen = tum.find(r => r.id === id);
+  if (!silinen) return { basarili: true, degisen: 0 };
+  const s = _riskNumaraBosluklariniKapat(tum.filter(r => r.id !== id), [riskYili(silinen)]);
+  _riskKaydet(s.liste);
+  return { basarili: true, degisen: s.degisen };
 }
 
 function riskTopluSil(idler) {
   if (!_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   if (!idler || !idler.length) return { basarili: false, hata: 'Silinecek risk seçilmedi.' };
-  return { basarili: true, silinen: riskTopluSilRepo(idler) };
+  const idSeti = new Set(idler);
+  const tum = riskTumunuGetir();
+  const silinenler = tum.filter(r => idSeti.has(r.id));
+  const s = _riskNumaraBosluklariniKapat(tum.filter(r => !idSeti.has(r.id)), silinenler.map(riskYili));
+  _riskKaydet(s.liste);
+  return { basarili: true, silinen: silinenler.length, degisen: s.degisen };
 }
 
 // ---- Şablonlar (sektöre göre hazır risk şablonları + kullanıcının kendi
@@ -598,10 +616,10 @@ function riskOzetiHesapla(verilenListe) {
 // — seçilen yılın risk numaraları her önek (NIT, CAN …) için mevcut sıra
 // korunarak 0001'den yeniden verilir. Diğer yılların kayıtlarına dokunulmaz.
 // Dönüş: { basarili, degisen, ornek: ['NIT0233 → NIT0001', …] }.
-function riskYilNumaralariOnizle(yil) {
+function riskYilNumaralariOnizle(yil, liste) {
   const y = Number(yil);
   const gruplar = {};
-  riskTumunuGetir().filter(r => riskYili(r) === y).forEach(r => {
+  (liste || riskTumunuGetir()).filter(r => riskYili(r) === y).forEach(r => {
     const no = String(r.riskNo || '');
     const onEk = /^[A-Z0-9]{3}\d+$/.test(no) ? no.slice(0, 3) : riskNoOnEkiUret(r.bolum);
     (gruplar[onEk] = gruplar[onEk] || []).push(r);

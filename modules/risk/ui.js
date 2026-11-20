@@ -210,10 +210,10 @@ function riskSayfasiniBaslat() {
   document.getElementById('topluSilBtn').addEventListener('click', async () => {
     const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
     if (!secililer.length) { alert('Silmek için listeden riskleri işaretleyin.'); return; }
-    if (!(await onayModali(`İşaretli ${secililer.length} risk kaydı silinsin mi?`, 'Sil'))) return;
+    if (!(await onayModali(`İşaretli ${secililer.length} risk kaydı silinsin mi? Aynı yıldaki risk numaraları boşluk kalmayacak şekilde yeniden sıralanır.`, 'Sil'))) return;
     const sonuc = riskTopluSil(secililer);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
-    alert(`${sonuc.silinen} risk kaydı silindi.`);
+    alert(`${sonuc.silinen} risk kaydı silindi.${sonuc.degisen ? ' ' + sonuc.degisen + ' riskin numarası boşluk kalmasın diye yeniden sıralandı.' : ''}`);
     _bolumFiltreDoldur();
     kayitlariCiz(document.getElementById('aramaKutusu').value, true);
   });
@@ -872,7 +872,7 @@ function _riskTabloDinleyicisiniKur() {
     }
     const sil = e.target.closest('[data-sil]');
     if (sil) {
-      if (await onayModali('Bu risk kaydını silmek istediğinize emin misiniz?', 'Sil')) {
+      if (await onayModali('Bu risk kaydını silmek istediğinize emin misiniz? Aynı yıldaki risk numaraları boşluk kalmayacak şekilde yeniden sıralanır.', 'Sil')) {
         riskSil(sil.getAttribute('data-sil'));
         _bolumFiltreDoldur();
         kayitlariCiz(document.getElementById('aramaKutusu').value, true);

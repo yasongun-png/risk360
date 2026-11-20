@@ -370,7 +370,7 @@ function riskIncelemeBaslat() {
     if (!id) return;
     if (b.hasAttribute('data-in-sil')) {
       const r = riskIdIleGetirRepo(id);
-      if (!r || !(await onayModali(`${r.riskNo || 'Bu'} risk kaydı tamamen silinsin mi? (${(r.tehlike || '').slice(0, 80)})`, 'Sil'))) return;
+      if (!r || !(await onayModali(`${r.riskNo || 'Bu'} risk kaydı tamamen silinsin mi? (${(r.tehlike || '').slice(0, 80)}) Aynı yıldaki numaralar boşluk kalmayacak şekilde yeniden sıralanır.`, 'Sil'))) return;
       const s = riskGunlukSil(id);
       if (!s.basarili) { alert(s.hata || 'Silinemedi.'); return; }
       _inAcikKartlar.delete(id);
