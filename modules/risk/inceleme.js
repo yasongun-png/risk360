@@ -208,7 +208,7 @@ function _inKartHtml(r) {
     ${ust}
     <div class="in-govde">
       <div class="in-izgara">
-        <label class="in-alan"><span>Risk Değerlendirme Konusu</span><select data-in-alan="bolum">${_inKonuSecenekleri(r)}</select></label>
+        <label class="in-alan"><span>Tesis/Konu</span><select data-in-alan="bolum">${_inKonuSecenekleri(r)}</select></label>
         <label class="in-alan"><span>Bölüm</span><input type="text" data-in-alan="altBolum" list="inBolumListesi" value="${_inK(z.altBolum || '')}" placeholder="${_inK(z.altBolum ? 'Listeden seçin ya da yazın' : (z.bolum || 'Listeden seçin ya da yazın'))}"></label>
       </div>
       <div class="in-izgara">
@@ -297,7 +297,7 @@ function _inGecmisHtml(liste) {
   return Object.keys(gunler).sort().reverse().map(g => `
     <div class="in-gun-baslik">${_inK(gunAyYil(g))} — ${gunler[g].length} risk</div>
     <div class="tablo-scroll"><table class="veri-tablosu">
-      <thead><tr><th>Risk No</th><th>Konu</th><th>Tehlike</th><th>Düzey</th><th>Onaylayan</th><th></th></tr></thead>
+      <thead><tr><th>Risk No</th><th>Tesis/Konu</th><th>Tehlike</th><th>Düzey</th><th>Onaylayan</th><th></th></tr></thead>
       <tbody>${gunler[g].map(r => { const z = _riskiZenginlestir(r); return `<tr>
         <td>${_inK(z.riskNo)}</td><td>${_inK(z.bolum)}</td><td>${_inK(z.tehlike)}</td>
         <td><span class="duzey-rozet duzey-${slugOlustur(z.duzey1)}">${_inK(z.duzey1)}</span></td>

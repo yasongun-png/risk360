@@ -113,7 +113,7 @@ function _raModalKur() {
       <p id="raKaynak" style="font-size:12.5px; color:var(--metin-soluk); margin:0 0 10px;"></p>
       <div id="raUyari" style="display:none; font-size:12.5px; background:#fef3c7; color:#92400e; padding:8px 10px; border-radius:8px; margin-bottom:10px;"></div>
       <datalist id="raKonuListesi"></datalist>
-      <label for="raKonu">Risk Değerlendirme Konusu</label><input type="text" id="raKonu" list="raKonuListesi" placeholder="Mevcut konuyu seçin veya yeni ad yazın">
+      <label for="raKonu">Tesis/Konu</label><input type="text" id="raKonu" list="raKonuListesi" placeholder="Mevcut konuyu seçin veya yeni ad yazın">
       <div class="form-satir-ikili">
         <div><label for="raBolum">Bölüm</label><input type="text" id="raBolum"></div>
         <div><label for="raYer">Yer / Ekipman</label><input type="text" id="raYer"></div>
@@ -173,7 +173,7 @@ async function _raKaydet() {
   const istek = _raAcikIstek;
   if (!istek) return;
   const v = id => document.getElementById(id).value.trim();
-  const zorunlu = [['raKonu', 'Risk Değerlendirme Konusu'], ['raYer', 'Yer / Ekipman'], ['raFaaliyet', 'Faaliyet'], ['raTehlike', 'Tehlike'], ['raRisk', 'Risk'], ['raO', 'Olasılık'], ['raF', 'Frekans'], ['raS', 'Şiddet']];
+  const zorunlu = [['raKonu', 'Tesis/Konu'], ['raYer', 'Yer / Ekipman'], ['raFaaliyet', 'Faaliyet'], ['raTehlike', 'Tehlike'], ['raRisk', 'Risk'], ['raO', 'Olasılık'], ['raF', 'Frekans'], ['raS', 'Şiddet']];
   const eksik = zorunlu.filter(([id]) => !v(id)).map(([, ad]) => ad);
   if (eksik.length) { document.getElementById('raHata').textContent = 'Doldurulması gereken alanlar: ' + eksik.join(', '); return; }
 

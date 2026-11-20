@@ -19,7 +19,7 @@ let _riskTasinacakIdler = [];
 // İçe aktarımda tüm satırlar açık (seçili) konuya yazılır; dosyadaki konu
 // sütunu yok sayılır, Bölüm sütunu satırın bölümü olarak kalır.
 const RISK_IMPORT_KOLONLARI = [
-  { anahtar: 'bolum', baslik: 'Risk Değerlendirme Konusu', esanlamlar: ['Konu', 'Risk Değerlendirme Konusu Adı'] },
+  { anahtar: 'bolum', baslik: 'Tesis/Konu', esanlamlar: ['Risk Değerlendirme Konusu', 'Tesis', 'Konu', 'Risk Değerlendirme Konusu Adı'] },
   { anahtar: 'altBolum', baslik: 'Bölüm' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman', esanlamlar: ['Ekipman'] },
   { anahtar: 'faaliyet', baslik: 'Faaliyet' },
@@ -45,7 +45,7 @@ const RISK_IMPORT_KOLONLARI = [
 
 const RISK_EXPORT_KOLONLARI = [
   { anahtar: 'riskNo', baslik: 'Risk No' },
-  { anahtar: 'bolum', baslik: 'Risk Değerlendirme Konusu' },
+  { anahtar: 'bolum', baslik: 'Tesis/Konu' },
   { anahtar: 'bolumGoruntu', baslik: 'Bölüm' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
@@ -123,7 +123,7 @@ function riskSayfasiniBaslat() {
   });
   document.getElementById('bolumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
   document.getElementById('bolumYeniBtn').addEventListener('click', async () => {
-    const ad = await metinIstemModali('Yeni risk değerlendirme konusu adı:', '', '');
+    const ad = await metinIstemModali('Yeni tesis/konu adı:', '', '');
     if (ad === null) return;
     const sonuc = bolumEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -170,7 +170,7 @@ function riskSayfasiniBaslat() {
   document.getElementById('konuGrubuTamamBtn').addEventListener('click', () => _riskKonuGrubuDegistir('tamamlanan'));
   document.getElementById('bolumTamamlaBtn').addEventListener('click', async () => {
     const ad = document.getElementById('bolumFiltre').value;
-    if (!ad) { alert('Önce bir risk değerlendirme konusu seçin.'); return; }
+    if (!ad) { alert('Önce bir tesis/konu seçin.'); return; }
     const tamamla = _riskKonuGrubu === 'devam';
     const soru = tamamla
       ? `"${ad}" risk değerlendirmesi tamamlandı olarak işaretlensin mi? Konu "Tamamlanan Değerlendirmeler" altına taşınır; kayıtları ve raporları orada açılmaya devam eder.`
@@ -318,13 +318,13 @@ function riskSayfasiniBaslat() {
       e.target.value = '';
       if (hataMesaji) { alert(hataMesaji); return; }
       // Kullanıcı isteği (2026-11-18): "risk değerlendirmesi konusunu tablodan
-      // almalı içe aktarırken" -- satırdaki "Risk Değerlendirme Konusu" sütunu
+      // almalı içe aktarırken" -- satırdaki "Tesis/Konu" sütunu
       // doluysa konu odur; boşsa açık (seçili) konuya yazılır. Önceki isteğe
       // uygun olarak "Bölüm" sütunu konu yapılmaz, yalnız satırın bölümüdür.
       const seciliKonu = document.getElementById('bolumFiltre').value;
       const konusuzSatir = satirlar.filter(s => !String(s.bolum || '').trim()).length;
       if (konusuzSatir && !seciliKonu) {
-        alert(`${konusuzSatir} satırda "Risk Değerlendirme Konusu" boş. Bu satırların ekleneceği konuyu yukarıdan seçin (yoksa "+ Yeni Konu" ile oluşturun) ya da tabloda konu sütununu doldurun.`);
+        alert(`${konusuzSatir} satırda "Tesis/Konu" boş. Bu satırların ekleneceği konuyu yukarıdan seçin (yoksa "+ Yeni Tesis/Konu" ile oluşturun) ya da tabloda konu sütununu doldurun.`);
         return;
       }
       satirlar.forEach(satir => {
@@ -454,7 +454,7 @@ function riskSayfasiniBaslat() {
   document.getElementById('sablonKonuFiltre').addEventListener('change', sablonlariCiz);
   document.getElementById('sablonYonetmelikFiltre').addEventListener('change', sablonlariCiz);
   document.getElementById('sablonBolumYeniBtn').addEventListener('click', async () => {
-    const ad = await metinIstemModali('Yeni risk değerlendirme konusu adı:', '', '');
+    const ad = await metinIstemModali('Yeni tesis/konu adı:', '', '');
     if (ad === null) return;
     const sonuc = bolumEkle(ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
@@ -759,7 +759,7 @@ function _bolumFiltreDoldur() {
   const bolumler = bolumleriGetir(_riskKonuGrubu);
   const tamam = _riskKonuGrubu === 'tamamlanan';
 
-  secim.innerHTML = '<option value="">Tüm Konular</option>' +
+  secim.innerHTML = '<option value="">Tüm Tesisler/Konular</option>' +
     bolumler.map(b => `<option value="${_riskKacir(b.ad)}" ${b.ad === seciliDeger ? 'selected' : ''}>${_riskKacir(b.ad)}${tamam && b.tamamlanmaTarihi ? ' (✓ ' + gunAyYil(b.tamamlanmaTarihi) + ')' : ''}</option>`).join('');
 
   document.getElementById('konuGrubuDevamSayi').textContent = `(${bolumleriGetir('devam').length})`;
@@ -973,7 +973,7 @@ function ozetiCiz() {
     </div>
 
     <div class="modul-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px,1fr));">
-      <div>${dagilimHtml('Risk Değerlendirme Konusuna Göre', ozet.bolumeGore)}</div>
+      <div>${dagilimHtml('Tesis/Konuya Göre', ozet.bolumeGore)}</div>
       <div>${dagilimHtml('Risk Düzeyine Göre', ozet.duzeyeGore)}</div>
       <div>${dagilimHtml('Sorumluya Göre', ozet.sorumluyaGore)}</div>
     </div>
@@ -1069,7 +1069,7 @@ function modalAc(risk) {
   const konu = risk ? risk.bolum : document.getElementById('bolumFiltre').value;
   const konular = bolumleriGetir('devam').map(b => b.ad);
   if (konu && !konular.includes(konu)) konular.push(konu);
-  konuSecim.innerHTML = '<option value="">— Konu seçiniz —</option>' +
+  konuSecim.innerHTML = '<option value="">— Tesis/Konu seçiniz —</option>' +
     konular.map(k => `<option value="${_riskKacir(k)}">${_riskKacir(k)}</option>`).join('');
   konuSecim.value = konu || '';
   document.getElementById('altBolum').value = risk ? riskBolumGoruntu(risk) : '';

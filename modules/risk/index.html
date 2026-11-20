@@ -98,11 +98,11 @@
           <button type="button" id="konuGrubuTamamBtn" class="sekme-seciliDegil">Tamamlanan Değerlendirmeler <span id="konuGrubuTamamSayi"></span></button>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <label for="bolumFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Risk Değerlendirme Konusu</label>
-          <select id="bolumFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Konular</option></select>
-          <button type="button" class="ikincil" id="bolumYeniBtn">+ Yeni Konu</button>
-          <button type="button" class="ikincil" id="bolumAdlandirBtn" title="Seçili konunun adını değiştirir; o konudaki tüm riskler yeni adı alır">Konuyu Yeniden Adlandır</button>
-          <button type="button" class="ikincil" id="bolumSilBtn">Konuyu Sil</button>
+          <label for="bolumFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Tesis/Konu</label>
+          <select id="bolumFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Tesisler/Konular</option></select>
+          <button type="button" class="ikincil" id="bolumYeniBtn">+ Yeni Tesis/Konu</button>
+          <button type="button" class="ikincil" id="bolumAdlandirBtn" title="Seçili konunun adını değiştirir; o konudaki tüm riskler yeni adı alır">Tesis/Konuyu Yeniden Adlandır</button>
+          <button type="button" class="ikincil" id="bolumSilBtn">Tesis/Konuyu Sil</button>
           <button type="button" class="ikincil" id="bolumTamamlaBtn">✓ Tamamlandı Olarak İşaretle</button>
         </div>
         <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;" id="konuGrubuAciklama">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.</p>
@@ -192,7 +192,7 @@
     <div class="modal-kutu" style="max-width:640px;">
       <h3 id="modalBaslik">Yeni Risk Kaydı</h3>
       <form id="riskForm">
-        <label for="bolum">Risk Değerlendirme Konusu</label>
+        <label for="bolum">Tesis/Konu</label>
         <select id="bolum"></select>
         <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
@@ -399,10 +399,10 @@
        bölüm seçim modalı. -->
   <div class="modal-katman" id="topluTasiKatman">
     <div class="modal-kutu" style="max-width:420px;">
-      <h3>Başka Konuya Taşı / Kopyala</h3>
+      <h3>Başka Tesis/Konuya Taşı / Kopyala</h3>
       <p style="font-size:13px; color:var(--metin-soluk); margin-top:-8px;" id="topluTasiSayisi"></p>
 
-      <label for="topluTasiBolum">Hedef Risk Değerlendirme Konusu</label>
+      <label for="topluTasiBolum">Hedef Tesis/Konu</label>
       <select id="topluTasiBolum"></select>
 
       <label for="topluTasiIslem">İşlem</label>
@@ -438,15 +438,15 @@
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
   <script src="model.js?v=20261120n"></script>
-  <script src="validation.js?v=20261118d"></script>
+  <script src="validation.js?v=20261120k"></script>
   <script src="repository.js?v=20261118a"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261120b"></script>
-  <script src="cikti.js?v=20261118d"></script>
-  <script src="ui.js?v=20261120b"></script>
-  <script src="ekipler.js?v=20261119b"></script>
-  <script src="inceleme.js?v=20261120s"></script>
-  <script src="terminler.js?v=20261118a"></script>
+  <script src="service.js?v=20261120k"></script>
+  <script src="cikti.js?v=20261120k"></script>
+  <script src="ui.js?v=20261120k"></script>
+  <script src="ekipler.js?v=20261120k"></script>
+  <script src="inceleme.js?v=20261120k"></script>
+  <script src="terminler.js?v=20261120k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 

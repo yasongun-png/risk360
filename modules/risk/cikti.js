@@ -913,7 +913,7 @@ async function riskPptxOlustur() {
     s.addShape(pptx.ShapeType.line, { x: 0.5, y: 0.72, w: 9.0, h: 0, line: { color: '0B2C52', width: 1 } });
 
     const sol = [
-      ['Konu', r.bolum], ['Bölüm', riskBolumGoruntu(r)], ['Yer', r.yer], ['Faaliyet', r.faaliyet],
+      ['Tesis/Konu', r.bolum], ['Bölüm', riskBolumGoruntu(r)], ['Yer', r.yer], ['Faaliyet', r.faaliyet],
       ['Tehlike', r.tehlike], ['Risk', r.risk], ['Mevcut Önlemler', r.onlem], ['Planlanan', r.planlanan]
     ].filter(([, v]) => v && String(v).trim());
     const uzunluk = sol.reduce((t, [k, v]) => t + k.length + String(v).length + 20, 0);
@@ -967,11 +967,11 @@ function riskChecklistExcelOlustur() {
     return;
   }
   const firma = aktifFirmaGetir();
-  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Konular';
+  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Tesisler/Konular';
 
   xlsxHazirOlduğunda(() => {
     const ustBilgiSatirlari = [
-      ['RİSK DEĞERLENDİRME KONUSU', bolum],
+      ['TESİS/KONU', bolum],
       ['KONTROL TARİHİ', ''],
       ['KONTROL EDEN', ''],
       ['AMAÇ', 'Mevcut risklerin sahadaki durumunun kontrolü'],
@@ -998,7 +998,7 @@ async function riskChecklistPdfOlustur() {
     return;
   }
   const firma = aktifFirmaGetir();
-  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Konular';
+  const bolum = document.getElementById('bolumFiltre').value || 'Tüm Tesisler/Konular';
   const bugun = gunAyYil(_bugun());
 
   const html = `
@@ -1030,7 +1030,7 @@ async function riskChecklistPdfOlustur() {
     </div>
 
     <div class="cl-bilgi">
-      <div><b>Risk Değerlendirme Konusu:</b> ${_riskCiktiKacir(bolum)}</div>
+      <div><b>Tesis/Konu:</b> ${_riskCiktiKacir(bolum)}</div>
       <div><b>Kontrol Tarihi:</b> ______________</div>
       <div><b>Rapor Tarihi:</b> ${bugun}</div>
     </div>

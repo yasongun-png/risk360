@@ -108,7 +108,7 @@ function bolumleriGetir(grup) {
 // tamamlandı olarak işaretlenir; risklerden türeyip kalıcı karşılığı olmayan
 // konu için önce kalıcı kayıt açılır. Risk kayıtlarına dokunulmaz.
 function bolumTamamlandiAyarla(ad, tamamlandi) {
-  if (!ad) return { basarili: false, hata: 'Önce bir risk değerlendirme konusu seçin.' };
+  if (!ad) return { basarili: false, hata: 'Önce bir tesis/konu seçin.' };
   const kalicilar = bolumleriTumunuGetir();
   const yil = riskAktifYil();
   let kayit = kalicilar.find(b => b.ad === ad && riskYili(b) === yil);
@@ -480,7 +480,7 @@ function riskSablonSil(id) {
 // değerlerini ve metinleri "Düzenle" ile firmaya özgü hâle getirebilir.
 function riskSablonlardanEkle(sablonIdleri, bolum, yer) {
   const temizBolum = (bolum || '').trim();
-  if (!temizBolum) return { basarili: false, hata: 'Risk değerlendirme konusu seçiniz.' };
+  if (!temizBolum) return { basarili: false, hata: 'Tesis/Konu seçiniz.' };
   const temizYer = (yer || '').trim() || 'Genel';
 
   const tumSablonlar = riskSablonlariGetir();

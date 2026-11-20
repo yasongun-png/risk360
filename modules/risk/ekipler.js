@@ -124,12 +124,12 @@ function _ekipKonuTablosunuCiz() {
   kap.innerHTML = `
     <div style="background:var(--kart-bg); border-radius:10px; padding:12px 14px; box-shadow:var(--golge); margin-bottom:14px;">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-        <div style="font-weight:700;">Konulara Göre Ekipler <span style="font-weight:400; font-size:12px; color:var(--metin-soluk);">(${riskAktifYil()} yılı konuları)</span></div>
+        <div style="font-weight:700;">Tesis/Konulara Göre Ekipler <span style="font-weight:400; font-size:12px; color:var(--metin-soluk);">(${riskAktifYil()} yılı konuları)</span></div>
         ${ozelsiz ? `<button type="button" class="ikincil" id="ekipTumKonularBtn" style="width:auto;" title="Kendi ekibi olmayan her konu için genel ekipten kopyalanan ayrı bir ekip oluşturur">+ Ekibi olmayan ${ozelsiz} konu için ayrı ekip oluştur</button>` : ''}
       </div>
       <p style="font-size:12px; color:var(--metin-soluk); margin:0 0 8px;">Her konunun raporunda kullanılacak ekibi seçin ya da "Ayrı ekip oluştur" ile o konuya özel ekip açın (İşveren, İSG uzmanı ve hekim genel ekipten kopyalanır; çalışan temsilcisi, destek elemanı ve bilgi sahibi çalışan boş gelir). Ekip üyeleri aşağıdaki kartlarda düzenlenir.</p>
       <div class="tablo-scroll"><table class="veri-tablosu">
-        <thead><tr><th>Risk Değerlendirme Konusu</th><th style="width:38%;">Ekip</th><th style="width:170px;"></th></tr></thead>
+        <thead><tr><th>Tesis/Konu</th><th style="width:38%;">Ekip</th><th style="width:170px;"></th></tr></thead>
         <tbody>${konular.map(k => {
           const atanan = ekipler.findIndex(e => (e.bolumler || []).includes(k));
           const secenekler = `<option value="-1" ${atanan === -1 ? 'selected' : ''}>${genelIndex !== -1 ? 'Genel ekip: ' + _ekipKacir(ekipler[genelIndex].ad || 'Adsız ekip') : '— Ekip yok —'}</option>` +
