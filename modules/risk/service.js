@@ -645,3 +645,16 @@ async function riskYilNumaralariniSirala(yil) {
   const sonuc = await yazVeSonucuGetir(tenantAnahtar('risk_kayitlari'), yeniListe);
   return sonuc.basarili ? { basarili: true, degisen: degisim.length } : { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
 }
+
+// Kullanıcı isteği (2026-11-20): "2027'deki 76 riskte bölüm olarak 20000 tonluk
+// amonyak tankı yazsın" — seçilen risklerin Bölüm (altBolum) alanı tek yazımda.
+async function riskAltBolumTopluGuncelle(idler, yeniBolum) {
+  const ad = String(yeniBolum || '').trim();
+  if (!ad) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };
+  const idSeti = new Set(idler || []);
+  if (!idSeti.size) return { basarili: false, hata: 'Değiştirilecek risk yok.' };
+  let sayac = 0;
+  const yeniListe = riskTumunuGetir().map(r => { if (!idSeti.has(r.id)) return r; sayac++; return Object.assign({}, r, { altBolum: ad }); });
+  const sonuc = await yazVeSonucuGetir(tenantAnahtar('risk_kayitlari'), yeniListe);
+  return sonuc.basarili ? { basarili: true, sayac } : { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
+}

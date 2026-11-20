@@ -206,6 +206,25 @@ function riskSayfasiniBaslat() {
     document.getElementById('topluTasiIslem').value = 'tasi';
     document.getElementById('topluTasiKatman').classList.add('acik');
   });
+  // Kullanıcı isteği (2026-11-20): işaretli (yoksa listede görünen tüm)
+  // risklerin Bölüm alanını tek seferde değiştir.
+  document.getElementById('topluBolumBtn').addEventListener('click', async () => {
+    let idler = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
+    let kapsam = 'İşaretli ' + idler.length + ' riskin';
+    if (!idler.length) {
+      idler = riskleriGetir(document.getElementById('aramaKutusu').value, riskListeFiltreleri()).map(r => r.id);
+      kapsam = 'Listede görünen ' + idler.length + ' riskin (' + riskAktifYil() + ')';
+    }
+    if (!idler.length) { alert('Listede risk yok.'); return; }
+    const ad = await metinIstemModali(kapsam + ' Bölüm alanına yazılacak ad:', 'Ör. 20000 tonluk amonyak tankı', '');
+    if (ad === null || !String(ad).trim()) return;
+    if (!(await onayModali(kapsam + ' bölümü "' + String(ad).trim() + '" olarak değiştirilsin mi?', 'Değiştir'))) return;
+    const sonuc = await riskAltBolumTopluGuncelle(idler, ad);
+    if (!sonuc.basarili) { alert(sonuc.hata); return; }
+    document.getElementById('tumunuSecCheckbox').checked = false;
+    kayitlariCiz(document.getElementById('aramaKutusu').value, true);
+    alert(sonuc.sayac + ' riskin bölümü "' + String(ad).trim() + '" olarak değiştirildi.');
+  });
   // Kullanıcı isteği: "konu içinde seçtikleri silme de ekleyelim".
   document.getElementById('topluSilBtn').addEventListener('click', async () => {
     const secililer = Array.from(document.querySelectorAll('#tabloGovde [data-sec]:checked')).map(cb => cb.getAttribute('data-id'));
