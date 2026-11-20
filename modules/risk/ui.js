@@ -26,7 +26,8 @@ const RISK_IMPORT_KOLONLARI = [
   { anahtar: 'tehlike', baslik: 'Tehlike' },
   { anahtar: 'risk', baslik: 'Risk' },
   { anahtar: 'onlem', baslik: 'Mevcut Önlemler' },
-  { anahtar: 'yasalSart', baslik: 'Yasal Şart', esanlamlar: ['Mevzuat', 'Yasal Dayanak', 'Yasal Şart / Mevzuat'] },
+  { anahtar: 'yasalSartlar', baslik: 'İlgili Yasal Şartlar', esanlamlar: ['Yasal Şartlar', 'Mevzuat'] },
+  { anahtar: 'yasalSart', baslik: 'Yasal Şart Açıklama / Madde', esanlamlar: ['Yasal Şart', 'Yasal Dayanak', 'Yasal Şart / Mevzuat', 'Madde'] },
   { anahtar: 'O', baslik: 'Olasılık (O)', esanlamlar: ['O'] },
   { anahtar: 'F', baslik: 'Frekans (F)', esanlamlar: ['F'] },
   { anahtar: 'S', baslik: 'Şiddet (Ş)', esanlamlar: ['Ş', 'S'] },
@@ -48,7 +49,8 @@ const RISK_EXPORT_KOLONLARI = [
   { anahtar: 'bolumGoruntu', baslik: 'Bölüm' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
-  { anahtar: 'yasalSart', baslik: 'Yasal Şart' },
+  { anahtar: 'yasalSartlarMetin', baslik: 'İlgili Yasal Şartlar' },
+  { anahtar: 'yasalSart', baslik: 'Yasal Şart Açıklama / Madde' },
   { anahtar: 'RP1', baslik: 'RP1' },
   { anahtar: 'duzey1', baslik: 'Düzey' },
   { anahtar: 'RP2', baslik: 'RP2' },
@@ -88,6 +90,18 @@ function _riskFotoAlaniniHazirla(inputId, onizlemeKutuId, mevcutDegerGetir, mevc
       alert(hata.message || 'Fotoğraf yüklenemedi.');
     }
   });
+}
+
+// Uygunsuzluk modülündeki "İlgili Yasal Şartlar" çoklu seçimi ile aynı.
+// Listede olmayan eski bir değer seçiliyse kaybolmasın diye başa eklenir.
+function _riskYasalSartlariDoldur(secili) {
+  const liste = Array.isArray(secili) ? secili : [];
+  const tum = liste.filter(s => !RISK_YASAL_SART_LISTESI.includes(s)).concat(RISK_YASAL_SART_LISTESI);
+  document.getElementById('yasalSartlar').innerHTML = tum.map(m => `<option value="${_rkKacir(m)}" ${liste.includes(m) ? 'selected' : ''}>${_rkKacir(m)}</option>`).join('');
+}
+
+function _rkKacir(v) {
+  return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
 function _riskFotoHucresiUret(url, etiket) {
@@ -269,7 +283,7 @@ function riskSayfasiniBaslat() {
     const bolum = document.getElementById('bolumFiltre').value;
     const dosyaAdi = bolum ? `risk_kayitlari_${bolum}.xlsx` : 'risk_kayitlari.xlsx';
     const liste = riskleriGetir(document.getElementById('aramaKutusu').value, riskListeFiltreleri())
-      .map(r => Object.assign({}, r, { bolumGoruntu: riskBolumGoruntu(r) }));
+      .map(r => Object.assign({}, r, { bolumGoruntu: riskBolumGoruntu(r), yasalSartlarMetin: (r.yasalSartlar || []).join(' | ') }));
     excelDisaAktar(liste, RISK_EXPORT_KOLONLARI, dosyaAdi);
   });
   document.getElementById('iceAktarBtn').addEventListener('click', () => {
@@ -296,6 +310,8 @@ function riskSayfasiniBaslat() {
       }
       satirlar.forEach(satir => {
         satir.bolum = String(satir.bolum || '').trim() || seciliKonu;
+        // İlgili Yasal Şartlar: ' | ', ';' ya da satır sonu ile ayrılmış liste.
+        satir.yasalSartlar = String(satir.yasalSartlar || '').split(/\s*[|;\n]\s*/).map(s => s.trim()).filter(Boolean);
         // Termin tarih ya da "Sürekli", "Her defasında" gibi metin olabilir
         // (kullanıcı isteği 2026-11-18) — metin olduğu gibi Termin'de kalır.
         satir.termin = String(excelTarihiNormallestir(satir.termin) || '').trim();
@@ -1029,6 +1045,7 @@ function modalAc(risk) {
   document.getElementById('risk').value = risk ? risk.risk : '';
   document.getElementById('onlem').value = risk ? risk.onlem : '';
   document.getElementById('yasalSart').value = risk ? (risk.yasalSart || '') : '';
+  _riskYasalSartlariDoldur(risk ? risk.yasalSartlar : []);
   document.getElementById('O').value = risk ? risk.O : '';
   document.getElementById('F').value = risk ? risk.F : '';
   document.getElementById('S').value = risk ? risk.S : '';
@@ -1112,6 +1129,7 @@ function formGonderildi(e) {
     risk: document.getElementById('risk').value,
     onlem: document.getElementById('onlem').value,
     yasalSart: document.getElementById('yasalSart').value,
+    yasalSartlar: Array.from(document.getElementById('yasalSartlar').selectedOptions).map(o => o.value),
     O: document.getElementById('O').value,
     F: document.getElementById('F').value,
     S: document.getElementById('S').value,

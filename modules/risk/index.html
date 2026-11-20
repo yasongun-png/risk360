@@ -221,8 +221,13 @@
         <label for="onlem">Mevcut Önlemler</label>
         <textarea id="onlem"></textarea>
 
-        <label for="yasalSart">Yasal Şart / Mevzuat</label>
-        <textarea id="yasalSart" rows="2" placeholder="Ör. İş Ekipmanlarının Kullanımında Sağlık ve Güvenlik Şartları Yönetmeliği, Ek-1 madde 2.8"></textarea>
+        <!-- Uygunsuzluk modülündeki yasal şart seçimi ile aynı yapı (bkz. ui.js _riskYasalSartlariDoldur). -->
+        <label for="yasalSartlar">İlgili Yasal Şartlar</label>
+        <select id="yasalSartlar" multiple size="6" style="width:100%;"></select>
+        <small style="color:var(--metin-soluk); display:block; margin:2px 0 10px;">Ctrl (Windows) / Cmd (Mac) ile çoklu seçim yapabilirsiniz.</small>
+
+        <label for="yasalSart">İlgili Yasal Şart – Serbest Açıklama / Madde</label>
+        <input type="text" id="yasalSart" placeholder="Ör. Ek-1 madde 2.8">
 
         <label for="yontem">Değerlendirme Yöntemi</label>
         <select id="yontem"></select>
@@ -430,15 +435,15 @@
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=20261120y"></script>
+  <script src="model.js?v=20261120z"></script>
   <script src="validation.js?v=20261118d"></script>
   <script src="repository.js?v=20261118a"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261120y"></script>
+  <script src="service.js?v=20261120z"></script>
   <script src="cikti.js?v=20261118d"></script>
-  <script src="ui.js?v=20261120y"></script>
+  <script src="ui.js?v=20261120z"></script>
   <script src="ekipler.js?v=20261119b"></script>
-  <script src="inceleme.js?v=20261120y"></script>
+  <script src="inceleme.js?v=20261120z"></script>
   <script src="terminler.js?v=20261118a"></script>
   <script>
     const kullanici = girisGerekliModul('risk');

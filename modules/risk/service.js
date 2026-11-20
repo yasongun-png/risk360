@@ -384,6 +384,7 @@ function riskGuncelle(id, veriler) {
     durum: veriler.durum || 'Açık',
     tespit: (veriler.tespit || '').trim(),
     // Yasal şart: formda alan yoksa (undefined) mevcut değer korunur.
+    yasalSartlar: Array.isArray(veriler.yasalSartlar) ? veriler.yasalSartlar.filter(Boolean) : ((riskIdIleGetirRepo(id) || {}).yasalSartlar || []),
     yasalSart: veriler.yasalSart !== undefined ? String(veriler.yasalSart || '').trim() : ((riskIdIleGetirRepo(id) || {}).yasalSart || '')
   });
   return { basarili: true, risk: guncellenen };

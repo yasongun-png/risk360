@@ -168,6 +168,13 @@ function _inFotoOnizlemeYenile(kutu, url) {
   if (typeof fotoReferanslariCoz === 'function') fotoReferanslariCoz(document.getElementById('inKart_' + id));
 }
 
+// Uygunsuzluk modülündeki "İlgili Yasal Şartlar" çoklu seçimi ile aynı (bkz. model.js RISK_YASAL_SART_LISTESI).
+function _inYasalSecenekleri(secili) {
+  const liste = Array.isArray(secili) ? secili : [];
+  const tum = liste.filter(s => !RISK_YASAL_SART_LISTESI.includes(s)).concat(RISK_YASAL_SART_LISTESI);
+  return tum.map(m => `<option value="${_inK(m)}" ${liste.includes(m) ? 'selected' : ''}>${_inK(m)}</option>`).join('');
+}
+
 function _inBolumListesiHtml(yil) {
   const adlar = new Set();
   riskTumunuGetir().forEach(x => { if (riskYili(x) === yil) { const b = riskBolumGoruntu(x); if (b) adlar.add(b); } });
@@ -211,7 +218,8 @@ function _inKartHtml(r) {
       ${alan('tehlike', 'Tehlike', z.tehlike, 2)}
       ${alan('risk', 'Risk', z.risk, 2)}
       ${alan('onlem', 'Mevcut (Alınmış) Önlemler', z.onlem, 2)}
-      ${alan('yasalSart', 'Yasal Şart / Mevzuat', z.yasalSart || '', 2)}
+      <label class="in-alan"><span>İlgili Yasal Şartlar <span style="font-weight:400;">(Ctrl / Cmd ile çoklu seçim)</span></span><select multiple size="5" data-in-yasal="1">${_inYasalSecenekleri(z.yasalSartlar)}</select></label>
+      ${alan('yasalSart', 'İlgili Yasal Şart – Serbest Açıklama / Madde', z.yasalSart || '')}
       <div class="in-bolum-baslik">Mevcut durum puanı — <span data-in-puan="1">${_inPuanHtml(z.O, z.F, z.S, z.yontem)}</span></div>
       <div class="in-izgara in-uclu">
         ${secim('O', 'Olasılık', olc.O, z.O)}${secim('F', 'Frekans', olc.F, z.F)}${secim('S', 'Şiddet', olc.S, z.S)}
@@ -302,6 +310,8 @@ function _inGecmisHtml(liste) {
 function _inKarttanVeri(kart) {
   const v = {};
   kart.querySelectorAll('[data-in-alan]').forEach(el => { v[el.getAttribute('data-in-alan')] = el.value; });
+  const yasal = kart.querySelector('[data-in-yasal]');
+  if (yasal) v.yasalSartlar = Array.from(yasal.selectedOptions).map(o => o.value);
   const t = ad => { const el = kart.querySelector(`[data-in-termin="${ad}"]`); return el ? el.value : ''; };
   v.termin = riskTerminBirlestir(t('tur'), t('tarih'), t('metin'));
   return v;
