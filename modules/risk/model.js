@@ -441,6 +441,8 @@ function riskKaydiOlustur(veriler) {
     Fn: veriler.Fn || '',
     Sn: veriler.Sn || '',
     fotoSonrasi: veriler.fotoSonrasi || '',
+    // Kullanıcı isteği (2026-11-20): riskin dayandığı yasal şart / mevzuat maddesi.
+    yasalSart: (veriler.yasalSart || '').trim(),
     sorumlu: (veriler.sorumlu || '').trim(),
     termin: veriler.termin || '',
     durum: veriler.durum || 'Açık',

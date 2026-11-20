@@ -143,6 +143,31 @@ function _inKonuSecenekleri(r) {
     .map(ad => `<option value="${_inK(ad)}" ${ad === r.bolum ? 'selected' : ''}>${_inK(ad)}</option>`).join('');
 }
 
+// Kullanıcı isteği (2026-11-20): "günlük kontrole fotoğraf ekleme ... de
+// ekle". Fotoğraf gizli alana (data-in-alan) yazılır, Kaydet ile risk kaydına
+// geçer; kart yeniden çizilmeden önizleme güncellenir (diğer alanlardaki
+// kaydedilmemiş değişiklikler kaybolmasın diye).
+function _inFotoAlaniHtml(id, alanAdi, etiket, url) {
+  return `<div class="in-alan" data-in-foto="${alanAdi}"><span>${etiket}</span>
+    <input type="hidden" data-in-alan="${alanAdi}" value="${_inK(url || '')}">
+    <div class="in-foto-onizleme" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;">
+      ${url ? `<img data-foto-ref="${_inK(url)}" alt="${_inK(etiket)}" style="width:84px; height:84px; object-fit:cover; border-radius:8px; border:1px solid var(--kenarlik);">` : '<span style="font-size:12px; color:var(--metin-soluk);">Fotoğraf yok</span>'}
+      <label class="tablo-buton" style="cursor:pointer; margin:0;">📷 ${url ? 'Değiştir' : 'Fotoğraf ekle'}<input type="file" accept="image/*" capture="environment" data-in-foto-sec="${alanAdi}" data-id="${id}" style="display:none;"></label>
+      ${url ? `<button type="button" class="tablo-buton sil" data-in-foto-sil="${alanAdi}">Kaldır</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function _inFotoOnizlemeYenile(kutu, url) {
+  const alanAdi = kutu.getAttribute('data-in-foto');
+  const etiket = kutu.querySelector('span').textContent;
+  const id = (kutu.closest('[data-in-kart]') || {}).getAttribute ? kutu.closest('[data-in-kart]').getAttribute('data-in-kart') : '';
+  const yeni = document.createElement('div');
+  yeni.innerHTML = _inFotoAlaniHtml(id, alanAdi, etiket, url);
+  kutu.replaceWith(yeni.firstElementChild);
+  if (typeof fotoReferanslariCoz === 'function') fotoReferanslariCoz(document.getElementById('inKart_' + id));
+}
+
 function _inBolumListesiHtml(yil) {
   const adlar = new Set();
   riskTumunuGetir().forEach(x => { if (riskYili(x) === yil) { const b = riskBolumGoruntu(x); if (b) adlar.add(b); } });
@@ -186,6 +211,7 @@ function _inKartHtml(r) {
       ${alan('tehlike', 'Tehlike', z.tehlike, 2)}
       ${alan('risk', 'Risk', z.risk, 2)}
       ${alan('onlem', 'Mevcut (Alınmış) Önlemler', z.onlem, 2)}
+      ${alan('yasalSart', 'Yasal Şart / Mevzuat', z.yasalSart || '', 2)}
       <div class="in-bolum-baslik">Mevcut durum puanı — <span data-in-puan="1">${_inPuanHtml(z.O, z.F, z.S, z.yontem)}</span></div>
       <div class="in-izgara in-uclu">
         ${secim('O', 'Olasılık', olc.O, z.O)}${secim('F', 'Frekans', olc.F, z.F)}${secim('S', 'Şiddet', olc.S, z.S)}
@@ -204,7 +230,7 @@ function _inKartHtml(r) {
         </label>
         <label class="in-alan"><span>Durum</span><select data-in-alan="durum">${RISK_DURUMLARI.filter(d => d !== 'Gecikmiş').map(d => `<option ${z.durum === d ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
       </div>
-      ${z.fotoOncesi || z.fotoSonrasi ? `<div class="in-fotolar">${z.fotoOncesi ? `<img data-foto-ref="${_inK(z.fotoOncesi)}" alt="Öncesi" title="Öncesi">` : ''}${z.fotoSonrasi ? `<img data-foto-ref="${_inK(z.fotoSonrasi)}" alt="Sonrası" title="Sonrası">` : ''}</div>` : ''}
+      <div class="in-izgara">${_inFotoAlaniHtml(r.id, 'fotoOncesi', 'Öncesi Fotoğrafı', z.fotoOncesi)}${_inFotoAlaniHtml(r.id, 'fotoSonrasi', 'Sonrası Fotoğrafı', z.fotoSonrasi)}</div>
       <div class="in-hata" data-in-hata="1"></div>
       <div class="in-eylemler">
         ${onayli
@@ -323,6 +349,11 @@ function riskIncelemeBaslat() {
       return;
     }
     if (!b) return;
+    if (b.hasAttribute('data-in-foto-sil')) {
+      const kutu = b.closest('[data-in-foto]');
+      if (kutu) _inFotoOnizlemeYenile(kutu, '');
+      return;
+    }
     if (b.id === 'inDahaBtn') { const n = riskGunlukListeyeEkle(RISK_GUNLUK_HEDEF); if (!n) alert('Onaylanmamış başka risk kalmadı.'); riskIncelemeCiz(); return; }
     if (b.id === 'inGecmisBtn') { _inGecmisAcik = !_inGecmisAcik; riskIncelemeCiz(); return; }
     const id = b.getAttribute('data-in-onayla') || b.getAttribute('data-in-kaydet') || b.getAttribute('data-in-atla') || b.getAttribute('data-in-geri') || b.getAttribute('data-in-form') || b.getAttribute('data-in-sil');
@@ -347,8 +378,27 @@ function riskIncelemeBaslat() {
       if (r) modalAc(r);
     }
   });
-  kutu.addEventListener('change', e => {
+  kutu.addEventListener('change', async e => {
     const el = e.target;
+    if (el.hasAttribute && el.hasAttribute('data-in-foto-sec')) {
+      const dosya = el.files && el.files[0];
+      el.value = '';
+      if (!dosya) return;
+      const fotoKutu = el.closest('[data-in-foto]');
+      const etiket = el.closest('label');
+      if (etiket) etiket.firstChild.textContent = '⏳ Yükleniyor… ';
+      try {
+        const sonuc = await fotoYukle(dosya, 'risk/' + el.getAttribute('data-id'));
+        _inFotoOnizlemeYenile(fotoKutu, sonuc.url);
+        const kart = document.getElementById('inKart_' + el.getAttribute('data-id'));
+        const h = kart && kart.querySelector('[data-in-hata]');
+        if (h) { h.style.color = 'var(--metin-soluk)'; h.textContent = 'Fotoğraf eklendi — kaydetmeyi unutmayın.'; }
+      } catch (hata) {
+        alert(hata.message || 'Fotoğraf yüklenemedi.');
+        if (etiket) etiket.firstChild.textContent = '📷 Fotoğraf ekle';
+      }
+      return;
+    }
     if (el.getAttribute && el.getAttribute('data-in-termin') === 'tur') {
       const kap = el.closest('label');
       kap.querySelector('[data-in-termin="tarih"]').style.display = el.value === 'tarih' ? '' : 'none';

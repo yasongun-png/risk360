@@ -26,6 +26,7 @@ const RISK_IMPORT_KOLONLARI = [
   { anahtar: 'tehlike', baslik: 'Tehlike' },
   { anahtar: 'risk', baslik: 'Risk' },
   { anahtar: 'onlem', baslik: 'Mevcut Önlemler' },
+  { anahtar: 'yasalSart', baslik: 'Yasal Şart', esanlamlar: ['Mevzuat', 'Yasal Dayanak', 'Yasal Şart / Mevzuat'] },
   { anahtar: 'O', baslik: 'Olasılık (O)', esanlamlar: ['O'] },
   { anahtar: 'F', baslik: 'Frekans (F)', esanlamlar: ['F'] },
   { anahtar: 'S', baslik: 'Şiddet (Ş)', esanlamlar: ['Ş', 'S'] },
@@ -47,6 +48,7 @@ const RISK_EXPORT_KOLONLARI = [
   { anahtar: 'bolumGoruntu', baslik: 'Bölüm' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
+  { anahtar: 'yasalSart', baslik: 'Yasal Şart' },
   { anahtar: 'RP1', baslik: 'RP1' },
   { anahtar: 'duzey1', baslik: 'Düzey' },
   { anahtar: 'RP2', baslik: 'RP2' },
@@ -1026,6 +1028,7 @@ function modalAc(risk) {
   document.getElementById('tehlike').value = risk ? risk.tehlike : '';
   document.getElementById('risk').value = risk ? risk.risk : '';
   document.getElementById('onlem').value = risk ? risk.onlem : '';
+  document.getElementById('yasalSart').value = risk ? (risk.yasalSart || '') : '';
   document.getElementById('O').value = risk ? risk.O : '';
   document.getElementById('F').value = risk ? risk.F : '';
   document.getElementById('S').value = risk ? risk.S : '';
@@ -1108,6 +1111,7 @@ function formGonderildi(e) {
     tehlike: document.getElementById('tehlike').value,
     risk: document.getElementById('risk').value,
     onlem: document.getElementById('onlem').value,
+    yasalSart: document.getElementById('yasalSart').value,
     O: document.getElementById('O').value,
     F: document.getElementById('F').value,
     S: document.getElementById('S').value,
