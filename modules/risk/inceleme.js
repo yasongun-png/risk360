@@ -209,7 +209,7 @@ function _inKartHtml(r) {
     <div class="in-govde">
       <div class="in-izgara">
         <label class="in-alan"><span>Tesis/Konu</span><select data-in-alan="bolum">${_inKonuSecenekleri(r)}</select></label>
-        <label class="in-alan"><span>Bölüm</span><input type="text" data-in-alan="altBolum" list="inBolumListesi" value="${_inK(z.altBolum || '')}" placeholder="${_inK(z.altBolum ? 'Listeden seçin ya da yazın' : (z.bolum || 'Listeden seçin ya da yazın'))}"></label>
+        <label class="in-alan"><span>Bölüm</span><datalist id="inBolumListesi_${r.id}">${riskBolumOnerileri(r.bolum, riskYili(r)).map(b => `<option value="${_inK(b)}">`).join('')}</datalist><input type="text" data-in-alan="altBolum" list="inBolumListesi_${r.id}" autocomplete="off" value="${_inK(z.altBolum || '')}" placeholder="${_inK(z.altBolum ? 'Listeden seçin ya da yazın' : (z.bolum || 'Listeden seçin ya da yazın'))}"></label>
       </div>
       <div class="in-izgara">
         ${alan('yer', 'Yer / Ekipman', z.yer)}
@@ -407,6 +407,14 @@ function riskIncelemeBaslat() {
         alert(hata.message || 'Fotoğraf yüklenemedi.');
         if (etiket) etiket.firstChild.textContent = '📷 Fotoğraf ekle';
       }
+      return;
+    }
+    // Tesis/Konu değişince bölüm önerileri o tesisin bölümleri olur.
+    if (el.getAttribute && el.getAttribute('data-in-alan') === 'bolum') {
+      const kart = el.closest('[data-in-kart]');
+      const r = riskIdIleGetirRepo(kart.getAttribute('data-in-kart'));
+      const dl = document.getElementById('inBolumListesi_' + kart.getAttribute('data-in-kart'));
+      if (dl) dl.innerHTML = riskBolumOnerileri(el.value, r ? riskYili(r) : null).map(b => `<option value="${_inK(b)}">`).join('');
       return;
     }
     if (el.getAttribute && el.getAttribute('data-in-termin') === 'tur') {

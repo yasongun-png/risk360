@@ -228,6 +228,8 @@ function riskleriGetir(aramaMetni, filtreler) {
     const konuSeti = new Set(f.bolumler);
     liste = liste.filter(r => konuSeti.has(r.bolum));
   }
+  // Bölüm klasörü (bkz. ui.js _riskAltBolumFiltre); '__bos__' = bölümü boş olanlar.
+  if (f.altBolum) liste = liste.filter(r => f.altBolum === '__bos__' ? !String(r.altBolum || '').trim() : String(r.altBolum || '').trim() === f.altBolum);
   if (f.durum) liste = liste.filter(r => r.durumGoruntu === f.durum);
   if (f.duzey) liste = liste.filter(r => r.duzey1 === f.duzey);
 
@@ -657,4 +659,22 @@ async function riskAltBolumTopluGuncelle(idler, yeniBolum) {
   const yeniListe = riskTumunuGetir().map(r => { if (!idSeti.has(r.id)) return r; sayac++; return Object.assign({}, r, { altBolum: ad }); });
   const sonuc = await yazVeSonucuGetir(tenantAnahtar('risk_kayitlari'), yeniListe);
   return sonuc.basarili ? { basarili: true, sayac } : { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
+}
+
+// Kullanıcı isteği (2026-11-20): "tesisi konu gibi, sonra bölüm de seçilebilsin"
+// — seçilen Tesis/Konu'daki (o yıl) risklerin bölüm adları önce, ardından
+// firmanın bölümleri. Listede olmayan bölüm elle de yazılabilir.
+function riskBolumOnerileri(konu, yil) {
+  const y = Number(yil) || riskAktifYil();
+  const tesisin = new Set();
+  riskTumunuGetir().forEach(r => {
+    if (riskYili(r) !== y) return;
+    if (konu && r.bolum !== konu) return;
+    const b = String(r.altBolum || '').trim();
+    if (b) tesisin.add(b);
+  });
+  const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
+  const diger = ((firma && firma.bolumler) || []).map(b => String(b || '').trim()).filter(b => b && !tesisin.has(b));
+  const sirala = l => l.sort((a, b) => a.localeCompare(b, 'tr'));
+  return sirala(Array.from(tesisin)).concat(sirala(Array.from(new Set(diger))));
 }

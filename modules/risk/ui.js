@@ -94,6 +94,12 @@ function _riskFotoAlaniniHazirla(inputId, onizlemeKutuId, mevcutDegerGetir, mevc
 
 // Uygunsuzluk modülündeki "İlgili Yasal Şartlar" çoklu seçimi ile aynı.
 // Listede olmayan eski bir değer seçiliyse kaybolmasın diye başa eklenir.
+// Bölüm önerileri seçili Tesis/Konu'ya göre (bkz. service.js riskBolumOnerileri).
+function _riskAltBolumListesiDoldur(yil) {
+  const konu = document.getElementById('bolum').value;
+  document.getElementById('altBolumListesi').innerHTML = riskBolumOnerileri(konu, yil).map(b => `<option value="${_rkKacir(b)}">`).join('');
+}
+
 function _riskYasalSartlariDoldur(secili) {
   const liste = Array.isArray(secili) ? secili : [];
   const tum = liste.filter(s => !RISK_YASAL_SART_LISTESI.includes(s)).concat(RISK_YASAL_SART_LISTESI);
@@ -121,7 +127,14 @@ function riskSayfasiniBaslat() {
     clearTimeout(_riskAramaZamanlayici);
     _riskAramaZamanlayici = setTimeout(() => kayitlariCiz(e.target.value), 250);
   });
-  document.getElementById('bolumFiltre').addEventListener('change', () => kayitlariCiz(document.getElementById('aramaKutusu').value));
+  document.getElementById('bolumFiltre').addEventListener('change', () => { _riskAltBolumFiltre = ''; kayitlariCiz(document.getElementById('aramaKutusu').value); });
+  document.getElementById('altBolumKlasorleri').addEventListener('click', e => {
+    const b = e.target.closest('[data-alt-bolum]');
+    if (!b) return;
+    _riskAltBolumFiltre = b.getAttribute('data-alt-bolum');
+    document.getElementById('tumunuSecCheckbox').checked = false;
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
   document.getElementById('bolumYeniBtn').addEventListener('click', async () => {
     const ad = await metinIstemModali('Yeni tesis/konu adı:', '', '');
     if (ad === null) return;
@@ -790,9 +803,36 @@ function _riskKonuGrubuDegistir(grup) {
 // Liste, dışa aktarım ve raporlar için ortak filtre: seçili konu ya da
 // (Tüm Konular'da) açık gruptaki tüm konular. Konusu boş eski kayıtlar
 // devam edenlerde görünür.
+let _riskAltBolumFiltre = '';
+
+// Seçili Tesis/Konu'nun bölümleri klasör düğmeleri olarak (sayılarıyla).
+function _riskAltBolumKlasorleriCiz(konu) {
+  const kutu = document.getElementById('altBolumKlasorleri');
+  if (!kutu) return;
+  if (!konu) { _riskAltBolumFiltre = ''; kutu.style.display = 'none'; kutu.innerHTML = ''; return; }
+  const sayilar = new Map();
+  let bos = 0;
+  riskleriGetir('', { bolum: konu }).forEach(r => {
+    const b = String(r.altBolum || '').trim();
+    if (b) sayilar.set(b, (sayilar.get(b) || 0) + 1); else bos++;
+  });
+  const adlar = Array.from(sayilar.keys()).sort((a, b) => a.localeCompare(b, 'tr'));
+  if (_riskAltBolumFiltre && _riskAltBolumFiltre !== '__bos__' && !sayilar.has(_riskAltBolumFiltre)) _riskAltBolumFiltre = '';
+  if (_riskAltBolumFiltre === '__bos__' && !bos) _riskAltBolumFiltre = '';
+  const toplam = adlar.reduce((t, a) => t + sayilar.get(a), 0) + bos;
+  const dugme = (deger, etiket, sayi, ikon) => `<button type="button" class="${_riskAltBolumFiltre === deger ? 'birincil' : 'ikincil'}" data-alt-bolum="${_riskKacir(deger)}" style="width:auto; padding:6px 12px; font-size:12.5px;">${ikon} ${_riskKacir(etiket)} <span style="opacity:.75;">(${sayi})</span></button>`;
+  kutu.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--metin-soluk); margin-bottom:6px;">📂 ${_riskKacir(konu)} → Bölümler</div>`
+    + `<div style="display:flex; gap:6px; flex-wrap:wrap;">`
+    + dugme('', 'Tümü', toplam, '🗂')
+    + adlar.map(a => dugme(a, a, sayilar.get(a), '📁')).join('')
+    + (bos ? dugme('__bos__', 'Bölümü belirtilmemiş', bos, '📄') : '')
+    + '</div>';
+  kutu.style.display = '';
+}
+
 function riskListeFiltreleri() {
   const bolum = document.getElementById('bolumFiltre').value;
-  if (bolum) return { bolum };
+  if (bolum) return _riskAltBolumFiltre ? { bolum, altBolum: _riskAltBolumFiltre } : { bolum };
   const bolumler = bolumleriGetir(_riskKonuGrubu).map(b => b.ad);
   if (_riskKonuGrubu === 'devam') bolumler.push('');
   return { bolumler };
@@ -909,6 +949,7 @@ function kayitlariCiz(aramaMetni, devamMi) {
   const bosDurum = document.getElementById('bosDurum');
   const dahaFazla = document.getElementById('riskDahaFazla');
   const bolum = document.getElementById('bolumFiltre').value;
+  _riskAltBolumKlasorleriCiz(bolum);
   const siralama = riskSiralamaDegeri();
   const riskler = riskSiralamaUygula(riskleriGetir(aramaMetni, riskListeFiltreleri()), siralama);
   document.getElementById('riskNoOk').textContent = siralama === 'noArtan' ? '▲' : (siralama === 'noAzalan' ? '▼' : '');
@@ -1072,7 +1113,9 @@ function modalAc(risk) {
   konuSecim.innerHTML = '<option value="">— Tesis/Konu seçiniz —</option>' +
     konular.map(k => `<option value="${_riskKacir(k)}">${_riskKacir(k)}</option>`).join('');
   konuSecim.value = konu || '';
-  document.getElementById('altBolum').value = risk ? riskBolumGoruntu(risk) : '';
+  document.getElementById('altBolum').value = risk ? (risk.altBolum || '') : (_riskAltBolumFiltre && _riskAltBolumFiltre !== '__bos__' ? _riskAltBolumFiltre : '');
+  _riskAltBolumListesiDoldur(risk ? riskYili(risk) : null);
+  konuSecim.onchange = () => _riskAltBolumListesiDoldur(risk ? riskYili(risk) : null);
   document.getElementById('yer').value = risk ? risk.yer : '';
   document.getElementById('faaliyet').value = risk ? risk.faaliyet : '';
   document.getElementById('tehlike').value = risk ? risk.tehlike : '';

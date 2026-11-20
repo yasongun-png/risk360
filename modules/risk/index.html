@@ -105,6 +105,8 @@
           <button type="button" class="ikincil" id="bolumSilBtn">Tesis/Konuyu Sil</button>
           <button type="button" class="ikincil" id="bolumTamamlaBtn">✓ Tamamlandı Olarak İşaretle</button>
         </div>
+        <!-- Kullanıcı isteği (2026-11-20): "bölüm alt dal olsun, yani klasör gibi" — seçili Tesis/Konu'nun bölümleri (bkz. ui.js _riskAltBolumKlasorleriCiz). -->
+        <div id="altBolumKlasorleri" style="display:none; margin-top:10px;"></div>
         <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;" id="konuGrubuAciklama">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.</p>
       </div>
 
@@ -199,7 +201,8 @@
         <div class="form-satir-ikili">
           <div>
             <label for="altBolum">Bölüm</label>
-            <input type="text" id="altBolum">
+            <input type="text" id="altBolum" list="altBolumListesi" placeholder="Listeden seçin ya da yazın" autocomplete="off">
+            <datalist id="altBolumListesi"></datalist>
           </div>
           <div>
             <label for="yer">Yer / Ekipman</label>
@@ -441,11 +444,11 @@
   <script src="validation.js?v=20261120k"></script>
   <script src="repository.js?v=20261118a"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261120k"></script>
+  <script src="service.js?v=20261120f"></script>
   <script src="cikti.js?v=20261120k"></script>
-  <script src="ui.js?v=20261120k"></script>
+  <script src="ui.js?v=20261120f"></script>
   <script src="ekipler.js?v=20261120k"></script>
-  <script src="inceleme.js?v=20261120k"></script>
+  <script src="inceleme.js?v=20261120f"></script>
   <script src="terminler.js?v=20261120k"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
