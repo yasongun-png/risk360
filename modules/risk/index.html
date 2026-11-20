@@ -97,9 +97,16 @@
           <button type="button" id="konuGrubuDevamBtn">Devam Eden Değerlendirmeler <span id="konuGrubuDevamSayi"></span></button>
           <button type="button" id="konuGrubuTamamBtn" class="sekme-seciliDegil">Tamamlanan Değerlendirmeler <span id="konuGrubuTamamSayi"></span></button>
         </div>
+        <!-- Kullanıcı isteği (2026-11-20): Bölüm (Firma Yönetimi'ndeki müdürlükler) → Tesis/Konu → Lokasyon. -->
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+          <label for="mudurlukFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Bölüm (Müdürlük)</label>
+          <select id="mudurlukFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Bölümler</option></select>
+          <button type="button" class="ikincil" id="mudurlukOtomatikBtn" title="Seçili yılda bölüme bağlanmamış tesis/konuları adına ya da risklerindeki sorumluya göre müdürlüklere bağlar (önizleyip onaylarsınız)">Tesisleri Bölümlere Bağla</button>
+        </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <label for="bolumFiltre" style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">Tesis/Konu</label>
           <select id="bolumFiltre" style="width:auto; min-width:220px; margin:0;"><option value="">Tüm Tesisler/Konular</option></select>
+          <label id="konuMudurlukKutu" style="display:none; margin:0; font-size:12.5px; white-space:nowrap; align-items:center; gap:6px;">Bağlı bölüm: <select id="konuMudurlukSec" style="width:auto; margin:0;" title="Bu tesis/konunun bağlı olduğu bölüm (müdürlük)"></select></label>
           <button type="button" class="ikincil" id="bolumYeniBtn">+ Yeni Tesis/Konu</button>
           <button type="button" class="ikincil" id="bolumAdlandirBtn" title="Seçili konunun adını değiştirir; o konudaki tüm riskler yeni adı alır">Tesis/Konuyu Yeniden Adlandır</button>
           <button type="button" class="ikincil" id="bolumSilBtn">Tesis/Konuyu Sil</button>
@@ -107,7 +114,7 @@
         </div>
         <!-- Kullanıcı isteği (2026-11-20): "bölüm alt dal olsun, yani klasör gibi" — seçili Tesis/Konu'nun bölümleri (bkz. ui.js _riskAltBolumKlasorleriCiz). -->
         <div id="altBolumKlasorleri" style="display:none; margin-top:10px;"></div>
-        <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;" id="konuGrubuAciklama">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.</p>
+        <p style="font-size:12px; color:var(--metin-soluk); margin:6px 0 0;" id="konuGrubuAciklama">Seçili risk değerlendirme konusuna göre aşağıdaki risk kayıtları listelenir. Riskin yeri, kayıt formundaki "Lokasyon" alanına yazılır.</p>
       </div>
 
       <div class="arac-cubugu">
@@ -133,7 +140,7 @@
           <!-- Kullanıcı isteği: "bölümler arasında risk taşınabilsin" --
                seçilen risk(ler)i tek seferde başka bir bölüme taşır. -->
           <button type="button" class="ikincil" id="topluTasiBtn" title="İşaretli riskleri; hiçbiri işaretli değilse açık konunun tüm maddelerini başka konuya taşır veya kopyalar">Taşı / Kopyala</button>
-          <button type="button" class="ikincil" id="topluBolumBtn" title="İşaretli risklerin; hiçbiri işaretli değilse listede görünen tüm risklerin Bölüm alanını tek seferde değiştirir">Bölümü Değiştir</button>
+          <button type="button" class="ikincil" id="topluBolumBtn" title="İşaretli risklerin; hiçbiri işaretli değilse listede görünen tüm risklerin Lokasyon alanını tek seferde değiştirir">Lokasyonu Değiştir</button>
           <button type="button" class="ikincil" id="topluSilBtn" title="Listede işaretli riskleri siler">Seçilenleri Sil</button>
           <button type="button" class="ikincil" id="mukerrerTemizleBtn" title="İçeriği birebir aynı olan tekrar eden risk kayıtlarını bulur, her birinden bir tane bırakır">Mükerrerleri Temizle</button>
           <button type="button" class="birincil" id="yeniRiskBtn" style="width:auto;">+ Yeni Risk</button>
@@ -146,7 +153,7 @@
           <thead>
             <tr>
               <th style="width:36px;"><input type="checkbox" id="tumunuSecCheckbox"></th>
-              <th id="riskNoBaslik" style="cursor:pointer; white-space:nowrap;" title="Risk No'ya göre sırala (tekrar tıklayınca yön değişir)">Risk No <span id="riskNoOk"></span></th><th>Yöntem</th><th>Bölüm</th><th>Yer / Ekipman</th><th>Tehlike</th><th>Risk</th>
+              <th id="riskNoBaslik" style="cursor:pointer; white-space:nowrap;" title="Risk No'ya göre sırala (tekrar tıklayınca yön değişir)">Risk No <span id="riskNoOk"></span></th><th>Yöntem</th><th>Lokasyon</th><th>Yer / Ekipman</th><th>Tehlike</th><th>Risk</th>
               <th style="min-width:340px;">Alınmış Önlem</th><th>RP1</th><th>Düzey</th><th>Öncesi</th><th style="min-width:340px;">Alınacak Önlem</th><th>RP2</th><th>Azalma</th><th>Sonrası</th>
               <th>Sorumlu</th><th>Termin</th><th>Durum</th><th>İşlemler</th>
             </tr>
@@ -194,13 +201,16 @@
     <div class="modal-kutu" style="max-width:640px;">
       <h3 id="modalBaslik">Yeni Risk Kaydı</h3>
       <form id="riskForm">
+        <!-- Bölüm (müdürlük) → Tesis/Konu → Lokasyon (bkz. ui.js _riskFormKonulariDoldur). -->
+        <label for="formMudurluk">Bölüm (Müdürlük)</label>
+        <select id="formMudurluk"></select>
         <label for="bolum">Tesis/Konu</label>
         <select id="bolum"></select>
         <div class="alan-hatasi" id="bolumHata" style="color:var(--hata); font-size:12px; margin-top:-12px; margin-bottom:10px;"></div>
 
         <div class="form-satir-ikili">
           <div>
-            <label for="altBolum">Bölüm</label>
+            <label for="altBolum">Lokasyon</label>
             <input type="text" id="altBolum" list="altBolumListesi" placeholder="Listeden seçin ya da yazın" autocomplete="off">
             <datalist id="altBolumListesi"></datalist>
           </div>
@@ -434,22 +444,22 @@
   <script src="../../core/plana-ekle.js?v=8"></script>
   <script src="../../core/excel.js?v=3"></script>
   <script src="../../core/form-ayarlari.js"></script>
-  <script src="../../core/metin-istem.js"></script>
+  <script src="../../core/metin-istem.js?v=2"></script>
   <script src="../../core/bolum-butonlari.js?v=20261118a"></script>
   <script src="../personel/model.js"></script>
   <script src="../personel/validation.js"></script>
   <script src="../personel/repository.js"></script>
   <script src="../personel/service.js"></script>
-  <script src="model.js?v=20261120e"></script>
+  <script src="model.js?v=20261120m"></script>
   <script src="validation.js?v=20261120k"></script>
   <script src="repository.js?v=20261120d"></script>
   <script src="sablon-repository.js"></script>
-  <script src="service.js?v=20261120d"></script>
-  <script src="cikti.js?v=20261120k"></script>
-  <script src="ui.js?v=20261120d"></script>
+  <script src="service.js?v=20261120m"></script>
+  <script src="cikti.js?v=20261120m"></script>
+  <script src="ui.js?v=20261120m"></script>
   <script src="ekipler.js?v=20261120k"></script>
-  <script src="inceleme.js?v=20261120f"></script>
-  <script src="terminler.js?v=20261120k"></script>
+  <script src="inceleme.js?v=20261120m"></script>
+  <script src="terminler.js?v=20261120m"></script>
   <script>
     const kullanici = girisGerekliModul('risk');
 

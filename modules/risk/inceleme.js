@@ -134,13 +134,22 @@ function _inPuanHtml(o, f, s, yontem) {
 // Kullanıcı isteği (2026-11-20): "günlük risk analizi kontrolünde istersem
 // bölüm değiştirebilmek istiyorum" — kartta konu (o yılın konuları) ve bölüm
 // (yıldaki bölüm adları + firma bölümleri) düzenlenebilir.
-function _inKonuSecenekleri(r) {
+// mud verilirse o müdürlüğün (ve bölümü olmayan) tesisleri; seçili tesis her zaman kalır.
+function _inKonuSecenekleri(r, mud, secili) {
   const yil = riskYili(r);
+  const sec = secili === undefined ? r.bolum : secili;
   const adlar = new Set(bolumleriTumunuGetir().filter(b => riskYili(b) === yil).map(b => b.ad));
   riskTumunuGetir().forEach(x => { if (riskYili(x) === yil && x.bolum) adlar.add(x.bolum); });
-  if (r.bolum) adlar.add(r.bolum);
-  return Array.from(adlar).sort((a, b) => a.localeCompare(b, 'tr'))
-    .map(ad => `<option value="${_inK(ad)}" ${ad === r.bolum ? 'selected' : ''}>${_inK(ad)}</option>`).join('');
+  let liste = Array.from(adlar);
+  if (mud) liste = liste.filter(ad => { const m = riskKonuMudurlugu(ad, yil); return !m || m === mud; });
+  if (sec && !liste.includes(sec)) liste.push(sec);
+  return liste.sort((a, b) => a.localeCompare(b, 'tr'))
+    .map(ad => `<option value="${_inK(ad)}" ${ad === sec ? 'selected' : ''}>${_inK(ad)}</option>`).join('');
+}
+
+function _inMudurlukSecenekleri(r) {
+  const m = riskKonuMudurlugu(r.bolum, riskYili(r));
+  return '<option value="">— Tüm bölümler —</option>' + riskMudurlukleri(riskYili(r)).map(x => `<option value="${_inK(x)}" ${x === m ? 'selected' : ''}>${_inK(x)}</option>`).join('');
 }
 
 // Kullanıcı isteği (2026-11-20): "günlük kontrole fotoğraf ekleme ... de
@@ -208,8 +217,11 @@ function _inKartHtml(r) {
     ${ust}
     <div class="in-govde">
       <div class="in-izgara">
+        <label class="in-alan"><span>Bölüm (Müdürlük)</span><select data-in-mudurluk="1">${_inMudurlukSecenekleri(r)}</select></label>
         <label class="in-alan"><span>Tesis/Konu</span><select data-in-alan="bolum">${_inKonuSecenekleri(r)}</select></label>
-        <label class="in-alan"><span>Bölüm</span><datalist id="inBolumListesi_${r.id}">${riskBolumOnerileri(r.bolum, riskYili(r)).map(b => `<option value="${_inK(b)}">`).join('')}</datalist><input type="text" data-in-alan="altBolum" list="inBolumListesi_${r.id}" autocomplete="off" value="${_inK(z.altBolum || '')}" placeholder="${_inK(z.altBolum ? 'Listeden seçin ya da yazın' : (z.bolum || 'Listeden seçin ya da yazın'))}"></label>
+      </div>
+      <div class="in-izgara">
+        <label class="in-alan"><span>Lokasyon</span><datalist id="inBolumListesi_${r.id}">${riskBolumOnerileri(r.bolum, riskYili(r)).map(b => `<option value="${_inK(b)}">`).join('')}</datalist><input type="text" data-in-alan="altBolum" list="inBolumListesi_${r.id}" autocomplete="off" value="${_inK(z.altBolum || '')}" placeholder="${_inK(z.altBolum ? 'Listeden seçin ya da yazın' : (z.bolum || 'Listeden seçin ya da yazın'))}"></label>
       </div>
       <div class="in-izgara">
         ${alan('yer', 'Yer / Ekipman', z.yer)}
@@ -323,6 +335,9 @@ function _inKaydet(id, onayla) {
   if (!kart || !mevcut) return;
   const veri = Object.assign({}, mevcut, _inKarttanVeri(kart));
   const sonuc = riskGuncelle(id, veri);
+  // Tesisin bölümü yoksa kartta seçilen bölüme (müdürlük) bağlanır.
+  const mudSec = kart.querySelector('[data-in-mudurluk]');
+  if (sonuc.basarili && mudSec && mudSec.value && veri.bolum && !riskKonuMudurlugu(veri.bolum, riskYili(mevcut))) bolumMudurlukAyarla(veri.bolum, mudSec.value, riskYili(mevcut));
   const hataKutu = kart.querySelector('[data-in-hata]');
   if (!sonuc.basarili) {
     hataKutu.textContent = 'Eksik alanlar: ' + Object.values(sonuc.hatalar).join(' ');
@@ -409,10 +424,21 @@ function riskIncelemeBaslat() {
       }
       return;
     }
-    // Tesis/Konu değişince bölüm önerileri o tesisin bölümleri olur.
+    // Bölüm (müdürlük) değişince Tesis/Konu listesi o müdürlüğe göre süzülür.
+    if (el.hasAttribute && el.hasAttribute('data-in-mudurluk')) {
+      const kart = el.closest('[data-in-kart]');
+      const r = riskIdIleGetirRepo(kart.getAttribute('data-in-kart'));
+      const ts = kart.querySelector('[data-in-alan="bolum"]');
+      if (r && ts) ts.innerHTML = _inKonuSecenekleri(r, el.value, ts.value);
+      return;
+    }
+    // Tesis/Konu değişince lokasyon önerileri o tesisin lokasyonları olur; bölümü varsa Bölüm de ona geçer.
     if (el.getAttribute && el.getAttribute('data-in-alan') === 'bolum') {
       const kart = el.closest('[data-in-kart]');
       const r = riskIdIleGetirRepo(kart.getAttribute('data-in-kart'));
+      const ms = kart.querySelector('[data-in-mudurluk]');
+      const m = r ? riskKonuMudurlugu(el.value, riskYili(r)) : '';
+      if (ms && m) ms.value = m;
       const dl = document.getElementById('inBolumListesi_' + kart.getAttribute('data-in-kart'));
       if (dl) dl.innerHTML = riskBolumOnerileri(el.value, r ? riskYili(r) : null).map(b => `<option value="${_inK(b)}">`).join('');
       return;

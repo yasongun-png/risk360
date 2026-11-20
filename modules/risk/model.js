@@ -223,7 +223,10 @@ function bolumOlustur(veriler) {
     olusturmaTarihi: veriler.olusturmaTarihi || new Date().toISOString(),
     // Risk analizi bitmiş konu "Tamamlanan Değerlendirmeler" altında listelenir.
     tamamlandi: !!veriler.tamamlandi,
-    tamamlanmaTarihi: veriler.tamamlanmaTarihi || ''
+    tamamlanmaTarihi: veriler.tamamlanmaTarihi || '',
+    // Kullanıcı isteği (2026-11-20): hiyerarşi Bölüm (müdürlük) → Tesis/Konu →
+    // Lokasyon. Tesisin bağlı olduğu müdürlük (Firma Yönetimi bölümlerinden).
+    mudurluk: (veriler.mudurluk || '').trim()
   };
 }
 

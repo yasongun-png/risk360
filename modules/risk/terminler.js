@@ -73,7 +73,7 @@ function riskTerminleriCiz() {
     <div class="pl-grup-rt">
       <div class="in-gun-baslik" style="color:${renk};">${baslik} <span class="in-bilgi">(${liste.length})</span></div>
       <div class="tablo-scroll"><table class="veri-tablosu">
-        <thead><tr><th>Risk No</th><th>Tesis/Konu · Bölüm</th><th>Tehlike</th><th>Alınacak Önlem</th><th>Sorumlu</th><th>Termin</th><th>Durum</th><th></th></tr></thead>
+        <thead><tr><th>Risk No</th><th>Tesis/Konu · Lokasyon</th><th>Tehlike</th><th>Alınacak Önlem</th><th>Sorumlu</th><th>Termin</th><th>Durum</th><th></th></tr></thead>
         <tbody>${liste.map(satir).join('')}</tbody>
       </table></div>
     </div>` : '';

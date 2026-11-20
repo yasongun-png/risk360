@@ -122,13 +122,13 @@ function bolumTamamlandiAyarla(ad, tamamlandi) {
   return { basarili: true };
 }
 
-function bolumEkle(ad) {
+function bolumEkle(ad, mudurluk) {
   const temiz = (ad || '').trim();
   if (!temiz) return { basarili: false, hata: 'Konu adı boş olamaz.' };
   if (bolumleriGetir().some(b => b.ad.toLocaleLowerCase('tr-TR') === temiz.toLocaleLowerCase('tr-TR'))) {
     return { basarili: false, hata: `Bu risk değerlendirme konusu ${riskAktifYil()} yılında zaten var.` };
   }
-  const yeni = bolumOlustur({ ad: temiz, yil: riskAktifYil() });
+  const yeni = bolumOlustur({ ad: temiz, yil: riskAktifYil(), mudurluk: mudurluk || '' });
   bolumEkleRepo(yeni);
   return { basarili: true, bolum: yeni };
 }
@@ -223,6 +223,12 @@ function riskleriGetir(aramaMetni, filtreler) {
   // Seçili değerlendirme yılı (f.tumYillar ile tüm yıllar).
   let liste = (f.tumYillar ? riskTumunuGetir() : _yilRiskleri(f.yil)).map(_riskiZenginlestir);
 
+  // Bölüm (müdürlük): o müdürlüğe bağlı tesis/konuların riskleri ('__bos__' = bağlanmamış).
+  if (f.mudurluk) {
+    const yilKonulari = new Map();
+    _yilBolumleri(f.yil).forEach(b => yilKonulari.set(b.ad, (b.mudurluk || '').trim()));
+    liste = liste.filter(r => { const m = yilKonulari.get(r.bolum) || ''; return f.mudurluk === '__bos__' ? !m : m === f.mudurluk; });
+  }
   if (f.bolum) liste = liste.filter(r => r.bolum === f.bolum);
   else if (f.bolumler) {
     const konuSeti = new Set(f.bolumler);
@@ -652,7 +658,7 @@ async function riskYilNumaralariniSirala(yil) {
 // amonyak tankı yazsın" — seçilen risklerin Bölüm (altBolum) alanı tek yazımda.
 async function riskAltBolumTopluGuncelle(idler, yeniBolum) {
   const ad = String(yeniBolum || '').trim();
-  if (!ad) return { basarili: false, hata: 'Bölüm adı boş olamaz.' };
+  if (!ad) return { basarili: false, hata: 'Lokasyon adı boş olamaz.' };
   const idSeti = new Set(idler || []);
   if (!idSeti.size) return { basarili: false, hata: 'Değiştirilecek risk yok.' };
   let sayac = 0;
@@ -673,8 +679,83 @@ function riskBolumOnerileri(konu, yil) {
     const b = String(r.altBolum || '').trim();
     if (b) tesisin.add(b);
   });
+  // Firma bölümleri artık müdürlük (üst katman) olduğundan lokasyon önerisine girmez.
+  return Array.from(tesisin).sort((a, b) => a.localeCompare(b, 'tr'));
+}
+
+// ---- Bölüm (müdürlük) → Tesis/Konu → Lokasyon (2026-11-20) ----
+// Müdürlükler Firma Yönetimi'ndeki bölüm listesidir; tesis kayıtlarında
+// geçen ama listede olmayan eski adlar da (kaybolmasın diye) eklenir.
+function riskMudurlukleri(yil) {
   const firma = typeof aktifFirmaGetir === 'function' ? aktifFirmaGetir() : null;
-  const diger = ((firma && firma.bolumler) || []).map(b => String(b || '').trim()).filter(b => b && !tesisin.has(b));
-  const sirala = l => l.sort((a, b) => a.localeCompare(b, 'tr'));
-  return sirala(Array.from(tesisin)).concat(sirala(Array.from(new Set(diger))));
+  const adlar = ((firma && firma.bolumler) || []).map(b => String(b || '').trim()).filter(Boolean);
+  _yilBolumleri(yil).forEach(b => { const m = (b.mudurluk || '').trim(); if (m && !adlar.includes(m)) adlar.push(m); });
+  return adlar;
+}
+
+function riskKonuMudurlugu(konuAd, yil) {
+  const k = _yilBolumleri(yil).find(b => b.ad === konuAd);
+  return k ? (k.mudurluk || '').trim() : '';
+}
+
+// Tesis/Konuyu bir müdürlüğe bağlar (seçili yıl). Kalıcı kaydı yoksa açılır.
+function bolumMudurlukAyarla(ad, mudurluk, yilVerilen) {
+  if (!ad) return { basarili: false, hata: 'Önce bir tesis/konu seçin.' };
+  const kalicilar = bolumleriTumunuGetir();
+  const yil = Number(yilVerilen) || riskAktifYil();
+  let kayit = kalicilar.find(b => b.ad === ad && riskYili(b) === yil);
+  if (!kayit) { kayit = bolumOlustur({ ad, yil }); kalicilar.push(kayit); }
+  kayit.mudurluk = String(mudurluk || '').trim();
+  _bolumListesiKaydet(kalicilar);
+  return { basarili: true };
+}
+
+// Kullanıcı isteği (2026-11-20): "mevcut risk değerlendirmelerini de buna
+// göre düzenle — sadece 2027'yi". Müdürlüğü olmayan tesis/konular için öneri:
+//  1) Tesis adında müdürlüğün adı (Müdürlüğü/Müdürlük sözcüğü hariç) geçiyorsa o,
+//  2) yoksa tesisin risklerinde Sorumlu olarak en çok yazılan müdürlük.
+function _riskKatla(s) {
+  return String(s || '').toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function riskMudurlukOnerileri(yil) {
+  const y = Number(yil) || riskAktifYil();
+  const mudurlukler = riskMudurlukleri(y);
+  const cekirdek = m => _riskKatla(m).replace(/\b(mudurlugu|mudurluk|mudurlukleri)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  const konular = Array.from(new Set(_yilBolumleri(y).map(b => b.ad).concat(_yilRiskleri(y).map(r => r.bolum)).filter(Boolean)));
+  const sonuc = [];
+  konular.forEach(ad => {
+    if (riskKonuMudurlugu(ad, y)) return;
+    const katli = ' ' + _riskKatla(ad) + ' ';
+    let oneri = '', neden = '';
+    const adEslesen = mudurlukler.filter(m => cekirdek(m) && katli.includes(' ' + cekirdek(m) + ' '))
+      .sort((a, b) => cekirdek(b).length - cekirdek(a).length)[0];
+    if (adEslesen) { oneri = adEslesen; neden = 'adında geçiyor'; }
+    else {
+      const say = new Map();
+      _yilRiskleri(y).filter(r => r.bolum === ad).forEach(r => {
+        String(r.sorumlu || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean).forEach(s => {
+          const m = mudurlukler.find(x => _riskKatla(x) === _riskKatla(s));
+          if (m) say.set(m, (say.get(m) || 0) + 1);
+        });
+      });
+      const enCok = Array.from(say.entries()).sort((a, b) => b[1] - a[1])[0];
+      if (enCok) { oneri = enCok[0]; neden = enCok[1] + ' riskte sorumlu'; }
+    }
+    sonuc.push({ ad, oneri, neden });
+  });
+  return sonuc.sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+}
+
+function riskMudurlukOnerileriniUygula(yil, oneriler) {
+  const y = Number(yil);
+  const kalicilar = bolumleriTumunuGetir();
+  let n = 0;
+  (oneriler || []).filter(o => o.oneri).forEach(o => {
+    let k = kalicilar.find(b => b.ad === o.ad && riskYili(b) === y);
+    if (!k) { k = bolumOlustur({ ad: o.ad, yil: y }); kalicilar.push(k); }
+    if (!(k.mudurluk || '').trim()) { k.mudurluk = o.oneri; n++; }
+  });
+  if (n) _bolumListesiKaydet(kalicilar);
+  return n;
 }

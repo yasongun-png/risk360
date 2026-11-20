@@ -61,7 +61,7 @@ function onayModali(mesaj, onaylaButonMetni) {
       katman.className = 'modal-katman';
       katman.innerHTML = `
         <div class="modal-kutu" style="max-width:400px;">
-          <p id="omMesaj" style="margin:0 0 4px; font-size:14px; line-height:1.5;"></p>
+          <p id="omMesaj" style="margin:0 0 4px; font-size:14px; line-height:1.5; white-space:pre-line; max-height:60vh; overflow:auto;"></p>
           <div class="modal-eylemler">
             <button type="button" class="ikincil" id="omIptalBtn">İptal</button>
             <button type="button" class="birincil" id="omOnaylaBtn"></button>

@@ -20,7 +20,7 @@ let _riskTasinacakIdler = [];
 // sütunu yok sayılır, Bölüm sütunu satırın bölümü olarak kalır.
 const RISK_IMPORT_KOLONLARI = [
   { anahtar: 'bolum', baslik: 'Tesis/Konu', esanlamlar: ['Risk Değerlendirme Konusu', 'Tesis', 'Konu', 'Risk Değerlendirme Konusu Adı'] },
-  { anahtar: 'altBolum', baslik: 'Bölüm' },
+  { anahtar: 'altBolum', baslik: 'Lokasyon', esanlamlar: ['Bölüm'] },
   { anahtar: 'yer', baslik: 'Yer / Ekipman', esanlamlar: ['Ekipman'] },
   { anahtar: 'faaliyet', baslik: 'Faaliyet' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
@@ -46,7 +46,8 @@ const RISK_IMPORT_KOLONLARI = [
 const RISK_EXPORT_KOLONLARI = [
   { anahtar: 'riskNo', baslik: 'Risk No' },
   { anahtar: 'bolum', baslik: 'Tesis/Konu' },
-  { anahtar: 'bolumGoruntu', baslik: 'Bölüm' },
+  { anahtar: 'mudurlukGoruntu', baslik: 'Bölüm (Müdürlük)' },
+  { anahtar: 'bolumGoruntu', baslik: 'Lokasyon' },
   { anahtar: 'yer', baslik: 'Yer / Ekipman' },
   { anahtar: 'tehlike', baslik: 'Tehlike' },
   { anahtar: 'yasalSartlarMetin', baslik: 'İlgili Yasal Şartlar' },
@@ -95,6 +96,16 @@ function _riskFotoAlaniniHazirla(inputId, onizlemeKutuId, mevcutDegerGetir, mevc
 // Uygunsuzluk modülündeki "İlgili Yasal Şartlar" çoklu seçimi ile aynı.
 // Listede olmayan eski bir değer seçiliyse kaybolmasın diye başa eklenir.
 // Bölüm önerileri seçili Tesis/Konu'ya göre (bkz. service.js riskBolumOnerileri).
+// Formdaki Tesis/Konu listesi seçili Bölüm'e (müdürlük) göre; seçili tesis her zaman kalır.
+function _riskFormKonulariDoldur(secili) {
+  const mud = document.getElementById('formMudurluk').value;
+  const konular = bolumleriGetir('devam').filter(b => !mud || (b.mudurluk || '').trim() === mud || !(b.mudurluk || '').trim()).map(b => b.ad);
+  if (secili && !konular.includes(secili)) konular.push(secili);
+  const sec = document.getElementById('bolum');
+  sec.innerHTML = '<option value="">— Tesis/Konu seçiniz —</option>' + konular.map(k => `<option value="${_rkKacir(k)}">${_rkKacir(k)}${!(riskKonuMudurlugu(k)) && mud ? ' (bölümü yok)' : ''}</option>`).join('');
+  sec.value = secili || '';
+}
+
 function _riskAltBolumListesiDoldur(yil) {
   const konu = document.getElementById('bolum').value;
   document.getElementById('altBolumListesi').innerHTML = riskBolumOnerileri(konu, yil).map(b => `<option value="${_rkKacir(b)}">`).join('');
@@ -127,7 +138,38 @@ function riskSayfasiniBaslat() {
     clearTimeout(_riskAramaZamanlayici);
     _riskAramaZamanlayici = setTimeout(() => kayitlariCiz(e.target.value), 250);
   });
-  document.getElementById('bolumFiltre').addEventListener('change', () => { _riskAltBolumFiltre = ''; kayitlariCiz(document.getElementById('aramaKutusu').value); });
+  document.getElementById('bolumFiltre').addEventListener('change', () => { _riskAltBolumFiltre = ''; _riskKonuMudurlukSecCiz(); kayitlariCiz(document.getElementById('aramaKutusu').value); });
+  document.getElementById('mudurlukOtomatikBtn').addEventListener('click', async () => {
+    const yil = riskAktifYil();
+    if (!riskMudurlukleri(yil).length) { alert('Firma Yönetimi\'nde bölüm (müdürlük) tanımlı değil. Önce oradan müdürlükleri ekleyin.'); return; }
+    const oneriler = riskMudurlukOnerileri(yil);
+    if (!oneriler.length) { alert(yil + ' yılında bölüme bağlanmamış tesis/konu yok.'); return; }
+    const bulunan = oneriler.filter(o => o.oneri);
+    const bulunamayan = oneriler.filter(o => !o.oneri);
+    if (!bulunan.length) { alert(yil + ' yılında ' + oneriler.length + ' tesis/konu bölüme bağlı değil ama hiçbiri için otomatik eşleşme bulunamadı. Tesisi seçip yanındaki "Bağlı bölüm" listesinden elle bağlayın.'); return; }
+    const ozet = bulunan.map(o => '• ' + o.ad + ' → ' + o.oneri + ' (' + o.neden + ')').join('\n');
+    const kalan = bulunamayan.length ? '\n\nEşleşme bulunamayan ' + bulunamayan.length + ' tesis/konu elle bağlanmalı: ' + bulunamayan.map(o => o.ad).join(', ') : '';
+    if (!(await onayModali(yil + ' yılı için ' + bulunan.length + ' tesis/konu bölüme bağlanacak:\n' + ozet + kalan, 'Bağla'))) return;
+    const n = riskMudurlukOnerileriniUygula(yil, bulunan);
+    _bolumFiltreDoldur();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+    alert(n + ' tesis/konu bölüme bağlandı.' + (bulunamayan.length ? ' ' + bulunamayan.length + ' tanesi için eşleşme bulunamadı; bunları tesisi seçip "Bağlı bölüm" listesinden bağlayın.' : ''));
+  });
+  document.getElementById('mudurlukFiltre').addEventListener('change', () => {
+    document.getElementById('bolumFiltre').value = ''; _riskAltBolumFiltre = '';
+    _bolumFiltreDoldur(); kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
+  document.getElementById('konuMudurlukSec').addEventListener('change', e => {
+    const konu = document.getElementById('bolumFiltre').value;
+    const s = bolumMudurlukAyarla(konu, e.target.value);
+    if (!s.basarili) { alert(s.hata); return; }
+    const mf = document.getElementById('mudurlukFiltre');
+    if (mf.value) mf.value = e.target.value || '__bos__';
+    _bolumFiltreDoldur();
+    document.getElementById('bolumFiltre').value = konu;
+    _riskKonuMudurlukSecCiz();
+    kayitlariCiz(document.getElementById('aramaKutusu').value);
+  });
   document.getElementById('altBolumKlasorleri').addEventListener('click', e => {
     const b = e.target.closest('[data-alt-bolum]');
     if (!b) return;
@@ -138,10 +180,12 @@ function riskSayfasiniBaslat() {
   document.getElementById('bolumYeniBtn').addEventListener('click', async () => {
     const ad = await metinIstemModali('Yeni tesis/konu adı:', '', '');
     if (ad === null) return;
-    const sonuc = bolumEkle(ad);
+    const mf = document.getElementById('mudurlukFiltre').value;
+    const sonuc = bolumEkle(ad, mf && mf !== '__bos__' ? mf : '');
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     _bolumFiltreDoldur();
     document.getElementById('bolumFiltre').value = sonuc.bolum.ad;
+    _riskKonuMudurlukSecCiz();
     kayitlariCiz(document.getElementById('aramaKutusu').value);
   });
   document.getElementById('bolumAdlandirBtn').addEventListener('click', async () => {
@@ -229,14 +273,14 @@ function riskSayfasiniBaslat() {
       kapsam = 'Listede görünen ' + idler.length + ' riskin (' + riskAktifYil() + ')';
     }
     if (!idler.length) { alert('Listede risk yok.'); return; }
-    const ad = await metinIstemModali(kapsam + ' Bölüm alanına yazılacak ad:', 'Ör. 20000 tonluk amonyak tankı', '');
+    const ad = await metinIstemModali(kapsam + ' Lokasyon alanına yazılacak ad:', 'Ör. 20000 tonluk amonyak tankı', '');
     if (ad === null || !String(ad).trim()) return;
-    if (!(await onayModali(kapsam + ' bölümü "' + String(ad).trim() + '" olarak değiştirilsin mi?', 'Değiştir'))) return;
+    if (!(await onayModali(kapsam + ' lokasyonu "' + String(ad).trim() + '" olarak değiştirilsin mi?', 'Değiştir'))) return;
     const sonuc = await riskAltBolumTopluGuncelle(idler, ad);
     if (!sonuc.basarili) { alert(sonuc.hata); return; }
     document.getElementById('tumunuSecCheckbox').checked = false;
     kayitlariCiz(document.getElementById('aramaKutusu').value, true);
-    alert(sonuc.sayac + ' riskin bölümü "' + String(ad).trim() + '" olarak değiştirildi.');
+    alert(sonuc.sayac + ' riskin lokasyonu "' + String(ad).trim() + '" olarak değiştirildi.');
   });
   // Kullanıcı isteği: "konu içinde seçtikleri silme de ekleyelim".
   document.getElementById('topluSilBtn').addEventListener('click', async () => {
@@ -315,7 +359,7 @@ function riskSayfasiniBaslat() {
     const bolum = document.getElementById('bolumFiltre').value;
     const dosyaAdi = bolum ? `risk_kayitlari_${bolum}.xlsx` : 'risk_kayitlari.xlsx';
     const liste = riskleriGetir(document.getElementById('aramaKutusu').value, riskListeFiltreleri())
-      .map(r => Object.assign({}, r, { bolumGoruntu: riskBolumGoruntu(r), yasalSartlarMetin: (r.yasalSartlar || []).join(' | ') }));
+      .map(r => Object.assign({}, r, { mudurlukGoruntu: riskKonuMudurlugu(r.bolum, riskYili(r)), bolumGoruntu: riskBolumGoruntu(r), yasalSartlarMetin: (r.yasalSartlar || []).join(' | ') }));
     excelDisaAktar(liste, RISK_EXPORT_KOLONLARI, dosyaAdi);
   });
   document.getElementById('iceAktarBtn').addEventListener('click', () => {
@@ -766,15 +810,46 @@ function _jsonDosyaOlarakIndir(veri, dosyaAdi) {
 // Kalıcı bölüm listesiyle risk kayıtlarında geçen bölüm adlarını birleştirip
 // filtre seçeneklerini günceller; o an seçili bölüm hâlâ mevcutsa seçimi korur.
 // Yalnızca açık gruptaki (devam eden / tamamlanan) konular listelenir.
+// Bölüm (müdürlük) seçimi: Firma Yönetimi'ndeki müdürlükler + tesis sayıları.
+function _riskMudurlukFiltreDoldur(konular) {
+  const sec = document.getElementById('mudurlukFiltre');
+  if (!sec) return;
+  const secili = sec.value;
+  const say = m => konular.filter(b => m === '__bos__' ? !(b.mudurluk || '').trim() : (b.mudurluk || '').trim() === m).length;
+  const adlar = riskMudurlukleri();
+  const bos = say('__bos__');
+  sec.innerHTML = '<option value="">Tüm Bölümler</option>'
+    + adlar.map(m => `<option value="${_riskKacir(m)}">${_riskKacir(m)} (${say(m)})</option>`).join('')
+    + (bos ? `<option value="__bos__">Bölüme bağlanmamış tesisler (${bos})</option>` : '');
+  sec.value = Array.from(sec.options).some(o => o.value === secili) ? secili : '';
+}
+
+// Seçili Tesis/Konu'nun bağlı olduğu bölüm (müdürlük) — değiştirilebilir.
+function _riskKonuMudurlukSecCiz() {
+  const kutu = document.getElementById('konuMudurlukKutu');
+  if (!kutu) return;
+  const konu = document.getElementById('bolumFiltre').value;
+  if (!konu) { kutu.style.display = 'none'; return; }
+  const mevcut = riskKonuMudurlugu(konu);
+  const adlar = riskMudurlukleri();
+  document.getElementById('konuMudurlukSec').innerHTML = '<option value="">— Bölüm seçin —</option>'
+    + adlar.map(m => `<option value="${_riskKacir(m)}" ${m === mevcut ? 'selected' : ''}>${_riskKacir(m)}</option>`).join('');
+  kutu.style.display = 'inline-flex';
+}
+
 function _bolumFiltreDoldur() {
   const secim = document.getElementById('bolumFiltre');
   const seciliDeger = secim.value;
-  const bolumler = bolumleriGetir(_riskKonuGrubu);
+  const mud = document.getElementById('mudurlukFiltre') ? document.getElementById('mudurlukFiltre').value : '';
+  const tumKonular = bolumleriGetir(_riskKonuGrubu);
+  _riskMudurlukFiltreDoldur(tumKonular);
+  const bolumler = mud ? tumKonular.filter(b => mud === '__bos__' ? !(b.mudurluk || '').trim() : (b.mudurluk || '').trim() === mud) : tumKonular;
   const tamam = _riskKonuGrubu === 'tamamlanan';
 
   secim.innerHTML = '<option value="">Tüm Tesisler/Konular</option>' +
     bolumler.map(b => `<option value="${_riskKacir(b.ad)}" ${b.ad === seciliDeger ? 'selected' : ''}>${_riskKacir(b.ad)}${tamam && b.tamamlanmaTarihi ? ' (✓ ' + gunAyYil(b.tamamlanmaTarihi) + ')' : ''}</option>`).join('');
 
+  _riskKonuMudurlukSecCiz();
   document.getElementById('konuGrubuDevamSayi').textContent = `(${bolumleriGetir('devam').length})`;
   document.getElementById('konuGrubuTamamSayi').textContent = `(${bolumleriGetir('tamamlanan').length})`;
   // Risk eklenip silindikçe yıl sekmelerindeki sayılar da güncellensin.
@@ -794,7 +869,7 @@ function _riskKonuGrubuDegistir(grup) {
   document.getElementById('bolumTamamlaBtn').textContent = tamam ? '↩ Devam Edenlere Geri Al' : '✓ Tamamlandı Olarak İşaretle';
   document.getElementById('konuGrubuAciklama').textContent = tamam
     ? 'Risk analizi tamamlanmış konular. Kayıtlar ve raporlar burada da açılabilir; konuyu yeniden çalışmaya açmak için "Devam Edenlere Geri Al" kullanın.'
-    : 'Risk analizi süren konular. Analizi biten konuyu seçip "Tamamlandı Olarak İşaretle" ile Tamamlanan Değerlendirmeler\'e taşıyın. Riskin ait olduğu bölüm, kayıt formundaki "Bölüm" alanına yazılır.';
+    : 'Risk analizi süren konular. Analizi biten konuyu seçip "Tamamlandı Olarak İşaretle" ile Tamamlanan Değerlendirmeler\'e taşıyın. Riskin yeri, kayıt formundaki "Lokasyon" alanına yazılır.';
   document.getElementById('bolumFiltre').value = '';
   _bolumFiltreDoldur();
   kayitlariCiz(document.getElementById('aramaKutusu').value);
@@ -821,11 +896,11 @@ function _riskAltBolumKlasorleriCiz(konu) {
   if (_riskAltBolumFiltre === '__bos__' && !bos) _riskAltBolumFiltre = '';
   const toplam = adlar.reduce((t, a) => t + sayilar.get(a), 0) + bos;
   const dugme = (deger, etiket, sayi, ikon) => `<button type="button" class="${_riskAltBolumFiltre === deger ? 'birincil' : 'ikincil'}" data-alt-bolum="${_riskKacir(deger)}" style="width:auto; padding:6px 12px; font-size:12.5px;">${ikon} ${_riskKacir(etiket)} <span style="opacity:.75;">(${sayi})</span></button>`;
-  kutu.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--metin-soluk); margin-bottom:6px;">📂 ${_riskKacir(konu)} → Bölümler</div>`
+  kutu.innerHTML = `<div style="font-size:12px; font-weight:600; color:var(--metin-soluk); margin-bottom:6px;">📂 ${_riskKacir(konu)} → Lokasyonlar</div>`
     + `<div style="display:flex; gap:6px; flex-wrap:wrap;">`
     + dugme('', 'Tümü', toplam, '🗂')
     + adlar.map(a => dugme(a, a, sayilar.get(a), '📁')).join('')
-    + (bos ? dugme('__bos__', 'Bölümü belirtilmemiş', bos, '📄') : '')
+    + (bos ? dugme('__bos__', 'Lokasyonu belirtilmemiş', bos, '📄') : '')
     + '</div>';
   kutu.style.display = '';
 }
@@ -833,8 +908,10 @@ function _riskAltBolumKlasorleriCiz(konu) {
 function riskListeFiltreleri() {
   const bolum = document.getElementById('bolumFiltre').value;
   if (bolum) return _riskAltBolumFiltre ? { bolum, altBolum: _riskAltBolumFiltre } : { bolum };
-  const bolumler = bolumleriGetir(_riskKonuGrubu).map(b => b.ad);
-  if (_riskKonuGrubu === 'devam') bolumler.push('');
+  const mud = document.getElementById('mudurlukFiltre') ? document.getElementById('mudurlukFiltre').value : '';
+  const bolumler = bolumleriGetir(_riskKonuGrubu)
+    .filter(b => !mud || (mud === '__bos__' ? !(b.mudurluk || '').trim() : (b.mudurluk || '').trim() === mud)).map(b => b.ad);
+  if (_riskKonuGrubu === 'devam' && (!mud || mud === '__bos__')) bolumler.push('');
   return { bolumler };
 }
 
@@ -1022,7 +1099,7 @@ function ozetiCiz() {
     <div class="card-title" style="margin:20px 0 8px;"><h3 style="margin:0; font-size:14px;">En Yüksek 10 Risk</h3></div>
     <div class="tablo-scroll">
       <table class="veri-tablosu">
-        <thead><tr><th>Risk No</th><th>Yöntem</th><th>Bölüm</th><th>Tehlike</th><th>Risk</th><th>RP1</th><th>Düzey</th></tr></thead>
+        <thead><tr><th>Risk No</th><th>Yöntem</th><th>Lokasyon</th><th>Tehlike</th><th>Risk</th><th>RP1</th><th>Düzey</th></tr></thead>
         <tbody>
           ${ozet.enYuksekRiskler.map(r => `
             <tr>
@@ -1108,14 +1185,21 @@ function modalAc(risk) {
   // Konu seçimi kalıcı konu listesinden; yeni kayıtta üstte seçili konu gelir.
   const konuSecim = document.getElementById('bolum');
   const konu = risk ? risk.bolum : document.getElementById('bolumFiltre').value;
-  const konular = bolumleriGetir('devam').map(b => b.ad);
-  if (konu && !konular.includes(konu)) konular.push(konu);
-  konuSecim.innerHTML = '<option value="">— Tesis/Konu seçiniz —</option>' +
-    konular.map(k => `<option value="${_riskKacir(k)}">${_riskKacir(k)}</option>`).join('');
-  konuSecim.value = konu || '';
+  // Bölüm (müdürlük): tesisin bağlı olduğu, yoksa listede seçili olan.
+  const mudSecim = document.getElementById('formMudurluk');
+  const mf = document.getElementById('mudurlukFiltre').value;
+  const mudVarsayilan = (konu && riskKonuMudurlugu(konu)) || (mf && mf !== '__bos__' ? mf : '');
+  mudSecim.innerHTML = '<option value="">— Tüm bölümler —</option>' + riskMudurlukleri().map(m => `<option value="${_riskKacir(m)}">${_riskKacir(m)}</option>`).join('');
+  mudSecim.value = mudVarsayilan;
+  _riskFormKonulariDoldur(konu);
+  mudSecim.onchange = () => { _riskFormKonulariDoldur(konuSecim.value); _riskAltBolumListesiDoldur(risk ? riskYili(risk) : null); };
   document.getElementById('altBolum').value = risk ? (risk.altBolum || '') : (_riskAltBolumFiltre && _riskAltBolumFiltre !== '__bos__' ? _riskAltBolumFiltre : '');
   _riskAltBolumListesiDoldur(risk ? riskYili(risk) : null);
-  konuSecim.onchange = () => _riskAltBolumListesiDoldur(risk ? riskYili(risk) : null);
+  konuSecim.onchange = () => {
+    const m = riskKonuMudurlugu(konuSecim.value);
+    if (m) { mudSecim.value = m; _riskFormKonulariDoldur(konuSecim.value); }
+    _riskAltBolumListesiDoldur(risk ? riskYili(risk) : null);
+  };
   document.getElementById('yer').value = risk ? risk.yer : '';
   document.getElementById('faaliyet').value = risk ? risk.faaliyet : '';
   document.getElementById('tehlike').value = risk ? risk.tehlike : '';
@@ -1231,6 +1315,9 @@ function formGonderildi(e) {
   const sonuc = _duzenlenenRiskId
     ? riskGuncelle(_duzenlenenRiskId, veriler)
     : riskEkle(veriler);
+  // Tesisin henüz bölümü yoksa formda seçilen bölüme (müdürlük) bağlanır.
+  const formMud = document.getElementById('formMudurluk').value;
+  if (sonuc.basarili && formMud && veriler.bolum && !riskKonuMudurlugu(veriler.bolum)) bolumMudurlukAyarla(veriler.bolum, formMud);
 
   if (!sonuc.basarili) {
     Object.keys(sonuc.hatalar).forEach(alan => {

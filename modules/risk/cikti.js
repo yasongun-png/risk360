@@ -184,7 +184,7 @@ function _riskRaporKolonlari(riskler, bolumFiltreli) {
   const f = (r, alan) => r.yontem === '5x5' ? '-' : deger(r[alan]);
   const kolonlar = [
     { baslik: 'No', g: 4.5, metin: r => r.riskNo },
-    (!bolumFiltreli || riskler.some(r => r.altBolum && r.altBolum !== r.bolum)) && { baslik: 'Bölüm', g: 6.5, metin: riskBolumGoruntu },
+    (!bolumFiltreli || riskler.some(r => r.altBolum && r.altBolum !== r.bolum)) && { baslik: 'Lokasyon', g: 6.5, metin: riskBolumGoruntu },
     { baslik: 'Faaliyet / Yer', g: 8, metin: r => [r.faaliyet, r.yer].filter(Boolean).join(' / ') },
     { baslik: 'Tehlike', g: 11, metin: r => r.tehlike },
     { baslik: 'Risk', g: 9, metin: r => r.risk },
@@ -913,7 +913,7 @@ async function riskPptxOlustur() {
     s.addShape(pptx.ShapeType.line, { x: 0.5, y: 0.72, w: 9.0, h: 0, line: { color: '0B2C52', width: 1 } });
 
     const sol = [
-      ['Tesis/Konu', r.bolum], ['Bölüm', riskBolumGoruntu(r)], ['Yer', r.yer], ['Faaliyet', r.faaliyet],
+      ['Bölüm', riskKonuMudurlugu(r.bolum, riskYili(r)) || '-'], ['Tesis/Konu', r.bolum], ['Lokasyon', riskBolumGoruntu(r)], ['Yer', r.yer], ['Faaliyet', r.faaliyet],
       ['Tehlike', r.tehlike], ['Risk', r.risk], ['Mevcut Önlemler', r.onlem], ['Planlanan', r.planlanan]
     ].filter(([, v]) => v && String(v).trim());
     const uzunluk = sol.reduce((t, [k, v]) => t + k.length + String(v).length + 20, 0);
