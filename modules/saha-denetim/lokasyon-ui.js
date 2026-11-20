@@ -30,6 +30,8 @@ function _ldModalKapat(id) { _ldEl(id).classList.remove('acik'); }
 function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
   _ldFirma = firma;
   _ldKullanici = kullanici;
+  // Firmanın kendi soru bankası yüklüyse standart soruların yerine geçer.
+  ldSoruBankasiYukle();
 
   document.querySelectorAll('#ldSekmeler [data-sekme]').forEach(b => b.addEventListener('click', () => _ldSekmeSec(b.getAttribute('data-sekme'))));
 
@@ -120,6 +122,17 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
     catch (hata) { console.error(hata); alert('Excel oluşturulamadı: ' + (hata.message || hata)); }
   };
   _ldEl('ldBosFormExcelBtn').addEventListener('click', () => formIndir(null));
+  _ldEl('ldBankaYukleBtn').addEventListener('click', () => _ldEl('ldBankaYukleDosya').click());
+  _ldEl('ldBankaYukleDosya').addEventListener('change', _ldBankaDosyasiSecildi);
+  _ldEl('ldBankaBilgi').addEventListener('click', async e => {
+    if (!e.target.closest('[data-banka-kaldir]')) return;
+    if (!(await onayModali('Firmanın soru bankası kaldırılıp uygulamanın standart soru listesine dönülsün mü? Lokasyonlarda bankadan seçilmiş sorular boşalır; lokasyonları yeniden düzenlemeniz gerekir.', 'Standarda dön'))) return;
+    ldSoruBankasiKaldir();
+    _ldBankaBilgisiCiz();
+    _ldEl('ldSKategori').innerHTML = LD_KATEGORILER.concat([LD_SERBEST_KATEGORI]).map(k => `<option value="${k.id}">${_ldK(k.ad)}</option>`).join('');
+    _ldLokasyonListesiCiz();
+  });
+  _ldBankaBilgisiCiz();
   _ldEl('ldTopluOneriBtn').addEventListener('click', () => {
     const secili = new Set(Array.from(document.querySelectorAll('#ldLokasyonGovde [data-lok-cb]:checked')).map(cb => cb.getAttribute('data-lok-cb')));
     let liste = _ldLokasyonFiltreli();
@@ -694,7 +707,8 @@ function _ldSoruSeciciKur(kutuId, seciliAnahtarlar) {
       <div class="ld-ss-ust">
         <input type="checkbox" data-ss-kat="${k.id}" ${n === k.sorular.length ? 'checked' : ''} title="Kategorinin tüm maddelerini seç / bırak">
         <details ${n && n < k.sorular.length ? 'open' : ''}><summary>${_ldK(k.ad)} <span class="ld-bilgi" data-ss-sayi="${k.id}">${n}/${k.sorular.length}</span></summary>
-          <div class="ld-ss-liste">${k.sorular.map(s => `<label><input type="checkbox" data-ss-madde="${k.id}" value="${k.id}.${s.id}" ${set.has(k.id + '.' + s.id) ? 'checked' : ''}> ${_ldK(s.soru)}</label>`).join('')}</div>
+          <div class="ld-ss-liste">${k.sorular.map((s, i) => (s.grup && s.grup !== (k.sorular[i - 1] || {}).grup ? `<div style="font-weight:700; font-size:12px; margin:6px 0 2px; color:var(--metin-soluk);">${_ldK(s.grup)}</div>` : '')
+            + `<label><input type="checkbox" data-ss-madde="${k.id}" value="${k.id}.${s.id}" ${set.has(k.id + '.' + s.id) ? 'checked' : ''}> ${_ldK(s.soru)}${s.tur && /dok/i.test(s.tur) ? ' <span class="ld-bilgi">(doküman)</span>' : ''}</label>`).join('')}</div>
         </details>
       </div>
     </div>`;
@@ -1193,9 +1207,11 @@ function _ldOneriSorHtml(liste, attr) {
   return `<div style="margin-top:8px; padding:8px; border:1px dashed #d97706; border-radius:8px; background:rgba(217,119,6,.06);">
     <div style="font-weight:700; font-size:12.5px; margin-bottom:4px;">🤔 Bunu da ekleyelim mi?</div>
     ${liste.map(o => {
-      const s = ldSoruGetir(o.anahtar);
-      return s ? `<div data-oneri-sor="${_ldK(o.anahtar)}" style="display:flex; gap:8px; align-items:center; padding:3px 0; border-top:1px solid rgba(0,0,0,.05); font-size:12.5px;">
-        <span style="flex:1;">${_ldK(s.soru.soru)} <span class="ld-bilgi">· ${_ldK(o.neden)}</span></span>
+      // Tek soru ya da (soru bankasında) bir alt başlığın tüm soruları (o.anahtarlar).
+      const s = o.anahtarlar ? null : ldSoruGetir(o.anahtar);
+      const metin = o.etiket || (s && s.soru.soru);
+      return metin ? `<div data-oneri-sor="${_ldK(o.anahtar)}" data-oneri-anahtarlar="${_ldK((o.anahtarlar || [o.anahtar]).join('|'))}" style="display:flex; gap:8px; align-items:center; padding:3px 0; border-top:1px solid rgba(0,0,0,.05); font-size:12.5px;">
+        <span style="flex:1;">${o.anahtarlar ? '<b>' + _ldK(metin) + '</b>' : _ldK(metin)} <span class="ld-bilgi">· ${_ldK(o.neden)}</span></span>
         <button type="button" class="tablo-buton" ${attr}="evet" style="font-size:11px;">Evet, ekle</button>
         <button type="button" class="tablo-buton" ${attr}="hayir" style="font-size:11px;">Hayır</button>
       </div>` : '';
@@ -1217,7 +1233,9 @@ function _ldTopluOneriAc(lokasyonlar) {
         <span style="font-weight:700; font-size:14px;">${_ldK(l.kod)} · ${_ldK(l.bolum)} — ${_ldK(l.lokasyon)}</span>
       </label>
       <div class="ld-bilgi" style="margin-bottom:6px;">Algılanan alan: <b>${_ldK(oneri.turler.join(', ') || 'belirlenemedi (genel liste)')}</b> · Şu an ${mevcut} madde → önerilen ${oneri.sorular.length} madde</div>
-      <div data-oneri-secili>${oneri.sorular.map(o => _ldOneriSoruSatiri(o.anahtar, o.neden, true, 'data-oneri-madde')).join('')}</div>
+      <details ${oneri.sorular.length > 15 ? '' : 'open'}><summary class="ld-bilgi" style="cursor:pointer;">Önerilen maddeler (${oneri.sorular.length}) — açıp istemediklerinizin işaretini kaldırın</summary>
+        <div data-oneri-secili>${oneri.sorular.map(o => _ldOneriSoruSatiri(o.anahtar, o.neden, true, 'data-oneri-madde')).join('')}</div>
+      </details>
       <div data-oneri-sor-kutu>${_ldOneriSorHtml(oneri.sorulsun, 'data-oneri-cevap')}</div>
     </div>`;
   }).join('');
@@ -1234,7 +1252,9 @@ function _ldOneriSorTiklandi(e) {
   if (btn.getAttribute('data-oneri-cevap') === 'evet') {
     const oneri = _ldOneriBaglam[Number(kart.getAttribute('data-oneri-lok'))].oneri;
     const o = oneri.sorulsun.find(x => x.anahtar === a);
-    kart.querySelector('[data-oneri-secili]').insertAdjacentHTML('beforeend', _ldOneriSoruSatiri(a, (o ? o.neden : '') + ' (sizin onayınızla)', true, 'data-oneri-madde'));
+    const neden = (o ? (o.anahtarlar ? o.etiket : o.neden) : '') + ' (sizin onayınızla)';
+    kart.querySelector('[data-oneri-secili]').insertAdjacentHTML('beforeend',
+      satir.getAttribute('data-oneri-anahtarlar').split('|').map(x => _ldOneriSoruSatiri(x, neden, true, 'data-oneri-madde')).join(''));
   }
   satir.remove();
   const kutu = kart.querySelector('[data-oneri-sor-kutu] > div');
@@ -1279,10 +1299,56 @@ function _ldFormOneriSorTiklandi(e) {
   const satir = btn.closest('[data-oneri-sor]');
   if (btn.getAttribute('data-form-oneri') === 'evet') {
     const secili = _ldSoruSeciciOku('ldLKategoriler').sorular;
-    secili.push(satir.getAttribute('data-oneri-sor'));
+    satir.getAttribute('data-oneri-anahtarlar').split('|').forEach(a => secili.push(a));
     _ldSoruSeciciKur('ldLKategoriler', secili);
   }
   const kutu = satir.parentElement;
   satir.remove();
   if (!kutu.querySelector('[data-oneri-sor]')) kutu.remove();
+}
+
+// ---------- Firma soru bankası: yükleme ----------
+function _ldBankaBilgisiCiz() {
+  const kutu = _ldEl('ldBankaBilgi');
+  const b = ldSoruBankasiGetir();
+  if (!b) {
+    kutu.innerHTML = 'Soru listesi: <b>uygulamanın standart listesi</b> (' + LD_KATEGORILER.reduce((t, k) => t + k.sorular.length, 0) + ' soru). Kendi kontrol listenizi "Soru Bankası Yükle" ile yükleyebilirsiniz.';
+    return;
+  }
+  const tarih = (b.tarih || '').slice(0, 10).split('-').reverse().join('.');
+  kutu.innerHTML = `Soru listesi: <b>firmanın soru bankası</b> — ${LD_KATEGORILER.length} tesis/bölüm, ${b.soruSayisi || LD_KATEGORILER.reduce((t, k) => t + k.sorular.length, 0)} soru${b.dosya ? ' (' + _ldK(b.dosya) + ')' : ''}, ${tarih} tarihinde yüklendi. `
+    + `<a href="#" data-banka-kaldir style="color:#b91c1c;">Standart listeye dön</a>`;
+}
+
+function _ldBankaDosyasiSecildi(e) {
+  const dosya = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!dosya) return;
+  xlsxHazirOlduğunda(async () => {
+    try {
+      const kitap = XLSX.read(await dosya.arrayBuffer(), { type: 'array' });
+      let sonuc = null;
+      for (const ad of kitap.SheetNames) {
+        const s = ldSoruBankasiSatirlardanOlustur(XLSX.utils.sheet_to_json(kitap.Sheets[ad], { header: 1, defval: '', raw: false }));
+        if (s.banka) { sonuc = s; break; }
+        if (!sonuc) sonuc = s;
+      }
+      if (!sonuc || !sonuc.banka) { alert('Soru bankası okunamadı: ' + ((sonuc && sonuc.hata) || 'dosyada sayfa yok.')); return; }
+      const b = sonuc.banka;
+      const ozet = b.kategoriler.map(k => `${k.ad} (${k.sorular.length})`).join(', ');
+      const lokSayisi = (oku(_ldLokAnahtar(), []) || []).length;
+      if (!(await onayModali(`${b.kategoriler.length} tesis/bölüm, ${b.soruSayisi} soru bulundu: ${ozet}. Lokasyon kontrolünün soru listesi bununla DEĞİŞECEK.${lokSayisi ? ` ${lokSayisi} lokasyon, bölüm adına göre eşleşen tesis/bölümün sorularına otomatik taşınır (sonra düzenleyebilirsiniz).` : ''} Geçmiş kontrollerin cevapları korunur.`, 'Değiştir'))) return;
+      const tasima = ldSoruBankasiKaydet(b, dosya.name);
+      _ldBankaBilgisiCiz();
+      _ldEl('ldSKategori').innerHTML = LD_KATEGORILER.concat([LD_SERBEST_KATEGORI]).map(k => `<option value="${k.id}">${_ldK(k.ad)}</option>`).join('');
+      _ldLokasyonListesiCiz();
+      alert(`Soru bankası yüklendi: ${b.soruSayisi} soru.`
+        + (tasima.eslesen.length ? `\n\nTesis/bölümüyle eşleşen lokasyonlar (${tasima.eslesen.length}):\n${tasima.eslesen.join('\n')}` : '')
+        + (tasima.genel.length ? `\n\nEşleşme bulunamadı, genel sorular atandı (${tasima.genel.length}) — bunları düzenleyip doğru tesisin sorularını seçin:\n${tasima.genel.join('\n')}` : '')
+        + (tasima.korunan ? `\n\nZaten bankadaki sorularla tanımlı ${tasima.korunan} lokasyon değişmedi.` : ''));
+    } catch (hata) {
+      console.error(hata);
+      alert('Excel okunamadı: ' + (hata.message || hata));
+    }
+  });
 }

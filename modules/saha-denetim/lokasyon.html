@@ -140,12 +140,15 @@
       <div class="arac-cubugu">
         <input type="text" id="ldLokasyonArama" class="arama-kutusu" placeholder="Bölüm, lokasyon veya kod ara..." style="margin:0;">
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="ikincil" id="ldBankaYukleBtn" title="Tesis / Bölüm, Alt başlık, Kontrol sorusu, Tür sütunlu kontrol listesini (Excel) yükler; lokasyon kontrolünün soruları bununla değişir">📥 Soru Bankası Yükle</button>
+          <input type="file" id="ldBankaYukleDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="ldTopluOneriBtn" title="Seçili (seçim yoksa tüm) lokasyonların soru listesini lokasyon adına ve ekipmanlarına göre önerir">✨ Soruları Lokasyonlara Göre Öner</button>
           <button type="button" class="ikincil" id="ldFormExcelBtn" title="Seçili lokasyonların (seçim yoksa tüm maddelerin) boş kontrol formu">📋 Kontrol Formu (Excel)</button>
           <button type="button" class="ikincil" id="ldBarkodPdfBtn">🏷 Barkod Etiketleri (PDF)</button>
           <button type="button" class="birincil" id="ldYeniLokasyonBtn" style="width:auto;">+ Lokasyon Ekle</button>
         </div>
       </div>
+      <div class="ld-bilgi" id="ldBankaBilgi" style="margin:4px 0 8px;"></div>
       <div class="tablo-scroll">
         <table class="veri-tablosu">
           <thead><tr><th><input type="checkbox" id="ldLokTumunuSec" style="width:auto; margin:0;"></th><th>Kod</th><th>Bölüm</th><th>Lokasyon / Kat</th><th>Sorulacak Maddeler</th><th>Acil Durum Ekipmanı</th><th>İşlemler</th></tr></thead>
@@ -335,10 +338,10 @@
   <script src="../uygunsuzluk/repository.js"></script>
   <script src="../uygunsuzluk/service.js?v=20261112c"></script>
   <script src="../acil-durum/model.js?v=20"></script>
-  <script src="lokasyon-model.js?v=10"></script>
-  <script src="lokasyon-service.js?v=9"></script>
+  <script src="lokasyon-model.js?v=11"></script>
+  <script src="lokasyon-service.js?v=10"></script>
   <script src="lokasyon-cikti.js?v=6"></script>
-  <script src="lokasyon-ui.js?v=10"></script>
+  <script src="lokasyon-ui.js?v=11"></script>
   <script>
     const kullanici = girisGerekliModul('saha-denetim');
 

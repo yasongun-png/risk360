@@ -523,3 +523,52 @@ function ldBagliUygunsuzluk(uygId) {
   if (!uygId || typeof uygunsuzlukTumunuGetir !== 'function') return null;
   return uygunsuzlukTumunuGetir().find(k => k.id === uygId) || null;
 }
+
+
+// ---------- Firma soru bankası (2026-11-20) ----------
+// Kullanıcı isteği: "lokasyon kontrolünde soruları bunlar ile değiştir"
+// (BAGFAŞ İSG Saha Kontrol Listesi). Bkz. lokasyon-model.js ldSoruBankasiniUygula.
+function _ldBankaAnahtar() { return tenantAnahtar('saha_lokasyon_soru_bankasi'); }
+
+function ldSoruBankasiGetir() {
+  const b = oku(_ldBankaAnahtar(), null);
+  return b && Array.isArray(b.kategoriler) && b.kategoriler.length ? b : null;
+}
+
+function ldSoruBankasiYukle() {
+  ldSoruBankasiniUygula(ldSoruBankasiGetir());
+}
+
+// Bankayı kaydeder, uygular ve lokasyonları yeni bankaya taşır. Sorularının
+// tamamı bankada bulunan lokasyonlar olduğu gibi kalır; diğerleri (eski
+// listeden seçilmiş olanlar) bölüm adına göre eşleşen Tesis/Bölüm'ün saha
+// sorularını alır (bkz. _ldBankaOnerisi).
+function ldSoruBankasiKaydet(banka, dosyaAdi) {
+  yaz(_ldBankaAnahtar(), Object.assign({}, banka, { dosya: dosyaAdi || '' }));
+  ldSoruBankasiniUygula(banka);
+  return ldLokasyonlariBankayaTasi();
+}
+
+function ldSoruBankasiKaldir() {
+  yaz(_ldBankaAnahtar(), null);
+  ldSoruBankasiniUygula(null);
+}
+
+function ldLokasyonlariBankayaTasi() {
+  const liste = oku(_ldLokAnahtar(), []) || [];
+  const sonuc = { korunan: 0, eslesen: [], genel: [] };
+  let degisti = false;
+  liste.forEach(l => {
+    const anahtarlar = Array.isArray(l.sorular) ? l.sorular : null;
+    if (anahtarlar && anahtarlar.length && anahtarlar.every(a => ldSoruGetir(a))) { sonuc.korunan++; return; }
+    const oneri = _ldBankaOnerisi(l);
+    const sorular = oneri.sorular.map(o => o.anahtar);
+    if (!sorular.length) return;
+    l.sorular = sorular;
+    l.kategoriler = Array.from(new Set(sorular.map(a => a.split('.')[0])));
+    (oneri.turler.length ? sonuc.eslesen : sonuc.genel).push(`${l.bolum} — ${l.lokasyon}${oneri.turler.length ? ' → ' + oneri.turler[0] : ''}`);
+    degisti = true;
+  });
+  if (degisti) yaz(_ldLokAnahtar(), liste);
+  return sonuc;
+}

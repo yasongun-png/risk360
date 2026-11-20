@@ -459,6 +459,7 @@ const LD_ONERI_EKIPMAN = {
 
 // lokasyon: {bolum, lokasyon, aciklama}; ekipmanTurleri: o lokasyondaki ekipman türleri.
 function ldSoruOnerisi(lokasyon, ekipmanTurleri) {
+  if (ldSoruBankasiAktifMi()) return _ldBankaOnerisi(lokasyon);
   const metin = ' ' + ldNormalize([lokasyon.bolum, lokasyon.lokasyon, lokasyon.aciklama].filter(Boolean).join(' '))
     .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/â/g, 'a') + ' ';
   const eslesen = LD_ONERI_KURALLARI.filter(k => k.kelime.test(metin));
@@ -485,4 +486,138 @@ function ldSoruOnerisi(lokasyon, ekipmanTurleri) {
     sorular: Array.from(sorular, ([anahtar, neden]) => ({ anahtar, neden })),
     sorulsun: Array.from(sorulsun, ([anahtar, neden]) => ({ anahtar, neden }))
   };
+}
+
+// ---------------------------------------------------------------------------
+// Kullanıcı isteği (2026-11-20): "lokasyon kontrolünde soruları bunlar ile
+// değiştir" — firmanın kendi soru bankası (BAGFAŞ İSG Saha Kontrol Listesi:
+// Tesis/Bölüm, Alt başlık, Kontrol sorusu, Tür sütunlu Excel). Yüklenen banka
+// LD_KATEGORILER'in YERİNE geçer (dizi yerinde değiştirilir, böylece bütün
+// sayfa kodu aynen çalışır). Her Tesis/Bölüm bir kategori, Alt başlık o
+// kategorideki soru grubu (soru.grup). Kimlikler metinden üretilir (No sütunu
+// yeniden sıralansa da sorular eşleşmeye devam eder).
+const LD_STANDART_KATEGORILER = LD_KATEGORILER.slice();
+
+function _ldKisaOzet(metin) {
+  let h = 5381;
+  const s = String(metin || '');
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+function ldSoruBankasiAktifMi() {
+  return !!(LD_KATEGORILER[0] && LD_KATEGORILER[0].banka);
+}
+
+function ldSoruBankasiniUygula(banka) {
+  const yeni = banka && Array.isArray(banka.kategoriler) && banka.kategoriler.length
+    ? banka.kategoriler.map(k => Object.assign({}, k, { banka: true }))
+    : LD_STANDART_KATEGORILER;
+  LD_KATEGORILER.length = 0;
+  yeni.forEach(k => LD_KATEGORILER.push(k));
+}
+
+// SheetJS satırları (header:1) → banka. Başlık satırı "Kontrol sorusu"
+// sütununu içeren ilk satırdır; sütunlar başlık adıyla bulunur.
+function ldSoruBankasiSatirlardanOlustur(satirlar) {
+  const norm = v => ldNormalize(v).replace(/ı/g, 'i');
+  const bi = (satirlar || []).findIndex(r => (r || []).some(h => norm(h) === 'kontrol sorusu'));
+  if (bi < 0) return { hata: '"Kontrol sorusu" sütunu bulunamadı. Tesis / Bölüm, Alt başlık ve Kontrol sorusu sütunlu listeyi yükleyin.' };
+  const baslik = satirlar[bi].map(norm);
+  const sut = ad => baslik.findIndex(h => h === ad || h.startsWith(ad));
+  const cTesis = sut('tesis'), cAlt = sut('alt baslik') >= 0 ? sut('alt baslik') : sut('alt başlik'), cSoru = sut('kontrol sorusu'), cTur = sut('tur') >= 0 ? sut('tur') : sut('tür');
+  if (cTesis < 0) return { hata: '"Tesis / Bölüm" sütunu bulunamadı.' };
+  const kategoriler = [];
+  const harita = new Map();
+  let soruSayisi = 0;
+  for (let i = bi + 1; i < satirlar.length; i++) {
+    const r = satirlar[i] || [];
+    const tesis = String(r[cTesis] || '').trim();
+    const soru = String(r[cSoru] || '').trim();
+    if (!tesis || !soru) continue;
+    let kat = harita.get(tesis);
+    if (!kat) {
+      kat = { id: 'b' + _ldKisaOzet(tesis), ad: tesis, varsayilan: /^genel\b/i.test(tesis), sorular: [] };
+      harita.set(tesis, kat);
+      kategoriler.push(kat);
+    }
+    let id = 'q' + _ldKisaOzet(soru);
+    let n = 2;
+    while (kat.sorular.some(s => s.id === id)) id = 'q' + _ldKisaOzet(soru) + '_' + (n++);
+    kat.sorular.push({ id, soru, mevzuat: '', grup: cAlt >= 0 ? String(r[cAlt] || '').trim() : '', tur: cTur >= 0 ? String(r[cTur] || '').trim() : '' });
+    soruSayisi++;
+  }
+  if (!soruSayisi) return { hata: 'Listede soru bulunamadı.' };
+  // Aynı alt başlığın soruları listede dağınık olabilir: ilk görüldüğü sıraya göre bir araya getir.
+  kategoriler.forEach(k => {
+    const sira = new Map();
+    k.sorular.forEach(s => { if (!sira.has(s.grup)) sira.set(s.grup, sira.size); });
+    k.sorular = k.sorular.map((s, i) => [s, i]).sort((x, y) => (sira.get(x[0].grup) - sira.get(y[0].grup)) || (x[1] - y[1])).map(x => x[0]);
+  });
+  return { banka: { kategoriler, soruSayisi, tarih: new Date().toISOString() } };
+}
+
+// Lokasyon/bölüm adını bankadaki Tesis/Bölüm kategorisiyle eşleştirir
+// (ör. "Can-An Ambarı" ↔ "CANAN ambarı", "Sülfürik Asit Tesisi" ↔ "Sülfürik asit").
+const _LD_GENEL_KELIMELER = new Set(['ve', 'ile', 'tesisi', 'tesis', 'tesisleri', 'ambari', 'ambar', 'alani', 'bolumu', 'bolum', 'mudurlugu', 'sahasi', 'genel', 'tum', 'sahalar', 'uretim', 'uretimi', 'birimi', 'servisi', 'kat', 'zemin']);
+function _ldKelimeler(metin) {
+  const s = ldNormalize(metin).replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/₂|₃/g, '');
+  const bitisik = s.replace(/[^a-z0-9]+/g, '');
+  return { bitisik, kelimeler: s.split(/[^a-z0-9]+/).filter(k => k.length >= 3 && !_LD_GENEL_KELIMELER.has(k)) };
+}
+function ldBankaKategorisiBul(lokasyon) {
+  if (!ldSoruBankasiAktifMi()) return null;
+  const hedefler = [lokasyon.bolum, lokasyon.lokasyon, lokasyon.aciklama].filter(Boolean).map(_ldKelimeler);
+  let enIyi = null, enIyiPuan = 0;
+  LD_KATEGORILER.forEach(k => {
+    if (k.varsayilan) return;
+    const kk = _ldKelimeler(String(k.ad).replace(/\(.*?\)/g, ' '));
+    let puan = 0;
+    hedefler.forEach((h, hi) => {
+      const agirlik = hi === 0 ? 3 : 1;
+      if (kk.bitisik && h.bitisik && (h.bitisik.includes(kk.bitisik) || kk.bitisik.includes(h.bitisik))) puan += 5 * agirlik;
+      kk.kelimeler.forEach(w => { if (h.kelimeler.some(x => x === w || (w.length >= 5 && (x.startsWith(w.slice(0, 5)))))) puan += agirlik; });
+    });
+    if (puan > enIyiPuan) { enIyiPuan = puan; enIyi = k; }
+  });
+  return enIyi;
+}
+function ldBankaGenelKategorisi() {
+  return LD_KATEGORILER.find(k => k.banka && k.varsayilan) || null;
+}
+
+// Firma soru bankası yüklüyse öneri: lokasyonun eşleştiği Tesis/Bölüm'ün saha
+// soruları önerilir; doküman soruları ve Genel'in alt başlıkları grup grup
+// "Bunu da ekleyelim mi?" diye sorulur. Eşleşme yoksa Genel'in temel alt
+// başlıkları önerilir ve her Tesis/Bölüm "bu alan ... mı?" diye sorulur.
+function _ldBankaOnerisi(lokasyon) {
+  const kat = ldBankaKategorisiBul(lokasyon);
+  const genel = ldBankaGenelKategorisi();
+  const sorular = [];
+  const sorulsun = [];
+  const grupla = (k, liste) => {
+    const g = new Map();
+    liste.forEach(s => { const ad = s.grup || 'Diğer'; if (!g.has(ad)) g.set(ad, []); g.get(ad).push(k.id + '.' + s.id); });
+    return g;
+  };
+  const sahaMi = s => !/dok[uü]man/i.test(s.tur || '');
+  if (kat) {
+    const saha = kat.sorular.filter(sahaMi);
+    (saha.length ? saha : kat.sorular).forEach(s => sorular.push({ anahtar: kat.id + '.' + s.id, neden: kat.ad + (s.grup ? ' — ' + s.grup : '') }));
+    const dok = saha.length ? kat.sorular.filter(s => !sahaMi(s)) : [];
+    if (dok.length) sorulsun.push({ anahtar: 'grup:' + kat.id + ':dok', anahtarlar: dok.map(s => kat.id + '.' + s.id), etiket: `${kat.ad} — doküman/kayıt soruları (${dok.length})`, neden: 'Sahada değil, kayıt üzerinden kontrol edilir' });
+  } else if (genel) {
+    grupla(genel, genel.sorular.filter(sahaMi)).forEach((anahtarlar, ad) => {
+      if (/d[uü]zen|yang[ıi]n|acil/i.test(ad)) anahtarlar.forEach(a => sorular.push({ anahtar: a, neden: 'Genel — ' + ad }));
+    });
+    LD_KATEGORILER.filter(k => !k.varsayilan).forEach(k => sorulsun.push({ anahtar: 'grup:' + k.id, anahtarlar: k.sorular.map(s => k.id + '.' + s.id), etiket: `Bu alan "${k.ad}" mı? Sorularını ekle (${k.sorular.length})`, neden: 'Lokasyon adı bankadaki bölümlerle eşleşmedi' }));
+  }
+  if (genel) {
+    const secili = new Set(sorular.map(o => o.anahtar));
+    grupla(genel, genel.sorular).forEach((anahtarlar, ad) => {
+      const kalan = anahtarlar.filter(a => !secili.has(a));
+      if (kalan.length) sorulsun.push({ anahtar: 'grup:' + genel.id + ':' + _ldKisaOzet(ad), anahtarlar: kalan, etiket: `${genel.ad} — ${ad} (${kalan.length} soru)`, neden: 'Genel sorular' });
+    });
+  }
+  return { turler: kat ? [kat.ad] : [], sorular, sorulsun };
 }
