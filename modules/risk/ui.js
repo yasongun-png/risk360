@@ -460,6 +460,18 @@ function riskSayfasiniBaslat() {
     const b = e.target.closest('[data-risk-yil]');
     if (b) _riskYilSec(Number(b.getAttribute('data-risk-yil')));
   });
+  document.getElementById('riskNoSiralaBtn').addEventListener('click', async () => {
+    const yil = riskAktifYil();
+    const degisim = riskYilNumaralariOnizle(yil);
+    if (!degisim.length) { alert(`${yil} yılının numaraları zaten 1'den sıralı.`); return; }
+    const ornek = degisim.slice(0, 6).map(d => d.eski + ' → ' + d.yeni).join(', ');
+    if (!(await onayModali(yil + ' yılındaki ' + degisim.length + ' riskin numarası değişecek (her konu öneki 0001\'den başlar, mevcut sıra korunur). Örnek: ' + ornek + (degisim.length > 6 ? ' …' : '') + '. Diğer yıllar etkilenmez. Devam edilsin mi?', 'Sırala'))) return;
+    const s = await riskYilNumaralariniSirala(yil);
+    if (!s.basarili) { alert(s.hata); return; }
+    kayitlariCiz(document.getElementById('aramaKutusu').value, true);
+    if (typeof riskIncelemeCiz === 'function' && _riskGorunum === 'inceleme') riskIncelemeCiz();
+    alert(s.degisen + ' risk yeniden numaralandırıldı.');
+  });
   document.getElementById('riskYeniYilBtn').addEventListener('click', async () => {
     const yillar = riskYillariListesi();
     const oneri = String(Math.max(yillar[yillar.length - 1] + 1, new Date().getFullYear()));

@@ -208,7 +208,7 @@ async function riskTopluKopyala(idler, yeniBolum) {
   const idSeti = new Set(idler);
   const kopyalar = [];
   mevcut.filter(r => idSeti.has(r.id)).forEach(r => {
-    const riskNo = sonrakiRiskNoUret(bolum, mevcut.concat(kopyalar));
+    const riskNo = sonrakiRiskNoUret(bolum, mevcut.concat(kopyalar), riskYili(r));
     kopyalar.push(riskKaydiOlustur(Object.assign({}, r, {
       id: '', riskNo, bolum, olusturmaTarihi: '', haritaTesisId: '', haritaX: '', haritaY: ''
     })));
@@ -332,7 +332,7 @@ async function riskExcelTopluEkle(verilerListesi) {
       hatalar.push(`Satır ${index + 2}: ${Object.values(dogrulama.hatalar)[0]}`);
       return;
     }
-    const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutListe.concat(basariliKayitlar));
+    const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutListe.concat(basariliKayitlar), riskAktifYil());
     const kayit = riskKaydiOlustur(Object.assign({}, veriler, { riskNo, yil: riskAktifYil() }));
     const anahtar = riskMukerrerAnahtari(kayit);
     if (mevcutAnahtarlar.has(anahtar)) { atlanan++; return; }
@@ -351,7 +351,7 @@ function riskEkle(veriler) {
   if (!dogrulama.gecerli) return { basarili: false, hatalar: dogrulama.hatalar };
 
   const mevcutRiskler = riskTumunuGetir();
-  const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutRiskler);
+  const riskNo = sonrakiRiskNoUret(veriler.bolum, mevcutRiskler, veriler.yil || riskAktifYil());
   const yeniRisk = riskKaydiOlustur(Object.assign({}, veriler, { riskNo, yil: veriler.yil || riskAktifYil() }));
   riskEkleRepo(yeniRisk);
   return { basarili: true, risk: yeniRisk };
@@ -591,4 +591,39 @@ function riskOzetiHesapla(verilenListe) {
       return goreliPuan(b) - goreliPuan(a);
     }).slice(0, 10)
   };
+}
+
+
+// Kullanıcı isteği (2026-11-20): "numaralandırma her yıl için birden başlasın"
+// — seçilen yılın risk numaraları her önek (NIT, CAN …) için mevcut sıra
+// korunarak 0001'den yeniden verilir. Diğer yılların kayıtlarına dokunulmaz.
+// Dönüş: { basarili, degisen, ornek: ['NIT0233 → NIT0001', …] }.
+function riskYilNumaralariOnizle(yil) {
+  const y = Number(yil);
+  const gruplar = {};
+  riskTumunuGetir().filter(r => riskYili(r) === y).forEach(r => {
+    const no = String(r.riskNo || '');
+    const onEk = /^[A-Z0-9]{3}\d+$/.test(no) ? no.slice(0, 3) : riskNoOnEkiUret(r.bolum);
+    (gruplar[onEk] = gruplar[onEk] || []).push(r);
+  });
+  const degisim = [];
+  Object.keys(gruplar).forEach(onEk => {
+    gruplar[onEk]
+      .sort((a, b) => (parseInt(String(a.riskNo).slice(3), 10) || 1e9) - (parseInt(String(b.riskNo).slice(3), 10) || 1e9) ||
+        String(a.olusturmaTarihi || '').localeCompare(String(b.olusturmaTarihi || '')))
+      .forEach((r, i) => {
+        const yeni = onEk + String(i + 1).padStart(4, '0');
+        if (yeni !== r.riskNo) degisim.push({ id: r.id, eski: r.riskNo || '-', yeni });
+      });
+  });
+  return degisim;
+}
+
+async function riskYilNumaralariniSirala(yil) {
+  const degisim = riskYilNumaralariOnizle(yil);
+  if (!degisim.length) return { basarili: true, degisen: 0 };
+  const harita = new Map(degisim.map(d => [d.id, d.yeni]));
+  const yeniListe = riskTumunuGetir().map(r => harita.has(r.id) ? Object.assign({}, r, { riskNo: harita.get(r.id) }) : r);
+  const sonuc = await yazVeSonucuGetir(tenantAnahtar('risk_kayitlari'), yeniListe);
+  return sonuc.basarili ? { basarili: true, degisen: degisim.length } : { basarili: false, hata: 'Bulut yazımı başarısız oldu.' };
 }

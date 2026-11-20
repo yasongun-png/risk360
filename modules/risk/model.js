@@ -109,10 +109,13 @@ function riskNoOnEkiUret(bolum) {
   return (temiz || 'RSK').padEnd(3, 'X');
 }
 
-function sonrakiRiskNoUret(bolum, mevcutRiskler) {
+// Kullanıcı isteği (2026-11-20): "numaralandırma her yıl için birden başlasın"
+// — yil verilirse yalnız o yılın kayıtlarına bakılır (2027'nin ilk NIT riski NIT0001).
+function sonrakiRiskNoUret(bolum, mevcutRiskler, yil) {
   const onEk = riskNoOnEkiUret(bolum);
   let maks = 0;
-  mevcutRiskler.forEach(r => {
+  const y = Number(yil);
+  (Number.isInteger(y) && y > 0 ? mevcutRiskler.filter(r => riskYili(r) === y) : mevcutRiskler).forEach(r => {
     if (!String(r.riskNo || '').startsWith(onEk)) return;
     const kuyruk = parseInt(String(r.riskNo).slice(3), 10);
     if (Number.isFinite(kuyruk) && kuyruk > maks) maks = kuyruk;

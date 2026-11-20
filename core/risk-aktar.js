@@ -34,12 +34,15 @@ function _raRiskAnahtari() {
 }
 
 // modules/risk/model.js riskNoOnEkiUret / sonrakiRiskNoUret ile aynı kural.
-function _raRiskNoUret(bolum, mevcut) {
+// Numaralar her yıl 1'den başlar (yil verilirse yalnız o yılın kayıtları).
+function _raRiskNoUret(bolum, mevcut, yil) {
   const harf = { ç: 'C', ğ: 'G', ı: 'I', ö: 'O', ş: 'S', ü: 'U', i: 'I' };
   const onEk = ((bolum || 'RSK').toLocaleLowerCase('tr-TR').split('').map(k => harf[k] || k).join('')
     .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'RSK').padEnd(3, 'X');
   let maks = 0;
-  mevcut.forEach(r => {
+  const y = Number(yil);
+  const kayitYili = r => { const x = Number(r && r.yil); return Number.isInteger(x) && x >= 2000 && x <= 2100 ? x : 2026; };
+  (Number.isInteger(y) && y > 0 ? mevcut.filter(r => kayitYili(r) === y) : mevcut).forEach(r => {
     if (!String(r.riskNo || '').startsWith(onEk)) return;
     const n = parseInt(String(r.riskNo).slice(3), 10);
     if (Number.isFinite(n) && n > maks) maks = n;
@@ -180,8 +183,8 @@ async function _raKaydet() {
   const bolum = v('raKonu');
   const kayit = {
     id: rastgeleId(),
-    riskNo: _raRiskNoUret(bolum, mevcut),
     yil: _raHedefYil(),
+    riskNo: _raRiskNoUret(bolum, mevcut, _raHedefYil()),
     yontem: 'Fine-Kinney',
     bolum, altBolum: v('raBolum'), yer: v('raYer'), faaliyet: v('raFaaliyet'), tehlike: v('raTehlike'), risk: v('raRisk'), onlem: v('raOnlem'),
     O: v('raO'), F: v('raF'), S: v('raS'),
