@@ -271,8 +271,29 @@ function ldDenetimOlustur(v) {
     tamamlandiMi: !!v.tamamlandiMi,
     ziyaretler: Array.isArray(v.ziyaretler) ? v.ziyaretler : [],
     imzaliBelgeUrl: v.imzaliBelgeUrl || '',
+    // Dijital kaşe/imza (bkz. ldImzaRolleri): { kontrol1|kontrol2|isveren: { ad, imzaUrl, tarih } }
+    imzalar: (v.imzalar && typeof v.imzalar === 'object') ? v.imzalar : {},
     olusturmaTarihi: v.olusturmaTarihi || new Date().toISOString()
   };
+}
+
+// Kullanıcı isteği (2026-11-21): "Lokasyon Bazlı Saha Kontrolü'nde
+// uygunsuzluklarda olduğu gibi imza atma fonksiyonu ekle". Roller Word
+// raporunun imza satırıyla aynı üç kutudur: 1. kontrol eden, 2. kontrol eden
+// (yoksa Bölüm Sorumlusu), İşveren / İşveren Vekili. Ad varsayılanı
+// "Kontrol Eden(ler)" alanındaki sıraya göre gelir.
+function ldImzaRolleri(d) {
+  const denetciler = String((d && d.denetciler) || '').split(',').map(s => s.trim()).filter(Boolean);
+  return [
+    { rol: 'kontrol1', etiket: 'Kontrolü Yapan', ad: denetciler[0] || '' },
+    { rol: 'kontrol2', etiket: denetciler[1] ? 'Kontrolü Yapan' : 'Bölüm Sorumlusu', ad: denetciler[1] || '' },
+    { rol: 'isveren', etiket: 'İşveren / İşveren Vekili', ad: '' }
+  ];
+}
+
+function ldImzaliMi(d) {
+  const im = (d && d.imzalar) || {};
+  return Object.keys(im).some(k => im[k] && im[k].imzaUrl);
 }
 
 // Bir denetimde bir lokasyona yapılan ziyaret. Cevaplar yalnızca

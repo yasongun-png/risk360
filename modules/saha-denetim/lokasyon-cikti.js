@@ -479,13 +479,23 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
 
   // İmza
   c.push(_ldcBosluk(240));
-  const imza = (baslik, ad) => [{ m: [
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [_ldcRun(baslik, { bold: true })] }),
-    new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 80 }, children: [_ldcRun(ad || 'Ad Soyad', { color: ad ? '000000' : '999999' })] }),
-    new docx.Paragraph({ spacing: { before: 600 }, alignment: docx.AlignmentType.CENTER, children: [_ldcRun('İmza', { color: '999999', size: 16 })] })
-  ], o: { dolgu: 'FFFFFF' } }];
-  const denetciler = (d.denetciler || '').split(',').map(s => s.trim()).filter(Boolean);
-  const imzaSatir = [imza('Kontrolü Yapan', denetciler[0] || ''), imza(denetciler[1] ? 'Kontrolü Yapan' : 'Bölüm Sorumlusu', denetciler[1] || ''), imza('İşveren / İşveren Vekili', '')].map(x => x[0]);
+  // Dijital imza atılmışsa (bkz. lokasyon-ui.js _ldImzaKaydet) imza görseli
+  // ve imzalayanın adı/tarihi basılır; atılmamışsa ıslak imza için boş alan.
+  const imzalar = d.imzalar || {};
+  const imzaHucre = async r => {
+    const i = imzalar[r.rol];
+    const gorsel = i && i.imzaUrl ? await _ldcGorsel(i.imzaUrl, 150, 55) : null;
+    const ad = (i && i.ad) || r.ad;
+    return { m: [
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [_ldcRun(r.etiket, { bold: true })] }),
+      new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing: { before: 80 }, children: [_ldcRun(ad || 'Ad Soyad', { color: ad ? '000000' : '999999' })] }),
+      gorsel
+        ? new docx.Paragraph({ spacing: { before: 120 }, alignment: docx.AlignmentType.CENTER, children: [new docx.ImageRun({ data: gorsel.veri, transformation: { width: gorsel.gen, height: gorsel.yuk } })] })
+        : new docx.Paragraph({ spacing: { before: 600 }, alignment: docx.AlignmentType.CENTER, children: [_ldcRun('İmza', { color: '999999', size: 16 })] }),
+      ...(gorsel ? [new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, children: [_ldcRun(_ldcTarih(i.tarih), { color: '777777', size: 15 })] })] : [])
+    ], o: { dolgu: 'FFFFFF' } };
+  };
+  const imzaSatir = await Promise.all(ldImzaRolleri(d).map(imzaHucre));
   c.push(_ldcTablo([33.3, 33.3, 33.4], null, [imzaSatir]));
 
   // ---- EK-1 kontrol listeleri ----

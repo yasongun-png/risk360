@@ -47,6 +47,17 @@ function lokasyonDenetimSayfasiniBaslat(firma, kullanici) {
   _ldEl('ldBarkodOkutBtn').addEventListener('click', _ldTaramaBaslat);
   _ldEl('ldLokasyonSecBtn').addEventListener('click', _ldLokasyonSecAc);
   _ldEl('ldWordRaporBtn').addEventListener('click', () => _ldWordRapor(_ldAktifDenetimId));
+  _ldEl('ldImzaBtn').addEventListener('click', () => _ldImzaModalAc(_ldAktifDenetimId));
+  _ldEl('ldImzaKapatBtn').addEventListener('click', _ldImzaModalKapat);
+  _ldEl('ldImzaVazgecBtn').addEventListener('click', () => _ldImzaModalAc(_ldImzaDenetimId));
+  _ldEl('ldImzaTemizleBtn').addEventListener('click', () => { if (_ldImzaPad) _ldImzaPad.temizle(); });
+  _ldEl('ldImzaKaydetBtn').addEventListener('click', _ldImzaKaydet);
+  _ldEl('ldImzaDurum').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.hasAttribute('data-ld-imza-at')) _ldImzaCizimBasla(b.getAttribute('data-ld-imza-at'));
+    else if (b.hasAttribute('data-ld-imza-kaldir')) _ldImzaKaldirTiklandi(b.getAttribute('data-ld-imza-kaldir'));
+  });
   _ldEl('ldFormYukleBtn').addEventListener('click', () => _ldEl('ldFormYukleDosya').click());
   _ldEl('ldFormYukleDosya').addEventListener('change', _ldFormDosyasiSecildi);
   _ldEl('ldTopluAktarBtn').addEventListener('click', _ldTopluAktarAc);
@@ -289,6 +300,8 @@ function _ldDetayCiz() {
   _ldEl('ldTamamlaBtn').textContent = kilitli ? '↺ Kontrolü Yeniden Aç' : '✓ Kontrolü Tamamla';
   _ldEl('ldTamamlaBtn').disabled = false;
   _ldEl('ldGenelDegerlendirme').value = d.genelDegerlendirme || '';
+  _ldEl('ldImzaBtn').classList.toggle('imzali', ldImzaliMi(d));
+  _ldEl('ldImzaBtn').textContent = ldImzaliMi(d) ? '✍️ Kaşe / İmza ✓' : '✍️ Kaşe / İmza';
   _ldBelgeAlaniniKur(d);
 
   _ldEl('ldZiyaretBos').classList.toggle('gorunur', !d.ziyaretler.length);
@@ -1345,4 +1358,165 @@ function _ldBankaDosyasiSecildi(e) {
       alert('Excel okunamadı: ' + (hata.message || hata));
     }
   });
+}
+
+// ==================== KAŞE / DİJİTAL İMZA ====================
+// Kullanıcı isteği (2026-11-21): "Lokasyon Bazlı Saha Kontrolü'nde
+// uygunsuzluklarda olduğu gibi imza atma fonksiyonu ekle". Akış ve pad
+// uygunsuzluk/ui.js (_ucImzaPaduBagla, _ucImzaKirp, _ucImzaYukle) ile aynı;
+// bu sayfa o dosyayı yüklemediği için _ld önekiyle tekrarlanır. İmzalar
+// Word raporunun imza bölümüne basılır (bkz. lokasyon-cikti.js).
+let _ldImzaDenetimId = null;
+let _ldImzaAktifRol = null;
+let _ldImzaPad = null;
+
+function _ldImzaPaduBagla(canvasId) {
+  const canvas = _ldEl(canvasId);
+  const ctx = canvas.getContext('2d');
+  let dolu = false, ciziliyor = false, sonX = 0, sonY = 0;
+  function boyutlandir() {
+    const oran = window.devicePixelRatio || 1;
+    const genislik = canvas.clientWidth || 300, yukseklik = canvas.clientHeight || 120;
+    canvas.width = genislik * oran;
+    canvas.height = yukseklik * oran;
+    ctx.setTransform(oran, 0, 0, oran, 0, 0);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e3a8a';
+  }
+  boyutlandir();
+  function konum(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  canvas.addEventListener('pointerdown', e => { ciziliyor = true; dolu = true; const p = konum(e); sonX = p.x; sonY = p.y; });
+  canvas.addEventListener('pointermove', e => {
+    if (!ciziliyor) return;
+    e.preventDefault();
+    const p = konum(e);
+    ctx.beginPath(); ctx.moveTo(sonX, sonY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    sonX = p.x; sonY = p.y;
+  });
+  window.addEventListener('pointerup', () => { ciziliyor = false; });
+  return {
+    temizle() { ctx.clearRect(0, 0, canvas.width, canvas.height); dolu = false; },
+    boyutlandir() { boyutlandir(); dolu = false; },
+    doluMu: () => dolu,
+    canvasElemani: canvas
+  };
+}
+
+// Boş tuval rapora geniş ve sola yaslı basılmasın diye çizilen alana kırpılır.
+function _ldImzaKirp(canvas) {
+  const ctx = canvas.getContext('2d');
+  const gen = canvas.width, yuk = canvas.height;
+  const veri = ctx.getImageData(0, 0, gen, yuk).data;
+  let minX = gen, minY = yuk, maxX = 0, maxY = 0, var_ = false;
+  for (let y = 0; y < yuk; y++) {
+    for (let x = 0; x < gen; x++) {
+      if (veri[(y * gen + x) * 4 + 3] > 10) {
+        var_ = true;
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!var_) return canvas;
+  const b = Math.round(gen * 0.02);
+  minX = Math.max(0, minX - b); minY = Math.max(0, minY - b);
+  maxX = Math.min(gen, maxX + b); maxY = Math.min(yuk, maxY + b);
+  const k = document.createElement('canvas');
+  k.width = maxX - minX; k.height = maxY - minY;
+  k.getContext('2d').drawImage(canvas, minX, minY, k.width, k.height, 0, 0, k.width, k.height);
+  return k;
+}
+
+function _ldImzaDurumCiz(d) {
+  const im = d.imzalar || {};
+  _ldEl('ldImzaDurum').innerHTML = ldImzaRolleri(d).map(r => {
+    const i = im[r.rol];
+    const durum = i && i.imzaUrl
+      ? `<span style="color:#15803d; font-weight:600;">✓ İmzalandı</span> — ${_ldK(i.ad)} (${_ldTarihGoster(i.tarih)})<img data-foto-ref="${_ldK(i.imzaUrl)}" alt="İmza">`
+      : `<span style="color:var(--metin-soluk);">Henüz imzalanmadı</span>${r.ad ? ` — ${_ldK(r.ad)}` : ''}`;
+    return `<div class="ld-imza-rol-satir">
+      <div><b>${_ldK(r.etiket)}</b><br><span style="font-size:12px;">${durum}</span></div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+        <button type="button" class="tablo-buton" data-ld-imza-at="${r.rol}">${i && i.imzaUrl ? 'Yeniden İmzala' : 'İmza At'}</button>
+        ${i && i.imzaUrl ? `<button type="button" class="tablo-buton sil" data-ld-imza-kaldir="${r.rol}">Kaldır</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  if (typeof fotoReferanslariCoz === 'function') fotoReferanslariCoz(_ldEl('ldImzaDurum'));
+}
+
+function _ldImzaModalAc(id) {
+  const d = ldDenetimGetir(id);
+  if (!d) return;
+  _ldImzaDenetimId = id;
+  _ldImzaAktifRol = null;
+  _ldEl('ldImzaKayitEtiketi').textContent = `${d.denetimNo}${d.baslik ? ' — ' + d.baslik : ''}`;
+  _ldEl('ldImzaCizimAlani').style.display = 'none';
+  _ldEl('ldImzaDurum').style.display = '';
+  _ldEl('ldImzaKapatEylemi').style.display = '';
+  _ldImzaDurumCiz(d);
+  _ldModalAc('ldImzaModal');
+}
+
+function _ldImzaCizimBasla(rol) {
+  const d = ldDenetimGetir(_ldImzaDenetimId);
+  if (!d) return;
+  const r = ldImzaRolleri(d).find(x => x.rol === rol);
+  const mevcut = (d.imzalar || {})[rol];
+  _ldImzaAktifRol = rol;
+  _ldEl('ldImzaDurum').style.display = 'none';
+  _ldEl('ldImzaKapatEylemi').style.display = 'none';
+  _ldEl('ldImzaCizimAlani').style.display = '';
+  _ldEl('ldImzaRolBaslik').textContent = r ? r.etiket : '';
+  // Ad: daha önce imzalayan > Kontrol Eden(ler) sırası > 1. kutuda oturumdaki kullanıcı.
+  _ldEl('ldImzaAdSoyad').value = (mevcut && mevcut.ad) || (r && r.ad) || (rol === 'kontrol1' && _ldKullanici && _ldKullanici.adSoyad) || '';
+  _ldEl('ldImzaHata').textContent = '';
+  requestAnimationFrame(() => {
+    if (!_ldImzaPad) _ldImzaPad = _ldImzaPaduBagla('ldImzaCanvas');
+    else _ldImzaPad.boyutlandir();
+    _ldImzaPad.temizle();
+  });
+}
+
+async function _ldImzaKaydet() {
+  const hataEl = _ldEl('ldImzaHata');
+  const ad = _ldEl('ldImzaAdSoyad').value.trim();
+  if (!ad) { hataEl.textContent = 'Lütfen ad soyad girin.'; return; }
+  if (!_ldImzaPad || !_ldImzaPad.doluMu()) { hataEl.textContent = 'Lütfen imza alanına imzanızı atın.'; return; }
+  const btn = _ldEl('ldImzaKaydetBtn');
+  btn.disabled = true;
+  btn.textContent = 'Kaydediliyor…';
+  try {
+    const dataUrl = _ldImzaKirp(_ldImzaPad.canvasElemani).toDataURL('image/png');
+    const imzaUrl = await fotoBuyukKaydet(dataUrl, _ldFirma ? (_ldFirma.slug || _ldFirma.id) : '');
+    const s = ldImzaVer(_ldImzaDenetimId, _ldImzaAktifRol, ad, imzaUrl);
+    if (!s.basarili) { hataEl.textContent = s.hata || 'İmza kaydedilemedi.'; return; }
+    _ldImzaModalAc(_ldImzaDenetimId);
+    if (_ldAktifDenetimId === _ldImzaDenetimId) _ldDetayCiz();
+  } catch (hata) {
+    console.error('İmza kaydedilemedi:', hata);
+    hataEl.textContent = 'İmza kaydedilemedi: ' + (hata.message || hata);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kaydet';
+  }
+}
+
+async function _ldImzaKaldirTiklandi(rol) {
+  const d = ldDenetimGetir(_ldImzaDenetimId);
+  const r = d && ldImzaRolleri(d).find(x => x.rol === rol);
+  if (!d || !(await onayModali(`${r ? r.etiket : 'Bu'} imzası kaldırılsın mı?`, 'Kaldır'))) return;
+  ldImzaKaldir(_ldImzaDenetimId, rol);
+  _ldImzaModalAc(_ldImzaDenetimId);
+  if (_ldAktifDenetimId === _ldImzaDenetimId) _ldDetayCiz();
+}
+
+function _ldImzaModalKapat() {
+  _ldModalKapat('ldImzaModal');
+  _ldImzaDenetimId = null;
+  _ldImzaAktifRol = null;
 }

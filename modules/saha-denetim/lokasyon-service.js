@@ -189,6 +189,25 @@ function ldDenetimAlanGuncelle(id, alanlar) {
   return d ? { basarili: true, denetim: d } : { basarili: false };
 }
 
+// Dijital kaşe/imza kaydı (bkz. lokasyon-model.js ldImzaRolleri) —
+// uygunsuzluk/service.js uygunsuzlukImzaVer ile aynı şekil.
+function ldImzaVer(id, rol, ad, imzaUrl) {
+  if (!['kontrol1', 'kontrol2', 'isveren'].includes(rol)) return { basarili: false, hata: 'Geçersiz imza rolü.' };
+  const d = _ldDenetimDegistir(id, d => {
+    d.imzalar = Object.assign({}, d.imzalar || {}, { [rol]: { ad: (ad || '').trim(), imzaUrl: imzaUrl || '', tarih: new Date().toISOString() } });
+  });
+  return d ? { basarili: true, denetim: d } : { basarili: false, hata: 'Kontrol bulunamadı.' };
+}
+
+function ldImzaKaldir(id, rol) {
+  const d = _ldDenetimDegistir(id, d => {
+    const im = Object.assign({}, d.imzalar || {});
+    delete im[rol];
+    d.imzalar = im;
+  });
+  return d ? { basarili: true, denetim: d } : { basarili: false };
+}
+
 function ldDenetimSil(id) {
   if (typeof _silmeYetkisiKontrolEt === 'function' && !_silmeYetkisiKontrolEt()) return { basarili: false, hata: 'Bu işlem için silme yetkiniz yok.' };
   _ldDenetimListesiYaz(_ldDenetimListesi().filter(d => d.id !== id));
