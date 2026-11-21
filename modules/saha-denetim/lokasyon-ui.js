@@ -365,10 +365,19 @@ function _ldMaddeHtml(d, z, m, kilitli) {
   const btn = (deger, etiket, sinif) => `<button type="button" ${kilitli ? 'disabled' : ''} class="${sonuc === deger ? sinif : ''}" data-sonuc="${deger}" data-z="${z.id}" data-a="${_ldK(m.anahtar)}">${etiket}</button>`;
   const ortak = `data-z="${z.id}" data-a="${_ldK(m.anahtar)}"`;
   let detay = '';
-  if (sonuc === 'Uygun Değil') {
+  const fotolar = (c.fotolar || []).map((f, i) => `<div class="ld-foto-kutu"><img data-foto-ref="${_ldK(f)}" alt="">${kilitli ? '' : `<button type="button" data-foto-sil="${i}" ${ortak}>✕</button>`}</div>`).join('');
+  if (sonuc !== 'Uygun Değil') {
+    // Kullanıcı isteği (2026-11-21): "soru bazında fotoğraf çekme olsun ve
+    // raporda da görünsün" — her maddede (cevap ne olursa olsun, cevapsız da)
+    // en çok 3 fotoğraf; Word raporunda EK-1 kontrol listesinde maddenin altına basılır.
+    if (fotolar || !kilitli) {
+      detay = `<div class="ld-fotolar" style="margin:6px 0 0;">${fotolar}
+        ${!kilitli && (c.fotolar || []).length < 3 ? `<label class="tablo-buton" style="cursor:pointer; margin:0;" title="Bu maddeye fotoğraf ekle (rapora girer)">📷${(c.fotolar || []).length ? '' : ' Fotoğraf'}<input type="file" accept="image/*" capture="environment" data-foto-ekle ${ortak} style="display:none;"></label>` : ''}
+      </div>`;
+    }
+  } else {
     const riskNo = riskeAktarilanRiskNo('saha-lokasyon', ldRiskKaynakId(d.id, z.id, m.anahtar));
     const riskSecenek = ['<option value="">— Seçiniz —</option>'].concat((typeof RISK_SEVIYELERI !== 'undefined' ? RISK_SEVIYELERI : []).map(r => `<option ${c.risk === r ? 'selected' : ''}>${_ldK(r)}</option>`)).join('');
-    const fotolar = (c.fotolar || []).map((f, i) => `<div class="ld-foto-kutu"><img data-foto-ref="${_ldK(f)}" alt="">${kilitli ? '' : `<button type="button" data-foto-sil="${i}" ${ortak}>✕</button>`}</div>`).join('');
     detay = `<div class="ld-detay">
       <label>Tespit <span class="ld-bilgi">(raporda ve uygunsuzluk kaydında başlık olur)</span></label>
       <textarea rows="2" data-alan="not" ${ortak} ${kilitli ? 'disabled' : ''} placeholder="Görülen durum, ör. H14 konveyörü emniyet halatı arızalı">${_ldK(c.not)}</textarea>
@@ -606,6 +615,7 @@ async function _ldZiyaretDegisti(e) {
       const sonuc = await fotoYukle(dosya, 'saha-denetim/' + (d ? d.denetimNo : 'lokasyon'));
       if (!sonuc || !sonuc.url) return;
       const guncel = _ldMaddeBul(_ldAktifZiyaret(zid), a);
+      if (!guncel) return;
       ldCevapGuncelle(did, zid, a, guncel, { fotolar: ((guncel.cevap && guncel.cevap.fotolar) || []).concat(sonuc.url).slice(0, 3) });
       _ldDetayCiz();
     } catch (hata) {

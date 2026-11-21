@@ -499,26 +499,41 @@ async function ldDenetimRaporuWordOlustur(d, firma) {
   c.push(_ldcTablo([33.3, 33.3, 33.4], null, [imzaSatir]));
 
   // ---- EK-1 kontrol listeleri ----
-  d.ziyaretler.forEach((z, i) => {
+  // Kullanıcı isteği (2026-11-21): soru bazında çekilen fotoğraflar raporda
+  // görünsün — fotoğraflı maddenin hemen altına fotoğraf satırı eklenir.
+  // "Uygun Değil" maddelerin fotoğrafları zaten 4.2 Bulgu Ayrıntıları'nda
+  // büyük basıldığından burada tekrarlanmaz, yalnızca bulgu numarası gösterilir.
+  const bulguNo = new Map(bulgular.map(b => [b.ziyaret.id + '|' + b.madde.anahtar, b.no]));
+  for (let i = 0; i < d.ziyaretler.length; i++) {
+    const z = d.ziyaretler[i];
     c.push(_ldcBaslik(`EK-1.${i + 1}  Kontrol Listesi: ${z.bolum} — ${z.lokasyon}`, 1, true));
     const s = ldZiyaretIstatistik(z);
     c.push(_ldcP(`Lokasyon kodu: ${z.kod || '-'}   |   Tarih: ${_ldcTarih(z.girisZamani)}   |   Uygunluk: ${s.puan == null ? '-' : '%' + s.puan}`, { size: 17, color: '555555' }));
     const satirlar = [];
     let sonKat = null;
     let no = 0;
-    ldZiyaretMaddeleri(z).forEach(m => {
+    for (const m of ldZiyaretMaddeleri(z)) {
       if (m.kategori.id !== sonKat) {
         sonKat = m.kategori.id;
         satirlar.push([{ m: m.kategori.ad, o: { span: 4, kalin: true, dolgu: 'DCE3EC' } }]);
       }
       no++;
       const cv = m.cevap || {};
-      const aciklama = [cv.not, cv.oneri ? 'Öneri: ' + cv.oneri : ''].filter(Boolean).join('\n');
+      const fotoRefleri = cv.fotolar || [];
+      const bulguMu = cv.sonuc === 'Uygun Değil';
+      const bNo = bulguMu ? bulguNo.get(z.id + '|' + m.anahtar) : '';
+      const aciklama = [cv.not, cv.oneri ? 'Öneri: ' + cv.oneri : '', bulguMu && fotoRefleri.length ? `Fotoğraf: ${bNo || 'Bulgu Ayrıntıları'}` : ''].filter(Boolean).join('\n');
       satirlar.push([String(no), { m: m.soru + (m.mevzuat ? '\n' + m.mevzuat : ''), o: { boy: 17 } }, _ldcSonucHucresi(cv.sonuc), { m: aciklama || '', o: { boy: 16 } }]);
-    });
+      if (fotoRefleri.length && !bulguMu) {
+        const fotolar = (await Promise.all(fotoRefleri.map(f => _ldcGorsel(f, 180, 135)))).filter(Boolean);
+        if (fotolar.length) {
+          satirlar.push(['', { m: [new docx.Paragraph({ alignment: docx.AlignmentType.LEFT, spacing: { before: 40, after: 40 }, children: fotolar.flatMap((f, k) => [new docx.ImageRun({ data: f.veri, transformation: { width: f.gen, height: f.yuk } }), ...(k < fotolar.length - 1 ? [_ldcRun('  ')] : [])]) })], o: { span: 3, dolgu: 'FFFFFF' } }]);
+        }
+      }
+    }
     c.push(_ldcTablo([6, 54, 14, 26], ['#', 'Kontrol Maddesi / Mevzuat', 'Sonuç', 'Tespit / Öneri'], satirlar));
     if (z.lokasyonNotu) c.push(_ldcP('Lokasyon notu: ' + z.lokasyonNotu, { italics: true }, { spacing: { before: 120 } }));
-  });
+  }
 
   // ---- Üst / alt bilgi ----
   const ustBilgi = new docx.Header({ children: [new docx.Table({
