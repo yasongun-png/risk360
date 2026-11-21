@@ -11,23 +11,13 @@
 // fotoğraf). Formun sağ üst köşesinde ortak Form Ayarları (Doküman No/
 // Sürüm Tarihi/Sürüm No/Sayfa Sayısı) kutusu bulunur (bkz. core/form-ayarlari.js).
 
-// Toplu Word raporunda her tablo sayfasına düşen kayıt sayısı (yatay A4,
-// satır başına ~34mm fotoğraf kutusu) — bkz. uygunsuzlukRaporuWordOlustur.
-const UC_SAYFA_BASINA_SATIR = 4;
-
-function _ucKayitlariParcala(kayitlar, boyut) {
-  const parcalar = [];
-  for (let i = 0; i < kayitlar.length; i += boyut) parcalar.push(kayitlar.slice(i, i + boyut));
-  return parcalar.length ? parcalar : [[]];
-}
 
 // ==================== TOPLU RAPOR (WORD) ====================
 // Kullanıcı isteği: "uygunsuzluk pdf raporunun yanına aynısının word
 // butonunu yapalım, rapor birebir aynı olsun; beğenirsem pdf'i kaldıracağız"
 // — eski PDF liste raporuyla AYNI veri/filtre/bölüm sırası ve ölçüler:
 // yatay A4, 7mm kenar, kapak (dikey ortalı çerçeveli kutu), AÇIK kayıtlar
-// (sayfa başına UC_SAYFA_BASINA_SATIR satır, ilk sayfada başlık +
-// istatistik), "KAPALI UYGUNSUZLUKLAR" ayırıcı sayfası, KAPALI kayıtlar,
+// (tek tablo, Word sayfalar; ilk sayfada başlık + istatistik), "KAPALI UYGUNSUZLUKLAR" ayırıcı sayfası, KAPALI kayıtlar,
 // altta ortalı "Sayfa X / Y". Kullanıcı Word'ü beğenince PDF liste raporu
 // tamamen kaldırıldı ("pdf raporunu kaldır", "maili word yapalım").
 
@@ -167,13 +157,14 @@ async function uygunsuzlukRaporuWordOlustur(indir = true) {
     children: [metin(t, { bold: true, size: 26 })]
   });
 
-  // Kayıtları UC_SAYFA_BASINA_SATIR'lık sayfalara böler; her sayfa kendi
-  // başlık satırlı tablosu (PDF'te her sayfa ayrı tablo olduğu gibi).
-  const listeSayfalari = (liste, ilkSayfaOnEki) => _ucKayitlariParcala(liste, UC_SAYFA_BASINA_SATIR).flatMap((parca, i) => [
-    ...(i > 0 ? [new docx.Paragraph({ children: [new docx.PageBreak()] })] : []),
-    ...(i === 0 ? ilkSayfaOnEki : []),
-    tablo(parca)
-  ]);
+  // Kullanıcı bildirdi (2026-11-21): "uygunsuzluk listesinde 3. sayfa boş
+  // çıkıyor". Eskiden kayıtlar 4'erli ayrı tablolara bölünüp araya elle
+  // sayfa sonu konuyordu; ilk liste sayfası (üst bilgi + başlık + 4 fotoğraflı
+  // satır) sayfayı tam doldurunca sayfa sonu paragrafı tek başına yeni
+  // sayfaya taşıyor ve boş sayfa oluşuyordu. Artık her bölüm TEK tablo:
+  // Word sayfalamayı kendisi yapar, başlık satırı her sayfada tekrarlanır
+  // (tableHeader), satırlar bölünmez (cantSplit) — boş sayfa oluşmaz.
+  const listeSayfalari = (liste, onEk) => [...onEk, tablo(liste)];
 
   // Kapak ve ayırıcı: PDF'teki gibi sayfanın ortasında kalın çerçeveli kutu.
   const cerceveliKutu = (yuzde, cocuklar) => new docx.Table({
