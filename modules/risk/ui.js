@@ -956,7 +956,7 @@ let _riskTabloDinleyiciKuruldu = false;
 function _riskSatirHtml(r) {
   return `<tr>
       <td><input type="checkbox" data-sec data-id="${r.id}"></td>
-      <td>${_riskKacir(r.riskNo)}${r.inceleme && r.inceleme.onayli ? `<div style="font-size:10.5px; color:#15803d; font-weight:600; margin-top:2px;" title="Günlük incelemede ${_riskKacir(gunAyYil(r.inceleme.tarih))} tarihinde${r.inceleme.kullanici ? ' ' + _riskKacir(r.inceleme.kullanici) + ' tarafından' : ''} onaylandı">✓ Onaylı</div>` : ''}${r.kaynak ? `<div style="font-size:10.5px; color:var(--metin-soluk); margin-top:2px;" title="Bu risk ${_riskKacir(r.kaynak.modulAdi)} modülünden aktarıldı">↩ ${_riskKacir(r.kaynak.modulAdi)}${r.kaynak.etiket ? ' ' + _riskKacir(r.kaynak.etiket) : ''}</div>` : ''}</td>
+      <td>${_riskKacir(r.riskNo)}${(typeof riskOnayliMi === 'function' ? riskOnayliMi(r) : (r.inceleme && r.inceleme.onayli)) ? `<div style="font-size:10.5px; color:#15803d; font-weight:600; margin-top:2px;" title="Günlük incelemede ${_riskKacir(gunAyYil(r.inceleme.tarih))} tarihinde${r.inceleme.kullanici ? ' ' + _riskKacir(r.inceleme.kullanici) + ' tarafından' : ''} onaylandı">✓ Onaylı</div>` : ''}${r.kaynak ? `<div style="font-size:10.5px; color:var(--metin-soluk); margin-top:2px;" title="Bu risk ${_riskKacir(r.kaynak.modulAdi)} modülünden aktarıldı">↩ ${_riskKacir(r.kaynak.modulAdi)}${r.kaynak.etiket ? ' ' + _riskKacir(r.kaynak.etiket) : ''}</div>` : ''}</td>
       <td>${_riskKacir(r.yontem)}</td>
       <td>${_riskKacir(riskBolumGoruntu(r))}</td>
       <td>${_riskKacir(r.yer)}</td>

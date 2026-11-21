@@ -10,6 +10,20 @@
 // - Kartlarda risk doğrudan düzenlenir; "Kaydet ve Onayla" ile risk kaydına
 //   inceleme: { onayli, tarih, kullanici, kullaniciId } yazılır.
 // - İncelenenler listesi ve yıl geneli ilerleme (onaylı / toplam) tutulur.
+//
+// Kullanıcı isteği (2026-11-21): "günlük inceleme her yıl için ayrı ayrı
+// olsun 10 adet sadece 2027 için değil ve tüm riskler bittikten sonra tekrar
+// baştan başlasın döngü sürekli olsun".
+// - Günün listesi her değerlendirme yılı (dönemler dahil) için ayrı tutulur:
+//   { tarih, yillar: { '<yıl>': { idler, atlananlar } } }. Ekranda üstteki yıl
+//   çubuğunda seçili yıl gösterilir; sekme sayacı tüm yılların toplamıdır.
+// - Tur (döngü): onaylanan riske inceleme.tur yazılır (eski kayıtlarda yok =
+//   1. tur). M = o yılda tamamlanan en yüksek tur. Yılın tüm riskleri M'yi
+//   tamamladıysa geçerli tur M+1'dir (hepsi yeniden "İncelenecek" olur),
+//   tamamlamayan varsa geçerli tur M'dir. Sonradan eklenen risk ya da geri
+//   alınan onay turu geriye düşürmez. Ayrı bir sayaç tutulmadığı için cihazlar
+//   arasında tutarsızlık oluşmaz. Bugün onaylanan risk, tur o gün dönse bile
+//   bugün için onaylı sayılır (günün listesi birden sıfırlanmasın).
 
 const RISK_GUNLUK_HEDEF = 10;
 
@@ -17,12 +31,47 @@ function _inBugun() { return new Date().toISOString().slice(0, 10); }
 function _inK(v) { return String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
 function _inAnahtar() { return tenantAnahtar('risk_gunluk_inceleme'); }
 
-function riskIncelemeYili() {
-  const yillar = riskYillariListesi();
-  return yillar[yillar.length - 1];
+// Ekranda gösterilen yıl: risk sayfasının üstündeki yıl çubuğunda seçili yıl.
+function riskIncelemeYili() { return riskAktifYil(); }
+
+// İncelemeye girecek yıllar: içinde iptal edilmemiş risk bulunan yıllar.
+function riskIncelemeYillari() {
+  const dolu = new Set(riskTumunuGetir().filter(r => r.durum !== 'İptal').map(riskYili));
+  return riskYillariListesi().filter(y => dolu.has(y));
 }
 
-function riskOnayliMi(r) { return !!(r && r.inceleme && r.inceleme.onayli); }
+function _inTamamlananTur(r) { return r && r.inceleme && r.inceleme.onayli ? (Number(r.inceleme.tur) || 1) : 0; }
+function _inBugunOnaylandiMi(r) { return !!(r && r.inceleme && r.inceleme.onayli && r.inceleme.tarih === _inBugun()); }
+
+// Yıl → { enAz, enCok } tamamlanan tur. Risk listesi her satırda
+// riskOnayliMi çağırdığı için kısa süre önbelleğe alınır; onay/geri alma/silme
+// sonrası hemen sıfırlanır.
+let _inTurOnbellek = null;
+function _inTurOnbellekSifirla() { _inTurOnbellek = null; }
+function riskIncelemeTuru(yil) {
+  const simdi = Date.now();
+  if (!_inTurOnbellek || simdi - _inTurOnbellek.zaman > 1000) {
+    const yillar = {};
+    riskTumunuGetir().forEach(r => {
+      if (r.durum === 'İptal') return;
+      const y = String(riskYili(r));
+      const t = _inTamamlananTur(r);
+      const o = yillar[y] || (yillar[y] = { enAz: t, enCok: t });
+      o.enAz = Math.min(o.enAz, t);
+      o.enCok = Math.max(o.enCok, t);
+    });
+    _inTurOnbellek = { zaman: simdi, yillar };
+  }
+  const o = _inTurOnbellek.yillar[String(yil)];
+  if (!o) return 1;
+  return o.enAz >= o.enCok ? o.enCok + 1 : o.enCok;
+}
+
+// "Bu turda onaylı" (ya da bugün onaylandı).
+function riskOnayliMi(r) {
+  if (!r || !r.inceleme || !r.inceleme.onayli) return false;
+  return _inTamamlananTur(r) >= riskIncelemeTuru(riskYili(r)) || _inBugunOnaylandiMi(r);
+}
 
 function _inAdaylar(yil, haric) {
   const goreli = r => r.RP1 / (r.yontem === '5x5' ? 25 : 1000);
@@ -33,20 +82,50 @@ function _inAdaylar(yil, haric) {
       String(a.riskNo || '').localeCompare(String(b.riskNo || ''), 'tr', { numeric: true }));
 }
 
-// Günün listesi: { tarih, yil, idler, atlananlar }. Gün ya da yıl değişince yeniden kurulur.
-function riskGunlukListeGetir() {
-  const yil = riskIncelemeYili();
+// Kayıtlı günlük liste; gün değişince boş başlar. Eski biçim ({ yil, idler })
+// bugünküyse o yılın listesi olarak korunur.
+function _inGunlukKayit() {
   const bugun = _inBugun();
-  let kayit = oku(_inAnahtar(), null);
-  const mevcutIdler = new Set(riskTumunuGetir().map(r => r.id));
-  if (!kayit || kayit.tarih !== bugun || kayit.yil !== yil) {
-    kayit = { tarih: bugun, yil, idler: _inAdaylar(yil, new Set()).slice(0, RISK_GUNLUK_HEDEF).map(r => r.id), atlananlar: [] };
-    yaz(_inAnahtar(), kayit);
-  } else if (kayit.idler.some(id => !mevcutIdler.has(id))) {
-    kayit.idler = kayit.idler.filter(id => mevcutIdler.has(id));
-    yaz(_inAnahtar(), kayit);
+  let k = oku(_inAnahtar(), null);
+  if (k && k.tarih === bugun && !k.yillar && k.yil != null) {
+    k = { tarih: bugun, yillar: { [String(k.yil)]: { idler: k.idler || [], atlananlar: k.atlananlar || [] } } };
   }
-  return kayit;
+  if (!k || k.tarih !== bugun || !k.yillar) k = { tarih: bugun, yillar: {} };
+  return k;
+}
+
+// Bir yılın günlük listesi: { yil, tarih, idler, atlananlar }. O gün o yıl
+// için ilk istendiğinde kurulur.
+function riskGunlukListeGetir(yil) {
+  if (yil === undefined) yil = riskIncelemeYili();
+  const k = _inGunlukKayit();
+  const anahtar = String(yil);
+  let l = k.yillar[anahtar];
+  let degisti = false;
+  if (!l) {
+    l = { idler: _inAdaylar(yil, new Set()).slice(0, RISK_GUNLUK_HEDEF).map(r => r.id), atlananlar: [] };
+    k.yillar[anahtar] = l;
+    degisti = true;
+  } else {
+    const mevcutIdler = new Set(riskTumunuGetir().map(r => r.id));
+    if ((l.idler || []).some(id => !mevcutIdler.has(id))) { l.idler = l.idler.filter(id => mevcutIdler.has(id)); degisti = true; }
+  }
+  if (degisti) yaz(_inAnahtar(), k);
+  return { yil, tarih: k.tarih, idler: (l.idler || []).slice(), atlananlar: (l.atlananlar || []).slice() };
+}
+
+function _inListeKaydet(liste) {
+  const k = _inGunlukKayit();
+  k.yillar[String(liste.yil)] = { idler: liste.idler, atlananlar: liste.atlananlar || [] };
+  yaz(_inAnahtar(), k);
+}
+
+// Yıl yıl bugün kalan (onaylanmamış) risk sayısı — sekme sayacı ve afiş için.
+function riskGunlukKalanlar() {
+  return riskIncelemeYillari().map(y => {
+    const gl = riskGunlukListeGetir(y);
+    return { yil: y, kalan: gl.idler.map(id => riskIdIleGetirRepo(id)).filter(r => r && !riskOnayliMi(r)).length };
+  });
 }
 
 function riskGunlukListeyeEkle(adet) {
@@ -54,7 +133,7 @@ function riskGunlukListeyeEkle(adet) {
   const haric = new Set(kayit.idler.concat(kayit.atlananlar || []));
   const yeni = _inAdaylar(kayit.yil, haric).slice(0, adet || RISK_GUNLUK_HEDEF).map(r => r.id);
   kayit.idler = kayit.idler.concat(yeni);
-  yaz(_inAnahtar(), kayit);
+  _inListeKaydet(kayit);
   return yeni.length;
 }
 
@@ -64,47 +143,61 @@ function riskGunlukListeyeEkle(adet) {
 function riskGunlukSil(id) {
   // Liste silmeden ÖNCE alınır: sonra okunursa silinen id listeden zaten
   // atılmış olur ve yerine yenisi konamaz.
-  const kayit = riskGunlukListeGetir();
+  const r0 = riskIdIleGetirRepo(id);
+  const kayit = riskGunlukListeGetir(r0 ? riskYili(r0) : undefined);
   const s = riskSil(id);
   if (!s.basarili) return s;
+  _inTurOnbellekSifirla();
   const haric = new Set(kayit.idler.concat(kayit.atlananlar || []));
   const yerine = _inAdaylar(kayit.yil, haric)[0];
   kayit.idler = kayit.idler.flatMap(x => x === id ? (yerine ? [yerine.id] : []) : [x]);
   kayit.atlananlar = (kayit.atlananlar || []).filter(x => x !== id);
-  yaz(_inAnahtar(), kayit);
+  _inListeKaydet(kayit);
   return { basarili: true, yerine: yerine || null };
 }
 
 // Riski bugünkü listeden çıkarıp yerine sıradaki adayı koyar.
 function riskGunlukAtla(id) {
-  const kayit = riskGunlukListeGetir();
+  const r0 = riskIdIleGetirRepo(id);
+  const kayit = riskGunlukListeGetir(r0 ? riskYili(r0) : undefined);
   kayit.atlananlar = Array.from(new Set((kayit.atlananlar || []).concat([id])));
   const haric = new Set(kayit.idler.concat(kayit.atlananlar));
   const yerine = _inAdaylar(kayit.yil, haric)[0];
   kayit.idler = kayit.idler.flatMap(x => x === id ? (yerine ? [yerine.id] : []) : [x]);
-  yaz(_inAnahtar(), kayit);
+  _inListeKaydet(kayit);
   return yerine || null;
 }
 
 function riskOnayla(id) {
   const k = oturumdakiKullanici ? oturumdakiKullanici() : null;
-  return riskGuncelleRepo(id, { inceleme: { onayli: true, tarih: _inBugun(), zaman: new Date().toISOString(), kullanici: (k && k.adSoyad) || '', kullaniciId: (k && k.id) || '' } });
+  const r = riskIdIleGetirRepo(id);
+  const tur = r ? riskIncelemeTuru(riskYili(r)) : 1;
+  const s = riskGuncelleRepo(id, { inceleme: { onayli: true, tur, tarih: _inBugun(), zaman: new Date().toISOString(), kullanici: (k && k.adSoyad) || '', kullaniciId: (k && k.id) || '' } });
+  _inTurOnbellekSifirla();
+  return s;
 }
 
+// Onay geri alınınca risk geçerli turda yeniden incelenecek olur. 2. turdan
+// itibaren önceki tur tamamlanmış sayılmaya devam eder; inceleme tamamen
+// silinseydi yıl bir önceki tura düşebilir, diğer riskler onaylı görünürdü.
 function riskOnayiGeriAl(id) {
-  return riskGuncelleRepo(id, { inceleme: null });
+  const r = riskIdIleGetirRepo(id);
+  const tur = r ? riskIncelemeTuru(riskYili(r)) : 1;
+  const s = riskGuncelleRepo(id, { inceleme: tur > 1 ? { onayli: true, tur: tur - 1, tarih: '', zaman: '', kullanici: '', kullaniciId: '' } : null });
+  _inTurOnbellekSifirla();
+  return s;
 }
 
-function riskIncelemeIstatistik() {
-  const yil = riskIncelemeYili();
+function riskIncelemeIstatistik(yil) {
+  if (yil === undefined) yil = riskIncelemeYili();
   const liste = riskTumunuGetir().filter(r => riskYili(r) === yil && r.durum !== 'İptal');
   const onayli = liste.filter(riskOnayliMi);
-  const kayit = riskGunlukListeGetir();
+  const kayit = riskGunlukListeGetir(yil);
   const bugunkuler = kayit.idler.map(id => liste.find(r => r.id === id)).filter(Boolean);
   return {
-    yil, toplam: liste.length, onayli: onayli.length,
+    yil, tur: riskIncelemeTuru(yil), toplam: liste.length, onayli: onayli.length,
     bugunToplam: bugunkuler.length, bugunOnayli: bugunkuler.filter(riskOnayliMi).length,
-    bugunOnaylanan: onayli.filter(r => r.inceleme.tarih === _inBugun()).length
+    bugunOnaylanan: liste.filter(_inBugunOnaylandiMi).length
   };
 }
 
@@ -271,28 +364,36 @@ function riskIncelemeCiz() {
   const riskler = kayit.idler.map(id => riskIdIleGetirRepo(id)).filter(Boolean);
   const kalan = riskler.filter(r => !riskOnayliMi(r)).length;
   const yuzde = (a, b) => b ? Math.round(a * 100 / b) : 0;
-  const gecmis = _inGecmisAcik ? riskTumunuGetir().filter(r => riskYili(r) === ist.yil && riskOnayliMi(r))
+  const gecmis = _inGecmisAcik ? riskTumunuGetir().filter(r => riskYili(r) === ist.yil && riskOnayliMi(r) && r.inceleme.tarih)
     .sort((a, b) => (b.inceleme.zaman || b.inceleme.tarih || '').localeCompare(a.inceleme.zaman || a.inceleme.tarih || '')) : [];
+  const haric = new Set(kayit.idler.concat(kayit.atlananlar || []));
+  const dahaVar = _inAdaylar(ist.yil, haric).length > 0;
+  // Yıl çipleri: her yılın bugünkü kalan sayısı; tıklanınca o yıla geçilir.
+  const kalanlar = riskGunlukKalanlar();
+  const yilCipleri = kalanlar.length > 1 ? `<div class="in-yillar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:10px;">
+      <span class="in-bilgi">Yıllar:</span>
+      ${kalanlar.map(k => `<button type="button" class="${k.yil === ist.yil ? '' : 'sekme-seciliDegil'}" data-in-yil="${k.yil}" style="width:auto; padding:4px 10px;">${k.yil} ${k.kalan ? `<span class="in-sayac">${k.kalan}</span>` : '✓'}</button>`).join('')}
+    </div>` : '';
 
-  kutu.innerHTML = _inBolumListesiHtml(ist.yil) + `
+  kutu.innerHTML = _inBolumListesiHtml(ist.yil) + yilCipleri + `
     <div class="in-ust">
       <div class="in-ilerleme">
         <div class="in-ilerleme-baslik"><b>Bugün (${_inK(gunAyYil(_inBugun()))})</b><span>${ist.bugunOnayli} / ${ist.bugunToplam} onaylandı</span></div>
         <div class="in-cubuk"><div style="width:${yuzde(ist.bugunOnayli, ist.bugunToplam)}%"></div></div>
       </div>
       <div class="in-ilerleme">
-        <div class="in-ilerleme-baslik"><b>${ist.yil} değerlendirmesi</b><span>${ist.onayli} / ${ist.toplam} risk onaylı (%${yuzde(ist.onayli, ist.toplam)})</span></div>
+        <div class="in-ilerleme-baslik"><b>${ist.yil} değerlendirmesi · ${ist.tur}. tur</b><span>${ist.onayli} / ${ist.toplam} risk onaylı (%${yuzde(ist.onayli, ist.toplam)})</span></div>
         <div class="in-cubuk yesil"><div style="width:${yuzde(ist.onayli, ist.toplam)}%"></div></div>
       </div>
       <div class="in-ust-eylemler">
-        <button type="button" class="ikincil" id="inDahaBtn" ${ist.onayli + kalan >= ist.toplam ? 'disabled' : ''}>+ ${RISK_GUNLUK_HEDEF} risk daha</button>
+        <button type="button" class="ikincil" id="inDahaBtn" ${dahaVar ? '' : 'disabled'}>+ ${RISK_GUNLUK_HEDEF} risk daha</button>
         <button type="button" class="ikincil" id="inGecmisBtn">${_inGecmisAcik ? 'Günün listesine dön' : `📋 İncelenenler (${ist.onayli})`}</button>
       </div>
     </div>
-    <p class="in-bilgi" style="margin:6px 0 12px;">Her gün ${ist.yil} yılının henüz onaylanmamış risklerinden ${RISK_GUNLUK_HEDEF} tanesi en yüksek risk düzeyinden başlayarak listelenir. Alanları düzenleyip <b>Kaydet ve Onayla</b>'ya basın; onaylanan risk kayıtlarda "✓ Onaylı" görünür.</p>
+    <p class="in-bilgi" style="margin:6px 0 12px;">Her gün her değerlendirme yılı için, o yılın bu turda henüz onaylanmamış risklerinden ${RISK_GUNLUK_HEDEF} tanesi en yüksek risk düzeyinden başlayarak listelenir (yılı üstten seçin). Alanları düzenleyip <b>Kaydet ve Onayla</b>'ya basın. Yılın tüm riskleri onaylanınca inceleme baştan başlar (yeni tur).</p>
     ${_inGecmisAcik ? _inGecmisHtml(gecmis) : (riskler.length
-      ? (kalan ? '' : `<div class="in-tamam">🎉 Bugünün ${riskler.length} riski onaylandı.${ist.onayli < ist.toplam ? ' İsterseniz "+10 risk daha" ile devam edebilirsiniz.' : ' Bu yılın tüm riskleri onaylı.'}</div>`) + riskler.map(_inKartHtml).join('')
-      : `<div class="in-tamam">${ist.toplam ? `${ist.yil} yılının tüm riskleri onaylı.` : `${ist.yil} yılında henüz risk kaydı yok.`}</div>`)}`;
+      ? (kalan ? '' : `<div class="in-tamam">🎉 Bugünün ${riskler.length} riski onaylandı.${dahaVar ? ` İsterseniz "+${RISK_GUNLUK_HEDEF} risk daha" ile devam edebilirsiniz.` : ''}</div>`) + riskler.map(_inKartHtml).join('')
+      : `<div class="in-tamam">${ist.toplam ? `${ist.yil} yılı için bugün incelenecek risk kalmadı.` : `${ist.yil} yılında henüz risk kaydı yok.`}</div>`)}`;
 
   if (typeof fotoReferanslariCoz === 'function') fotoReferanslariCoz(kutu);
   // Sorumlu: Uygunsuzluk'taki gibi firma bölümlerinden hızlı seçim (core/bolum-butonlari.js).
@@ -352,13 +453,13 @@ function _inKaydet(id, onayla) {
 function _riskIncelemeSekmeEtiketi() {
   const btn = document.getElementById('sekmeInceleme');
   if (!btn) return;
-  const kayit = riskGunlukListeGetir();
-  const kalan = kayit.idler.map(id => riskIdIleGetirRepo(id)).filter(r => r && !riskOnayliMi(r)).length;
+  const kalanlar = riskGunlukKalanlar().filter(k => k.kalan);
+  const kalan = kalanlar.reduce((t, k) => t + k.kalan, 0);
   btn.innerHTML = `Günlük İnceleme ${kalan ? `<span class="in-sayac">${kalan}</span>` : '✓'}`;
   const afis = document.getElementById('incelemeAfisi');
   if (afis) {
     afis.style.display = kalan && _riskGorunum !== 'inceleme' ? '' : 'none';
-    afis.querySelector('[data-in-afis-metin]').textContent = `Bugün incelemeniz gereken ${kalan} risk var (${kayit.yil}).`;
+    afis.querySelector('[data-in-afis-metin]').textContent = `Bugün incelemeniz gereken ${kalan} risk var (${kalanlar.map(k => `${k.yil}: ${k.kalan}`).join(' · ')}).`;
   }
 }
 
@@ -379,6 +480,7 @@ function riskIncelemeBaslat() {
       if (kutu) _inFotoOnizlemeYenile(kutu, '');
       return;
     }
+    if (b.hasAttribute('data-in-yil')) { const y = Number(b.getAttribute('data-in-yil')); if (typeof _riskYilSec === 'function') _riskYilSec(y); else { riskAktifYilAyarla(y); riskIncelemeCiz(); } return; }
     if (b.id === 'inDahaBtn') { const n = riskGunlukListeyeEkle(RISK_GUNLUK_HEDEF); if (!n) alert('Onaylanmamış başka risk kalmadı.'); riskIncelemeCiz(); return; }
     if (b.id === 'inGecmisBtn') { _inGecmisAcik = !_inGecmisAcik; riskIncelemeCiz(); return; }
     const id = b.getAttribute('data-in-onayla') || b.getAttribute('data-in-kaydet') || b.getAttribute('data-in-atla') || b.getAttribute('data-in-geri') || b.getAttribute('data-in-form') || b.getAttribute('data-in-sil');
