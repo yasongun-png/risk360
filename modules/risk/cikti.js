@@ -178,8 +178,10 @@ function _riskRaporOnlemMetni(r) {
 // uyumlu hale getir" — Word ve Excel birebir aynı sütunları kullanır;
 // fotoğraf sütunları (Word'de yalnızca "Var/-" yazıyordu, Excel'de yoktu)
 // ikisinden de çıkarıldı. Fotoğraflar PPTX sunumunda yer alır.
-function _riskRaporKolonlari(riskler, bolumFiltreli) {
-  const fotoVar = false;
+// fotografli: yalnızca "Excel (Fotoğraflı)" raporu true verir (Öncesi/Sonrası
+// sütunları eklenir); Word ve normal Excel raporu değişmez.
+function _riskRaporKolonlari(riskler, bolumFiltreli, fotografli) {
+  const fotoVar = !!fotografli;
   const deger = v => (v === null || v === undefined || v === '') ? '-' : String(v);
   const f = (r, alan) => r.yontem === '5x5' ? '-' : deger(r[alan]);
   const kolonlar = [
@@ -650,7 +652,36 @@ function _riskExcelHazir() {
   return new Promise(resolve => exceljsHazirOlduğunda(resolve));
 }
 
-async function riskRaporuExcelOlustur(hazirlayanAdi) {
+// Kullanıcı isteği (2026-11-21): "risk değerlendirmesi exceli hiç
+// değiştirmeden fotoğraflı olanı için ayrı bir buton koy" — Excel
+// (Fotoğraflı) aynı raporu Öncesi/Sonrası fotoğraf sütunlarıyla üretir.
+// Fotoğraf hücreye sığacak şekilde (oran korunarak) küçültülüp JPEG yapılır.
+const _RSK_EXCEL_FOTO_SUTUN_GEN = 20;   // karakter (~145 px)
+const _RSK_EXCEL_FOTO_SATIR_YUK = 82;   // punto (~109 px)
+
+async function _riskExcelFotoHazirla(ref, maksGen, maksYuk) {
+  if (!ref) return null;
+  try {
+    const url = typeof fotoBuyukCoz === 'function' ? ((await fotoBuyukCoz(ref)) || ref) : ref;
+    if (!url) return null;
+    const blob = await (await fetch(url)).blob();
+    const img = await new Promise((coz, red) => { const i = new Image(); i.onload = () => coz(i); i.onerror = red; i.src = URL.createObjectURL(blob); });
+    const oran = Math.min(maksGen / img.naturalWidth, maksYuk / img.naturalHeight, 1);
+    const gen = Math.max(1, Math.round(img.naturalWidth * oran));
+    const yuk = Math.max(1, Math.round(img.naturalHeight * oran));
+    const canvas = document.createElement('canvas');
+    canvas.width = gen * 2; canvas.height = yuk * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return { base64: canvas.toDataURL('image/jpeg', 0.82).split(',')[1], gen, yuk };
+  } catch (e) {
+    console.warn('Risk fotoğrafı Excel\'e eklenemedi:', e);
+    return null;
+  }
+}
+
+async function riskRaporuExcelOlustur(hazirlayanAdi, fotografli) {
   const filtreler = riskListeFiltreleri();
   const riskler = riskleriGetir(document.getElementById('aramaKutusu').value, filtreler);
   if (!riskler.length) {
@@ -663,7 +694,9 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
   const firma = aktifFirmaGetir();
   const bugun = gunAyYil(_bugun());
   const ozet = riskOzetiHesapla(riskler);
-  const kolonlar = _riskRaporKolonlari(riskler, !!filtreler.bolum).filter(k => !k.foto);
+  const kolonlar = fotografli
+    ? _riskRaporKolonlari(riskler, !!filtreler.bolum, true)
+    : _riskRaporKolonlari(riskler, !!filtreler.bolum).filter(k => !k.foto);
   const ince = { style: 'thin', color: { argb: 'FF94A3B8' } };
   const kenar = { top: ince, bottom: ince, left: ince, right: ince };
 
@@ -673,7 +706,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
     headerFooter: { oddFooter: '&CSayfa &P / &N' }
   });
   // Başlık + filtre oku sığsın ("Düze", "Azalı" gibi kesilmesin): en az başlık uzunluğu + 5.
-  ws.columns = kolonlar.map(k => ({ width: Math.max(6, Math.round(k.yuzde * 2.1), k.baslik.length + 5) }));
+  ws.columns = kolonlar.map(k => ({ width: k.foto ? _RSK_EXCEL_FOTO_SUTUN_GEN : Math.max(6, Math.round(k.yuzde * 2.1), k.baslik.length + 5) }));
   const sonHarf = ws.getColumn(kolonlar.length).letter;
 
   const baslikSatiri = (no, metin, boyut, kalin) => {
@@ -711,11 +744,36 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
     c.border = kenar;
   });
 
+  // Fotoğraflı raporda görseller önceden (6'şar paralel) hazırlanır.
+  const fotoKolonlari = kolonlar.map((k, j) => k.foto ? j : -1).filter(j => j >= 0);
+  const fotoPx = { gen: _RSK_EXCEL_FOTO_SUTUN_GEN * 7 + 5, yuk: Math.round(_RSK_EXCEL_FOTO_SATIR_YUK * 4 / 3) };
+  const fotolar = riskler.map(() => ({}));
+  if (fotoKolonlari.length) {
+    const isler = [];
+    riskler.forEach((r, i) => fotoKolonlari.forEach(j => isler.push([i, j])));
+    for (let s = 0; s < isler.length; s += 6) {
+      await Promise.all(isler.slice(s, s + 6).map(async ([i, j]) => {
+        fotolar[i][j] = await _riskExcelFotoHazirla(kolonlar[j].foto(riskler[i]), fotoPx.gen - 10, fotoPx.yuk - 10);
+      }));
+    }
+  }
+
   riskler.forEach((r, i) => {
     const satir = ws.getRow(6 + i);
     kolonlar.forEach((k, j) => {
       const c = satir.getCell(j + 1);
-      if (k.duzey) {
+      if (k.foto) {
+        const f = fotolar[i][j];
+        c.value = f ? '' : '-';
+        c.font = { size: 9 };
+        c.alignment = { horizontal: 'center', vertical: 'middle' };
+        if (f) {
+          ws.addImage(wb.addImage({ base64: f.base64, extension: 'jpeg' }), {
+            tl: { col: j + (fotoPx.gen - f.gen) / 2 / fotoPx.gen, row: 5 + i + (fotoPx.yuk - f.yuk) / 2 / fotoPx.yuk },
+            ext: { width: f.gen, height: f.yuk }, editAs: 'oneCell'
+          });
+        }
+      } else if (k.duzey) {
         const etiket = k.duzey(r);
         c.value = etiket ? (_RISK_DUZEY_KISALTMA[etiket] || etiket) : '-';
         if (etiket) {
@@ -732,6 +790,18 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
       }
       c.border = kenar;
     });
+    // Fotoğraflı satır fotoğrafın sığacağı kadar yüksek olur; uzun metin
+    // daha fazla yer istiyorsa (kaba satır tahmini) o kadar uzatılır.
+    if (fotoKolonlari.some(j => fotolar[i][j])) {
+      let satirSayisi = 1;
+      kolonlar.forEach((k, j) => {
+        if (k.foto || k.duzey) return;
+        const gen = ws.getColumn(j + 1).width || 10;
+        const n = String(k.metin(r) || '').split('\n').reduce((t, p) => t + Math.max(1, Math.ceil(p.length / (gen * 1.15))), 0);
+        satirSayisi = Math.max(satirSayisi, n);
+      });
+      satir.height = Math.max(_RSK_EXCEL_FOTO_SATIR_YUK, satirSayisi * 12 + 6);
+    }
   });
 
   const sonVeriSatiri = 5 + riskler.length;
@@ -835,7 +905,7 @@ async function riskRaporuExcelOlustur(hazirlayanAdi) {
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `Risk_Degerlendirme_Raporu_${bugun.replace(/\./g, '-')}.xlsx`);
+  saveAs(blob, `Risk_Degerlendirme_Raporu_${fotografli ? 'Fotografli_' : ''}${bugun.replace(/\./g, '-')}.xlsx`);
 }
 
 // ==================== PPTX ====================

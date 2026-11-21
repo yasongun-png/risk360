@@ -467,6 +467,8 @@ function riskSayfasiniBaslat() {
 
   document.getElementById('wordRaporBtn').addEventListener('click', () => hazirlayanModalAc('word'));
   document.getElementById('excelRaporBtn').addEventListener('click', () => hazirlayanModalAc('excel'));
+  // Kullanıcı isteği (2026-11-21): normal Excel aynen kalsın, fotoğraflısı ayrı düğme.
+  document.getElementById('excelFotoRaporBtn').addEventListener('click', () => hazirlayanModalAc('excelFoto'));
   document.getElementById('hazirlayanModalKapatBtn').addEventListener('click', hazirlayanModalKapat);
   document.getElementById('riskEkibiUyeEkleBtn').addEventListener('click', () => {
     document.getElementById('riskEkibiGovde').insertAdjacentHTML('beforeend', _riskEkibiSatiriHtml({}));
@@ -484,11 +486,12 @@ function riskSayfasiniBaslat() {
     try {
       if (_hazirlayanFormat === 'word') await riskRaporuWordOlustur(hazirlayanAdi);
       else if (_hazirlayanFormat === 'excel') await riskRaporuExcelOlustur(hazirlayanAdi);
+      else if (_hazirlayanFormat === 'excelFoto') await riskRaporuExcelOlustur(hazirlayanAdi, true);
       else await riskRaporuPdfOlustur(hazirlayanAdi);
       hazirlayanModalKapat();
     } catch (hata) {
       console.error(hata);
-      alert(({ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF') + ' üretilemedi: ' + (hata.message || hata));
+      alert(({ word: 'Word', excel: 'Excel', excelFoto: 'Fotoğraflı Excel' }[_hazirlayanFormat] || 'PDF') + ' üretilemedi: ' + (hata.message || hata));
     } finally {
       dugme.disabled = false;
       dugme.textContent = eskiMetin;
@@ -653,8 +656,8 @@ function _riskEkibiFormdanOku() {
 
 function hazirlayanModalAc(format) {
   _hazirlayanFormat = format || 'pdf';
-  document.getElementById('hazirlayanBaslik').textContent = `${{ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF'} Raporu — Risk Değerlendirme Ekibi`;
-  document.getElementById('hazirlayanOnaylaBtn').textContent = `${{ word: 'Word', excel: 'Excel' }[_hazirlayanFormat] || 'PDF'} Oluştur`;
+  document.getElementById('hazirlayanBaslik').textContent = `${{ word: 'Word', excel: 'Excel', excelFoto: 'Excel (Fotoğraflı)' }[_hazirlayanFormat] || 'PDF'} Raporu — Risk Değerlendirme Ekibi`;
+  document.getElementById('hazirlayanOnaylaBtn').textContent = `${{ word: 'Word', excel: 'Excel', excelFoto: 'Fotoğraflı Excel' }[_hazirlayanFormat] || 'PDF'} Oluştur`;
   const personeller = personelleriGetir('', false);
   document.getElementById('riskEkibiPersonelListesi').innerHTML = personeller.map(p => `<option value="${_riskKacir(p.adSoyad)}">`).join('');
   let dl = document.getElementById('riskEkibiGorevListesi');
