@@ -261,7 +261,7 @@ async function uygunsuzlukRaporuWordOlustur(indir = true) {
     ]
   });
   const blob = await docx.Packer.toBlob(doc);
-  const dosyaAdi = `${UYG_CEVRE_MODU ? 'Cevre_' : ''}Uygunsuzluk_Raporu_${bugun.replace(/\./g, '-')}.docx`;
+  const dosyaAdi = `${UYG_CEVRE_MODU ? 'Cevre_' : ''}Uygunsuzluklar_Listesi_${bugun.replace(/\./g, '-')}.docx`;
   if (indir) saveAs(blob, dosyaAdi);
   return { blob, dosyaAdi };
 }

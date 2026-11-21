@@ -88,7 +88,7 @@
           <input type="file" id="iceAktarDosya" accept=".xlsx,.xls" style="display:none;">
           <button type="button" class="ikincil" id="disaAktarBtn">Dışa Aktar</button>
           <button type="button" class="ikincil" id="listeYazdirBtn">Listeyi Yazdır</button>
-          <button type="button" class="ikincil" id="wordRaporBtn">Word Raporu</button>
+          <button type="button" class="ikincil" id="wordRaporBtn">Uygunsuzluklar Listesi (Word)</button>
           <button type="button" class="ikincil" id="kurulPptxBtn" title="Tablodaki kutucuklarla seçtiğiniz (seçim yoksa listelenen) uygunsuzlukları İSG Kurulu sunumu formatında PPTX yapar">📊 Kurul Sunumu (PPTX)</button>
           <button type="button" class="ikincil" id="listeMailBtn">✉️ Listeyi Mail Gönder</button>
           <button type="button" class="ikincil" id="raporMetniBtn">Rapor Kapak Metni</button>
@@ -131,7 +131,7 @@
       <h3>Rapor Kapak Metni</h3>
       <p style="font-size:12px; color:var(--metin-soluk); margin-top:-8px;">Toplu Word raporunun ilk sayfasında (kapak) görünecek başlık ve serbest metin. Bir kez girin, istediğinizde değiştirin.</p>
       <label for="raporKonuGirdi">Konu (Başlık)</label>
-      <input type="text" id="raporKonuGirdi" placeholder="ör. Saha Kontrolü Uygunsuzlukları Raporu">
+      <input type="text" id="raporKonuGirdi" placeholder="ör. Uygunsuzluklar Listesi">
       <label for="raporGirisMetniGirdi">Giriş Metni</label>
       <textarea id="raporGirisMetniGirdi" rows="8" placeholder="Rapor kapak sayfasında yer alacak serbest açıklama metni..."></textarea>
       <div class="modal-eylemler">
@@ -488,8 +488,8 @@
   <script src="validation.js"></script>
   <script src="repository.js?v=20261024a"></script>
   <script src="service.js?v=20261112c"></script>
-  <script src="ui.js?v=20261112c"></script>
-  <script src="cikti.js?v=20261116a"></script>
+  <script src="ui.js?v=20261121a"></script>
+  <script src="cikti.js?v=20261121a"></script>
   <script>
     // İSG / Çevre ana sekmesi ve Çevre'ye özgü başlıklar.
     document.querySelectorAll('#uygAlanSekmeleri [data-alan]').forEach(b => {

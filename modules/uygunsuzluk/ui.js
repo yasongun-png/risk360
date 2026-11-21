@@ -226,7 +226,7 @@ function uygunsuzlukSayfasiniBaslat() {
     btn.disabled = true;
     btn.textContent = 'Word hazırlanıyor...';
     try { await uygunsuzlukRaporuWordOlustur(); } catch (hata) { console.error(hata); alert('Word raporu üretilemedi: ' + (hata.message || hata)); }
-    finally { btn.disabled = false; btn.textContent = 'Word Raporu'; }
+    finally { btn.disabled = false; btn.textContent = 'Uygunsuzluklar Listesi (Word)'; }
   });
   // Kullanıcı isteği: seçilen uygunsuzlukları İSG Kurulu PPTX'iyle uyumlu sunuma çevir.
   // Kutucuk işaretlenmemişse o an listelenen (arama/filtre uygulanmış) kayıtlar kullanılır.
@@ -407,7 +407,12 @@ async function uygunsuzlukFormunuYazdir(id) {
 function _raporMetniAnahtari() { return uygunsuzlukAnahtari('uygunsuzluk_rapor_metni'); }
 
 function raporMetniGetir() {
-  return oku(_raporMetniAnahtari(), { konu: UYG_CEVRE_MODU ? 'Çevre Uygunsuzluk Raporu' : 'Uygunsuzluk Raporu', girisMetni: '' });
+  // Kullanıcı isteği (2026-11-21): rapor adı "Uygunsuzluklar Listesi" olsun. Eski varsayılan
+  // başlıkla kaydedilmiş kapak metni de yeni ada çevrilir (elle yazılmış başlıklar korunur).
+  const varsayilan = UYG_CEVRE_MODU ? 'Çevre Uygunsuzlukları Listesi' : 'Uygunsuzluklar Listesi';
+  const kayit = Object.assign({ konu: varsayilan, girisMetni: '' }, oku(_raporMetniAnahtari(), {}) || {});
+  if (!kayit.konu || ['Uygunsuzluk Raporu', 'Çevre Uygunsuzluk Raporu'].includes(String(kayit.konu).trim())) kayit.konu = varsayilan;
+  return kayit;
 }
 
 function raporMetniModalAc() {
@@ -423,7 +428,7 @@ function raporMetniModalKapat() {
 
 function raporMetniKaydet() {
   yaz(_raporMetniAnahtari(), {
-    konu: document.getElementById('raporKonuGirdi').value.trim() || 'Uygunsuzluk Raporu',
+    konu: document.getElementById('raporKonuGirdi').value.trim() || (UYG_CEVRE_MODU ? 'Çevre Uygunsuzlukları Listesi' : 'Uygunsuzluklar Listesi'),
     girisMetni: document.getElementById('raporGirisMetniGirdi').value.trim()
   });
   raporMetniModalKapat();
